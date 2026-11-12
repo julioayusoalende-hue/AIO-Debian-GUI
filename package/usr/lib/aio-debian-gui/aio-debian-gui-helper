@@ -66,6 +66,17 @@ instalar_paquete_si_falta() {
     fi
 }
 
+paquete_appimage() {
+    local paquete
+    for paquete in libfuse2t64 libfuse2; do
+        if apt-cache show "$paquete" 2>/dev/null | grep -q "^Package: ${paquete}$"; then
+            printf '%s\n' "$paquete"
+            return 0
+        fi
+    done
+    return 1
+}
+
 # Añade 'contrib' y 'non-free' a los repositorios oficiales de Debian
 # Soporta formato clásico (.list) y deb822 (.sources)
 anadir_componentes() {
@@ -170,6 +181,17 @@ paso_tools() {
     instalar_paquete_si_falta fastfetch   "No se pudo instalar 'fastfetch'. Puede que no esté disponible en tus repositorios." || r=1
     instalar_paquete_si_falta kitty       "No se pudo instalar 'kitty'. Puede que no esté disponible en tus repositorios." || r=1
     instalar_paquete_si_falta synaptic    "No se pudo instalar 'synaptic'. Puede que no esté disponible en tus repositorios." || r=1
+    if paquete_instalado libfuse2 || paquete_instalado libfuse2t64; then
+        ok "El soporte FUSE 2 para AppImage ya está instalado."
+    else
+        local paquete
+        if paquete=$(paquete_appimage); then
+            instalar_paquete_si_falta "$paquete" "No se pudo instalar el soporte FUSE 2 para AppImage." || r=1
+        else
+            warn "No se encontró libfuse2 ni libfuse2t64 en los repositorios."
+            r=1
+        fi
+    fi
     return $r
 }
 

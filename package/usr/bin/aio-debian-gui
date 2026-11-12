@@ -31,6 +31,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.0.3": "Las herramientas auxiliares instalan el soporte FUSE necesario para AppImage.",
     "1.0.2": "El logotipo de Debian aparece junto a la información del sistema.",
     "1.0.1": "El botón principal ahora se llama «Iniciar tareas».",
     "1.0.0": "Primera versión independiente de la interfaz gráfica de AiO Debian.",
@@ -173,7 +174,7 @@ PASOS = [
     ("repos", "Habilitar contrib y non-free",
      "Añade los componentes a los repositorios oficiales de Debian (con copia .bak).", True, "apt"),
     ("tools", "Instalar herramientas auxiliares",
-     "needrestart, fastfetch, kitty y synaptic, si no están instalados.", True, "apt"),
+     "needrestart, fastfetch, kitty, synaptic y soporte FUSE para AppImage, si faltan.", True, "apt"),
     ("upgrade", "Actualizar los paquetes del sistema",
      "apt-get update y apt-get dist-upgrade.", True, "apt"),
     ("autoremove", "Eliminar dependencias huérfanas",
