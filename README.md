@@ -41,9 +41,9 @@ sudo bash -c 'set -euo pipefail; key=$(mktemp); trap "rm -f $key" EXIT; python3 
 Descarga el archivo `aio-debian-gui_X.Y.Z_x86_64.AppImage` desde [Releases](../../releases/latest),
 dale permiso de ejecución y ábrelo. El AppImage incluye la interfaz y el asistente; requiere
 en el sistema `python3-gi`, GTK 3, `pkexec`, APT y FUSE 2 (`libfuse2` en Debian 12,
-`libfuse2t64` en Debian 13). No hace falta instalar el `.deb`. La autorización administrativa
-la gestiona `pkexec` con la política general del sistema; el AppImage no instala la política
-polkit específica del paquete `.deb`.
+`libfuse2t64` en Debian 13). No hace falta instalar el `.deb`. Si el asistente incluido coincide
+con el instalado por el paquete `.deb`, el AppImage reutiliza el del sistema para aprovechar su
+política polkit; de lo contrario, usa el asistente incluido y la política general de `pkexec`.
 
 ```bash
 chmod +x aio-debian-gui_*_x86_64.AppImage

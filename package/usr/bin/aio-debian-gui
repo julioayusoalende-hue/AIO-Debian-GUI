@@ -25,6 +25,7 @@ PRGNAME = "aio-debian-gui"
 HELPER = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "../lib/aio-debian-gui/aio-debian-gui-helper")
 )
+HELPER_SISTEMA = "/usr/lib/aio-debian-gui/aio-debian-gui-helper"
 HOMEPAGE = "https://github.com/julioayusoalende-hue/AIO-Debian-GUI"
 DEBIAN_LOGO = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/debian-openlogo.png")
@@ -33,6 +34,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.0.5": "Corrige la autenticación al ejecutar AppImage con el paquete Debian instalado.",
     "1.0.4": "La aplicación también se distribuye como AppImage.",
     "1.0.3": "Las herramientas auxiliares instalan el soporte FUSE necesario para AppImage.",
     "1.0.2": "El logotipo de Debian aparece junto a la información del sistema.",
@@ -88,6 +90,18 @@ def _ejecutar(cmd):
         return subprocess.run(cmd, capture_output=True, text=True, timeout=10).stdout.strip()
     except (OSError, subprocess.SubprocessError):
         return ""
+
+
+def helper_mantenimiento():
+    if not os.environ.get("APPDIR"):
+        return HELPER
+    try:
+        with open(HELPER, "rb") as incluido, open(HELPER_SISTEMA, "rb") as instalado:
+            if incluido.read() == instalado.read():
+                return HELPER_SISTEMA
+    except OSError:
+        pass
+    return HELPER
 
 
 def fecha_instalacion():
@@ -421,13 +435,14 @@ class VentanaPrincipal(Gtk.Window):
         if not pasos:
             self._mensaje(Gtk.MessageType.INFO, "Nada que hacer", "Activa al menos una tarea.")
             return
-        if not os.path.exists(HELPER):
+        helper = helper_mantenimiento()
+        if not os.path.exists(helper):
             self._mensaje(Gtk.MessageType.ERROR, "Falta el asistente",
-                          "No se encuentra %s.\nReinstala el paquete aio-debian-gui." % HELPER)
+                          "No se encuentra %s.\nReinstala el paquete aio-debian-gui." % helper)
             return
 
         lang = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or "C"
-        cmd = ["pkexec", HELPER, "--lang", lang] + pasos
+        cmd = ["pkexec", helper, "--lang", lang] + pasos
 
         self.buf.set_text("")
         self.necesita_reinicio = False
