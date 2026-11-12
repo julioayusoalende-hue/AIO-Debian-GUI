@@ -37,6 +37,8 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.0.8": "Detecta tareas ya configuradas y permite cancelar una espera de autorización.",
+    "1.0.7": "Permite instalar el kernel y los controladores Mesa desde Debian Backports.",
     "1.0.6": "Permite configurar autorización sin contraseña para este usuario.",
     "1.0.5": "Corrige la autenticación al ejecutar AppImage con el paquete Debian instalado.",
     "1.0.4": "La aplicación también se distribuye como AppImage.",
@@ -112,6 +114,14 @@ def helper_admite_autorizacion_sin_contrasena(ruta):
         "--enable-passwordless" in contenido
         and "--disable-passwordless" in contenido
     )
+
+
+def helper_admite_tarea(ruta, tarea):
+    try:
+        with open(ruta, encoding="utf-8") as helper:
+            return "[%s]=" % tarea in helper.read()
+    except OSError:
+        return False
 
 
 def autorizacion_sin_contrasena_activa():
@@ -223,6 +233,9 @@ PASOS = [
      "Añade los componentes a los repositorios oficiales de Debian (con copia .bak).", True, "apt"),
     ("tools", "Instalar herramientas auxiliares",
      "needrestart, fastfetch, kitty, synaptic y soporte FUSE para AppImage, si faltan.", True, "apt"),
+    ("backports-kernel-mesa", "Instalar kernel y Mesa desde Backports",
+     "Instala el kernel y los controladores gráficos Mesa de Debian Backports; puede requerir reinicio.",
+     False, "apt"),
     ("upgrade", "Actualizar los paquetes del sistema",
      "apt-get update y apt-get dist-upgrade.", True, "apt"),
     ("autoremove", "Eliminar dependencias huérfanas",
@@ -275,8 +288,15 @@ class VentanaPrincipal(Gtk.Window):
         self.terminado_gestionado = False
         self.configurando_sin_contrasena = None
         self.actualizando_sin_contrasena = False
+        self.esperando_autorizacion = False
+        self.cancelacion_autorizacion = None
+        self.timeout_autorizacion_id = None
+        self.consultando_estados = False
+        self.estados_tareas = set()
+        self.salida_estados = []
         self.switches = {}
         self.filas = {}
+        self.indicadores = {}
 
         self.flatpak_presente = shutil.which("flatpak") is not None
         self.gnome_presente = paquete_instalado("gnome-shell")
@@ -328,8 +348,12 @@ class VentanaPrincipal(Gtk.Window):
         fila = Gtk.Box(spacing=10)
         self.spinner = Gtk.Spinner()
         self.estado = etiqueta("Listo. Elige las tareas y pulsa «Iniciar tareas».")
+        self.btn_cancelar = Gtk.Button(label="Cancelar espera")
+        self.btn_cancelar.set_no_show_all(True)
+        self.btn_cancelar.connect("clicked", self._cancelar_espera_autorizacion)
         fila.pack_start(self.spinner, False, False, 0)
         fila.pack_start(self.estado, True, True, 0)
+        fila.pack_end(self.btn_cancelar, False, False, 0)
         inf.pack_start(fila, False, False, 0)
 
         self.barra = Gtk.ProgressBar()
@@ -401,6 +425,7 @@ class VentanaPrincipal(Gtk.Window):
         b2.connect("clicked", self._preset_flatpak)
         presets.pack_start(b1, False, False, 0)
         presets.pack_start(b2, False, False, 0)
+        self.botones_preset = (b1, b2)
         cab.pack_end(presets, False, False, 0)
         externa.pack_start(cab, False, False, 0)
 
@@ -432,6 +457,125 @@ class VentanaPrincipal(Gtk.Window):
             externa.pack_start(marco, False, False, 0)
         return externa
 
+    def _consultar_estados_tareas(self, inicial=False):
+        if self.consultando_estados:
+            return
+        self.consultando_estados = True
+        self.consulta_inicial = inicial
+        self.salida_estados = []
+        if inicial:
+            self.estado.set_text("Comprobando tareas ya instaladas…")
+        self._actualizar_sensibilidad()
+        try:
+            self.proceso_estados = Gio.Subprocess.new(
+                ["bash", HELPER, "--status"],
+                Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE,
+            )
+        except GLib.Error as e:
+            self._finalizar_consulta_estados(False, str(e.message))
+            return
+        self.flujo_estados = Gio.DataInputStream.new(self.proceso_estados.get_stdout_pipe())
+        self._leer_linea_estado()
+
+    def _leer_linea_estado(self):
+        self.flujo_estados.read_line_async(
+            GLib.PRIORITY_DEFAULT, None, self._linea_estado_leida
+        )
+
+    def _linea_estado_leida(self, flujo, res):
+        try:
+            r = flujo.read_line_finish_utf8(res)
+            datos = r[0] if isinstance(r, tuple) else r
+        except GLib.Error:
+            datos = None
+        if datos is None:
+            self.proceso_estados.wait_async(None, self._estados_terminados)
+            return
+        self.salida_estados.append(datos)
+        self._leer_linea_estado()
+
+    def _estados_terminados(self, proceso, res):
+        try:
+            proceso.wait_finish(res)
+            codigo = proceso.get_exit_status()
+        except GLib.Error:
+            codigo = -1
+        estados = {}
+        for linea in self.salida_estados:
+            campos = linea.split(":")
+            if (len(campos) == 3 and campos[0] == "##STATUS"
+                    and campos[1] in (
+                        "repos", "tools", "backports-kernel-mesa",
+                        "gnome-plugin", "ext-manager",
+                    )
+                    and campos[2] in ("0", "1")):
+                estados[campos[1]] = campos[2] == "1"
+        requeridos = {
+            "repos", "tools", "backports-kernel-mesa", "gnome-plugin", "ext-manager",
+        }
+        if codigo != 0 or set(estados) != requeridos:
+            self._finalizar_consulta_estados(
+                False, "El asistente no devolvió un estado completo de las tareas."
+            )
+            return
+
+        self.estados_tareas = {pid for pid, completada in estados.items() if completada}
+        etiquetas = {
+            "repos": "✓ Ya configurados",
+            "tools": "✓ Ya instaladas",
+            "backports-kernel-mesa": "✓ Ya instalados",
+            "gnome-plugin": "✓ Ya instalado",
+            "ext-manager": "✓ Ya instalado",
+        }
+        for pid, completada in estados.items():
+            indicador = self.indicadores[pid]
+            if completada:
+                indicador.set_markup(
+                    "<span foreground='#26a269'><b>%s</b></span>" % etiquetas[pid]
+                )
+                indicador.set_tooltip_text(
+                    "Esta tarea ya está completada y no se incluirá en futuras operaciones."
+                )
+                indicador.show()
+                self.switches[pid][0].set_active(False)
+            else:
+                indicador.set_text("")
+                indicador.set_tooltip_text(None)
+                indicador.hide()
+        self._finalizar_consulta_estados(True)
+
+    def _finalizar_consulta_estados(self, correcta, detalle=""):
+        inicial = self.consulta_inicial
+        if not correcta:
+            self.estados_tareas.clear()
+            for indicador in self.indicadores.values():
+                indicador.set_text("")
+                indicador.set_tooltip_text(None)
+                indicador.hide()
+        self.consultando_estados = False
+        self._actualizar_sensibilidad()
+        if correcta:
+            if inicial:
+                self.estado.set_text("Listo. Elige las tareas y pulsa «Iniciar tareas».")
+            return
+        mensaje = "No se pudo comprobar el estado de las tareas; siguen disponibles."
+        if detalle:
+            mensaje += " " + detalle
+        if inicial:
+            self.estado.set_text(mensaje)
+        self._escribir("[!] %s\n" % mensaje, "aviso")
+
+    def _actualizar_sensibilidad(self):
+        disponible = not self.en_curso and not self.consultando_estados
+        self.btn_iniciar.set_sensitive(disponible)
+        self.chk_sin_contrasena.set_sensitive(disponible)
+        for boton in self.botones_preset:
+            boton.set_sensitive(disponible)
+        for pid, fila in self.filas.items():
+            habilitada = disponible and pid not in self.estados_tareas
+            fila.set_sensitive(habilitada)
+            self.switches[pid][0].set_sensitive(habilitada)
+
     def _visible(self, pid):
         if pid == "flatpak-setup":
             return not self.flatpak_presente
@@ -449,29 +593,38 @@ class VentanaPrincipal(Gtk.Window):
         textos = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         textos.pack_start(etiqueta(GLib.markup_escape_text(titulo), markup=True), False, False, 0)
         textos.pack_start(etiqueta(desc, dim=True), False, False, 0)
+        indicador = Gtk.Label()
+        indicador.set_no_show_all(True)
         sw = Gtk.Switch(active=defecto, valign=Gtk.Align.CENTER)
         caja.pack_start(textos, True, True, 0)
+        caja.pack_end(indicador, False, False, 0)
         caja.pack_end(sw, False, False, 0)
         fila.add(caja)
         self.switches[pid] = (sw, defecto)
         self.filas[pid] = fila
+        self.indicadores[pid] = indicador
         return fila
 
     # -- Presets ---------------------------------------------------------------
     def _preset_completo(self, _b):
-        for sw, defecto in self.switches.values():
-            sw.set_active(defecto)
+        for pid, (sw, defecto) in self.switches.items():
+            sw.set_active(defecto and pid not in self.estados_tareas)
 
     def _preset_flatpak(self, _b):
         for pid, (sw, _d) in self.switches.items():
             if pid in ("clock", "repos", "tools", "upgrade", "autoremove", "autoclean", "rebootcheck"):
                 sw.set_active(False)
-            elif pid == "flatpak-update":
+            elif pid == "flatpak-update" and pid not in self.estados_tareas:
                 sw.set_active(True)
 
     # -- Ejecución ---------------------------------------------------------------
     def _pasos_seleccionados(self):
-        sel = [p[0] for p in PASOS if p[0] in self.switches and self.switches[p[0]][0].get_active()]
+        sel = [
+            p[0] for p in PASOS
+            if p[0] in self.switches
+            and p[0] not in self.estados_tareas
+            and self.switches[p[0]][0].get_active()
+        ]
         # La instalación/actualización de Flatpak no tiene sentido sin soporte Flatpak
         return sel
 
@@ -486,6 +639,33 @@ class VentanaPrincipal(Gtk.Window):
                           "No se encuentra %s.\nReinstala el paquete aio-debian-gui." % helper)
             return
 
+        if ("backports-kernel-mesa" in pasos and
+                not helper_admite_tarea(helper, "backports-kernel-mesa")):
+            self._mensaje(
+                Gtk.MessageType.ERROR, "Asistente del sistema desactualizado",
+                "El asistente instalado no incluye la tarea de Backports. "
+                "Actualiza el paquete .deb a la versión 1.0.7 o posterior.",
+            )
+            return
+
+        if "backports-kernel-mesa" in pasos:
+            d = Gtk.MessageDialog(
+                transient_for=self, modal=True, message_type=Gtk.MessageType.WARNING,
+                buttons=Gtk.ButtonsType.OK_CANCEL,
+                text="¿Instalar el kernel y Mesa desde Debian Backports?",
+            )
+            d.format_secondary_text(
+                "Se instalará el kernel de Backports para esta arquitectura y los controladores "
+                "Mesa disponibles. Esto puede actualizar componentes gráficos y requerir un "
+                "reinicio. Si falta, se añadirá la fuente oficial de Debian Backports."
+            )
+            confirmar = d.run() == Gtk.ResponseType.OK
+            d.destroy()
+            if not confirmar:
+                self.switches["backports-kernel-mesa"][0].set_active(False)
+                self.estado.set_text("Instalación desde Backports cancelada.")
+                return
+
         lang = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or "C"
         cmd = ["pkexec", helper, "--lang", lang] + pasos
 
@@ -494,10 +674,15 @@ class VentanaPrincipal(Gtk.Window):
         self.hubo_errores = False
         self.fin_recibido = False
         self.terminado_gestionado = False
+        self.cancelacion_autorizacion = None
         self.total_pasos = len(pasos)
         self._poner_ocupado(True)
         self.estado.set_text("Esperando autenticación de administrador…")
         self._escribir("[*] Solicitando autorización de administrador…\n", "info")
+        self._escribir(
+            "[*] Si no aparece el diálogo, cancela la espera y comprueba el agente de Polkit.\n",
+            "info",
+        )
         self.barra.set_fraction(0)
         self.barra.set_text("")
         self.barra.set_show_text(False)
@@ -512,6 +697,7 @@ class VentanaPrincipal(Gtk.Window):
             return
 
         self.flujo = Gio.DataInputStream.new(self.proceso.get_stdout_pipe())
+        self._iniciar_espera_autorizacion()
         self._leer_linea()
 
     def _cambiar_sin_contrasena(self, boton):
@@ -556,6 +742,7 @@ class VentanaPrincipal(Gtk.Window):
         lang = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or "C"
         self.configurando_sin_contrasena = habilitar
         self.terminado_gestionado = False
+        self.cancelacion_autorizacion = None
         self._poner_ocupado(True)
         self.buf.set_text("")
         self.estado.set_text("Esperando autorización de administrador…")
@@ -576,6 +763,7 @@ class VentanaPrincipal(Gtk.Window):
             return
 
         self.flujo = Gio.DataInputStream.new(self.proceso.get_stdout_pipe())
+        self._iniciar_espera_autorizacion()
         self._leer_linea()
 
     def _restablecer_opcion_sin_contrasena(self, activa):
@@ -585,29 +773,58 @@ class VentanaPrincipal(Gtk.Window):
 
     def _poner_ocupado(self, ocupado):
         self.en_curso = ocupado
-        self.btn_iniciar.set_sensitive(not ocupado)
         self.btn_iniciar.set_label("Trabajando…" if ocupado else "Iniciar tareas")
-        self.chk_sin_contrasena.set_sensitive(not ocupado)
-        for fila in self.filas.values():
-            fila.set_sensitive(not ocupado)
+        self._actualizar_sensibilidad()
         if ocupado:
             self.spinner.start()
         else:
             self.spinner.stop()
+
+    def _iniciar_espera_autorizacion(self):
+        self.esperando_autorizacion = True
+        self.btn_cancelar.show()
+        self.timeout_autorizacion_id = GLib.timeout_add_seconds(
+            90, self._agotamiento_autorizacion
+        )
+
+    def _finalizar_espera_autorizacion(self):
+        self.esperando_autorizacion = False
+        self.btn_cancelar.hide()
+        if self.timeout_autorizacion_id is not None:
+            GLib.source_remove(self.timeout_autorizacion_id)
+            self.timeout_autorizacion_id = None
+
+    def _cancelar_espera_autorizacion(self, _boton=None, agotada=False):
+        if not self.esperando_autorizacion or self.proceso is None:
+            return
+        self.cancelacion_autorizacion = "agotada" if agotada else "cancelada"
+        self._finalizar_espera_autorizacion()
+        self.estado.set_text("Cancelando la espera de autorización…")
+        self._escribir(
+            "[-] Se canceló la espera de autorización de administrador.\n", "error"
+        )
+        self.proceso.force_exit()
+
+    def _agotamiento_autorizacion(self):
+        self.timeout_autorizacion_id = None
+        self._cancelar_espera_autorizacion(agotada=True)
+        return GLib.SOURCE_REMOVE
 
     def _leer_linea(self):
         self.flujo.read_line_async(GLib.PRIORITY_DEFAULT, None, self._linea_leida)
 
     def _linea_leida(self, flujo, res):
         try:
-            r = flujo.read_line_finish(res)
+            r = flujo.read_line_finish_utf8(res)
             datos = r[0] if isinstance(r, tuple) else r
         except GLib.Error:
             datos = None
         if datos is None:
+            self._finalizar_espera_autorizacion()
             self.proceso.wait_async(None, self._proceso_terminado)
             return
-        texto = bytes(datos).decode("utf-8", errors="replace")
+        self._finalizar_espera_autorizacion()
+        texto = datos
         # apt/flatpak pueden usar \r para repintar: nos quedamos con el último trozo
         texto = ANSI.sub("", texto.split("\r")[-1]).rstrip()
         self._procesar(texto)
@@ -659,9 +876,12 @@ class VentanaPrincipal(Gtk.Window):
         if self.terminado_gestionado:
             return
         self.terminado_gestionado = True
+        self._finalizar_espera_autorizacion()
+        cancelacion = self.cancelacion_autorizacion
+        self.cancelacion_autorizacion = None
         try:
             proc.wait_finish(res)
-            codigo = proc.get_exit_status()
+            codigo = proc.get_exit_status() if proc.get_if_exited() else -1
         except GLib.Error:
             codigo = -1
 
@@ -671,7 +891,15 @@ class VentanaPrincipal(Gtk.Window):
             self._poner_ocupado(False)
             activa = autorizacion_sin_contrasena_activa()
             self._restablecer_opcion_sin_contrasena(activa)
-            if codigo == 0 and activa == deseada:
+            if cancelacion:
+                self.estado.set_text(
+                    "Espera de autorización agotada."
+                    if cancelacion == "agotada" else "Espera de autorización cancelada."
+                )
+                self._escribir(
+                    "[-] No se cambió la preferencia de autorización.\n", "error"
+                )
+            elif codigo == 0 and activa == deseada:
                 self.estado.set_text(
                     "Autorización sin contraseña activada."
                     if activa else "Autorización sin contraseña desactivada."
@@ -697,7 +925,17 @@ class VentanaPrincipal(Gtk.Window):
         self._poner_ocupado(False)
         self.barra.set_show_text(False)
 
-        if codigo == 0 and not self.hubo_errores:
+        if cancelacion:
+            self.estado.set_text(
+                "Espera de autorización agotada."
+                if cancelacion == "agotada" else "Espera de autorización cancelada."
+            )
+            self._escribir(
+                "[-] No se ejecutó ninguna tarea. Comprueba el agente de autenticación de Polkit.\n",
+                "error",
+            )
+            return
+        if codigo == 0 and self.fin_recibido and not self.hubo_errores:
             self.barra.set_fraction(1.0)
             self.estado.set_text("✔ ¡Mantenimiento completado con éxito!")
             self._escribir("\n==================================================\n"
@@ -714,6 +952,7 @@ class VentanaPrincipal(Gtk.Window):
 
         if self.necesita_reinicio:
             self._preguntar_reinicio()
+        self._consultar_estados_tareas()
 
     def _preguntar_reinicio(self):
         d = Gtk.MessageDialog(
@@ -777,6 +1016,7 @@ def main():
     win = VentanaPrincipal()
     win.connect("destroy", Gtk.main_quit)
     win.show_all()
+    win._consultar_estados_tareas(inicial=True)
     Gtk.main()
 
 
