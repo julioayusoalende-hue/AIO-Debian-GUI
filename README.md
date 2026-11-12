@@ -5,6 +5,8 @@ Interfaz gráfica de mantenimiento y configuración todo en uno para Debian.
 - Actualiza el sistema con apt (`update`, `dist-upgrade`, `autoremove`, `autoclean`).
 - Habilita `contrib` y `non-free`.
 - Instala herramientas auxiliares, incluido el soporte FUSE para AppImage.
+- Permite instalar opcionalmente el kernel y los controladores Mesa desde Debian Backports.
+- Indica si las tareas de repositorios, herramientas y Backports ya están completadas.
 - Sincroniza el reloj, instala Flatpak + Flathub y actualiza las apps Flatpak.
 - Complementos para GNOME (plugin Flatpak de GNOME Software, Extension Manager).
 - Comprueba si hace falta reiniciar y lo ofrece al terminar.
@@ -44,9 +46,9 @@ en el sistema `python3-gi`, GTK 3, `pkexec`, APT y FUSE 2 (`libfuse2` en Debian 
 `libfuse2t64` en Debian 13). No hace falta instalar el `.deb`. Si hay un asistente instalado
 por el paquete `.deb`, el AppImage reutiliza ese asistente para respetar la ruta fija de Polkit,
 aunque sea de otra versión. Las tareas normales dependen de las funciones disponibles en ese
-asistente. La opción de autorización sin contraseña requiere que el asistente del sistema incluya
-esa función (v1.0.6 o superior). Si no hay `.deb` instalado, el AppImage usa e instala su
-asistente y política tras una autorización inicial.
+asistente. La tarea de kernel y Mesa desde Backports requiere que incluya esa función (v1.0.7 o
+superior); la autorización sin contraseña requiere v1.0.6 o superior. Si no hay `.deb` instalado,
+el AppImage usa e instala su asistente y política tras una autorización inicial.
 
 ```bash
 chmod +x aio-debian-gui_*_x86_64.AppImage
@@ -74,7 +76,13 @@ de autorización sin contraseña queda desactivada inicialmente; al activarla, s
 autorización una vez y se crea una regla persistente de Polkit para el usuario actual, limitada
 al asistente de AiO en sesiones locales activas. Desactívala desde la misma opción para revocarla.
 Mientras esté activa, todas las tareas de mantenimiento de AiO podrán ejecutarse como
-administrador sin volver a pedir contraseña.
+administrador sin volver a pedir contraseña. La instalación del kernel y Mesa desde Backports
+también está desactivada por defecto; al activarla, puede añadirse la fuente oficial
+`<codename>-backports` y puede ser necesario reiniciar después.
+Las tareas de repositorios, herramientas, Backports y complementos de GNOME se marcan cuando ya
+están completas y su selector queda desactivado; el estado se vuelve a comprobar al abrir la
+aplicación. Si la espera de autorización de Polkit no responde, puede cancelarse desde la interfaz
+y se cancela automáticamente tras 90 segundos.
 
 ## Estructura
 

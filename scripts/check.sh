@@ -50,4 +50,91 @@ V=$(sed -n 's/^Version: //p' package/DEBIAN/control)
 grep -q "\"$V\":" "$GUI"   && bien "novedad $V en la GUI"      || fallo "falta la novedad $V en $GUI (NOVEDADES)"
 grep -q "^## $V" CHANGELOG.md && bien "entrada $V en CHANGELOG.md" || fallo "falta '## $V' en CHANGELOG.md"
 
+if grep -Fq '("backports-kernel-mesa",' "$GUI" &&
+   grep -Fq 'helper_admite_tarea(helper, "backports-kernel-mesa")' "$GUI" &&
+   grep -Fq 'paso_backports_kernel_mesa()' "$HELPER" &&
+   grep -Fq '[backports-kernel-mesa]=' "$HELPER"; then
+    bien "tarea de kernel y Mesa Backports conectada entre GUI y asistente"
+else
+    fallo "la tarea de kernel y Mesa Backports no está conectada"
+fi
+
+ESTADOS=$(bash "$HELPER" --status) || {
+    fallo "consulta de estado de tareas"
+    ESTADOS=""
+}
+for tarea in repos tools backports-kernel-mesa gnome-plugin ext-manager; do
+    printf '%s\n' "$ESTADOS" | grep -Eq "^##STATUS:${tarea}:[01]$" ||
+        fallo "falta un estado válido para la tarea $tarea"
+done
+
+TMP_TEST=$(mktemp -d)
+trap 'rm -rf -- "$TMP_TEST"' EXIT
+mkdir -p "$TMP_TEST/apt/sources.list.d"
+printf '%s\n' "Types: deb" "URIs: http://deb.debian.org/debian" \
+    "Suites: trixie" "Components: main" > "$TMP_TEST/apt/sources.list.d/test.sources"
+if bash -c '
+    source "$1"
+    estado_repos "$2" && exit 1
+    printf "%s\n" "Types: deb" "URIs: http://deb.debian.org/debian" \
+        "Suites: trixie" "Components: main contrib non-free" \
+        > "$2/sources.list.d/test.sources"
+    estado_repos "$2"
+' _ "$HELPER" "$TMP_TEST/apt"; then
+    bien "estado de repositorios distingue configuración incompleta y completa"
+else
+    fallo "estado de repositorios incorrecto"
+fi
+
+if bash -c '
+    source "$1"
+    paquete_instalado() {
+        case "$1" in
+            needrestart|fastfetch|kitty|synaptic|libfuse2t64) return 0 ;;
+            *) return 1 ;;
+        esac
+    }
+    estado_tools || exit 1
+    paquete_instalado() {
+        case "$1" in
+            synaptic) return 1 ;;
+            *) return 0 ;;
+        esac
+    }
+    if estado_tools; then exit 1; fi
+' _ "$HELPER"; then
+    bien "estado de herramientas requiere todos los paquetes y FUSE"
+else
+    fallo "estado de herramientas incorrecto"
+fi
+
+if bash -c '
+    source "$1"
+    debian_backports_codename() { printf "%s\n" trixie; }
+    kernel_backports_package() { printf "%s\n" linux-image-amd64; }
+    paquete_disponible_en_suite() { return 0; }
+    paquete_instalado_en_suite() { return 0; }
+    estado_backports || exit 1
+    paquete_instalado_en_suite() {
+        [ "$1" != libgl1-mesa-dri ]
+    }
+    if estado_backports; then exit 1; fi
+' _ "$HELPER"; then
+    bien "estado de Backports requiere kernel y Mesa instalados desde la suite"
+else
+    fallo "estado de Backports incorrecto"
+fi
+
+if bash -c '
+    source "$1"
+    paquete_instalado() { [ "$1" = gnome-software-plugin-flatpak ]; }
+    estado_gnome_plugin || exit 1
+    paquete_instalado() { [ "$1" = gnome-shell-extension-manager ]; }
+    estado_ext_manager
+' _ "$HELPER"; then
+    bien "estado GNOME comprueba plugin y Extension Manager instalados"
+else
+    fallo "estado de las opciones GNOME incorrecto"
+fi
+
 exit $fallos

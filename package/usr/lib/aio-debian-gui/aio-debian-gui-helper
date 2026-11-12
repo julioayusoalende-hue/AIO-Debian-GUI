@@ -30,6 +30,7 @@ export NEEDRESTART_MODE=l
 APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confold -o Dpkg::Use-Pty=0)
 
 LISTAS_ACTUALIZADAS=0
+REINICIO_REQUERIDO=0
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 POLKIT_RULES_DIR=/etc/polkit-1/rules.d
@@ -197,6 +198,99 @@ paquete_appimage() {
     return 1
 }
 
+debian_backports_codename() {
+    local distro codename
+    . /etc/os-release
+    distro=${ID:-}
+    codename=${VERSION_CODENAME:-}
+    if [ "$distro" != "debian" ]; then
+        err "La instalación del kernel desde Backports solo está disponible en Debian."
+        return 1
+    fi
+    if [[ ! "$codename" =~ ^[a-z][a-z0-9-]*$ ]]; then
+        err "No se pudo determinar de forma segura la versión de Debian."
+        return 1
+    fi
+    printf '%s\n' "$codename"
+}
+
+kernel_backports_package() {
+    case "$(dpkg --print-architecture)" in
+        amd64)   printf '%s\n' linux-image-amd64 ;;
+        arm64)   printf '%s\n' linux-image-arm64 ;;
+        armhf)   printf '%s\n' linux-image-armmp ;;
+        i386)    printf '%s\n' linux-image-686-pae ;;
+        ppc64el) printf '%s\n' linux-image-powerpc64le ;;
+        riscv64) printf '%s\n' linux-image-riscv64 ;;
+        s390x)   printf '%s\n' linux-image-s390x ;;
+        *)
+            err "La arquitectura $(dpkg --print-architecture) no tiene un kernel Backports compatible configurado."
+            return 1
+            ;;
+    esac
+}
+
+paquete_disponible_en_suite() {
+    local paquete="$1" suite="$2"
+    apt-cache madison "$paquete" 2>/dev/null |
+        awk -F'|' -v suite="$suite" 'index($3, suite "/") { disponible=1 } END { exit !disponible }'
+}
+
+asegurar_fuente_backports() {
+    local suite="$1"
+    local dir=/etc/apt/sources.list.d
+    local archivo="$dir/aio-debian-gui-backports.sources"
+    local temporal
+
+    if [ -e "$archivo" ]; then
+        if grep -Fxq "Types: deb" "$archivo" &&
+           grep -Fxq "URIs: http://deb.debian.org/debian" "$archivo" &&
+           grep -Fxq "Suites: $suite" "$archivo" &&
+           grep -Fxq "Components: main" "$archivo" &&
+           grep -Fxq "Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg" "$archivo"; then
+            return 0
+        fi
+        err "$archivo existe, pero no coincide con la fuente Backports gestionada por AiO."
+        return 1
+    fi
+
+    if ! install -d -o root -g root -m 0755 "$dir"; then
+        err "No se pudo preparar el directorio de repositorios APT."
+        return 1
+    fi
+    temporal=$(mktemp "$dir/.aio-debian-gui-backports.XXXXXX") || {
+        err "No se pudo crear la fuente de Debian Backports."
+        return 1
+    }
+    if ! cat > "$temporal" <<EOF
+Types: deb
+URIs: http://deb.debian.org/debian
+Suites: $suite
+Components: main
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+EOF
+    then
+        rm -f -- "$temporal"
+        err "No se pudo escribir la fuente de Debian Backports."
+        return 1
+    fi
+    if ! chmod 0644 "$temporal" || ! chown root:root "$temporal" || ! mv -f -- "$temporal" "$archivo"; then
+        rm -f -- "$temporal"
+        err "No se pudo activar la fuente de Debian Backports."
+        return 1
+    fi
+    LISTAS_ACTUALIZADAS=0
+    info "Se añadió la fuente oficial $suite."
+}
+
+versiones_paquetes() {
+    local paquete version
+    for paquete in "$@"; do
+        version=$(dpkg-query -W -f='${Version}' "$paquete" 2>/dev/null || true)
+        printf '%s=%s\n' "$paquete" "$version"
+    done
+}
+
 # Añade 'contrib' y 'non-free' a los repositorios oficiales de Debian
 # Soporta formato clásico (.list) y deb822 (.sources)
 anadir_componentes() {
@@ -294,6 +388,49 @@ paso_repos() {
     fi
 }
 
+fuente_debian_relevante() {
+    local f="$1"
+    case "$f" in
+        *.sources)
+            grep -qiE '^URIs:.*(debian\.org|/debian/?([[:space:]]|$))' "$f" &&
+                grep -qE '^Components:.*(^|[[:space:]])main([[:space:]]|$)' "$f"
+            ;;
+        *.list)
+            grep -qE '^[[:space:]]*deb(-src)?[[:space:]].*(debian\.org|/debian/?[[:space:]]).*([[:space:]])main([[:space:]]|$)' "$f"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+estado_repos() {
+    local root="${1:-/etc/apt}" f temporal relevantes=0 pendientes=0 indice=0
+    local -a fuentes
+    shopt -s nullglob
+    fuentes=("$root/sources.list" "$root"/sources.list.d/*.list "$root"/sources.list.d/*.sources)
+    shopt -u nullglob
+
+    temporal=$(mktemp -d) || return 1
+    for f in "${fuentes[@]}"; do
+        [ -f "$f" ] || continue
+        fuente_debian_relevante "$f" || continue
+        relevantes=1
+        indice=$((indice + 1))
+        local copia="$temporal/$indice-$(basename "$f")"
+        if ! cp -- "$f" "$copia"; then
+            rm -rf -- "$temporal"
+            return 1
+        fi
+        if anadir_componentes "$copia"; then
+            pendientes=1
+            break
+        fi
+    done
+    rm -rf -- "$temporal"
+    [ "$relevantes" -eq 1 ] && [ "$pendientes" -eq 0 ]
+}
+
 paso_tools() {
     asegurar_listas || return 1
     local r=0
@@ -313,6 +450,108 @@ paso_tools() {
         fi
     fi
     return $r
+}
+
+estado_tools() {
+    local paquete
+    for paquete in needrestart fastfetch kitty synaptic; do
+        paquete_instalado "$paquete" || return 1
+    done
+    paquete_instalado libfuse2 || paquete_instalado libfuse2t64
+}
+
+paso_backports_kernel_mesa() {
+    local codename suite kernel paquete apt_status antes despues
+    local -a paquetes especificaciones
+
+    codename=$(debian_backports_codename) || return 1
+    suite="${codename}-backports"
+    kernel=$(kernel_backports_package) || return 1
+    asegurar_listas || return 1
+
+    if ! paquete_disponible_en_suite "$kernel" "$suite" ||
+       ! paquete_disponible_en_suite libgl1-mesa-dri "$suite"; then
+        asegurar_fuente_backports "$suite" || return 1
+        asegurar_listas || return 1
+    fi
+    if ! paquete_disponible_en_suite "$kernel" "$suite"; then
+        err "No se encontró $kernel en $suite para esta arquitectura."
+        return 1
+    fi
+    if ! paquete_disponible_en_suite libgl1-mesa-dri "$suite"; then
+        err "No se encontró libgl1-mesa-dri en $suite."
+        return 1
+    fi
+
+    paquetes=("$kernel" libgl1-mesa-dri)
+    for paquete in mesa-vulkan-drivers mesa-va-drivers mesa-vdpau-drivers; do
+        if paquete_disponible_en_suite "$paquete" "$suite"; then
+            paquetes+=("$paquete")
+        else
+            info "'$paquete' no está disponible en $suite; se omitirá."
+        fi
+    done
+
+    especificaciones=()
+    for paquete in "${paquetes[@]}"; do
+        especificaciones+=("$paquete/$suite")
+    done
+    antes=$(versiones_paquetes "${paquetes[@]}")
+
+    info "Instalando el kernel y los controladores Mesa desde $suite..."
+    if apt-get "${APT_OPTS[@]}" -t "$suite" install "${especificaciones[@]}"; then
+        apt_status=0
+    else
+        apt_status=$?
+    fi
+
+    despues=$(versiones_paquetes "${paquetes[@]}")
+    if [ "$antes" != "$despues" ]; then
+        REINICIO_REQUERIDO=1
+        echo "##REBOOT:1"
+    fi
+    if [ "$apt_status" -ne 0 ]; then
+        err "No se pudieron instalar el kernel y los controladores Mesa desde $suite."
+        return 1
+    fi
+
+    if [ "$REINICIO_REQUERIDO" -eq 1 ]; then
+        ok "Kernel y controladores Mesa instalados desde $suite. Se recomienda reiniciar."
+    else
+        ok "El kernel y los controladores Mesa de $suite ya estaban al día."
+    fi
+}
+
+paquete_instalado_en_suite() {
+    local paquete="$1" suite="$2" instalado
+    paquete_instalado "$paquete" || return 1
+    instalado=$(dpkg-query -W -f='${Version}' "$paquete" 2>/dev/null) || return 1
+    [ -n "$instalado" ] || return 1
+    apt-cache madison "$paquete" 2>/dev/null |
+        awk -F'|' -v version="$instalado" -v suite="$suite" '
+            {
+                actual=$2
+                gsub(/^[ \t]+|[ \t]+$/, "", actual)
+                if (actual == version && index($3, suite "/")) encontrado=1
+            }
+            END { exit !encontrado }
+        '
+}
+
+estado_backports() {
+    local codename suite kernel paquete
+    codename=$(debian_backports_codename 2>/dev/null) || return 1
+    suite="${codename}-backports"
+    kernel=$(kernel_backports_package 2>/dev/null) || return 1
+
+    for paquete in "$kernel" libgl1-mesa-dri; do
+        paquete_instalado_en_suite "$paquete" "$suite" || return 1
+    done
+    for paquete in mesa-vulkan-drivers mesa-va-drivers mesa-vdpau-drivers; do
+        if paquete_disponible_en_suite "$paquete" "$suite"; then
+            paquete_instalado_en_suite "$paquete" "$suite" || return 1
+        fi
+    done
 }
 
 paso_flatpak_setup() {
@@ -388,6 +627,14 @@ paso_ext_manager() {
     fi
 }
 
+estado_gnome_plugin() {
+    paquete_instalado gnome-software-plugin-flatpak
+}
+
+estado_ext_manager() {
+    paquete_instalado gnome-shell-extension-manager
+}
+
 paso_upgrade() {
     asegurar_listas || return 1
     info "Actualizando los paquetes del sistema (apt-get dist-upgrade)..."
@@ -425,7 +672,7 @@ paso_flatpak_update() {
 }
 
 paso_rebootcheck() {
-    local necesita=0 salida=""
+    local necesita="$REINICIO_REQUERIDO" salida=""
 
     [ -f /var/run/reboot-required ] && necesita=1
 
@@ -460,6 +707,7 @@ declare -A TITULOS=(
     [clock]="Sincronizar el reloj"
     [repos]="Habilitar contrib y non-free"
     [tools]="Instalar herramientas auxiliares"
+    [backports-kernel-mesa]="Instalar kernel y Mesa desde Backports"
     [flatpak-setup]="Instalar Flatpak y Flathub"
     [gnome-plugin]="Plugin Flatpak para GNOME Software"
     [ext-manager]="Extension Manager de GNOME"
@@ -470,9 +718,32 @@ declare -A TITULOS=(
     [rebootcheck]="Comprobar si hace falta reiniciar"
 )
 # Pasos cuyo fallo detiene la ejecución (el resto solo se anota)
-CRITICOS=" upgrade "
+CRITICOS=" upgrade backports-kernel-mesa "
+
+mostrar_estados() {
+    local tarea funcion
+    for tarea in repos tools backports-kernel-mesa gnome-plugin ext-manager; do
+        case "$tarea" in
+            repos) funcion=estado_repos ;;
+            tools) funcion=estado_tools ;;
+            backports-kernel-mesa) funcion=estado_backports ;;
+            gnome-plugin) funcion=estado_gnome_plugin ;;
+            ext-manager) funcion=estado_ext_manager ;;
+        esac
+        if "$funcion"; then
+            printf '##STATUS:%s:1\n' "$tarea"
+        else
+            printf '##STATUS:%s:0\n' "$tarea"
+        fi
+    done
+}
 
 main() {
+    if [ "${1:-}" = "--status" ] && [ "$#" -eq 1 ]; then
+        mostrar_estados
+        return 0
+    fi
+
     if [ "$EUID" -ne 0 ]; then
         err "Este asistente debe ejecutarse con privilegios de administrador." >&2
         exit 1
