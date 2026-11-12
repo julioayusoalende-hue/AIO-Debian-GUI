@@ -30,10 +30,130 @@ export NEEDRESTART_MODE=l
 APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confold -o Dpkg::Use-Pty=0)
 
 LISTAS_ACTUALIZADAS=0
+SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
+SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
+POLKIT_RULES_DIR=/etc/polkit-1/rules.d
 
 # ------------------------------------------------------------------------------
 # Utilidades
 # ------------------------------------------------------------------------------
+pkexec_uid() {
+    local uid="${PKEXEC_UID:-}"
+    if [[ ! "$uid" =~ ^[1-9][0-9]*$ ]]; then
+        err "No se pudo determinar el usuario que solicitó la autorización."
+        return 1
+    fi
+    printf '%s\n' "$uid"
+}
+
+pkexec_username() {
+    local uid entry username
+    uid=$(pkexec_uid) || return 1
+    entry=$(getent passwd "$uid") || {
+        err "No se pudo consultar la cuenta del usuario."
+        return 1
+    }
+    username=${entry%%:*}
+    if [[ ! "$username" =~ ^[A-Za-z0-9_.-]+[$]?$ ]]; then
+        err "El nombre de usuario contiene caracteres no admitidos."
+        return 1
+    fi
+    printf '%s\n' "$username"
+}
+
+instalar_componentes_polkit() {
+    local source_helper="${BASH_SOURCE[0]}" source_dir source_policy
+    source_dir=$(cd -- "$(dirname -- "$source_helper")" && pwd) || return 1
+    source_policy="$source_dir/../../share/polkit-1/actions/es.aiodebian.gui.policy"
+    [ -f "$source_policy" ] || source_policy=$SYSTEM_POLICY
+    [ -f "$source_policy" ] || {
+        err "No se encontró la política polkit de AiO Debian GUI."
+        return 1
+    }
+
+    if paquete_instalado aio-debian-gui; then
+        if [ -f "$SYSTEM_HELPER" ] && ! cmp -s "$source_helper" "$SYSTEM_HELPER"; then
+            err "La versión del AppImage no coincide con el paquete .deb instalado. Actualiza ambos antes de activar esta opción."
+            return 1
+        fi
+        if [ -f "$SYSTEM_POLICY" ] && ! cmp -s "$source_policy" "$SYSTEM_POLICY"; then
+            err "La política del paquete .deb no coincide con el AppImage. Actualiza ambos antes de activar esta opción."
+            return 1
+        fi
+    fi
+
+    if ! install -d -o root -g root -m 0755 \
+        "$(dirname "$SYSTEM_HELPER")" "$(dirname "$SYSTEM_POLICY")"; then
+        err "No se pudieron preparar los directorios de AiO Debian GUI."
+        return 1
+    fi
+    if [ ! -f "$SYSTEM_HELPER" ] || ! cmp -s "$source_helper" "$SYSTEM_HELPER"; then
+        if ! install -o root -g root -m 0755 "$source_helper" "$SYSTEM_HELPER"; then
+            err "No se pudo instalar el asistente de AiO Debian GUI."
+            return 1
+        fi
+    fi
+    if ! cmp -s "$source_policy" "$SYSTEM_POLICY"; then
+        if ! install -o root -g root -m 0644 "$source_policy" "$SYSTEM_POLICY"; then
+            err "No se pudo instalar la política polkit de AiO Debian GUI."
+            return 1
+        fi
+    fi
+}
+
+habilitar_sin_contrasena() {
+    local uid username rule_file temp
+    uid=$(pkexec_uid) || return 1
+    username=$(pkexec_username) || return 1
+    instalar_componentes_polkit || return 1
+    if ! install -d -o root -g root -m 0755 "$POLKIT_RULES_DIR"; then
+        err "No se pudo preparar el directorio de reglas polkit."
+        return 1
+    fi
+    rule_file="$POLKIT_RULES_DIR/50-aiodebian-gui-${uid}.rules"
+    temp=$(mktemp "$POLKIT_RULES_DIR/.aiodebian-gui-${uid}.XXXXXX") || {
+        err "No se pudo crear la regla polkit."
+        return 1
+    }
+    if ! generar_regla_polkit "$username" > "$temp"; then
+        rm -f -- "$temp"
+        err "No se pudo escribir la regla polkit."
+        return 1
+    fi
+    if ! chmod 0644 "$temp" || ! chown root:root "$temp" || ! mv -f -- "$temp" "$rule_file"; then
+        rm -f -- "$temp"
+        err "No se pudo activar la regla polkit."
+        return 1
+    fi
+    ok "AiO Debian GUI ya no pedirá la contraseña a este usuario en esta sesión."
+}
+
+generar_regla_polkit() {
+    local username="$1"
+    cat <<EOF
+polkit.addRule(function(action, subject) {
+    if (action.id === "es.aiodebian.gui.mantenimiento" &&
+        action.lookup("program") === "/usr/lib/aio-debian-gui/aio-debian-gui-helper" &&
+        subject.user === "$username" &&
+        subject.local &&
+        subject.active) {
+        return polkit.Result.YES;
+    }
+});
+EOF
+}
+
+deshabilitar_sin_contrasena() {
+    local uid rule_file
+    uid=$(pkexec_uid) || return 1
+    rule_file="$POLKIT_RULES_DIR/50-aiodebian-gui-${uid}.rules"
+    if ! rm -f -- "$rule_file"; then
+        err "No se pudo quitar la regla polkit."
+        return 1
+    fi
+    ok "Se quitó la autorización sin contraseña de AiO Debian GUI."
+}
+
 paquete_instalado() {
     dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q "install ok installed"
 }
@@ -365,6 +485,19 @@ main() {
         fi
         shift; [ $# -gt 0 ] && shift
     fi
+
+    case "${1:-}" in
+        --enable-passwordless)
+            [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --enable-passwordless"; exit 2; }
+            habilitar_sin_contrasena
+            exit $?
+            ;;
+        --disable-passwordless)
+            [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --disable-passwordless"; exit 2; }
+            deshabilitar_sin_contrasena
+            exit $?
+            ;;
+    esac
 
     local pasos=() s
     for s in "$@"; do

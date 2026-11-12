@@ -10,7 +10,9 @@
 
 import calendar
 import datetime
+import json
 import os
+import pwd
 import re
 import shutil
 import subprocess
@@ -22,6 +24,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gio, GLib, Gtk, Pango  # noqa: E402
 
 PRGNAME = "aio-debian-gui"
+POLKIT_ACTION = "es.aiodebian.gui.mantenimiento"
 HELPER = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "../lib/aio-debian-gui/aio-debian-gui-helper")
 )
@@ -34,6 +37,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.0.6": "Permite configurar autorización sin contraseña para este usuario.",
     "1.0.5": "Corrige la autenticación al ejecutar AppImage con el paquete Debian instalado.",
     "1.0.4": "La aplicación también se distribuye como AppImage.",
     "1.0.3": "Las herramientas auxiliares instalan el soporte FUSE necesario para AppImage.",
@@ -93,15 +97,39 @@ def _ejecutar(cmd):
 
 
 def helper_mantenimiento():
-    if not os.environ.get("APPDIR"):
-        return HELPER
-    try:
-        with open(HELPER, "rb") as incluido, open(HELPER_SISTEMA, "rb") as instalado:
-            if incluido.read() == instalado.read():
-                return HELPER_SISTEMA
-    except OSError:
-        pass
+    if os.environ.get("APPDIR") and os.path.isfile(HELPER_SISTEMA):
+        return HELPER_SISTEMA
     return HELPER
+
+
+def helper_admite_autorizacion_sin_contrasena(ruta):
+    try:
+        with open(ruta, encoding="utf-8") as helper:
+            contenido = helper.read()
+    except OSError:
+        return False
+    return (
+        "--enable-passwordless" in contenido
+        and "--disable-passwordless" in contenido
+    )
+
+
+def autorizacion_sin_contrasena_activa():
+    uid = os.getuid()
+    rule_path = "/etc/polkit-1/rules.d/50-aiodebian-gui-%s.rules" % uid
+    try:
+        username = pwd.getpwuid(uid).pw_name
+        with open(rule_path, encoding="utf-8") as regla:
+            contenido = regla.read()
+    except (OSError, KeyError):
+        return False
+    return (
+        ('action.id === "%s"' % POLKIT_ACTION) in contenido
+        and ('action.lookup("program") === "%s"' % HELPER_SISTEMA) in contenido
+        and ("subject.user === %s" % json.dumps(username)) in contenido
+        and "subject.local" in contenido
+        and "subject.active" in contenido
+    )
 
 
 def fecha_instalacion():
@@ -245,6 +273,8 @@ class VentanaPrincipal(Gtk.Window):
         self.hubo_errores = False
         self.fin_recibido = False
         self.terminado_gestionado = False
+        self.configurando_sin_contrasena = None
+        self.actualizando_sin_contrasena = False
         self.switches = {}
         self.filas = {}
 
@@ -374,6 +404,21 @@ class VentanaPrincipal(Gtk.Window):
         cab.pack_end(presets, False, False, 0)
         externa.pack_start(cab, False, False, 0)
 
+        self.chk_sin_contrasena = Gtk.CheckButton(
+            label="No pedir contraseña para las tareas de AiO (solo este usuario)"
+        )
+        self.chk_sin_contrasena.set_tooltip_text(
+            "La activación requiere autorización de administrador una vez. "
+            "Puedes desmarcar esta opción para revocarla."
+        )
+        self.chk_sin_contrasena.set_active(autorizacion_sin_contrasena_activa())
+        self.chk_sin_contrasena.connect("toggled", self._cambiar_sin_contrasena)
+        externa.pack_start(self.chk_sin_contrasena, False, False, 0)
+        externa.pack_start(
+            etiqueta("Permite ejecutar las tareas de AiO sin contraseña en la sesión local activa.", dim=True),
+            False, False, 0,
+        )
+
         for gid, gtitulo in GRUPOS:
             visibles = [p for p in PASOS if p[4] == gid and self._visible(p[0])]
             if not visibles:
@@ -452,6 +497,7 @@ class VentanaPrincipal(Gtk.Window):
         self.total_pasos = len(pasos)
         self._poner_ocupado(True)
         self.estado.set_text("Esperando autenticación de administrador…")
+        self._escribir("[*] Solicitando autorización de administrador…\n", "info")
         self.barra.set_fraction(0)
         self.barra.set_text("")
         self.barra.set_show_text(False)
@@ -468,10 +514,80 @@ class VentanaPrincipal(Gtk.Window):
         self.flujo = Gio.DataInputStream.new(self.proceso.get_stdout_pipe())
         self._leer_linea()
 
+    def _cambiar_sin_contrasena(self, boton):
+        if self.actualizando_sin_contrasena:
+            return
+
+        habilitar = boton.get_active()
+        helper = helper_mantenimiento()
+        if not os.path.exists(helper):
+            self._restablecer_opcion_sin_contrasena(autorizacion_sin_contrasena_activa())
+            self._mensaje(Gtk.MessageType.ERROR, "Falta el asistente",
+                          "No se encuentra %s.\nReinstala el paquete aio-debian-gui." % helper)
+            return
+
+        if not helper_admite_autorizacion_sin_contrasena(helper):
+            self._restablecer_opcion_sin_contrasena(autorizacion_sin_contrasena_activa())
+            self._mensaje(
+                Gtk.MessageType.ERROR, "Función no disponible en el asistente instalado",
+                "El asistente del sistema no incluye la autorización sin contraseña. "
+                "Actualiza el paquete .deb a la versión 1.0.6 o posterior.",
+            )
+            return
+
+        if habilitar:
+            d = Gtk.MessageDialog(
+                transient_for=self, modal=True, message_type=Gtk.MessageType.WARNING,
+                buttons=Gtk.ButtonsType.OK_CANCEL, text="Permitir tareas sin contraseña?",
+            )
+            d.format_secondary_text(
+                "Se instalará una autorización persistente de Polkit para este usuario y "
+                "solo para AiO Debian GUI. Todas las tareas de mantenimiento podrán ejecutarse "
+                "como administrador sin volver a pedir contraseña. La activación requiere "
+                "autorización de administrador una vez; puedes desactivarla desde esta opción."
+            )
+            confirmar = d.run() == Gtk.ResponseType.OK
+            d.destroy()
+            if not confirmar:
+                self._restablecer_opcion_sin_contrasena(False)
+                return
+
+        accion = "--enable-passwordless" if habilitar else "--disable-passwordless"
+        lang = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or "C"
+        self.configurando_sin_contrasena = habilitar
+        self.terminado_gestionado = False
+        self._poner_ocupado(True)
+        self.buf.set_text("")
+        self.estado.set_text("Esperando autorización de administrador…")
+        self._escribir("[*] Solicitando autorización de administrador…\n", "info")
+        self.barra.set_fraction(0)
+        self.barra.set_show_text(False)
+
+        try:
+            self.proceso = Gio.Subprocess.new(
+                ["pkexec", helper, "--lang", lang, accion],
+                Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE,
+            )
+        except GLib.Error as e:
+            self.configurando_sin_contrasena = None
+            self._poner_ocupado(False)
+            self._restablecer_opcion_sin_contrasena(autorizacion_sin_contrasena_activa())
+            self._mensaje(Gtk.MessageType.ERROR, "No se pudo iniciar", str(e.message))
+            return
+
+        self.flujo = Gio.DataInputStream.new(self.proceso.get_stdout_pipe())
+        self._leer_linea()
+
+    def _restablecer_opcion_sin_contrasena(self, activa):
+        self.actualizando_sin_contrasena = True
+        self.chk_sin_contrasena.set_active(activa)
+        self.actualizando_sin_contrasena = False
+
     def _poner_ocupado(self, ocupado):
         self.en_curso = ocupado
         self.btn_iniciar.set_sensitive(not ocupado)
         self.btn_iniciar.set_label("Trabajando…" if ocupado else "Iniciar tareas")
+        self.chk_sin_contrasena.set_sensitive(not ocupado)
         for fila in self.filas.values():
             fila.set_sensitive(not ocupado)
         if ocupado:
@@ -548,6 +664,35 @@ class VentanaPrincipal(Gtk.Window):
             codigo = proc.get_exit_status()
         except GLib.Error:
             codigo = -1
+
+        if self.configurando_sin_contrasena is not None:
+            deseada = self.configurando_sin_contrasena
+            self.configurando_sin_contrasena = None
+            self._poner_ocupado(False)
+            activa = autorizacion_sin_contrasena_activa()
+            self._restablecer_opcion_sin_contrasena(activa)
+            if codigo == 0 and activa == deseada:
+                self.estado.set_text(
+                    "Autorización sin contraseña activada."
+                    if activa else "Autorización sin contraseña desactivada."
+                )
+                self._escribir(
+                    "[✔] Preferencia de autorización actualizada.\n", "ok"
+                )
+            elif codigo in (126, 127):
+                self.estado.set_text("No se cambió la autorización.")
+                self._escribir(
+                    "[-] Autorización cancelada o denegada; no se cambió la preferencia.\n",
+                    "error",
+                )
+            else:
+                self.estado.set_text("No se pudo cambiar la autorización.")
+                self._escribir(
+                    "[-] No se pudo actualizar la preferencia de autorización (código %s).\n"
+                    % codigo,
+                    "error",
+                )
+            return
 
         self._poner_ocupado(False)
         self.barra.set_show_text(False)
