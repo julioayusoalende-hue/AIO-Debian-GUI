@@ -47,6 +47,8 @@ install -m 755 package/usr/lib/aio-debian-gui/aio-debian-gui-helper \
     "$APPDIR/usr/lib/aio-debian-gui/aio-debian-gui-helper"
 install -m 644 package/usr/share/aio-debian-gui/debian-openlogo.png \
     "$APPDIR/usr/share/aio-debian-gui/debian-openlogo.png"
+install -m 644 package/usr/share/aio-debian-gui/adri-y-lu.jpg \
+    "$APPDIR/usr/share/aio-debian-gui/adri-y-lu.jpg"
 install -m 644 package/usr/share/doc/aio-debian-gui/copyright \
     "$APPDIR/usr/share/doc/aio-debian-gui/copyright"
 install -m 644 package/usr/share/polkit-1/actions/es.aiodebian.gui.policy \

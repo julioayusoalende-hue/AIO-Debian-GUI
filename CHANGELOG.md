@@ -4,6 +4,10 @@ Al publicar una versión nueva: sube `Version` en `package/DEBIAN/control`, aña
 novedad en `NOVEDADES` (`package/usr/bin/aio-debian-gui`) y una sección `## X.Y.Z` aquí.
 `scripts/check.sh` lo verifica.
 
+## 1.0.13
+Amplía el crédito del autor y añade un enlace a una ventana con una foto y una dedicatoria
+personal.
+
 ## 1.0.12
 Corrige la visualización de la consola en modo completo y al desactivar el modo simple.
 

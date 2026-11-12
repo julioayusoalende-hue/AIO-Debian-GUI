@@ -85,6 +85,60 @@ if Gtk.init_check([])[0]:
     ventana = app.VentanaPrincipal(
         {"idioma": "es", "tema": "claro", "modo_simple": False}
     )
+    acerca = ventana._crear_dialogo_acerca_de()
+
+    def widgets_descendientes(widget):
+        yield widget
+        if isinstance(widget, Gtk.Container):
+            for hijo in widget.get_children():
+                yield from widgets_descendientes(hijo)
+
+    credito = next(
+        widget for widget in widgets_descendientes(acerca)
+        if isinstance(widget, Gtk.Label) and widget.get_text() == "© 2026 Julio Ayuso"
+    )
+    assert 'size="large"' in credito.get_label()
+    assert '<a href="aio-debian-gui://inspiracion">Julio Ayuso</a>' in credito.get_label()
+
+    dedicatoria = {}
+
+    def cerrar_dedicatoria():
+        dialogos = [
+            widget for widget in Gtk.Window.list_toplevels()
+            if isinstance(widget, Gtk.Dialog)
+            and widget is not acerca
+            and widget.get_title() == app.traducir("Agradecimiento")
+        ]
+        if not dialogos:
+            return GLib.SOURCE_CONTINUE
+        dialogo = dialogos[-1]
+        try:
+            hijos = list(widgets_descendientes(dialogo))
+            imagenes = [widget for widget in hijos if isinstance(widget, Gtk.Image)]
+            textos = [
+                widget.get_text() for widget in hijos
+                if isinstance(widget, Gtk.Label)
+            ]
+            assert len(imagenes) == 1
+            assert imagenes[0].get_pixbuf() is not None
+            assert "Gracias a Adri y Lu por ser mi inspiración en TODO lo que hago" in textos
+            dedicatoria["visible"] = True
+        except Exception as error:
+            dedicatoria["error"] = error
+        finally:
+            dialogo.response(Gtk.ResponseType.CLOSE)
+        return GLib.SOURCE_REMOVE
+
+    GLib.idle_add(cerrar_dedicatoria)
+    assert credito.emit("activate-link", "aio-debian-gui://inspiracion")
+    assert dedicatoria.get("visible"), dedicatoria
+    assert "error" not in dedicatoria, dedicatoria
+    acerca.destroy()
+    ventana.destroy()
+
+    ventana = app.VentanaPrincipal(
+        {"idioma": "es", "tema": "claro", "modo_simple": False}
+    )
     consulta_original = app.VentanaPrincipal._consultar_estados_tareas
     app.VentanaPrincipal._consultar_estados_tareas = lambda self, inicial=False: None
     ventana.handler_cierre = ventana.connect("destroy", Gtk.main_quit)
@@ -148,4 +202,4 @@ if Gtk.init_check([])[0]:
         app.aplicar_tema("claro")
     app.VentanaPrincipal._consultar_estados_tareas = consulta_original
 
-print("Preference persistence, language translations, and simple mode: OK")
+print("Preference persistence, language translations, about dialog, and simple mode: OK")
