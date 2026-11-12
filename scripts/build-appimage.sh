@@ -40,7 +40,7 @@ ACTUAL_SHA256=$(sha256sum "$RUNTIME_FILE" | awk '{print $1}')
 APPDIR="$STAGE/AppDir"
 mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/lib/aio-debian-gui" \
          "$APPDIR/usr/share/applications" "$APPDIR/usr/share/aio-debian-gui" \
-         "$APPDIR/usr/share/doc/aio-debian-gui"
+         "$APPDIR/usr/share/doc/aio-debian-gui" "$APPDIR/usr/share/polkit-1/actions"
 
 install -m 755 package/usr/bin/aio-debian-gui "$APPDIR/usr/bin/aio-debian-gui"
 install -m 755 package/usr/lib/aio-debian-gui/aio-debian-gui-helper \
@@ -49,6 +49,8 @@ install -m 644 package/usr/share/aio-debian-gui/debian-openlogo.png \
     "$APPDIR/usr/share/aio-debian-gui/debian-openlogo.png"
 install -m 644 package/usr/share/doc/aio-debian-gui/copyright \
     "$APPDIR/usr/share/doc/aio-debian-gui/copyright"
+install -m 644 package/usr/share/polkit-1/actions/es.aiodebian.gui.policy \
+    "$APPDIR/usr/share/polkit-1/actions/es.aiodebian.gui.policy"
 cp -a package/usr/share/icons/hicolor "$APPDIR/usr/share/icons"
 install -m 644 package/usr/share/icons/hicolor/512x512/apps/aio-debian-gui.png \
     "$APPDIR/aio-debian-gui.png"

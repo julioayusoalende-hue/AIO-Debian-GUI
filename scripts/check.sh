@@ -31,6 +31,20 @@ if command -v desktop-file-validate >/dev/null; then
     desktop-file-validate package/usr/share/applications/*.desktop && bien "archivo .desktop" || fallo "archivo .desktop"
 fi
 
+REGLA=$(bash -c 'source "$1"; generar_regla_polkit "test-user"' _ "$HELPER") || {
+    fallo "generación de regla polkit"
+    REGLA=""
+}
+if printf '%s\n' "$REGLA" | grep -Fq 'action.id === "es.aiodebian.gui.mantenimiento"' &&
+   printf '%s\n' "$REGLA" | grep -Fq 'action.lookup("program") === "/usr/lib/aio-debian-gui/aio-debian-gui-helper"' &&
+   printf '%s\n' "$REGLA" | grep -Fq 'subject.user === "test-user"' &&
+   printf '%s\n' "$REGLA" | grep -Fq "subject.local" &&
+   printf '%s\n' "$REGLA" | grep -Fq "subject.active"; then
+    bien "regla polkit limitada al usuario y al asistente de AiO"
+else
+    fallo "la regla polkit no limita correctamente la autorización"
+fi
+
 # La versión del control debe tener su entrada de novedades en la GUI y en el CHANGELOG
 V=$(sed -n 's/^Version: //p' package/DEBIAN/control)
 grep -q "\"$V\":" "$GUI"   && bien "novedad $V en la GUI"      || fallo "falta la novedad $V en $GUI (NOVEDADES)"

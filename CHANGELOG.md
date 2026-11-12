@@ -4,6 +4,15 @@ Al publicar una versión nueva: sube `Version` en `package/DEBIAN/control`, aña
 novedad en `NOVEDADES` (`package/usr/bin/aio-debian-gui`) y una sección `## X.Y.Z` aquí.
 `scripts/check.sh` lo verifica.
 
+## 1.0.6
+Añade una opción para permitir, tras una autorización inicial, tareas sin contraseña
+para el usuario actual y solo en la sesión local activa. El AppImage reutiliza el
+asistente del sistema aunque sea de otra versión; la opción nueva verifica que el
+asistente tenga esa capacidad.
+
+## 1.0.5
+Se corrige la autenticación al ejecutar el AppImage cuando está instalado el paquete Debian.
+
 ## 1.0.4
 La aplicación también se distribuye como AppImage.
 
