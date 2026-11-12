@@ -16,6 +16,9 @@ Se corrige la autenticación al ejecutar el AppImage cuando está instalado el p
 ## 1.0.4
 La aplicación también se distribuye como AppImage.
 
+## 1.0.5
+Se corrige la autenticación al ejecutar el AppImage cuando está instalado el paquete Debian.
+
 ## 1.0.3
 Las herramientas auxiliares instalan el soporte FUSE necesario para ejecutar AppImage.
 
