@@ -37,6 +37,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.0.9": "Los botones de preset resaltan la selección y se desmarcan al cambiar tareas.",
     "1.0.8": "Detecta tareas ya configuradas y permite cancelar una espera de autorización.",
     "1.0.7": "Permite instalar el kernel y los controladores Mesa desde Debian Backports.",
     "1.0.6": "Permite configurar autorización sin contraseña para este usuario.",
@@ -294,6 +295,7 @@ class VentanaPrincipal(Gtk.Window):
         self.consultando_estados = False
         self.estados_tareas = set()
         self.salida_estados = []
+        self.actualizando_preset = False
         self.switches = {}
         self.filas = {}
         self.indicadores = {}
@@ -599,6 +601,7 @@ class VentanaPrincipal(Gtk.Window):
         caja.pack_start(textos, True, True, 0)
         caja.pack_end(indicador, False, False, 0)
         caja.pack_end(sw, False, False, 0)
+        sw.connect("notify::active", self._cambio_switch_preset)
         fila.add(caja)
         self.switches[pid] = (sw, defecto)
         self.filas[pid] = fila
@@ -607,15 +610,37 @@ class VentanaPrincipal(Gtk.Window):
 
     # -- Presets ---------------------------------------------------------------
     def _preset_completo(self, _b):
-        for pid, (sw, defecto) in self.switches.items():
-            sw.set_active(defecto and pid not in self.estados_tareas)
+        self.actualizando_preset = True
+        try:
+            for pid, (sw, defecto) in self.switches.items():
+                sw.set_active(defecto and pid not in self.estados_tareas)
+        finally:
+            self.actualizando_preset = False
+        self._marcar_preset_seleccionado(self.botones_preset[0])
 
     def _preset_flatpak(self, _b):
-        for pid, (sw, _d) in self.switches.items():
-            if pid in ("clock", "repos", "tools", "upgrade", "autoremove", "autoclean", "rebootcheck"):
-                sw.set_active(False)
-            elif pid == "flatpak-update" and pid not in self.estados_tareas:
-                sw.set_active(True)
+        self.actualizando_preset = True
+        try:
+            for pid, (sw, _d) in self.switches.items():
+                if pid in ("clock", "repos", "tools", "upgrade", "autoremove", "autoclean", "rebootcheck"):
+                    sw.set_active(False)
+                elif pid == "flatpak-update" and pid not in self.estados_tareas:
+                    sw.set_active(True)
+        finally:
+            self.actualizando_preset = False
+        self._marcar_preset_seleccionado(self.botones_preset[1])
+
+    def _cambio_switch_preset(self, _switch, _propiedad):
+        if not self.actualizando_preset:
+            self._marcar_preset_seleccionado(None)
+
+    def _marcar_preset_seleccionado(self, seleccionado):
+        for boton in self.botones_preset:
+            estilo = boton.get_style_context()
+            if boton is seleccionado:
+                estilo.add_class("suggested-action")
+            else:
+                estilo.remove_class("suggested-action")
 
     # -- Ejecución ---------------------------------------------------------------
     def _pasos_seleccionados(self):

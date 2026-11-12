@@ -11,6 +11,10 @@ el estado y desactiva las tareas completadas.
 Añade un botón para cancelar la espera de Polkit y un límite para evitar que la interfaz
 quede indefinidamente esperando una autorización que no llega.
 
+## 1.0.9
+Los botones «Completo» y «Solo Flatpak» resaltan el preset seleccionado. El resaltado se
+quita si se modifica una tarea individualmente.
+
 ## 1.0.7
 Añade una opción para instalar el kernel de la arquitectura y los controladores Mesa
 disponibles desde Debian Backports. La opción está desactivada por defecto y avisa
