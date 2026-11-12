@@ -28,6 +28,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.0.1": "El botón principal ahora se llama «Iniciar tareas».",
     "1.0.0": "Primera versión independiente de la interfaz gráfica de AiO Debian.",
 }
 
@@ -236,7 +237,7 @@ class VentanaPrincipal(Gtk.Window):
         hb.set_title("AiO Debian")
         hb.set_subtitle("Mantenimiento y configuración del sistema")
 
-        self.btn_iniciar = Gtk.Button(label="Iniciar mantenimiento")
+        self.btn_iniciar = Gtk.Button(label="Iniciar tareas")
         self.btn_iniciar.get_style_context().add_class("suggested-action")
         self.btn_iniciar.connect("clicked", self._iniciar)
         hb.pack_start(self.btn_iniciar)
@@ -271,7 +272,7 @@ class VentanaPrincipal(Gtk.Window):
 
         fila = Gtk.Box(spacing=10)
         self.spinner = Gtk.Spinner()
-        self.estado = etiqueta("Listo. Elige las tareas y pulsa «Iniciar mantenimiento».")
+        self.estado = etiqueta("Listo. Elige las tareas y pulsa «Iniciar tareas».")
         fila.pack_start(self.spinner, False, False, 0)
         fila.pack_start(self.estado, True, True, 0)
         inf.pack_start(fila, False, False, 0)
@@ -436,7 +437,7 @@ class VentanaPrincipal(Gtk.Window):
     def _poner_ocupado(self, ocupado):
         self.en_curso = ocupado
         self.btn_iniciar.set_sensitive(not ocupado)
-        self.btn_iniciar.set_label("Trabajando…" if ocupado else "Iniciar mantenimiento")
+        self.btn_iniciar.set_label("Trabajando…" if ocupado else "Iniciar tareas")
         for fila in self.filas.values():
             fila.set_sensitive(not ocupado)
         if ocupado:
