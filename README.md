@@ -56,6 +56,7 @@ package/                                  árbol que se instala tal cual en el s
   DEBIAN/control                          metadatos y versión
   usr/bin/aio-debian-gui                  interfaz gráfica (GTK 3, se ejecuta como usuario)
   usr/lib/aio-debian-gui/aio-debian-gui-helper   tareas privilegiadas (vía pkexec)
+  usr/share/aio-debian-gui/              logotipo de Debian mostrado en la tarjeta de información
   usr/share/polkit-1/actions/             política de autenticación
 scripts/
   build-deb.sh                            construye dist/aio-debian-gui_X.Y.Z_all.deb

@@ -20,3 +20,13 @@ License: GPL-3+
  .
  On Debian systems, the complete text of the GNU General Public
  License version 3 can be found in /usr/share/common-licenses/GPL-3.
+
+Files: package/usr/share/aio-debian-gui/debian-openlogo.png
+Copyright: 1999 Software in the Public Interest, Inc.
+License: LGPL-3+
+ This is the Debian Open Use Logo without the wordmark. It is available
+ under the GNU Lesser General Public License version 3 or later.
+ .
+ On Debian systems, the complete text of the GNU LGPL version 3 can be
+ found in /usr/share/common-licenses/LGPL-3.
+Comment: Source: https://www.debian.org/logos/openlogo-nd-100.png

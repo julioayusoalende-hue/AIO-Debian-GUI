@@ -24,10 +24,14 @@ from gi.repository import Gio, GLib, Gtk, Pango  # noqa: E402
 PRGNAME = "aio-debian-gui"
 HELPER = "/usr/lib/aio-debian-gui/aio-debian-gui-helper"
 HOMEPAGE = "https://github.com/julioayusoalende-hue/AIO-Debian-GUI"
+DEBIAN_LOGO = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/debian-openlogo.png")
+)
 ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.0.2": "El logotipo de Debian aparece junto a la información del sistema.",
     "1.0.1": "El botón principal ahora se llama «Iniciar tareas».",
     "1.0.0": "Primera versión independiente de la interfaz gráfica de AiO Debian.",
 }
@@ -307,13 +311,21 @@ class VentanaPrincipal(Gtk.Window):
 
         caja.pack_start(etiqueta("<b>Información del sistema</b>", markup=True), False, False, 0)
         filas, version = informacion_sistema()
+        contenido = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18)
         grid = Gtk.Grid(column_spacing=18, row_spacing=4)
         for i, (clave, valor) in enumerate(filas):
             grid.attach(etiqueta(clave, dim=True), 0, i, 1, 1)
             v = etiqueta(valor)
             v.set_selectable(True)
             grid.attach(v, 1, i, 1, 1)
-        caja.pack_start(grid, False, False, 0)
+        contenido.pack_start(grid, True, True, 0)
+
+        logo = Gtk.Image.new_from_file(DEBIAN_LOGO)
+        logo.set_tooltip_text("Logotipo de Debian")
+        logo.set_valign(Gtk.Align.CENTER)
+        logo.get_accessible().set_name("Logotipo de Debian")
+        contenido.pack_end(logo, False, False, 0)
+        caja.pack_start(contenido, False, False, 0)
 
         nov = NOVEDADES.get(version)
         if nov:
