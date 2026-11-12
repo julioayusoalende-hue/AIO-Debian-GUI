@@ -48,7 +48,9 @@ por el paquete `.deb`, el AppImage reutiliza ese asistente para respetar la ruta
 aunque sea de otra versión. Las tareas normales dependen de las funciones disponibles en ese
 asistente. La tarea de kernel y Mesa desde Backports requiere que incluya esa función (v1.0.7 o
 superior); la autorización sin contraseña requiere v1.0.6 o superior. Si no hay `.deb` instalado,
-el AppImage usa e instala su asistente y política tras una autorización inicial.
+el AppImage prepara su asistente en un directorio temporal accesible para Polkit y lo ejecuta
+mediante Bash del sistema; la política y el asistente se instalan al activar la autorización sin
+contraseña.
 
 ```bash
 chmod +x aio-debian-gui_*_x86_64.AppImage
@@ -83,6 +85,9 @@ Las tareas de repositorios, herramientas, Backports y complementos de GNOME se m
 están completas y su selector queda desactivado; el estado se vuelve a comprobar al abrir la
 aplicación. Si la espera de autorización de Polkit no responde, puede cancelarse desde la interfaz
 y se cancela automáticamente tras 90 segundos.
+La comprobación inicial de las tareas se ejecuta en segundo plano: las opciones permanecen
+disponibles mientras se comprueba y el botón de inicio se habilita al terminar. Si la comprobación
+se bloquea, se cancela automáticamente tras 30 segundos.
 El menú superior permite elegir el idioma de la interfaz (español, inglés, francés o chino),
 el tema claro u oscuro y el modo simple, que oculta la salida detallada de las tareas. Las
 preferencias se guardan para el usuario actual; el español, el tema claro y la interfaz completa

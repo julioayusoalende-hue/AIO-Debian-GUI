@@ -4,6 +4,14 @@ Al publicar una versión nueva: sube `Version` en `package/DEBIAN/control`, aña
 novedad en `NOVEDADES` (`package/usr/bin/aio-debian-gui`) y una sección `## X.Y.Z` aquí.
 `scripts/check.sh` lo verifica.
 
+## 1.0.15
+Corrige la autorización desde el AppImage en montajes FUSE: prepara una copia temporal del
+asistente y la ejecuta mediante Bash del sistema para que Polkit no tenga que abrir el montaje.
+
+## 1.0.14
+Mantiene operables las opciones durante la comprobación inicial de tareas y cancela la
+comprobación si tarda más de 30 segundos.
+
 ## 1.0.13
 Amplía el crédito del autor y añade un enlace a una ventana con una foto y una dedicatoria
 personal.
