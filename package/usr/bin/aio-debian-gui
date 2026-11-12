@@ -42,6 +42,8 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.0.15": "Corrige la autorización del asistente incluido en AppImage.",
+    "1.0.14": "Mantiene disponibles las opciones mientras comprueba su estado en segundo plano.",
     "1.0.13": "Añade una dedicatoria personal enlazada en la ventana «Acerca de».",
     "1.0.12": "Corrige la visualización de la salida de consola en modo completo.",
     "1.0.11": "Corrige la visualización del menú de preferencias.",
@@ -510,9 +512,48 @@ def _ejecutar(cmd):
 
 
 def helper_mantenimiento():
+    global _helper_appimage_temporal
     if os.environ.get("APPDIR") and os.path.isfile(HELPER_SISTEMA):
         return HELPER_SISTEMA
+    if os.environ.get("APPDIR"):
+        if _helper_appimage_temporal and os.path.isfile(_helper_appimage_temporal):
+            return _helper_appimage_temporal
+        directorio = tempfile.TemporaryDirectory(
+            prefix="aio-debian-gui-", dir="/tmp"
+        )
+        _directorios_helper_appimage.append(directorio)
+        raiz = directorio.name
+        ruta_helper = os.path.join(
+            raiz, "usr", "lib", "aio-debian-gui", "aio-debian-gui-helper"
+        )
+        ruta_politica = os.path.join(
+            raiz, "usr", "share", "polkit-1", "actions",
+            "es.aiodebian.gui.policy",
+        )
+        os.makedirs(os.path.dirname(ruta_helper), mode=0o755, exist_ok=True)
+        os.makedirs(os.path.dirname(ruta_politica), mode=0o755, exist_ok=True)
+        origen_politica = os.path.normpath(
+            os.path.join(
+                os.path.dirname(HELPER),
+                "../../share/polkit-1/actions/es.aiodebian.gui.policy",
+            )
+        )
+        shutil.copyfile(HELPER, ruta_helper)
+        os.chmod(ruta_helper, 0o755)
+        shutil.copyfile(origen_politica, ruta_politica)
+        _helper_appimage_temporal = ruta_helper
+        return ruta_helper
     return HELPER
+
+
+_directorios_helper_appimage = []
+_helper_appimage_temporal = None
+
+
+def comando_pkexec(helper, lang, *argumentos):
+    if os.environ.get("APPDIR") and helper != HELPER_SISTEMA:
+        return ["pkexec", "/bin/bash", helper, "--lang", lang, *argumentos]
+    return ["pkexec", helper, "--lang", lang, *argumentos]
 
 
 def helper_admite_autorizacion_sin_contrasena(ruta):
@@ -709,6 +750,7 @@ class VentanaPrincipal(Gtk.Window):
         self.cancelacion_autorizacion = None
         self.timeout_autorizacion_id = None
         self.consultando_estados = False
+        self.timeout_estados_id = None
         self.estados_tareas = set()
         self.salida_estados = []
         self.actualizando_preset = False
@@ -1012,7 +1054,20 @@ class VentanaPrincipal(Gtk.Window):
             self._finalizar_consulta_estados(False, str(e.message))
             return
         self.flujo_estados = Gio.DataInputStream.new(self.proceso_estados.get_stdout_pipe())
+        self.timeout_estados_id = GLib.timeout_add_seconds(
+            30, self._consulta_estados_agotada
+        )
         self._leer_linea_estado()
+
+    def _consulta_estados_agotada(self):
+        self.timeout_estados_id = None
+        if not self.consultando_estados:
+            return GLib.SOURCE_REMOVE
+        self.proceso_estados.force_exit()
+        self._finalizar_consulta_estados(
+            False, "La comprobación de tareas superó el límite de 30 segundos."
+        )
+        return GLib.SOURCE_REMOVE
 
     def _leer_linea_estado(self):
         self.flujo_estados.read_line_async(
@@ -1020,6 +1075,8 @@ class VentanaPrincipal(Gtk.Window):
         )
 
     def _linea_estado_leida(self, flujo, res):
+        if not self.consultando_estados:
+            return
         try:
             r = flujo.read_line_finish_utf8(res)
             datos = r[0] if isinstance(r, tuple) else r
@@ -1032,6 +1089,8 @@ class VentanaPrincipal(Gtk.Window):
         self._leer_linea_estado()
 
     def _estados_terminados(self, proceso, res):
+        if not self.consultando_estados:
+            return
         try:
             proceso.wait_finish(res)
             codigo = proceso.get_exit_status()
@@ -1086,6 +1145,9 @@ class VentanaPrincipal(Gtk.Window):
 
     def _finalizar_consulta_estados(self, correcta, detalle=""):
         inicial = self.consulta_inicial
+        if self.timeout_estados_id is not None:
+            GLib.source_remove(self.timeout_estados_id)
+            self.timeout_estados_id = None
         if not correcta:
             self.estados_tareas.clear()
             for indicador in self.indicadores.values():
@@ -1110,8 +1172,8 @@ class VentanaPrincipal(Gtk.Window):
         self._escribir("[!] %s\n" % mensaje, "aviso")
 
     def _actualizar_sensibilidad(self):
-        disponible = not self.en_curso and not self.consultando_estados
-        self.btn_iniciar.set_sensitive(disponible)
+        disponible = not self.en_curso
+        self.btn_iniciar.set_sensitive(disponible and not self.consultando_estados)
         self.chk_sin_contrasena.set_sensitive(disponible)
         self.btn_menu.set_sensitive(disponible)
         for boton in self.botones_preset:
@@ -1201,7 +1263,11 @@ class VentanaPrincipal(Gtk.Window):
         if not pasos:
             self._mensaje(Gtk.MessageType.INFO, "Nada que hacer", "Activa al menos una tarea.")
             return
-        helper = helper_mantenimiento()
+        try:
+            helper = helper_mantenimiento()
+        except OSError as e:
+            self._mensaje(Gtk.MessageType.ERROR, "No se pudo preparar el asistente", str(e))
+            return
         if not os.path.exists(helper):
             self._mensaje(Gtk.MessageType.ERROR, "Falta el asistente",
                           traducir("No se encuentra %s.\nReinstala el paquete aio-debian-gui.")
@@ -1241,7 +1307,7 @@ class VentanaPrincipal(Gtk.Window):
                 return
 
         lang = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or "C"
-        cmd = ["pkexec", helper, "--lang", lang] + pasos
+        cmd = comando_pkexec(helper, lang, *pasos)
 
         self.buf.set_text("")
         self.necesita_reinicio = False
@@ -1279,7 +1345,18 @@ class VentanaPrincipal(Gtk.Window):
             return
 
         habilitar = boton.get_active()
-        helper = helper_mantenimiento()
+        try:
+            helper = helper_mantenimiento()
+        except OSError as e:
+            self.configurando_sin_contrasena = None
+            self._poner_ocupado(False)
+            self._restablecer_opcion_sin_contrasena(
+                autorizacion_sin_contrasena_activa()
+            )
+            self._mensaje(
+                Gtk.MessageType.ERROR, "No se pudo preparar el asistente", str(e)
+            )
+            return
         if not os.path.exists(helper):
             self._restablecer_opcion_sin_contrasena(autorizacion_sin_contrasena_activa())
             self._mensaje(
@@ -1336,7 +1413,7 @@ class VentanaPrincipal(Gtk.Window):
 
         try:
             self.proceso = Gio.Subprocess.new(
-                ["pkexec", helper, "--lang", lang, accion],
+                comando_pkexec(helper, lang, accion),
                 Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE,
             )
         except GLib.Error as e:
