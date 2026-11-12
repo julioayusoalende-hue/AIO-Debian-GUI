@@ -1,22 +1,22 @@
 Package: aio-debian-gui
-Version: 1.0.2
+Version: 1.0.3
 Architecture: all
 Maintainer: Julio Ayuso <epdc@msn.com>
 Depends: bash, apt, coreutils, diffutils, grep, sed, util-linux, python3, python3-gi, gir1.2-gtk-3.0, pkexec | policykit-1
 Conflicts: aio-debian (= 1.1.0), aio-debian (= 1.1.1)
 Replaces: aio-debian (= 1.1.0), aio-debian (= 1.1.1)
-Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.0.2_all.deb
-Size: 338680
-MD5sum: 0ccf3c175b2f77687aedeeca1484133f
-SHA1: 83af15f6ae5842f16e1894bf29ad95f3a45b92c3
-SHA256: 023d16ff6c6fe13dd22b314b7b0207c162498573ecf8f06d6b9a7ccbdc23d19c
+Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.0.3_all.deb
+Size: 338920
+MD5sum: 4e777eae7321612a094f0785a01991e3
+SHA1: e295721b5a634c482bef187415e497910644b638
+SHA256: 8e5f594693efd6703c2fe6d468865721951c386d8f3834e07c24287adbe7f67b
 Section: admin
 Priority: optional
 Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
 Description: Interfaz gráfica de mantenimiento y configuración para Debian
  Aplicación gráfica que actualiza el sistema con apt (update, dist-upgrade,
  autoremove, autoclean), habilita contrib y non-free, sincroniza el reloj,
- añade soporte Flatpak con Flathub, ofrece complementos para GNOME y
- comprueba si hace falta reiniciar.
+ añade soporte Flatpak con Flathub y FUSE para AppImage, ofrece complementos
+ para GNOME y comprueba si hace falta reiniciar.
  Este paquete configura su propio repositorio APT para recibir actualizaciones.
 
