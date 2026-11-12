@@ -26,21 +26,13 @@ sudo apt install ./aio-debian-gui_*_all.deb
 Al instalarlo se configura automáticamente el repositorio APT, así que las
 actualizaciones llegarán con `sudo apt update && sudo apt upgrade`.
 
-### Opción 2: añadir el repositorio APT
+### Opción 2: instalar el repositorio y la aplicación con un comando
+
+Este comando configura la clave y el repositorio APT, actualiza el índice e instala
+AiO Debian GUI:
 
 ```bash
-sudo install -d /usr/share/keyrings
-curl -fsSL https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.gpg \
-  | sudo tee /usr/share/keyrings/aio-debian-gui.gpg >/dev/null
-sudo tee /etc/apt/sources.list.d/aio-debian-gui.sources >/dev/null <<'EOF'
-Types: deb
-URIs: https://julioayusoalende-hue.github.io/AIO-Debian-GUI
-Suites: stable
-Components: main
-Architectures: all
-Signed-By: /usr/share/keyrings/aio-debian-gui.gpg
-EOF
-sudo apt update && sudo apt install aio-debian-gui
+sudo bash -c 'set -euo pipefail; key=$(mktemp); trap "rm -f $key" EXIT; curl -fsSL https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.gpg -o "$key"; install -D -m 0644 "$key" /usr/share/keyrings/aio-debian-gui.gpg; printf "%s\n" "Types: deb" "URIs: https://julioayusoalende-hue.github.io/AIO-Debian-GUI" "Suites: stable" "Components: main" "Architectures: all" "Signed-By: /usr/share/keyrings/aio-debian-gui.gpg" > /etc/apt/sources.list.d/aio-debian-gui.sources; apt-get update; apt-get install aio-debian-gui'
 ```
 
 ### Opción 3: compilar desde el código
