@@ -22,7 +22,8 @@ import tempfile
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gio, GLib, Gtk, Pango  # noqa: E402
+gi.require_version("GdkPixbuf", "2.0")
+from gi.repository import GdkPixbuf, Gio, GLib, Gtk, Pango  # noqa: E402
 
 PRGNAME = "aio-debian-gui"
 POLKIT_ACTION = "es.aiodebian.gui.mantenimiento"
@@ -34,10 +35,14 @@ HOMEPAGE = "https://github.com/julioayusoalende-hue/AIO-Debian-GUI"
 DEBIAN_LOGO = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/debian-openlogo.png")
 )
+FOTO_INSPIRACION = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/adri-y-lu.jpg")
+)
 ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.0.13": "Añade una dedicatoria personal enlazada en la ventana «Acerca de».",
     "1.0.12": "Corrige la visualización de la salida de consola en modo completo.",
     "1.0.11": "Corrige la visualización del menú de preferencias.",
     "1.0.10": "Añade preferencias de idioma, tema claro u oscuro e interfaz simple.",
@@ -68,6 +73,9 @@ TRADUCCIONES = {
         "Iniciar tareas": "Start tasks",
         "Trabajando…": "Working…",
         "Acerca de AiO Debian": "About AiO Debian",
+        "Agradecimiento": "A note of thanks",
+        "Cerrar": "Close",
+        "Foto de Adri y Lu": "Photo of Adri and Lu",
         "Menú de preferencias": "Preferences menu",
         "Preferencias": "Preferences",
         "Idioma de la interfaz": "Interface language",
@@ -179,6 +187,9 @@ TRADUCCIONES = {
         "Iniciar tareas": "Lancer les tâches",
         "Trabajando…": "En cours…",
         "Acerca de AiO Debian": "À propos d’AiO Debian",
+        "Agradecimiento": "Remerciements",
+        "Cerrar": "Fermer",
+        "Foto de Adri y Lu": "Photo d’Adri et Lu",
         "Menú de preferencias": "Menu des préférences",
         "Preferencias": "Préférences",
         "Idioma de la interfaz": "Langue de l’interface",
@@ -289,6 +300,9 @@ TRADUCCIONES = {
         "Iniciar tareas": "开始任务",
         "Trabajando…": "正在处理…",
         "Acerca de AiO Debian": "关于 AiO Debian",
+        "Agradecimiento": "致谢",
+        "Cerrar": "关闭",
+        "Foto de Adri y Lu": "Adri 和 Lu 的照片",
         "Menú de preferencias": "偏好设置菜单",
         "Preferencias": "偏好设置",
         "Idioma de la interfaz": "界面语言",
@@ -1562,7 +1576,45 @@ class VentanaPrincipal(Gtk.Window):
         d.run()
         d.destroy()
 
-    def _acerca_de(self, _b):
+    def _crear_dialogo_dedicatoria(self, parent):
+        dialogo = Gtk.Dialog(
+            title=traducir("Agradecimiento"), transient_for=parent, modal=True
+        )
+        dialogo.set_resizable(False)
+        dialogo.add_button(traducir("Cerrar"), Gtk.ResponseType.CLOSE)
+        caja = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        for margen in ("top", "bottom", "start", "end"):
+            getattr(caja, "set_margin_" + margen)(16)
+
+        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
+            FOTO_INSPIRACION, 420, 420, True
+        )
+        imagen = Gtk.Image.new_from_pixbuf(pixbuf)
+        imagen.get_accessible().set_name(traducir("Foto de Adri y Lu"))
+        caja.pack_start(imagen, False, False, 0)
+
+        mensaje = Gtk.Label(
+            label="Gracias a Adri y Lu por ser mi inspiración en TODO lo que hago"
+        )
+        mensaje.set_line_wrap(True)
+        mensaje.set_justify(Gtk.Justification.CENTER)
+        mensaje.set_max_width_chars(50)
+        caja.pack_start(mensaje, False, False, 0)
+        dialogo.get_content_area().pack_start(caja, True, True, 0)
+        dialogo.show_all()
+        return dialogo
+
+    def _abrir_dedicatoria(self, _label, uri, acerca):
+        if uri != "aio-debian-gui://inspiracion":
+            return False
+        dialogo = self._crear_dialogo_dedicatoria(acerca)
+        try:
+            dialogo.run()
+        finally:
+            dialogo.destroy()
+        return True
+
+    def _crear_dialogo_acerca_de(self):
         d = Gtk.AboutDialog(transient_for=self, modal=True)
         d.set_program_name("AiO Debian GUI")
         d.set_version(version_app())
@@ -1571,8 +1623,35 @@ class VentanaPrincipal(Gtk.Window):
         d.set_copyright("© 2026 Julio Ayuso")
         d.set_license_type(Gtk.License.GPL_3_0)
         d.set_logo_icon_name("aio-debian-gui")
-        d.run()
-        d.destroy()
+        d.show_all()
+
+        def buscar_credito(widget):
+            if isinstance(widget, Gtk.Label) and widget.get_text() == "© 2026 Julio Ayuso":
+                return widget
+            if isinstance(widget, Gtk.Container):
+                for hijo in widget.get_children():
+                    encontrado = buscar_credito(hijo)
+                    if encontrado is not None:
+                        return encontrado
+            return None
+
+        credito = buscar_credito(d)
+        if credito is None:
+            d.destroy()
+            raise RuntimeError("No se encontró el crédito de autor en el diálogo Acerca de.")
+        credito.set_markup(
+            '<span size="large">© 2026 '
+            '<a href="aio-debian-gui://inspiracion">Julio Ayuso</a></span>'
+        )
+        credito.connect("activate-link", self._abrir_dedicatoria, d)
+        return d
+
+    def _acerca_de(self, _b):
+        d = self._crear_dialogo_acerca_de()
+        try:
+            d.run()
+        finally:
+            d.destroy()
 
     def _al_cerrar(self, *_a):
         if not self.en_curso:

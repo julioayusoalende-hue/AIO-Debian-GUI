@@ -87,6 +87,8 @@ El menú superior permite elegir el idioma de la interfaz (español, inglés, fr
 el tema claro u oscuro y el modo simple, que oculta la salida detallada de las tareas. Las
 preferencias se guardan para el usuario actual; el español, el tema claro y la interfaz completa
 son los valores iniciales.
+La ventana «Acerca de» muestra el crédito del autor y permite abrir una dedicatoria con una foto
+proporcionada por el usuario.
 
 ## Estructura
 
@@ -95,7 +97,7 @@ package/                                  árbol que se instala tal cual en el s
   DEBIAN/control                          metadatos y versión
   usr/bin/aio-debian-gui                  interfaz gráfica (GTK 3, se ejecuta como usuario)
   usr/lib/aio-debian-gui/aio-debian-gui-helper   tareas privilegiadas (vía pkexec)
-  usr/share/aio-debian-gui/              logotipo de Debian mostrado en la tarjeta de información
+  usr/share/aio-debian-gui/              logotipo de Debian y foto de la dedicatoria
   usr/share/polkit-1/actions/             política de autenticación
 scripts/
   build-deb.sh                            construye dist/aio-debian-gui_X.Y.Z_all.deb
