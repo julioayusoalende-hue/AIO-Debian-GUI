@@ -1,0 +1,22 @@
+Package: aio-debian-gui
+Version: 1.0.0
+Architecture: all
+Maintainer: Julio Ayuso <epdc@msn.com>
+Depends: bash, apt, coreutils, diffutils, grep, sed, util-linux, python3, python3-gi, gir1.2-gtk-3.0, pkexec | policykit-1
+Conflicts: aio-debian (= 1.1.0), aio-debian (= 1.1.1)
+Replaces: aio-debian (= 1.1.0), aio-debian (= 1.1.1)
+Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.0.0_all.deb
+Size: 334128
+MD5sum: 8b31dd540ff2809df86673677e313e68
+SHA1: 652e42c969e17c9750326491d30a88a2a4fa668e
+SHA256: f2e3841f7aa293f3db0eed381879e7895e315e6a55daaf21558327098e4e028f
+Section: admin
+Priority: optional
+Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
+Description: Interfaz gráfica de mantenimiento y configuración para Debian
+ Aplicación gráfica que actualiza el sistema con apt (update, dist-upgrade,
+ autoremove, autoclean), habilita contrib y non-free, sincroniza el reloj,
+ añade soporte Flatpak con Flathub, ofrece complementos para GNOME y
+ comprueba si hace falta reiniciar.
+ Este paquete configura su propio repositorio APT para recibir actualizaciones.
+
