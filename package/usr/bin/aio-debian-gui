@@ -22,7 +22,9 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gio, GLib, Gtk, Pango  # noqa: E402
 
 PRGNAME = "aio-debian-gui"
-HELPER = "/usr/lib/aio-debian-gui/aio-debian-gui-helper"
+HELPER = os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "../lib/aio-debian-gui/aio-debian-gui-helper")
+)
 HOMEPAGE = "https://github.com/julioayusoalende-hue/AIO-Debian-GUI"
 DEBIAN_LOGO = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/debian-openlogo.png")
@@ -31,6 +33,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.0.4": "La aplicación también se distribuye como AppImage.",
     "1.0.3": "Las herramientas auxiliares instalan el soporte FUSE necesario para AppImage.",
     "1.0.2": "El logotipo de Debian aparece junto a la información del sistema.",
     "1.0.1": "El botón principal ahora se llama «Iniciar tareas».",
@@ -53,6 +56,9 @@ def paquete_instalado(nombre):
 
 
 def version_app():
+    version = os.environ.get("AIO_DEBIAN_GUI_VERSION")
+    if version:
+        return version
     try:
         out = subprocess.run(
             ["dpkg-query", "-W", "-f=${Status}|${Version}", "aio-debian-gui"],
