@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=AiO Debian GUI
+GenericName=Mantenimiento del sistema
+Comment=Mantenimiento y configuración todo en uno para Debian
+Exec=aio-debian-gui
+Icon=aio-debian-gui
+Terminal=false
+StartupNotify=true
+StartupWMClass=Aio-debian-gui
+Categories=System;Settings;PackageManager;
+Keywords=apt;flatpak;update;actualizar;mantenimiento;

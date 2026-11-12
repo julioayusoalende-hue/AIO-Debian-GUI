@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AiO Debian GUI – repositorio APT</title>
+<style>
+  body{font-family:system-ui,sans-serif;max-width:46rem;margin:3rem auto;padding:0 1rem;line-height:1.55}
+  pre{background:#0001;padding:.9rem 1rem;border-radius:.5rem;overflow-x:auto}
+  @media (prefers-color-scheme:dark){body{background:#1e1e1e;color:#ddd}pre{background:#fff1}a{color:#8ab4ff}}
+</style>
+</head>
+<body>
+<h1>AiO Debian GUI</h1>
+<p>Mantenimiento y configuración todo en uno para Debian, con interfaz gráfica.</p>
+<h2>Instalación</h2>
+<pre>sudo install -d /usr/share/keyrings
+curl -fsSL https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.gpg \
+  | sudo tee /usr/share/keyrings/aio-debian-gui.gpg &gt;/dev/null
+sudo tee /etc/apt/sources.list.d/aio-debian-gui.sources &gt;/dev/null &lt;&lt;'EOF'
+Types: deb
+URIs: https://julioayusoalende-hue.github.io/AIO-Debian-GUI
+Suites: stable
+Components: main
+Architectures: all
+Signed-By: /usr/share/keyrings/aio-debian-gui.gpg
+EOF
+sudo apt update &amp;&amp; sudo apt install aio-debian-gui</pre>
+<p><a href="https://github.com/julioayusoalende-hue/AIO-Debian-GUI">Código fuente y descargas en GitHub</a></p>
+</body>
+</html>

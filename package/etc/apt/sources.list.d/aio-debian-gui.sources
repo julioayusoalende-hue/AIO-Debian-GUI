@@ -1,0 +1,6 @@
+Types: deb
+URIs: https://julioayusoalende-hue.github.io/AIO-Debian-GUI
+Suites: stable
+Components: main
+Architectures: all
+Signed-By: /usr/share/keyrings/aio-debian-gui.gpg

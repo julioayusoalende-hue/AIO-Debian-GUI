@@ -1,0 +1,377 @@
+#!/bin/bash
+# aio-debian-gui-helper - Backend privilegiado de aio-debian-gui
+# Copyright (C) 2026 Julio Ayuso
+# Licencia: GNU GPL v3 o posterior (https://www.gnu.org/licenses/gpl-3.0.html)
+# Este programa se distribuye SIN NINGUNA GARANTÍA.
+#
+# Lo lanza la interfaz gráfica mediante pkexec (una sola autenticación para
+# todos los pasos). No hace preguntas: cada paso se activa desde la interfaz.
+# Uso: aio-debian-gui-helper [--lang LOCALE] paso [paso ...]
+#
+# Protocolo de salida (una línea por mensaje):
+#   ##STEP:<n>:<total>:<título>   inicio de un paso
+#   ##REBOOT:<0|1>                resultado de la comprobación de reinicio
+#   ##DONE:<0|1>                  fin (1 = hubo algún paso con errores)
+
+set -u
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+umask 022
+exec </dev/null   # nunca esperar entrada: no hay terminal
+
+info() { echo "[*] $*"; }
+ok()   { echo "[✔] $*"; }
+warn() { echo "[!] $*"; }
+err()  { echo "[-] $*"; }
+
+# Sin terminal: nada de preguntas de apt/dpkg/needrestart
+export DEBIAN_FRONTEND=noninteractive
+export APT_LISTCHANGES_FRONTEND=none
+export NEEDRESTART_MODE=l
+APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confold -o Dpkg::Use-Pty=0)
+
+LISTAS_ACTUALIZADAS=0
+
+# ------------------------------------------------------------------------------
+# Utilidades
+# ------------------------------------------------------------------------------
+paquete_instalado() {
+    dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q "install ok installed"
+}
+
+asegurar_listas() {
+    [ "$LISTAS_ACTUALIZADAS" -eq 1 ] && return 0
+    info "Sincronizando listas de paquetes (apt-get update)..."
+    if apt-get update; then
+        LISTAS_ACTUALIZADAS=1
+        return 0
+    fi
+    err "Error al actualizar las listas de paquetes. Comprueba tu conexión."
+    return 1
+}
+
+# Instala un paquete (nombre Debian) si falta. $1 = paquete, $2 = aviso si falla
+instalar_paquete_si_falta() {
+    local pkg="$1" aviso="$2"
+    if paquete_instalado "$pkg"; then
+        ok "'${pkg}' ya está instalado."
+        return 0
+    fi
+    info "'${pkg}' no detectado. Instalando..."
+    apt-get "${APT_OPTS[@]}" install "$pkg"
+    if paquete_instalado "$pkg"; then
+        ok "'${pkg}' se instaló correctamente."
+    else
+        warn "$aviso"
+        return 1
+    fi
+}
+
+# Añade 'contrib' y 'non-free' a los repositorios oficiales de Debian
+# Soporta formato clásico (.list) y deb822 (.sources)
+anadir_componentes() {
+    local f="$1" copia
+    copia=$(mktemp)
+    cp -a "$f" "$copia"
+
+    case "$f" in
+        *.sources)
+            # Solo si apunta a servidores oficiales de Debian (no a repos de terceros
+            # cuyo nombre contenga 'debian', como .../aio-debian)
+            if ! grep -qiE '^URIs:.*(debian\.org|/debian/?([[:space:]]|$))' "$f"; then rm -f "$copia"; return 1; fi
+            sed -i -E '/^Components:/ {
+                /(^|[[:space:]])contrib([[:space:]]|$)/! s/[[:space:]]*$/ contrib/
+                /(^|[[:space:]])non-free([[:space:]]|$)/! s/[[:space:]]*$/ non-free/
+            }' "$f"
+            ;;
+        *.list)
+            # Solo líneas deb/deb-src de Debian que tengan el componente 'main'
+            sed -i -E '/^[[:space:]]*deb(-src)?[[:space:]].*(debian\.org|\/debian\/?[[:space:]])/ {
+                /[[:space:]]main([[:space:]]|$)/ {
+                    /[[:space:]]contrib([[:space:]]|$)/! s/[[:space:]]*$/ contrib/
+                    /[[:space:]]non-free([[:space:]]|$)/! s/[[:space:]]*$/ non-free/
+                }
+            }' "$f"
+            ;;
+    esac
+
+    if ! cmp -s "$f" "$copia"; then
+        cp -a "$copia" "${f}.bak"     # copia de seguridad (apt ignora .bak)
+        rm -f "$copia"
+        return 0                      # hubo cambios
+    fi
+    rm -f "$copia"
+    return 1                          # sin cambios
+}
+
+# ------------------------------------------------------------------------------
+# Pasos
+# ------------------------------------------------------------------------------
+paso_clock() {
+    command -v timedatectl &> /dev/null || { info "timedatectl no disponible. Omitiendo."; return 0; }
+
+    local estado
+    estado=$(timedatectl show -p NTPSynchronized --value 2>/dev/null)
+    if [ "$estado" = "yes" ]; then
+        ok "Reloj del sistema sincronizado."
+        return 0
+    fi
+
+    warn "El reloj del sistema no está sincronizado. Intentando sincronizarlo..."
+
+    # Activar NTP; si no hay servicio de hora instalado, instalar systemd-timesyncd
+    if ! timedatectl set-ntp true &> /dev/null; then
+        info "Servicio de hora no disponible. Instalando systemd-timesyncd..."
+        apt-get update &> /dev/null
+        apt-get -y install systemd-timesyncd &> /dev/null
+        timedatectl set-ntp true &> /dev/null
+    fi
+
+    # Esperar hasta 30 segundos a que se sincronice
+    local i
+    for i in $(seq 1 30); do
+        estado=$(timedatectl show -p NTPSynchronized --value 2>/dev/null)
+        [ "$estado" = "yes" ] && break
+        sleep 1
+    done
+
+    if [ "$estado" = "yes" ]; then
+        ok "Reloj sincronizado correctamente: $(date)"
+    else
+        err "No se pudo sincronizar el reloj (¿sin red o puerto NTP bloqueado?)."
+        err "Fecha actual del sistema: $(date)"
+        return 1
+    fi
+}
+
+paso_repos() {
+    info "Verificando los repositorios 'contrib' y 'non-free'..."
+    local cambios=0 f
+    shopt -s nullglob
+    for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+        [ -f "$f" ] || continue
+        if anadir_componentes "$f"; then
+            ok "Actualizado: $f (copia en ${f}.bak)"
+            cambios=1
+        fi
+    done
+    shopt -u nullglob
+
+    if [ "$cambios" -eq 0 ]; then
+        ok "'contrib' y 'non-free' ya estaban configurados."
+    else
+        LISTAS_ACTUALIZADAS=0   # hay que volver a sincronizar las listas
+    fi
+}
+
+paso_tools() {
+    asegurar_listas || return 1
+    local r=0
+    instalar_paquete_si_falta needrestart "No se pudo instalar 'needrestart'. Se usará el método manual." || r=1
+    instalar_paquete_si_falta fastfetch   "No se pudo instalar 'fastfetch'. Puede que no esté disponible en tus repositorios." || r=1
+    instalar_paquete_si_falta kitty       "No se pudo instalar 'kitty'. Puede que no esté disponible en tus repositorios." || r=1
+    instalar_paquete_si_falta synaptic    "No se pudo instalar 'synaptic'. Puede que no esté disponible en tus repositorios." || r=1
+    return $r
+}
+
+paso_flatpak_setup() {
+    if command -v flatpak &> /dev/null; then
+        ok "Flatpak ya está instalado."
+        return 0
+    fi
+    asegurar_listas || return 1
+
+    info "Instalando flatpak..."
+    apt-get "${APT_OPTS[@]}" install flatpak ca-certificates
+
+    if ! command -v flatpak &> /dev/null; then
+        err "No se pudo instalar Flatpak. Comprueba tus repositorios."
+        return 1
+    fi
+    ok "Flatpak instalado correctamente."
+    info "Añadiendo el repositorio de Flathub..."
+    update-ca-certificates &> /dev/null
+    if flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo; then
+        ok "Repositorio Flathub configurado con éxito."
+    else
+        err "No se pudo añadir Flathub (error de certificado o de red)."
+        err "Fecha del sistema: $(date)"
+        err "Reloj sincronizado: $(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo desconocido)"
+        err "Si la fecha es correcta, puede que tu red intercepte HTTPS (proxy/antivirus)."
+        err "Reintenta luego con: sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo"
+        return 1
+    fi
+}
+
+paso_gnome_plugin() {
+    command -v flatpak &> /dev/null || { info "Flatpak no está instalado. Omitiendo el plugin de GNOME Software."; return 0; }
+    paquete_instalado gnome-shell || { info "GNOME no detectado. Omitiendo."; return 0; }
+    if paquete_instalado gnome-software-plugin-flatpak; then
+        ok "'gnome-software-plugin-flatpak' ya está instalado."
+        return 0
+    fi
+    asegurar_listas || return 1
+
+    info "Instalando gnome-software-plugin-flatpak..."
+    apt-get "${APT_OPTS[@]}" install gnome-software-plugin-flatpak
+    if paquete_instalado gnome-software-plugin-flatpak; then
+        ok "Plugin instalado correctamente."
+        info "Cierra y vuelve a abrir GNOME Software (o reinicia la sesión) para verlo."
+    else
+        err "No se pudo instalar el plugin. Comprueba tus repositorios."
+        return 1
+    fi
+}
+
+paso_ext_manager() {
+    paquete_instalado gnome-shell || { info "GNOME no detectado. Omitiendo."; return 0; }
+    if paquete_instalado gnome-shell-extension-manager; then
+        ok "'gnome-shell-extension-manager' ya está instalado."
+        return 0
+    fi
+    asegurar_listas || return 1
+
+    # No está disponible en versiones antiguas de Debian
+    if ! apt-cache show gnome-shell-extension-manager &> /dev/null; then
+        err "'gnome-shell-extension-manager' no está disponible en tus repositorios."
+        return 1
+    fi
+
+    info "Instalando gnome-shell-extension-manager..."
+    apt-get "${APT_OPTS[@]}" install gnome-shell-extension-manager
+    if paquete_instalado gnome-shell-extension-manager; then
+        ok "Extension Manager instalado correctamente."
+    else
+        err "No se pudo instalar Extension Manager. Comprueba tus repositorios."
+        return 1
+    fi
+}
+
+paso_upgrade() {
+    asegurar_listas || return 1
+    info "Actualizando los paquetes del sistema (apt-get dist-upgrade)..."
+    if ! apt-get "${APT_OPTS[@]}" dist-upgrade; then
+        err "Error durante la actualización de paquetes."
+        return 1
+    fi
+    ok "Paquetes actualizados."
+}
+
+paso_autoremove() {
+    info "Eliminando dependencias huérfanas (apt-get autoremove)..."
+    apt-get "${APT_OPTS[@]}" autoremove
+    ok "Dependencias huérfanas eliminadas."
+}
+
+paso_autoclean() {
+    info "Limpiando paquetes .deb obsoletos del caché (apt-get autoclean)..."
+    apt-get autoclean
+    ok "Limpieza realizada."
+}
+
+paso_flatpak_update() {
+    if ! command -v flatpak &> /dev/null; then
+        info "Flatpak no está instalado en este sistema. Omitiendo..."
+        return 0
+    fi
+    info "Actualizando aplicaciones Flatpak..."
+    if flatpak update -y && flatpak uninstall --unused -y; then
+        ok "Flatpak al día."
+    else
+        err "Hubo problemas al actualizar Flatpak."
+        return 1
+    fi
+}
+
+paso_rebootcheck() {
+    local necesita=0 salida=""
+
+    [ -f /var/run/reboot-required ] && necesita=1
+
+    if command -v needrestart &> /dev/null; then
+        info "Comprobación final de servicios y kernel con needrestart..."
+        info "(puede tardar un poco)"
+        salida=$(timeout 180 needrestart -b </dev/null 2>/dev/null)
+        [ -n "$salida" ] && echo "$salida"
+
+        if echo "$salida" | grep -qE "^NEEDRESTART-KSTA: [23]"; then
+            necesita=1
+        fi
+
+        local criticos="dbus|dbus-broker|gdm|gdm3|lightdm|sddm|systemd-logind|systemd-udevd"
+        if echo "$salida" | grep -qE "^NEEDRESTART-SVC: (${criticos})\.service$"; then
+            necesita=1
+        fi
+    fi
+
+    if [ "$necesita" -eq 1 ]; then
+        warn "Se recomienda reiniciar para aplicar cambios críticos (kernel/servicios)."
+    else
+        ok "No hace falta reiniciar."
+    fi
+    echo "##REBOOT:${necesita}"
+}
+
+# ------------------------------------------------------------------------------
+# Principal
+# ------------------------------------------------------------------------------
+declare -A TITULOS=(
+    [clock]="Sincronizar el reloj"
+    [repos]="Habilitar contrib y non-free"
+    [tools]="Instalar herramientas auxiliares"
+    [flatpak-setup]="Instalar Flatpak y Flathub"
+    [gnome-plugin]="Plugin Flatpak para GNOME Software"
+    [ext-manager]="Extension Manager de GNOME"
+    [upgrade]="Actualizar paquetes del sistema"
+    [autoremove]="Eliminar dependencias huérfanas"
+    [autoclean]="Limpiar caché de paquetes"
+    [flatpak-update]="Actualizar aplicaciones Flatpak"
+    [rebootcheck]="Comprobar si hace falta reiniciar"
+)
+# Pasos cuyo fallo detiene la ejecución (el resto solo se anota)
+CRITICOS=" upgrade "
+
+main() {
+    if [ "$EUID" -ne 0 ]; then
+        err "Este asistente debe ejecutarse con privilegios de administrador." >&2
+        exit 1
+    fi
+
+    # Idioma de los mensajes de apt/flatpak (pkexec limpia el entorno)
+    if [ "${1:-}" = "--lang" ]; then
+        if [[ "${2:-}" =~ ^[A-Za-z0-9_.@-]{1,40}$ ]]; then
+            export LANG="$2"
+        fi
+        shift; [ $# -gt 0 ] && shift
+    fi
+
+    local pasos=() s
+    for s in "$@"; do
+        if [ -z "${TITULOS[$s]+x}" ]; then
+            err "Paso desconocido: $s" >&2
+            exit 2
+        fi
+        pasos+=("$s")
+    done
+    [ ${#pasos[@]} -gt 0 ] || { err "No se indicó ningún paso." >&2; exit 2; }
+
+    local total=${#pasos[@]} i=0 fallos=0
+    for s in "${pasos[@]}"; do
+        i=$((i + 1))
+        echo "##STEP:${i}:${total}:${TITULOS[$s]}"
+        if ! "paso_${s//-/_}"; then
+            fallos=1
+            if [[ "$CRITICOS" == *" $s "* ]]; then
+                echo "##DONE:1"
+                exit 1
+            fi
+        fi
+    done
+
+    echo "##DONE:${fallos}"
+    [ "$fallos" -eq 0 ]
+}
+
+# Permite hacer 'source' del archivo para pruebas sin ejecutar nada
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    main "$@"
+fi
