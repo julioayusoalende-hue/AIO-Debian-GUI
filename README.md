@@ -4,6 +4,7 @@ Interfaz gráfica de mantenimiento y configuración todo en uno para Debian.
 
 - Actualiza el sistema con apt (`update`, `dist-upgrade`, `autoremove`, `autoclean`).
 - Habilita `contrib` y `non-free`.
+- Instala herramientas auxiliares, incluido el soporte FUSE para AppImage.
 - Sincroniza el reloj, instala Flatpak + Flathub y actualiza las apps Flatpak.
 - Complementos para GNOME (plugin Flatpak de GNOME Software, Extension Manager).
 - Comprueba si hace falta reiniciar y lo ofrece al terminar.
