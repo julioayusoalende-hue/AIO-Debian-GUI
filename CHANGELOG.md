@@ -4,6 +4,16 @@ Al publicar una versión nueva: sube `Version` en `package/DEBIAN/control`, aña
 novedad en `NOVEDADES` (`package/usr/bin/aio-debian-gui`) y una sección `## X.Y.Z` aquí.
 `scripts/check.sh` lo verifica.
 
+## 1.0.12
+Corrige la visualización de la consola en modo completo y al desactivar el modo simple.
+
+## 1.0.11
+Corrige la visualización del menú de preferencias.
+
+## 1.0.10
+Añade preferencias de idioma (español, inglés, francés y chino), tema claro u oscuro e
+interfaz simple sin salida detallada de consola.
+
 ## 1.0.8
 Detecta si contrib/non-free, las herramientas auxiliares, GNOME Software Plugin Flatpak,
 Extension Manager y el kernel/Mesa de Backports ya están configurados o instalados; muestra

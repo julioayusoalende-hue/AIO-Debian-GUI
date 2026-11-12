@@ -83,6 +83,10 @@ Las tareas de repositorios, herramientas, Backports y complementos de GNOME se m
 están completas y su selector queda desactivado; el estado se vuelve a comprobar al abrir la
 aplicación. Si la espera de autorización de Polkit no responde, puede cancelarse desde la interfaz
 y se cancela automáticamente tras 90 segundos.
+El menú superior permite elegir el idioma de la interfaz (español, inglés, francés o chino),
+el tema claro u oscuro y el modo simple, que oculta la salida detallada de las tareas. Las
+preferencias se guardan para el usuario actual; el español, el tema claro y la interfaz completa
+son los valores iniciales.
 
 ## Estructura
 

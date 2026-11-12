@@ -19,6 +19,14 @@ import ast, sys
 ast.parse(open(sys.argv[1], encoding="utf-8").read())
 PY
 
+if python3 -c 'import gi; gi.require_version("Gtk", "3.0")' >/dev/null 2>&1; then
+    python3 scripts/test-preferences.py "$GUI" &&
+        bien "preferencias, traducciones y modo simple" ||
+        fallo "pruebas de preferencias"
+else
+    echo "- PyGObject no instalado: se omiten las pruebas de preferencias"
+fi
+
 if command -v shellcheck >/dev/null; then
     shellcheck -S error "$HELPER" scripts/*.sh && bien "shellcheck" || fallo "shellcheck"
 else
