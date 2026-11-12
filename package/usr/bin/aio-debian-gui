@@ -17,6 +17,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 
 import gi
 
@@ -37,6 +38,9 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.0.12": "Corrige la visualización de la salida de consola en modo completo.",
+    "1.0.11": "Corrige la visualización del menú de preferencias.",
+    "1.0.10": "Añade preferencias de idioma, tema claro u oscuro e interfaz simple.",
     "1.0.9": "Los botones de preset resaltan la selección y se desmarcan al cambiar tareas.",
     "1.0.8": "Detecta tareas ya configuradas y permite cancelar una espera de autorización.",
     "1.0.7": "Permite instalar el kernel y los controladores Mesa desde Debian Backports.",
@@ -48,6 +52,398 @@ NOVEDADES = {
     "1.0.1": "El botón principal ahora se llama «Iniciar tareas».",
     "1.0.0": "Primera versión independiente de la interfaz gráfica de AiO Debian.",
 }
+
+IDIOMA_ACTUAL = "es"
+PREFERENCIAS_DEFECTO = {
+    "idioma": "es",
+    "tema": "claro",
+    "modo_simple": False,
+}
+IDIOMAS = {"es", "en", "fr", "zh"}
+TEMAS = {"claro", "oscuro"}
+
+TRADUCCIONES = {
+    "en": {
+        "Mantenimiento y configuración del sistema": "System maintenance and configuration",
+        "Iniciar tareas": "Start tasks",
+        "Trabajando…": "Working…",
+        "Acerca de AiO Debian": "About AiO Debian",
+        "Menú de preferencias": "Preferences menu",
+        "Preferencias": "Preferences",
+        "Idioma de la interfaz": "Interface language",
+        "Apariencia": "Appearance",
+        "Claro": "Light",
+        "Oscuro": "Dark",
+        "Interfaz simple (sin salida de consola)": "Simple interface (hide task output)",
+        "El modo simple oculta la salida detallada de las tareas.": "Simple mode hides detailed task output.",
+        "Guardar": "Save",
+        "Cancelar": "Cancel",
+        "Aceptar": "OK",
+        "Continuar": "Continue",
+        "Listo. Elige las tareas y pulsa «Iniciar tareas».": "Ready. Choose tasks and click “Start tasks”.",
+        "Cancelar espera": "Cancel wait",
+        "<b>Información del sistema</b>": "<b>System information</b>",
+        "Sistema operativo": "Operating system",
+        "Kernel actual": "Current kernel",
+        "Espacio en disco (/)": "Disk space (/)",
+        "Usado: %.1f GiB / Total: %.1f GiB (%d%% ocupado)": "Used: %.1f GiB / Total: %.1f GiB (%d%% used)",
+        "Fecha de instalación": "Installation date",
+        "Antigüedad del sistema": "System age",
+        "%d años, %d meses y %d días (%d días en total)": "%d years, %d months and %d days (%d days total)",
+        "Versión de AiO Debian GUI": "AiO Debian GUI version",
+        "Sistema": "System",
+        "<b>Novedades de esta versión:</b>": "<b>What's new in this version:</b>",
+        "Los botones de preset resaltan la selección y se desmarcan al cambiar tareas.": "Preset buttons highlight the selection and clear when tasks change.",
+        "<b>Tareas a realizar</b>": "<b>Tasks to perform</b>",
+        "Completo": "Full",
+        "Mantenimiento completo (valores por defecto)": "Full maintenance (default selections)",
+        "Solo Flatpak": "Flatpak only",
+        "Saltarse el mantenimiento de APT y actualizar solo Flatpak": "Skip APT maintenance and update only Flatpak",
+        "No pedir contraseña para las tareas de AiO (solo este usuario)": "Do not ask for a password for AiO tasks (this user only)",
+        "La activación requiere autorización de administrador una vez. Puedes desmarcar esta opción para revocarla.": "Enabling this requires administrator authorization once. Uncheck this option to revoke it.",
+        "Permite ejecutar las tareas de AiO sin contraseña en la sesión local activa.": "Allows AiO tasks to run without a password in the active local session.",
+        "Sistema (APT)": "System (APT)",
+        "Al terminar": "After completion",
+        "Sincronizar el reloj": "Synchronize the clock",
+        "Un reloj desfasado rompe la validación de certificados (apt, Flathub…).": "An incorrect clock breaks certificate validation (APT, Flathub…).",
+        "Habilitar contrib y non-free": "Enable contrib and non-free",
+        "Añade los componentes a los repositorios oficiales de Debian (con copia .bak).": "Adds these components to official Debian repositories (with a .bak backup).",
+        "Instalar herramientas auxiliares": "Install auxiliary tools",
+        "needrestart, fastfetch, kitty, synaptic y soporte FUSE para AppImage, si faltan.": "needrestart, fastfetch, kitty, synaptic and FUSE support for AppImage, if missing.",
+        "Instalar kernel y Mesa desde Backports": "Install kernel and Mesa from Backports",
+        "Instala el kernel y los controladores gráficos Mesa de Debian Backports; puede requerir reinicio.": "Installs the kernel and Mesa graphics drivers from Debian Backports; may require a restart.",
+        "Actualizar los paquetes del sistema": "Upgrade system packages",
+        "Eliminar dependencias huérfanas": "Remove orphaned dependencies",
+        "Limpiar la caché de paquetes obsoletos": "Clean the obsolete package cache",
+        "apt-get update y apt-get dist-upgrade.": "apt-get update and apt-get dist-upgrade.",
+        "apt-get autoremove.": "apt-get autoremove.",
+        "apt-get autoclean.": "apt-get autoclean.",
+        "Instalar soporte Flatpak y añadir Flathub": "Install Flatpak support and add Flathub",
+        "Flatpak no está instalado en este sistema.": "Flatpak is not installed on this system.",
+        "Actualizar aplicaciones Flatpak": "Update Flatpak applications",
+        "flatpak update y eliminación de runtimes sin uso.": "flatpak update and remove unused runtimes.",
+        "Plugin Flatpak para GNOME Software": "Flatpak plugin for GNOME Software",
+        "Permite gestionar apps Flatpak desde la tienda de GNOME.": "Manage Flatpak apps from the GNOME software store.",
+        "Extension Manager": "Extension Manager",
+        "Instala gnome-shell-extension-manager para gestionar extensiones de GNOME Shell.": "Installs gnome-shell-extension-manager to manage GNOME Shell extensions.",
+        "Comprobar si hace falta reiniciar": "Check whether a restart is needed",
+        "Revisa kernel y servicios críticos al terminar.": "Checks the kernel and critical services when finished.",
+        "Logotipo de Debian": "Debian logo",
+        "Comprobando tareas ya instaladas…": "Checking already-installed tasks…",
+        "✓ Ya configurados": "✓ Already configured",
+        "✓ Ya instaladas": "✓ Already installed",
+        "✓ Ya instalados": "✓ Already installed",
+        "✓ Ya instalado": "✓ Already installed",
+        "Esta tarea ya está completada y no se incluirá en futuras operaciones.": "This task is already complete and will not be included in future operations.",
+        "No se pudo comprobar el estado de las tareas; siguen disponibles.": "Could not check task status; tasks remain available.",
+        "El asistente no devolvió un estado completo de las tareas.": "The helper did not return a complete task status.",
+        "Nada que hacer": "Nothing to do",
+        "Activa al menos una tarea.": "Select at least one task.",
+        "Falta el asistente": "Helper missing",
+        "No se encuentra %s.\nReinstala el paquete aio-debian-gui.": "Could not find %s.\nReinstall the aio-debian-gui package.",
+        "Asistente del sistema desactualizado": "System helper is outdated",
+        "El asistente instalado no incluye la tarea de Backports. Actualiza el paquete .deb a la versión 1.0.7 o posterior.": "The installed helper does not include the Backports task. Upgrade the .deb package to version 1.0.7 or later.",
+        "Función no disponible en el asistente instalado": "Feature unavailable in the installed helper",
+        "El asistente del sistema no incluye la autorización sin contraseña. Actualiza el paquete .deb a la versión 1.0.6 o posterior.": "The system helper does not support passwordless authorization. Upgrade the .deb package to version 1.0.6 or later.",
+        "¿Instalar el kernel y Mesa desde Debian Backports?": "Install the kernel and Mesa from Debian Backports?",
+        "Se instalará el kernel de Backports para esta arquitectura y los controladores Mesa disponibles. Esto puede actualizar componentes gráficos y requerir un reinicio. Si falta, se añadirá la fuente oficial de Debian Backports.": "The Backports kernel for this architecture and available Mesa drivers will be installed. This may update graphics components and require a restart. The official Debian Backports source will be added if needed.",
+        "Instalación desde Backports cancelada.": "Backports installation cancelled.",
+        "Esperando autenticación de administrador…": "Waiting for administrator authentication…",
+        "No se pudo iniciar": "Could not start",
+        "Permitir tareas sin contraseña?": "Allow tasks without a password?",
+        "Se instalará una autorización persistente de Polkit para este usuario y solo para AiO Debian GUI. Todas las tareas de mantenimiento podrán ejecutarse como administrador sin volver a pedir contraseña. La activación requiere autorización de administrador una vez; puedes desactivarla desde esta opción.": "Persistent Polkit authorization will be installed for this user and AiO Debian GUI only. Maintenance tasks will be able to run as administrator without asking for a password again. Enabling this requires administrator authorization once; you can disable it here.",
+        "Cancelando la espera de autorización…": "Cancelling the authorization wait…",
+        "Paso %d de %d": "Step %d of %d",
+        "Autorización sin contraseña activada.": "Passwordless authorization enabled.",
+        "Autorización sin contraseña desactivada.": "Passwordless authorization disabled.",
+        "No se cambió la autorización.": "Authorization was not changed.",
+        "No se pudo cambiar la autorización.": "Could not change authorization.",
+        "No se pudieron guardar las preferencias": "Could not save preferences",
+        "No se pudieron leer las preferencias": "Could not read preferences",
+        "✔ ¡Mantenimiento completado con éxito!": "✔ Maintenance completed successfully!",
+        "No se obtuvo autorización de administrador.": "Administrator authorization was not granted.",
+        "Terminó con errores. Revisa el registro.": "Finished with errors. Check the log.",
+        "¿Reiniciar el sistema ahora?": "Restart the system now?",
+        "Se recomienda reiniciar para aplicar los cambios críticos (kernel/servicios).": "A restart is recommended to apply critical changes (kernel/services).",
+        "Más tarde": "Later",
+        "Reiniciar ahora": "Restart now",
+        "No se pudo reiniciar": "Could not restart",
+        "Mantenimiento y configuración todo en uno para Debian": "All-in-one Debian maintenance and configuration",
+        "Mantenimiento en curso": "Maintenance in progress",
+        "Espera a que termine: interrumpir apt o dpkg a mitad puede dejar el sistema en un estado inconsistente.": "Wait for it to finish: interrupting APT or dpkg may leave the system in an inconsistent state.",
+        "Espera de autorización agotada.": "Authorization wait timed out.",
+        "Espera de autorización cancelada.": "Authorization wait cancelled.",
+    },
+    "fr": {
+        "Mantenimiento y configuración del sistema": "Maintenance et configuration du système",
+        "Iniciar tareas": "Lancer les tâches",
+        "Trabajando…": "En cours…",
+        "Acerca de AiO Debian": "À propos d’AiO Debian",
+        "Menú de preferencias": "Menu des préférences",
+        "Preferencias": "Préférences",
+        "Idioma de la interfaz": "Langue de l’interface",
+        "Apariencia": "Apparence",
+        "Claro": "Clair",
+        "Oscuro": "Sombre",
+        "Interfaz simple (sin salida de consola)": "Interface simple (sans sortie console)",
+        "El modo simple oculta la salida detallada de las tareas.": "Le mode simple masque la sortie détaillée des tâches.",
+        "Guardar": "Enregistrer",
+        "Cancelar": "Annuler",
+        "Aceptar": "OK",
+        "Continuar": "Continuer",
+        "Listo. Elige las tareas y pulsa «Iniciar tareas».": "Prêt. Choisissez les tâches puis cliquez sur « Lancer les tâches ».",
+        "Cancelar espera": "Annuler l’attente",
+        "<b>Información del sistema</b>": "<b>Informations système</b>",
+        "Sistema operativo": "Système d’exploitation",
+        "Kernel actual": "Noyau actuel",
+        "Espacio en disco (/)": "Espace disque (/)",
+        "Usado: %.1f GiB / Total: %.1f GiB (%d%% ocupado)": "Utilisé : %.1f Gio / Total : %.1f Gio (%d%% occupé)",
+        "Fecha de instalación": "Date d’installation",
+        "Antigüedad del sistema": "Ancienneté du système",
+        "%d años, %d meses y %d días (%d días en total)": "%d ans, %d mois et %d jours (%d jours au total)",
+        "Versión de AiO Debian GUI": "Version d’AiO Debian GUI",
+        "<b>Novedades de esta versión:</b>": "<b>Nouveautés de cette version :</b>",
+        "Los botones de preset resaltan la selección y se desmarcan al cambiar tareas.": "Les boutons de préréglage mettent la sélection en évidence et se désactivent lorsque les tâches changent.",
+        "<b>Tareas a realizar</b>": "<b>Tâches à effectuer</b>",
+        "Completo": "Complet",
+        "Mantenimiento completo (valores por defecto)": "Maintenance complète (sélection par défaut)",
+        "Solo Flatpak": "Flatpak uniquement",
+        "Saltarse el mantenimiento de APT y actualizar solo Flatpak": "Ignorer la maintenance APT et mettre à jour uniquement Flatpak",
+        "No pedir contraseña para las tareas de AiO (solo este usuario)": "Ne pas demander de mot de passe pour les tâches AiO (cet utilisateur uniquement)",
+        "La activación requiere autorización de administrador una vez. Puedes desmarcar esta opción para revocarla.": "L’activation nécessite une autorisation administrateur unique. Décochez cette option pour la révoquer.",
+        "Permite ejecutar las tareas de AiO sin contraseña en la sesión local activa.": "Permet d’exécuter les tâches AiO sans mot de passe dans la session locale active.",
+        "Sistema (APT)": "Système (APT)",
+        "Al terminar": "À la fin",
+        "Sincronizar el reloj": "Synchroniser l’horloge",
+        "Un reloj desfasado rompe la validación de certificados (apt, Flathub…).": "Une horloge incorrecte empêche la validation des certificats (APT, Flathub…).",
+        "Habilitar contrib y non-free": "Activer contrib et non-free",
+        "Añade los componentes a los repositorios oficiales de Debian (con copia .bak).": "Ajoute ces composants aux dépôts officiels Debian (avec sauvegarde .bak).",
+        "Instalar herramientas auxiliares": "Installer les outils auxiliaires",
+        "needrestart, fastfetch, kitty, synaptic y soporte FUSE para AppImage, si faltan.": "needrestart, fastfetch, kitty, synaptic et prise en charge FUSE pour AppImage, si nécessaire.",
+        "Instalar kernel y Mesa desde Backports": "Installer le noyau et Mesa depuis Backports",
+        "Instala el kernel y los controladores gráficos Mesa de Debian Backports; puede requerir reinicio.": "Installe le noyau et les pilotes graphiques Mesa de Debian Backports ; un redémarrage peut être nécessaire.",
+        "Actualizar los paquetes del sistema": "Mettre à jour les paquets du système",
+        "Eliminar dependencias huérfanas": "Supprimer les dépendances orphelines",
+        "Limpiar la caché de paquetes obsoletos": "Nettoyer le cache des paquets obsolètes",
+        "apt-get update y apt-get dist-upgrade.": "apt-get update et apt-get dist-upgrade.",
+        "apt-get autoremove.": "apt-get autoremove.",
+        "apt-get autoclean.": "apt-get autoclean.",
+        "Instalar soporte Flatpak y añadir Flathub": "Installer Flatpak et ajouter Flathub",
+        "Flatpak no está instalado en este sistema.": "Flatpak n’est pas installé sur ce système.",
+        "Actualizar aplicaciones Flatpak": "Mettre à jour les applications Flatpak",
+        "flatpak update y eliminación de runtimes sin uso.": "flatpak update et suppression des environnements d’exécution inutilisés.",
+        "Plugin Flatpak para GNOME Software": "Extension Flatpak pour GNOME Logiciels",
+        "Permite gestionar apps Flatpak desde la tienda de GNOME.": "Permet de gérer les applications Flatpak depuis la boutique GNOME.",
+        "Extension Manager": "Extension Manager",
+        "Instala gnome-shell-extension-manager para gestionar extensiones de GNOME Shell.": "Installe gnome-shell-extension-manager pour gérer les extensions GNOME Shell.",
+        "Comprobar si hace falta reiniciar": "Vérifier si un redémarrage est nécessaire",
+        "Revisa kernel y servicios críticos al terminar.": "Vérifie le noyau et les services critiques à la fin.",
+        "Logotipo de Debian": "Logo Debian",
+        "Comprobando tareas ya instaladas…": "Vérification des tâches déjà installées…",
+        "✓ Ya configurados": "✓ Déjà configurés",
+        "✓ Ya instaladas": "✓ Déjà installées",
+        "✓ Ya instalados": "✓ Déjà installés",
+        "✓ Ya instalado": "✓ Déjà installé",
+        "Esta tarea ya está completada y no se incluirá en futuras operaciones.": "Cette tâche est déjà terminée et ne sera pas incluse dans les prochaines opérations.",
+        "No se pudo comprobar el estado de las tareas; siguen disponibles.": "Impossible de vérifier l’état des tâches ; elles restent disponibles.",
+        "El asistente no devolvió un estado completo de las tareas.": "L’assistant n’a pas renvoyé un état complet des tâches.",
+        "Nada que hacer": "Rien à faire",
+        "Activa al menos una tarea.": "Activez au moins une tâche.",
+        "Falta el asistente": "Assistant manquant",
+        "No se encuentra %s.\nReinstala el paquete aio-debian-gui.": "%s est introuvable.\nRéinstallez le paquet aio-debian-gui.",
+        "Asistente del sistema desactualizado": "Assistant système obsolète",
+        "El asistente instalado no incluye la tarea de Backports. Actualiza el paquete .deb a la versión 1.0.7 o posterior.": "L’assistant installé ne prend pas en charge la tâche Backports. Mettez à jour le paquet .deb vers la version 1.0.7 ou ultérieure.",
+        "Función no disponible en el asistente instalado": "Fonction indisponible dans l’assistant installé",
+        "El asistente del sistema no incluye la autorización sin contraseña. Actualiza el paquete .deb a la versión 1.0.6 o posterior.": "L’assistant système ne prend pas en charge l’autorisation sans mot de passe. Mettez à jour le paquet .deb vers la version 1.0.6 ou ultérieure.",
+        "¿Instalar el kernel y Mesa desde Debian Backports?": "Installer le noyau et Mesa depuis Debian Backports ?",
+        "Se instalará el kernel de Backports para esta arquitectura y los controladores Mesa disponibles. Esto puede actualizar componentes gráficos y requerir un reinicio. Si falta, se añadirá la fuente oficial de Debian Backports.": "Le noyau Backports de cette architecture et les pilotes Mesa disponibles seront installés. Cela peut mettre à jour les composants graphiques et nécessiter un redémarrage. Le dépôt officiel Debian Backports sera ajouté si nécessaire.",
+        "Instalación desde Backports cancelada.": "Installation Backports annulée.",
+        "Esperando autenticación de administrador…": "En attente de l’authentification administrateur…",
+        "No se pudo iniciar": "Impossible de démarrer",
+        "Permitir tareas sin contraseña?": "Autoriser les tâches sans mot de passe ?",
+        "Se instalará una autorización persistente de Polkit para este usuario y solo para AiO Debian GUI. Todas las tareas de mantenimiento podrán ejecutarse como administrador sin volver a pedir contraseña. La activación requiere autorización de administrador una vez; puedes desactivarla desde esta opción.": "Une autorisation Polkit persistante sera installée pour cet utilisateur et AiO Debian GUI uniquement. Les tâches de maintenance pourront s’exécuter en tant qu’administrateur sans redemander le mot de passe. L’activation nécessite une autorisation administrateur unique ; vous pouvez la désactiver ici.",
+        "Cancelando la espera de autorización…": "Annulation de l’attente d’autorisation…",
+        "Paso %d de %d": "Étape %d sur %d",
+        "Autorización sin contraseña activada.": "Autorisation sans mot de passe activée.",
+        "Autorización sin contraseña desactivada.": "Autorisation sans mot de passe désactivée.",
+        "No se cambió la autorización.": "L’autorisation n’a pas été modifiée.",
+        "No se pudo cambiar la autorización.": "Impossible de modifier l’autorisation.",
+        "No se pudieron guardar las preferencias": "Impossible d’enregistrer les préférences",
+        "No se pudieron leer las preferencias": "Impossible de lire les préférences",
+        "✔ ¡Mantenimiento completado con éxito!": "✔ Maintenance terminée avec succès !",
+        "No se obtuvo autorización de administrador.": "L’autorisation administrateur n’a pas été accordée.",
+        "Terminó con errores. Revisa el registro.": "Terminé avec des erreurs. Consultez le journal.",
+        "¿Reiniciar el sistema ahora?": "Redémarrer le système maintenant ?",
+        "Se recomienda reiniciar para aplicar los cambios críticos (kernel/servicios).": "Un redémarrage est recommandé pour appliquer les changements critiques (noyau/services).",
+        "Más tarde": "Plus tard",
+        "Reiniciar ahora": "Redémarrer maintenant",
+        "No se pudo reiniciar": "Impossible de redémarrer",
+        "Mantenimiento y configuración todo en uno para Debian": "Maintenance et configuration tout-en-un pour Debian",
+        "Mantenimiento en curso": "Maintenance en cours",
+        "Espera a que termine: interrumpir apt o dpkg a mitad puede dejar el sistema en un estado inconsistente.": "Attendez la fin : interrompre APT ou dpkg peut rendre le système incohérent.",
+        "Espera de autorización agotada.": "Délai d’autorisation dépassé.",
+        "Espera de autorización cancelada.": "Attente d’autorisation annulée.",
+    },
+    "zh": {
+        "Mantenimiento y configuración del sistema": "系统维护与配置",
+        "Iniciar tareas": "开始任务",
+        "Trabajando…": "正在处理…",
+        "Acerca de AiO Debian": "关于 AiO Debian",
+        "Menú de preferencias": "偏好设置菜单",
+        "Preferencias": "偏好设置",
+        "Idioma de la interfaz": "界面语言",
+        "Apariencia": "外观",
+        "Claro": "浅色",
+        "Oscuro": "深色",
+        "Interfaz simple (sin salida de consola)": "简洁界面（隐藏控制台输出）",
+        "El modo simple oculta la salida detallada de las tareas.": "简洁模式会隐藏任务的详细输出。",
+        "Guardar": "保存",
+        "Cancelar": "取消",
+        "Aceptar": "确定",
+        "Continuar": "继续",
+        "Listo. Elige las tareas y pulsa «Iniciar tareas».": "准备就绪。选择任务，然后点击“开始任务”。",
+        "Cancelar espera": "取消等待",
+        "<b>Información del sistema</b>": "<b>系统信息</b>",
+        "Sistema operativo": "操作系统",
+        "Kernel actual": "当前内核",
+        "Espacio en disco (/)": "磁盘空间（/）",
+        "Usado: %.1f GiB / Total: %.1f GiB (%d%% ocupado)": "已用：%.1f GiB / 总计：%.1f GiB（已用%d%%）",
+        "Fecha de instalación": "安装日期",
+        "Antigüedad del sistema": "系统运行时间",
+        "%d años, %d meses y %d días (%d días en total)": "%d年%d个月%d天（共%d天）",
+        "Versión de AiO Debian GUI": "AiO Debian GUI 版本",
+        "<b>Novedades de esta versión:</b>": "<b>此版本的新功能：</b>",
+        "Los botones de preset resaltan la selección y se desmarcan al cambiar tareas.": "预设按钮会突出显示当前选择，手动更改任务后取消突出显示。",
+        "<b>Tareas a realizar</b>": "<b>要执行的任务</b>",
+        "Completo": "完整",
+        "Mantenimiento completo (valores por defecto)": "完整维护（默认选项）",
+        "Solo Flatpak": "仅 Flatpak",
+        "Saltarse el mantenimiento de APT y actualizar solo Flatpak": "跳过 APT 维护，仅更新 Flatpak",
+        "No pedir contraseña para las tareas de AiO (solo este usuario)": "AiO 任务不再询问密码（仅此用户）",
+        "La activación requiere autorización de administrador una vez. Puedes desmarcar esta opción para revocarla.": "启用时需要一次管理员授权。取消勾选即可撤销。",
+        "Permite ejecutar las tareas de AiO sin contraseña en la sesión local activa.": "允许在当前本地会话中无需密码运行 AiO 任务。",
+        "Sistema (APT)": "系统（APT）",
+        "Al terminar": "完成后",
+        "Sincronizar el reloj": "同步时钟",
+        "Un reloj desfasado rompe la validación de certificados (apt, Flathub…).": "时钟不准确会导致证书验证失败（APT、Flathub 等）。",
+        "Habilitar contrib y non-free": "启用 contrib 和 non-free",
+        "Añade los componentes a los repositorios oficiales de Debian (con copia .bak).": "将这些组件添加到 Debian 官方软件源（创建 .bak 备份）。",
+        "Instalar herramientas auxiliares": "安装辅助工具",
+        "needrestart, fastfetch, kitty, synaptic y soporte FUSE para AppImage, si faltan.": "安装缺失的 needrestart、fastfetch、kitty、synaptic 和 AppImage FUSE 支持。",
+        "Instalar kernel y Mesa desde Backports": "从 Backports 安装内核和 Mesa",
+        "Instala el kernel y los controladores gráficos Mesa de Debian Backports; puede requerir reinicio.": "从 Debian Backports 安装内核和 Mesa 显卡驱动；可能需要重启。",
+        "Actualizar los paquetes del sistema": "升级系统软件包",
+        "Eliminar dependencias huérfanas": "删除孤立依赖",
+        "Limpiar la caché de paquetes obsoletos": "清理过时软件包缓存",
+        "apt-get update y apt-get dist-upgrade.": "运行 apt-get update 和 apt-get dist-upgrade。",
+        "apt-get autoremove.": "运行 apt-get autoremove。",
+        "apt-get autoclean.": "运行 apt-get autoclean。",
+        "Instalar soporte Flatpak y añadir Flathub": "安装 Flatpak 支持并添加 Flathub",
+        "Flatpak no está instalado en este sistema.": "此系统尚未安装 Flatpak。",
+        "Actualizar aplicaciones Flatpak": "更新 Flatpak 应用",
+        "flatpak update y eliminación de runtimes sin uso.": "运行 flatpak update 并删除未使用的运行环境。",
+        "Plugin Flatpak para GNOME Software": "GNOME 软件的 Flatpak 插件",
+        "Permite gestionar apps Flatpak desde la tienda de GNOME.": "可在 GNOME 软件商店中管理 Flatpak 应用。",
+        "Extension Manager": "扩展管理器",
+        "Instala gnome-shell-extension-manager para gestionar extensiones de GNOME Shell.": "安装 gnome-shell-extension-manager 以管理 GNOME Shell 扩展。",
+        "Comprobar si hace falta reiniciar": "检查是否需要重启",
+        "Revisa kernel y servicios críticos al terminar.": "完成后检查内核和关键服务。",
+        "Logotipo de Debian": "Debian 标志",
+        "Comprobando tareas ya instaladas…": "正在检查已完成的任务…",
+        "✓ Ya configurados": "✓ 已配置",
+        "✓ Ya instaladas": "✓ 已安装",
+        "✓ Ya instalados": "✓ 已安装",
+        "✓ Ya instalado": "✓ 已安装",
+        "Esta tarea ya está completada y no se incluirá en futuras operaciones.": "此任务已完成，不会包含在后续操作中。",
+        "No se pudo comprobar el estado de las tareas; siguen disponibles.": "无法检查任务状态；任务仍可使用。",
+        "El asistente no devolvió un estado completo de las tareas.": "辅助程序未返回完整的任务状态。",
+        "Nada que hacer": "没有要执行的操作",
+        "Activa al menos una tarea.": "请至少选择一项任务。",
+        "Falta el asistente": "缺少辅助程序",
+        "No se encuentra %s.\nReinstala el paquete aio-debian-gui.": "找不到 %s。\n请重新安装 aio-debian-gui 软件包。",
+        "Asistente del sistema desactualizado": "系统辅助程序版本过旧",
+        "El asistente instalado no incluye la tarea de Backports. Actualiza el paquete .deb a la versión 1.0.7 o posterior.": "已安装的辅助程序不支持 Backports 任务。请将 .deb 软件包更新到 1.0.7 或更高版本。",
+        "Función no disponible en el asistente instalado": "已安装的辅助程序不支持此功能",
+        "El asistente del sistema no incluye la autorización sin contraseña. Actualiza el paquete .deb a la versión 1.0.6 o posterior.": "系统辅助程序不支持无密码授权。请将 .deb 软件包更新到 1.0.6 或更高版本。",
+        "¿Instalar el kernel y Mesa desde Debian Backports?": "要从 Debian Backports 安装内核和 Mesa 吗？",
+        "Se instalará el kernel de Backports para esta arquitectura y los controladores Mesa disponibles. Esto puede actualizar componentes gráficos y requerir un reinicio. Si falta, se añadirá la fuente oficial de Debian Backports.": "将安装适用于此架构的 Backports 内核和可用的 Mesa 驱动程序。这可能会更新图形组件并需要重启；如果尚未配置，将添加 Debian 官方 Backports 软件源。",
+        "Instalación desde Backports cancelada.": "已取消从 Backports 安装。",
+        "Esperando autenticación de administrador…": "正在等待管理员身份验证…",
+        "No se pudo iniciar": "无法启动",
+        "Permitir tareas sin contraseña?": "允许无密码执行任务？",
+        "Se instalará una autorización persistente de Polkit para este usuario y solo para AiO Debian GUI. Todas las tareas de mantenimiento podrán ejecutarse como administrador sin volver a pedir contraseña. La activación requiere autorización de administrador una vez; puedes desactivarla desde esta opción.": "将为此用户和 AiO Debian GUI 安装持久 Polkit 授权。维护任务可以管理员身份运行，而无需再次输入密码。启用时需要一次管理员授权；可在此处停用。",
+        "Cancelando la espera de autorización…": "正在取消授权等待…",
+        "Paso %d de %d": "第 %d 步，共 %d 步",
+        "Autorización sin contraseña activada.": "已启用无密码授权。",
+        "Autorización sin contraseña desactivada.": "已停用无密码授权。",
+        "No se cambió la autorización.": "授权未更改。",
+        "No se pudo cambiar la autorización.": "无法更改授权。",
+        "No se pudieron guardar las preferencias": "无法保存偏好设置",
+        "No se pudieron leer las preferencias": "无法读取偏好设置",
+        "✔ ¡Mantenimiento completado con éxito!": "✔ 维护已成功完成！",
+        "No se obtuvo autorización de administrador.": "未获得管理员授权。",
+        "Terminó con errores. Revisa el registro.": "执行结束但出现错误。请检查日志。",
+        "¿Reiniciar el sistema ahora?": "现在重启系统吗？",
+        "Se recomienda reiniciar para aplicar los cambios críticos (kernel/servicios).": "建议重启以应用关键更改（内核/服务）。",
+        "Más tarde": "稍后",
+        "Reiniciar ahora": "立即重启",
+        "No se pudo reiniciar": "无法重启",
+        "Mantenimiento y configuración todo en uno para Debian": "Debian 一体化维护与配置",
+        "Mantenimiento en curso": "维护正在进行",
+        "Espera a que termine: interrumpir apt o dpkg a mitad puede dejar el sistema en un estado inconsistente.": "请等待操作完成：中断 APT 或 dpkg 可能导致系统状态不一致。",
+        "Espera de autorización agotada.": "授权等待超时。",
+        "Espera de autorización cancelada.": "已取消授权等待。",
+    },
+}
+
+
+def traducir(texto):
+    return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)
+
+
+def ruta_preferencias():
+    return os.path.join(GLib.get_user_config_dir(), PRGNAME, "preferences.json")
+
+
+def cargar_preferencias(ruta=None):
+    ruta = ruta or ruta_preferencias()
+    try:
+        with open(ruta, encoding="utf-8") as archivo:
+            datos = json.load(archivo)
+    except FileNotFoundError:
+        return PREFERENCIAS_DEFECTO.copy()
+    if not isinstance(datos, dict):
+        raise ValueError("El archivo de preferencias debe contener un objeto JSON.")
+    preferencias = PREFERENCIAS_DEFECTO.copy()
+    preferencias.update({clave: datos[clave] for clave in PREFERENCIAS_DEFECTO if clave in datos})
+    if not isinstance(preferencias["idioma"], str) or preferencias["idioma"] not in IDIOMAS:
+        raise ValueError("Idioma de interfaz no válido en las preferencias.")
+    if not isinstance(preferencias["tema"], str) or preferencias["tema"] not in TEMAS:
+        raise ValueError("Tema de interfaz no válido en las preferencias.")
+    if type(preferencias["modo_simple"]) is not bool:
+        raise ValueError("El modo simple de las preferencias debe ser verdadero o falso.")
+    return preferencias
+
+
+def guardar_preferencias(preferencias, ruta=None):
+    ruta = ruta or ruta_preferencias()
+    directorio = os.path.dirname(ruta)
+    os.makedirs(directorio, exist_ok=True)
+    descriptor, temporal = tempfile.mkstemp(prefix=".preferences-", dir=directorio)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as archivo:
+            json.dump(preferencias, archivo, ensure_ascii=False, indent=2)
+            archivo.write("\n")
+        os.replace(temporal, ruta)
+    finally:
+        if os.path.exists(temporal):
+            os.unlink(temporal)
+
+
+def aplicar_tema(tema):
+    settings = Gtk.Settings.get_default()
+    if settings is not None:
+        settings.set_property("gtk-application-prefer-dark-theme", tema == "oscuro")
 
 
 # ------------------------------------------------------------------------------
@@ -201,7 +597,7 @@ def informacion_sistema():
         gib = 1024 ** 3
         filas.append((
             "Espacio en disco (/)",
-            "Usado: %.1f GiB / Total: %.1f GiB (%d%% ocupado)"
+            traducir("Usado: %.1f GiB / Total: %.1f GiB (%d%% ocupado)")
             % (du.used / gib, du.total / gib, round(du.used * 100 / du.total)),
         ))
     except OSError:
@@ -215,7 +611,8 @@ def informacion_sistema():
         filas.append(("Fecha de instalación", fecha.isoformat()))
         filas.append((
             "Antigüedad del sistema",
-            "%d años, %d meses y %d días (%d días en total)" % (a, m, d, total),
+            traducir("%d años, %d meses y %d días (%d días en total)")
+            % (a, m, d, total),
         ))
 
     version = version_app()
@@ -263,6 +660,7 @@ GRUPOS = [
 
 
 def etiqueta(texto, markup=False, dim=False, xalign=0.0):
+    texto = traducir(texto)
     lbl = Gtk.Label(xalign=xalign)
     if markup:
         lbl.set_markup(texto)
@@ -275,8 +673,12 @@ def etiqueta(texto, markup=False, dim=False, xalign=0.0):
 
 
 class VentanaPrincipal(Gtk.Window):
-    def __init__(self):
+    def __init__(self, preferencias=None):
         super().__init__(title="AiO Debian")
+        self.preferencias = (preferencias or PREFERENCIAS_DEFECTO).copy()
+        self.handler_cierre = None
+        global IDIOMA_ACTUAL
+        IDIOMA_ACTUAL = self.preferencias["idioma"]
         self.set_default_size(920, 780)
         self.set_icon_name("aio-debian-gui")
 
@@ -312,18 +714,126 @@ class VentanaPrincipal(Gtk.Window):
         hb = Gtk.HeaderBar()
         hb.set_show_close_button(True)
         hb.set_title("AiO Debian")
-        hb.set_subtitle("Mantenimiento y configuración del sistema")
+        hb.set_subtitle(traducir("Mantenimiento y configuración del sistema"))
 
-        self.btn_iniciar = Gtk.Button(label="Iniciar tareas")
+        self.btn_iniciar = Gtk.Button(label=traducir("Iniciar tareas"))
         self.btn_iniciar.get_style_context().add_class("suggested-action")
         self.btn_iniciar.connect("clicked", self._iniciar)
         hb.pack_start(self.btn_iniciar)
 
         btn_acerca = Gtk.Button.new_from_icon_name("help-about-symbolic", Gtk.IconSize.BUTTON)
-        btn_acerca.set_tooltip_text("Acerca de AiO Debian")
+        btn_acerca.set_tooltip_text(traducir("Acerca de AiO Debian"))
         btn_acerca.connect("clicked", self._acerca_de)
         hb.pack_end(btn_acerca)
+
+        self.btn_menu = Gtk.MenuButton()
+        self.btn_menu.add(Gtk.Image.new_from_icon_name("open-menu-symbolic", Gtk.IconSize.BUTTON))
+        self.btn_menu.set_tooltip_text(traducir("Menú de preferencias"))
+        popover = Gtk.Popover.new(self.btn_menu)
+        menu = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        menu.set_margin_top(8)
+        menu.set_margin_bottom(8)
+        menu.set_margin_start(8)
+        menu.set_margin_end(8)
+        btn_preferencias = Gtk.Button(label=traducir("Preferencias"))
+        btn_preferencias.connect("clicked", self._abrir_preferencias)
+        menu.pack_start(btn_preferencias, False, False, 0)
+        popover.add(menu)
+        menu.show_all()
+        self.btn_menu.set_popover(popover)
+        self.menu_popover = popover
+        hb.pack_end(self.btn_menu)
         self.set_titlebar(hb)
+
+    def _abrir_preferencias(self, _boton):
+        self.menu_popover.popdown()
+        dialogo = Gtk.Dialog(
+            title=traducir("Preferencias"), transient_for=self, modal=True
+        )
+        dialogo.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
+        dialogo.add_button(traducir("Guardar"), Gtk.ResponseType.OK)
+
+        contenido = dialogo.get_content_area()
+        grid = Gtk.Grid(column_spacing=12, row_spacing=10)
+        for margen in ("top", "bottom", "start", "end"):
+            getattr(grid, "set_margin_" + margen)(16)
+        contenido.pack_start(grid, True, True, 0)
+
+        combo_idioma = Gtk.ComboBoxText()
+        for codigo, nombre in (
+            ("es", "Español"), ("en", "English"), ("fr", "Français"), ("zh", "中文")
+        ):
+            combo_idioma.append(codigo, nombre)
+        combo_idioma.set_active_id(self.preferencias["idioma"])
+        grid.attach(etiqueta("Idioma de la interfaz"), 0, 0, 1, 1)
+        grid.attach(combo_idioma, 1, 0, 1, 1)
+
+        combo_tema = Gtk.ComboBoxText()
+        combo_tema.append("claro", traducir("Claro"))
+        combo_tema.append("oscuro", traducir("Oscuro"))
+        combo_tema.set_active_id(self.preferencias["tema"])
+        grid.attach(etiqueta("Apariencia"), 0, 1, 1, 1)
+        grid.attach(combo_tema, 1, 1, 1, 1)
+
+        simple = Gtk.CheckButton(
+            label=traducir("Interfaz simple (sin salida de consola)")
+        )
+        simple.set_active(self.preferencias["modo_simple"])
+        grid.attach(simple, 0, 2, 2, 1)
+        grid.attach(
+            etiqueta("El modo simple oculta la salida detallada de las tareas.", dim=True),
+            0, 3, 2, 1,
+        )
+        dialogo.show_all()
+        respuesta = dialogo.run()
+        if respuesta != Gtk.ResponseType.OK:
+            dialogo.destroy()
+            return
+
+        nuevas = {
+            "idioma": combo_idioma.get_active_id(),
+            "tema": combo_tema.get_active_id(),
+            "modo_simple": simple.get_active(),
+        }
+        try:
+            guardar_preferencias(nuevas)
+        except OSError as error:
+            dialogo.destroy()
+            self._mensaje(
+                Gtk.MessageType.ERROR,
+                "No se pudieron guardar las preferencias",
+                str(error),
+            )
+            return
+
+        idioma_cambiado = nuevas["idioma"] != self.preferencias["idioma"]
+        modo_simple_activado = (
+            nuevas["modo_simple"] and not self.preferencias["modo_simple"]
+        )
+        self.preferencias = nuevas
+        aplicar_tema(nuevas["tema"])
+        dialogo.destroy()
+        if idioma_cambiado:
+            self._reiniciar_interfaz()
+            return
+        if modo_simple_activado:
+            self.buf.set_text("")
+        self.marco_consola.set_no_show_all(nuevas["modo_simple"])
+        if nuevas["modo_simple"]:
+            self.marco_consola.set_visible(False)
+        else:
+            self.marco_consola.show_all()
+
+    def _reiniciar_interfaz(self):
+        ancho, alto = self.get_size()
+        if self.handler_cierre is not None:
+            self.disconnect(self.handler_cierre)
+        nueva = VentanaPrincipal(self.preferencias)
+        nueva.handler_cierre = nueva.connect("destroy", Gtk.main_quit)
+        nueva.resize(ancho, alto)
+        nueva.show_all()
+        nueva._consultar_estados_tareas(inicial=True)
+        self.destroy()
 
     def _construir_cuerpo(self):
         panel = Gtk.Paned(orientation=Gtk.Orientation.VERTICAL)
@@ -349,8 +859,8 @@ class VentanaPrincipal(Gtk.Window):
 
         fila = Gtk.Box(spacing=10)
         self.spinner = Gtk.Spinner()
-        self.estado = etiqueta("Listo. Elige las tareas y pulsa «Iniciar tareas».")
-        self.btn_cancelar = Gtk.Button(label="Cancelar espera")
+        self.estado = etiqueta(traducir("Listo. Elige las tareas y pulsa «Iniciar tareas»."))
+        self.btn_cancelar = Gtk.Button(label=traducir("Cancelar espera"))
         self.btn_cancelar.set_no_show_all(True)
         self.btn_cancelar.connect("clicked", self._cancelar_espera_autorizacion)
         fila.pack_start(self.spinner, False, False, 0)
@@ -364,6 +874,9 @@ class VentanaPrincipal(Gtk.Window):
         marco = Gtk.ScrolledWindow()
         marco.set_shadow_type(Gtk.ShadowType.IN)
         marco.set_min_content_height(140)
+        marco.set_no_show_all(self.preferencias["modo_simple"])
+        marco.set_visible(not self.preferencias["modo_simple"])
+        self.marco_consola = marco
         self.log = Gtk.TextView(editable=False, cursor_visible=False)
         self.log.set_monospace(True)
         self.log.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
@@ -398,7 +911,7 @@ class VentanaPrincipal(Gtk.Window):
         contenido.pack_start(grid, True, True, 0)
 
         logo = Gtk.Image.new_from_file(DEBIAN_LOGO)
-        logo.set_tooltip_text("Logotipo de Debian")
+        logo.set_tooltip_text(traducir("Logotipo de Debian"))
         logo.set_valign(Gtk.Align.CENTER)
         logo.get_accessible().set_name("Logotipo de Debian")
         contenido.pack_end(logo, False, False, 0)
@@ -406,8 +919,10 @@ class VentanaPrincipal(Gtk.Window):
 
         nov = NOVEDADES.get(version)
         if nov:
+            titulo_novedades = traducir("<b>Novedades de esta versión:</b>")
+            nov = GLib.markup_escape_text(traducir(nov))
             caja.pack_start(
-                etiqueta("<b>Novedades de esta versión:</b> " + GLib.markup_escape_text(nov), markup=True),
+                etiqueta(titulo_novedades + " " + nov, markup=True),
                 False, False, 4,
             )
         return marco
@@ -419,11 +934,13 @@ class VentanaPrincipal(Gtk.Window):
         cab.pack_start(etiqueta("<b>Tareas a realizar</b>", markup=True), True, True, 0)
         presets = Gtk.Box()
         presets.get_style_context().add_class("linked")
-        b1 = Gtk.Button(label="Completo")
-        b1.set_tooltip_text("Mantenimiento completo (valores por defecto)")
+        b1 = Gtk.Button(label=traducir("Completo"))
+        b1.set_tooltip_text(traducir("Mantenimiento completo (valores por defecto)"))
         b1.connect("clicked", self._preset_completo)
-        b2 = Gtk.Button(label="Solo Flatpak")
-        b2.set_tooltip_text("Saltarse el mantenimiento de APT y actualizar solo Flatpak")
+        b2 = Gtk.Button(label=traducir("Solo Flatpak"))
+        b2.set_tooltip_text(
+            traducir("Saltarse el mantenimiento de APT y actualizar solo Flatpak")
+        )
         b2.connect("clicked", self._preset_flatpak)
         presets.pack_start(b1, False, False, 0)
         presets.pack_start(b2, False, False, 0)
@@ -432,11 +949,15 @@ class VentanaPrincipal(Gtk.Window):
         externa.pack_start(cab, False, False, 0)
 
         self.chk_sin_contrasena = Gtk.CheckButton(
-            label="No pedir contraseña para las tareas de AiO (solo este usuario)"
+            label=traducir(
+                "No pedir contraseña para las tareas de AiO (solo este usuario)"
+            )
         )
         self.chk_sin_contrasena.set_tooltip_text(
-            "La activación requiere autorización de administrador una vez. "
-            "Puedes desmarcar esta opción para revocarla."
+            traducir(
+                "La activación requiere autorización de administrador una vez. "
+                "Puedes desmarcar esta opción para revocarla."
+            )
         )
         self.chk_sin_contrasena.set_active(autorizacion_sin_contrasena_activa())
         self.chk_sin_contrasena.connect("toggled", self._cambiar_sin_contrasena)
@@ -466,7 +987,7 @@ class VentanaPrincipal(Gtk.Window):
         self.consulta_inicial = inicial
         self.salida_estados = []
         if inicial:
-            self.estado.set_text("Comprobando tareas ya instaladas…")
+            self.estado.set_text(traducir("Comprobando tareas ya instaladas…"))
         self._actualizar_sensibilidad()
         try:
             self.proceso_estados = Gio.Subprocess.new(
@@ -533,10 +1054,13 @@ class VentanaPrincipal(Gtk.Window):
             indicador = self.indicadores[pid]
             if completada:
                 indicador.set_markup(
-                    "<span foreground='#26a269'><b>%s</b></span>" % etiquetas[pid]
+                    "<span foreground='#26a269'><b>%s</b></span>"
+                    % traducir(etiquetas[pid])
                 )
                 indicador.set_tooltip_text(
-                    "Esta tarea ya está completada y no se incluirá en futuras operaciones."
+                    traducir(
+                        "Esta tarea ya está completada y no se incluirá en futuras operaciones."
+                    )
                 )
                 indicador.show()
                 self.switches[pid][0].set_active(False)
@@ -558,9 +1082,13 @@ class VentanaPrincipal(Gtk.Window):
         self._actualizar_sensibilidad()
         if correcta:
             if inicial:
-                self.estado.set_text("Listo. Elige las tareas y pulsa «Iniciar tareas».")
+                self.estado.set_text(
+                    traducir("Listo. Elige las tareas y pulsa «Iniciar tareas».")
+                )
             return
-        mensaje = "No se pudo comprobar el estado de las tareas; siguen disponibles."
+        mensaje = traducir(
+            "No se pudo comprobar el estado de las tareas; siguen disponibles."
+        )
         if detalle:
             mensaje += " " + detalle
         if inicial:
@@ -571,6 +1099,7 @@ class VentanaPrincipal(Gtk.Window):
         disponible = not self.en_curso and not self.consultando_estados
         self.btn_iniciar.set_sensitive(disponible)
         self.chk_sin_contrasena.set_sensitive(disponible)
+        self.btn_menu.set_sensitive(disponible)
         for boton in self.botones_preset:
             boton.set_sensitive(disponible)
         for pid, fila in self.filas.items():
@@ -661,7 +1190,8 @@ class VentanaPrincipal(Gtk.Window):
         helper = helper_mantenimiento()
         if not os.path.exists(helper):
             self._mensaje(Gtk.MessageType.ERROR, "Falta el asistente",
-                          "No se encuentra %s.\nReinstala el paquete aio-debian-gui." % helper)
+                          traducir("No se encuentra %s.\nReinstala el paquete aio-debian-gui.")
+                          % helper)
             return
 
         if ("backports-kernel-mesa" in pasos and
@@ -676,19 +1206,24 @@ class VentanaPrincipal(Gtk.Window):
         if "backports-kernel-mesa" in pasos:
             d = Gtk.MessageDialog(
                 transient_for=self, modal=True, message_type=Gtk.MessageType.WARNING,
-                buttons=Gtk.ButtonsType.OK_CANCEL,
-                text="¿Instalar el kernel y Mesa desde Debian Backports?",
+                buttons=Gtk.ButtonsType.NONE,
+                text=traducir("¿Instalar el kernel y Mesa desde Debian Backports?"),
             )
+            d.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
+            d.add_button(traducir("Continuar"), Gtk.ResponseType.OK)
+            d.set_default_response(Gtk.ResponseType.CANCEL)
             d.format_secondary_text(
-                "Se instalará el kernel de Backports para esta arquitectura y los controladores "
+                traducir(
+                    "Se instalará el kernel de Backports para esta arquitectura y los controladores "
                 "Mesa disponibles. Esto puede actualizar componentes gráficos y requerir un "
-                "reinicio. Si falta, se añadirá la fuente oficial de Debian Backports."
+                    "reinicio. Si falta, se añadirá la fuente oficial de Debian Backports."
+                )
             )
             confirmar = d.run() == Gtk.ResponseType.OK
             d.destroy()
             if not confirmar:
                 self.switches["backports-kernel-mesa"][0].set_active(False)
-                self.estado.set_text("Instalación desde Backports cancelada.")
+                self.estado.set_text(traducir("Instalación desde Backports cancelada."))
                 return
 
         lang = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or "C"
@@ -702,7 +1237,7 @@ class VentanaPrincipal(Gtk.Window):
         self.cancelacion_autorizacion = None
         self.total_pasos = len(pasos)
         self._poner_ocupado(True)
-        self.estado.set_text("Esperando autenticación de administrador…")
+        self.estado.set_text(traducir("Esperando autenticación de administrador…"))
         self._escribir("[*] Solicitando autorización de administrador…\n", "info")
         self._escribir(
             "[*] Si no aparece el diálogo, cancela la espera y comprueba el agente de Polkit.\n",
@@ -733,8 +1268,12 @@ class VentanaPrincipal(Gtk.Window):
         helper = helper_mantenimiento()
         if not os.path.exists(helper):
             self._restablecer_opcion_sin_contrasena(autorizacion_sin_contrasena_activa())
-            self._mensaje(Gtk.MessageType.ERROR, "Falta el asistente",
-                          "No se encuentra %s.\nReinstala el paquete aio-debian-gui." % helper)
+            self._mensaje(
+                Gtk.MessageType.ERROR,
+                "Falta el asistente",
+                traducir("No se encuentra %s.\nReinstala el paquete aio-debian-gui.")
+                % helper,
+            )
             return
 
         if not helper_admite_autorizacion_sin_contrasena(helper):
@@ -749,13 +1288,19 @@ class VentanaPrincipal(Gtk.Window):
         if habilitar:
             d = Gtk.MessageDialog(
                 transient_for=self, modal=True, message_type=Gtk.MessageType.WARNING,
-                buttons=Gtk.ButtonsType.OK_CANCEL, text="Permitir tareas sin contraseña?",
+                buttons=Gtk.ButtonsType.NONE,
+                text=traducir("Permitir tareas sin contraseña?"),
             )
+            d.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
+            d.add_button(traducir("Continuar"), Gtk.ResponseType.OK)
+            d.set_default_response(Gtk.ResponseType.CANCEL)
             d.format_secondary_text(
-                "Se instalará una autorización persistente de Polkit para este usuario y "
+                traducir(
+                    "Se instalará una autorización persistente de Polkit para este usuario y "
                 "solo para AiO Debian GUI. Todas las tareas de mantenimiento podrán ejecutarse "
                 "como administrador sin volver a pedir contraseña. La activación requiere "
-                "autorización de administrador una vez; puedes desactivarla desde esta opción."
+                    "autorización de administrador una vez; puedes desactivarla desde esta opción."
+                )
             )
             confirmar = d.run() == Gtk.ResponseType.OK
             d.destroy()
@@ -770,7 +1315,7 @@ class VentanaPrincipal(Gtk.Window):
         self.cancelacion_autorizacion = None
         self._poner_ocupado(True)
         self.buf.set_text("")
-        self.estado.set_text("Esperando autorización de administrador…")
+        self.estado.set_text(traducir("Esperando autorización de administrador…"))
         self._escribir("[*] Solicitando autorización de administrador…\n", "info")
         self.barra.set_fraction(0)
         self.barra.set_show_text(False)
@@ -798,7 +1343,9 @@ class VentanaPrincipal(Gtk.Window):
 
     def _poner_ocupado(self, ocupado):
         self.en_curso = ocupado
-        self.btn_iniciar.set_label("Trabajando…" if ocupado else "Iniciar tareas")
+        self.btn_iniciar.set_label(
+            traducir("Trabajando…" if ocupado else "Iniciar tareas")
+        )
         self._actualizar_sensibilidad()
         if ocupado:
             self.spinner.start()
@@ -824,7 +1371,7 @@ class VentanaPrincipal(Gtk.Window):
             return
         self.cancelacion_autorizacion = "agotada" if agotada else "cancelada"
         self._finalizar_espera_autorizacion()
-        self.estado.set_text("Cancelando la espera de autorización…")
+        self.estado.set_text(traducir("Cancelando la espera de autorización…"))
         self._escribir(
             "[-] Se canceló la espera de autorización de administrador.\n", "error"
         )
@@ -864,8 +1411,8 @@ class VentanaPrincipal(Gtk.Window):
             n, total = int(n), int(total)
             self.barra.set_show_text(True)
             self.barra.set_fraction((n - 1) / total)
-            self.barra.set_text("Paso %d de %d" % (n, total))
-            self.estado.set_text("%s…" % titulo)
+            self.barra.set_text(traducir("Paso %d de %d") % (n, total))
+            self.estado.set_text(traducir(titulo) + "…")
             self._escribir("\n▶ %s\n" % titulo, "paso")
             return
         if linea.startswith("##REBOOT:"):
@@ -888,6 +1435,8 @@ class VentanaPrincipal(Gtk.Window):
         self._escribir(linea + "\n", tag)
 
     def _escribir(self, texto, tag=None):
+        if self.preferencias["modo_simple"]:
+            return
         fin = self.buf.get_end_iter()
         if tag:
             self.buf.insert_with_tags_by_name(fin, texto, tag)
@@ -918,28 +1467,29 @@ class VentanaPrincipal(Gtk.Window):
             self._restablecer_opcion_sin_contrasena(activa)
             if cancelacion:
                 self.estado.set_text(
-                    "Espera de autorización agotada."
-                    if cancelacion == "agotada" else "Espera de autorización cancelada."
+                    traducir("Espera de autorización agotada.")
+                    if cancelacion == "agotada"
+                    else traducir("Espera de autorización cancelada.")
                 )
                 self._escribir(
                     "[-] No se cambió la preferencia de autorización.\n", "error"
                 )
             elif codigo == 0 and activa == deseada:
                 self.estado.set_text(
-                    "Autorización sin contraseña activada."
-                    if activa else "Autorización sin contraseña desactivada."
+                    traducir("Autorización sin contraseña activada.")
+                    if activa else traducir("Autorización sin contraseña desactivada.")
                 )
                 self._escribir(
                     "[✔] Preferencia de autorización actualizada.\n", "ok"
                 )
             elif codigo in (126, 127):
-                self.estado.set_text("No se cambió la autorización.")
+                self.estado.set_text(traducir("No se cambió la autorización."))
                 self._escribir(
                     "[-] Autorización cancelada o denegada; no se cambió la preferencia.\n",
                     "error",
                 )
             else:
-                self.estado.set_text("No se pudo cambiar la autorización.")
+                self.estado.set_text(traducir("No se pudo cambiar la autorización."))
                 self._escribir(
                     "[-] No se pudo actualizar la preferencia de autorización (código %s).\n"
                     % codigo,
@@ -952,8 +1502,9 @@ class VentanaPrincipal(Gtk.Window):
 
         if cancelacion:
             self.estado.set_text(
-                "Espera de autorización agotada."
-                if cancelacion == "agotada" else "Espera de autorización cancelada."
+                traducir("Espera de autorización agotada.")
+                if cancelacion == "agotada"
+                else traducir("Espera de autorización cancelada.")
             )
             self._escribir(
                 "[-] No se ejecutó ninguna tarea. Comprueba el agente de autenticación de Polkit.\n",
@@ -962,17 +1513,17 @@ class VentanaPrincipal(Gtk.Window):
             return
         if codigo == 0 and self.fin_recibido and not self.hubo_errores:
             self.barra.set_fraction(1.0)
-            self.estado.set_text("✔ ¡Mantenimiento completado con éxito!")
+            self.estado.set_text(traducir("✔ ¡Mantenimiento completado con éxito!"))
             self._escribir("\n==================================================\n"
                            "  [✔] ¡Mantenimiento completado con éxito!\n"
                            "==================================================\n"
                            "         ❤️ Made by JULIO AYUSO\n", "ok")
         elif codigo in (126, 127) and self.barra.get_fraction() == 0:
-            self.estado.set_text("No se obtuvo autorización de administrador.")
+            self.estado.set_text(traducir("No se obtuvo autorización de administrador."))
             self._escribir("[-] Autenticación cancelada o denegada. No se ha hecho ningún cambio.\n", "error")
             return
         else:
-            self.estado.set_text("Terminó con errores. Revisa el registro.")
+            self.estado.set_text(traducir("Terminó con errores. Revisa el registro."))
             self._escribir("\n[-] El proceso terminó con errores (código %s).\n" % codigo, "error")
 
         if self.necesita_reinicio:
@@ -983,11 +1534,13 @@ class VentanaPrincipal(Gtk.Window):
         d = Gtk.MessageDialog(
             transient_for=self, modal=True, message_type=Gtk.MessageType.QUESTION,
             buttons=Gtk.ButtonsType.NONE,
-            text="¿Reiniciar el sistema ahora?",
+            text=traducir("¿Reiniciar el sistema ahora?"),
         )
-        d.format_secondary_text("Se recomienda reiniciar para aplicar los cambios críticos (kernel/servicios).")
-        d.add_button("Más tarde", Gtk.ResponseType.NO)
-        d.add_button("Reiniciar ahora", Gtk.ResponseType.YES)
+        d.format_secondary_text(traducir(
+            "Se recomienda reiniciar para aplicar los cambios críticos (kernel/servicios)."
+        ))
+        d.add_button(traducir("Más tarde"), Gtk.ResponseType.NO)
+        d.add_button(traducir("Reiniciar ahora"), Gtk.ResponseType.YES)
         d.set_default_response(Gtk.ResponseType.NO)
         r = d.run()
         d.destroy()
@@ -1003,8 +1556,9 @@ class VentanaPrincipal(Gtk.Window):
     # -- Varios ----------------------------------------------------------------
     def _mensaje(self, tipo, titulo, texto):
         d = Gtk.MessageDialog(transient_for=self, modal=True, message_type=tipo,
-                              buttons=Gtk.ButtonsType.OK, text=titulo)
-        d.format_secondary_text(texto)
+                              buttons=Gtk.ButtonsType.NONE, text=traducir(titulo))
+        d.add_button(traducir("Aceptar"), Gtk.ResponseType.OK)
+        d.format_secondary_text(traducir(texto))
         d.run()
         d.destroy()
 
@@ -1012,7 +1566,7 @@ class VentanaPrincipal(Gtk.Window):
         d = Gtk.AboutDialog(transient_for=self, modal=True)
         d.set_program_name("AiO Debian GUI")
         d.set_version(version_app())
-        d.set_comments("Mantenimiento y configuración todo en uno para Debian")
+        d.set_comments(traducir("Mantenimiento y configuración todo en uno para Debian"))
         d.set_website(HOMEPAGE)
         d.set_copyright("© 2026 Julio Ayuso")
         d.set_license_type(Gtk.License.GPL_3_0)
@@ -1038,10 +1592,21 @@ def main():
         print("Ejecuta aio-debian-gui como usuario normal (pedirá la contraseña cuando haga falta).",
               file=sys.stderr)
         sys.exit(1)
-    win = VentanaPrincipal()
-    win.connect("destroy", Gtk.main_quit)
+    error_preferencias = None
+    try:
+        preferencias = cargar_preferencias()
+    except (OSError, ValueError) as error:
+        preferencias = PREFERENCIAS_DEFECTO.copy()
+        error_preferencias = str(error)
+    win = VentanaPrincipal(preferencias)
+    aplicar_tema(preferencias["tema"])
+    win.handler_cierre = win.connect("destroy", Gtk.main_quit)
     win.show_all()
     win._consultar_estados_tareas(inicial=True)
+    if error_preferencias:
+        win.estado.set_text(
+            traducir("No se pudieron leer las preferencias") + ": " + error_preferencias
+        )
     Gtk.main()
 
 
