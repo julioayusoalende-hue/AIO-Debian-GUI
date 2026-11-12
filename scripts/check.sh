@@ -12,6 +12,7 @@ HELPER=package/usr/lib/aio-debian-gui/aio-debian-gui-helper
 for f in "$HELPER" scripts/*.sh; do
     bash -n "$f" && bien "sintaxis bash: $f" || fallo "sintaxis bash: $f"
 done
+sh -n scripts/appimage/AppRun && bien "sintaxis AppRun" || fallo "sintaxis AppRun"
 
 python3 - "$GUI" <<'PY' && bien "sintaxis python: $GUI" || fallo "sintaxis python: $GUI"
 import ast, sys

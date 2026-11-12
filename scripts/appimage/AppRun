@@ -1,0 +1,19 @@
+#!/bin/sh
+set -eu
+
+APPDIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+export APPDIR
+export AIO_DEBIAN_GUI_VERSION="@VERSION@"
+
+if ! command -v python3 >/dev/null 2>&1 ||
+   ! python3 -c 'import gi; gi.require_version("Gtk", "3.0")' >/dev/null 2>&1; then
+    echo "Faltan Python 3, PyGObject o GTK 3. Instálalos con los paquetes de Debian." >&2
+    exit 1
+fi
+
+if ! command -v pkexec >/dev/null 2>&1 || ! command -v apt-get >/dev/null 2>&1; then
+    echo "Este AppImage requiere pkexec y apt-get del sistema." >&2
+    exit 1
+fi
+
+exec python3 "$APPDIR/usr/bin/aio-debian-gui" "$@"

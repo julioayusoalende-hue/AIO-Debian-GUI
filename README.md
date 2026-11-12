@@ -36,14 +36,32 @@ AiO Debian GUI:
 sudo bash -c 'set -euo pipefail; key=$(mktemp); trap "rm -f $key" EXIT; python3 -c "import sys, urllib.request; urllib.request.urlretrieve(sys.argv[1], sys.argv[2])" https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.gpg "$key"; install -D -m 0644 "$key" /usr/share/keyrings/aio-debian-gui.gpg; printf "%s\n" "Types: deb" "URIs: https://julioayusoalende-hue.github.io/AIO-Debian-GUI" "Suites: stable" "Components: main" "Architectures: all" "Signed-By: /usr/share/keyrings/aio-debian-gui.gpg" > /etc/apt/sources.list.d/aio-debian-gui.sources; apt-get update; apt-get install aio-debian-gui'
 ```
 
-### Opción 3: compilar desde el código
+### Opción 3: AppImage
+
+Descarga el archivo `aio-debian-gui_X.Y.Z_x86_64.AppImage` desde [Releases](../../releases/latest),
+dale permiso de ejecución y ábrelo. El AppImage incluye la interfaz y el asistente; requiere
+en el sistema `python3-gi`, GTK 3, `pkexec`, APT y FUSE 2 (`libfuse2` en Debian 12,
+`libfuse2t64` en Debian 13). No hace falta instalar el `.deb`. La autorización administrativa
+la gestiona `pkexec` con la política general del sistema; el AppImage no instala la política
+polkit específica del paquete `.deb`.
+
+```bash
+chmod +x aio-debian-gui_*_x86_64.AppImage
+./aio-debian-gui_*_x86_64.AppImage
+```
+
+### Opción 4: compilar desde el código
 
 ```bash
 git clone https://github.com/julioayusoalende-hue/AIO-Debian-GUI.git
 cd AIO-Debian-GUI
 ./scripts/build-deb.sh
+APPIMAGETOOL=/ruta/a/appimagetool ./scripts/build-appimage.sh
 sudo apt install ./dist/aio-debian-gui_*_all.deb
 ```
+
+El AppImage se construye para `x86_64` y usa el runtime de Debian; instala
+`appimagetool` para generarlo.
 
 ## Uso
 
@@ -61,6 +79,8 @@ package/                                  árbol que se instala tal cual en el s
   usr/share/polkit-1/actions/             política de autenticación
 scripts/
   build-deb.sh                            construye dist/aio-debian-gui_X.Y.Z_all.deb
+  build-appimage.sh                       construye dist/aio-debian-gui_X.Y.Z_x86_64.AppImage
+  appimage/AppRun                         lanzador del AppImage
   check.sh                                comprobaciones previas a publicar
   publish-apt-repo.sh                     añade el .deb al repositorio APT y lo firma
   recolor-icon.py                         regenera los iconos con otro color de fondo
@@ -83,14 +103,15 @@ El icono usa fondo verde para distinguirse del de `aio-debian`. Para otro color
 2. Añade la novedad en `NOVEDADES` (`package/usr/bin/aio-debian-gui`) y una sección
    `## X.Y.Z` en `CHANGELOG.md`.
 3. Comprueba: `./scripts/check.sh`
-4. Sube y etiqueta:
+4. Construye los paquetes:
 
    ```bash
-   git commit -am "Versión X.Y.Z" && git push
-   git tag vX.Y.Z && git push origin vX.Y.Z
+   ./scripts/build-deb.sh
+   APPIMAGETOOL=/ruta/a/appimagetool ./scripts/build-appimage.sh
    ```
 
-GitHub Actions crea la *Release* con el `.deb` y actualiza el repositorio APT.
+5. Publica ambos archivos en la *Release* de GitHub y actualiza el repositorio APT con
+   `scripts/publish-apt-repo.sh` sobre la rama `gh-pages`.
 
 ## Configuración inicial en GitHub (una sola vez)
 
