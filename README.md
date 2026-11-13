@@ -16,7 +16,7 @@ Es un proyecto independiente: no necesita el script de consola
 
 ## Instalación
 
-Pensado para Debian 12 (bookworm) o superior y derivados con `apt`.
+Compatible con Debian 12 (bookworm) o superior y, desde la v1.2.0, con Ubuntu 24.04/26.04 LTS (modo nativo por distribución). En otros sistemas la interfaz es informativa y el mantenimiento privilegiado queda bloqueado.
 
 **Actualizaciones:** la instalación mediante `.deb` usa el repositorio APT del proyecto; la instalación mediante `.flatpakref` usa nuestro **repositorio Flatpak firmado**, alojado en GitHub Pages, sin depender de que la aplicación esté publicada en Flathub. **No se ofrece un `.flatpak` independiente**. La edición AppImage se actualiza descargando una nueva versión.
 
@@ -205,6 +205,21 @@ resultados a JSON. Se registran hasta 100 ejecuciones por usuario, con fecha, ve
 tareas y resultado, en el directorio de estado de usuario (`$XDG_STATE_HOME/aio-debian-gui/history.json`,
 o `~/.local/state/aio-debian-gui/history.json`). No se guardan credenciales ni salidas
 completas de la consola. El historial no registra operaciones que aún no hayan comenzado.
+
+## Debian y Ubuntu LTS (v1.2.0)
+
+La aplicación lee `/etc/os-release` del sistema anfitrión para identificar Debian o Ubuntu.
+En **Debian** muestra contrib/non-free y Backports; en **Ubuntu 24.04/26.04 LTS**
+muestra la activación de los componentes oficiales `universe`, `restricted` y
+`multiverse` mediante `add-apt-repository`, y una tarea opcional para instalar el
+metapaquete de kernel **HWE** oficial, **solo si existe** en los repositorios configurados.
+No añade repositorios Debian a Ubuntu ni PPAs. La actualización general sigue
+utilizando APT; el soporte Flatpak se mantiene. Las tareas incompatibles se bloquean
+también en el asistente privilegiado, incluso si se invoca directamente.
+
+**Aviso:** el soporte requiere pruebas de integración y validación en instalaciones reales
+para confirmar el funcionamiento completo de cada combinación de Ubuntu, escritorio y formato.
+Se recomienda una copia de seguridad antes de habilitar nuevos repositorios o instalar HWE.
 
 ## Uso
 
