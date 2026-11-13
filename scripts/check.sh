@@ -24,6 +24,7 @@ PY
 python3 -c 'import ast, pathlib; [ast.parse(p.read_text(encoding="utf-8"), filename=str(p)) for p in pathlib.Path("package/usr/lib/aio-debian-gui/aio_core").glob("*.py")]' &&
     bien "módulos core Python válidos" || fallo "sintaxis módulos core"
 python3 scripts/test-core-preferences.py && bien "preferencias modulares" || fallo "pruebas de preferencias core"
+bash scripts/test-distro.sh && bien "detección Debian/Ubuntu LTS y HWE" || fallo "pruebas de distribución"
 python3 scripts/test-updater.py && bien "actualizador AppImage: versiones y SHA-256" || fallo "pruebas de actualizador"
 python3 scripts/test-history.py && bien "historial de mantenimiento y persistencia" || fallo "pruebas del historial"
 python3 scripts/test-install-format.py && bien "detección de formato DEB/AppImage/Flatpak" || fallo "detección de formato"
@@ -79,17 +80,22 @@ else
     fallo "la tarea de kernel y Mesa Backports no está conectada"
 fi
 
+# Ejecutar pruebas existentes de Debian incluso sobre los runners Ubuntu.
+TMP_DISTRIBUTION_DIR=$(mktemp -d)
+printf 'ID=debian\nVERSION_ID="13"\n' > "$TMP_DISTRIBUTION_DIR/debian-os-release"
+export AIO_TEST_OS_RELEASE="$TMP_DISTRIBUTION_DIR/debian-os-release"
+trap 'rm -rf -- "$TMP_DISTRIBUTION_DIR"' EXIT
 ESTADOS=$(bash "$HELPER" --status) || {
     fallo "consulta de estado de tareas"
     ESTADOS=""
 }
-for tarea in repos tools backports-kernel-mesa gnome-plugin ext-manager; do
+for tarea in repos tools backports-kernel-mesa ubuntu-hwe gnome-plugin ext-manager; do
     printf '%s\n' "$ESTADOS" | grep -Eq "^##STATUS:${tarea}:[01]$" ||
         fallo "falta un estado válido para la tarea $tarea"
 done
 
 TMP_TEST=$(mktemp -d)
-trap 'rm -rf -- "$TMP_TEST"' EXIT
+trap 'rm -rf -- "$TMP_TEST" "$TMP_DISTRIBUTION_DIR"' EXIT
 mkdir -p "$TMP_TEST/apt/sources.list.d"
 printf '%s\n' "Types: deb" "URIs: http://deb.debian.org/debian" \
     "Suites: trixie" "Components: main" > "$TMP_TEST/apt/sources.list.d/test.sources"
