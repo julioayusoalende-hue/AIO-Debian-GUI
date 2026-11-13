@@ -1,0 +1,50 @@
+name: aio-debian-gui
+title: AiO Debian GUI
+version: '1.2.1'
+summary: Herramientas de mantenimiento para Debian y Ubuntu LTS
+description: |
+  Interfaz GTK para mantenimiento de Debian y Ubuntu LTS.
+  Paquete experimental. Las operaciones administrativas requieren un
+  asistente Polkit compatible instalado por separado en el anfitrión.
+  El confinamiento classic requiere aprobación explícita de Snap Store.
+grade: devel
+base: core24
+confinement: classic
+license: GPL-3.0-or-later
+website: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
+source-code: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
+issues: https://github.com/julioayusoalende-hue/AIO-Debian-GUI/issues
+icon: package/usr/share/icons/hicolor/256x256/apps/aio-debian-gui.png
+platforms:
+  amd64:
+
+apps:
+  aio-debian-gui:
+    command: bin/aio-debian-gui-snap-launch
+    desktop: snap/gui/aio-debian-gui.desktop
+    environment:
+      PYTHONDONTWRITEBYTECODE: '1'
+
+parts:
+  aio-debian-gui:
+    plugin: nil
+    source: .
+    stage-packages:
+      - python3
+      - python3-gi
+      - gir1.2-gtk-3.0
+      - gir1.2-gdkpixbuf-2.0
+      - librsvg2-common
+      - libgtk-3-0t64
+      - shared-mime-info
+    override-build: |
+      set -eu
+      install -Dm755 package/usr/bin/aio-debian-gui "$CRAFT_PART_INSTALL/usr/bin/aio-debian-gui"
+      mkdir -p "$CRAFT_PART_INSTALL/usr/lib/aio-debian-gui"
+      cp -a package/usr/lib/aio-debian-gui/aio_core "$CRAFT_PART_INSTALL/usr/lib/aio-debian-gui/"
+      install -Dm644 package/usr/share/aio-debian-gui/debian-openlogo.png "$CRAFT_PART_INSTALL/usr/share/aio-debian-gui/debian-openlogo.png"
+      install -Dm644 package/usr/share/aio-debian-gui/ubuntu-logo.svg "$CRAFT_PART_INSTALL/usr/share/aio-debian-gui/ubuntu-logo.svg"
+      install -Dm644 package/usr/share/aio-debian-gui/adri-y-lu.jpg "$CRAFT_PART_INSTALL/usr/share/aio-debian-gui/adri-y-lu.jpg"
+      install -Dm755 snap/local/aio-debian-gui-snap-launch "$CRAFT_PART_INSTALL/bin/aio-debian-gui-snap-launch"
+      install -Dm644 snap/gui/aio-debian-gui.desktop "$CRAFT_PART_INSTALL/snap/gui/aio-debian-gui.desktop"
+      install -Dm644 package/usr/share/icons/hicolor/256x256/apps/aio-debian-gui.png "$CRAFT_PART_INSTALL/snap/gui/aio-debian-gui.png"
