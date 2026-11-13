@@ -14,6 +14,15 @@ Interfaz gráfica de mantenimiento y configuración todo en uno para Debian.
 Es un proyecto independiente: no necesita el script de consola
 [aio-debian](https://github.com/julioayusoalende-hue/aio-debian) (puedes tener ambos).
 
+## Apariencia
+
+En Preferencias → Apariencia se puede elegir **Seguir el sistema**, **Claro** u **Oscuro**.
+En instalaciones nuevas se sigue el tema del escritorio automáticamente, incluidos cambios
+mientras la aplicación esté abierta. Las elecciones manuales guardadas siguen teniendo prioridad.
+La detección consulta el portal de apariencia freedesktop, GNOME y, en último término,
+el nombre del tema GTK; algunos temas y escritorios pueden no expresar su preferencia
+mediante estos mecanismos.
+
 ## Instalación
 
 Compatible con Debian 12 (bookworm) o superior y, desde la v1.2.0, con Ubuntu 24.04/26.04 LTS (modo nativo por distribución). En otros sistemas la interfaz es informativa y el mantenimiento privilegiado queda bloqueado.

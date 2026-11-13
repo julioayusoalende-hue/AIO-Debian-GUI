@@ -24,6 +24,7 @@ PY
 python3 -c 'import ast, pathlib; [ast.parse(p.read_text(encoding="utf-8"), filename=str(p)) for p in pathlib.Path("package/usr/lib/aio-debian-gui/aio_core").glob("*.py")]' &&
     bien "módulos core Python válidos" || fallo "sintaxis módulos core"
 python3 scripts/test-core-preferences.py && bien "preferencias modulares" || fallo "pruebas de preferencias core"
+python3 scripts/test-appearance.py && bien "tema automático y preferencia manual" || fallo "pruebas de apariencia"
 bash scripts/test-distro.sh && bien "detección Debian/Ubuntu LTS y HWE" || fallo "pruebas de distribución"
 python3 scripts/test-updater.py && bien "actualizador AppImage: versiones y SHA-256" || fallo "pruebas de actualizador"
 python3 scripts/test-history.py && bien "historial de mantenimiento y persistencia" || fallo "pruebas del historial"

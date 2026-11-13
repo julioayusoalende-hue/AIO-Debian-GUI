@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.2.2
+
+- Nueva opción de apariencia «Seguir el sistema», predeterminada para nuevas instalaciones.
+- Cambio automático en vivo del tema claro/oscuro usando el portal freedesktop, GSettings GNOME y respaldo GTK.
+- Se conservan las preferencias manuales «Claro» y «Oscuro» de las instalaciones existentes.
+- Disponible en los formatos DEB, Flatpak, AppImage y el prototipo Snap.
+
 ## 1.2.1
 
 - La tarjeta Información del sistema muestra el logotipo Debian o Ubuntu según `/etc/os-release` del anfitrión.

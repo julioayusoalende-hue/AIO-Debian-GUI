@@ -4,9 +4,9 @@ import os
 import tempfile
 
 def cargar_preferencias(ruta, defaults=None):
-    PREFERENCIAS_DEFECTO = defaults or {'idioma': 'es', 'tema': 'claro', 'modo_simple': False}
+    PREFERENCIAS_DEFECTO = defaults or {'idioma': 'es', 'tema': 'sistema', 'modo_simple': False}
     IDIOMAS = {'es','en','fr','zh'}
-    TEMAS = {'claro','oscuro'}
+    TEMAS = {'sistema','claro','oscuro'}
     try:
         with open(ruta, encoding="utf-8") as archivo:
             datos = json.load(archivo)

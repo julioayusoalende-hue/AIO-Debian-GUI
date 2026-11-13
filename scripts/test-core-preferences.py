@@ -8,7 +8,7 @@ import tempfile
 sys.path.insert(0, os.path.abspath("package/usr/lib/aio-debian-gui"))
 from aio_core import preferences
 
-DEFAULTS = {"idioma": "es", "tema": "claro", "modo_simple": False}
+DEFAULTS = {"idioma": "es", "tema": "sistema", "modo_simple": False}
 with tempfile.TemporaryDirectory() as directory:
     path = os.path.join(directory, "preferences.json")
     assert preferences.cargar_preferencias(path, DEFAULTS) == DEFAULTS
