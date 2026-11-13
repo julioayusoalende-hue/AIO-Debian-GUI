@@ -419,6 +419,33 @@ TRADUCCIONES = {
 }
 
 
+# Textos del actualizador integrados con las traducciones existentes.
+TRADUCCIONES["en"].update({
+    "Buscar actualizaciones": "Check for updates",
+    "Actualizar esta aplicación": "Update this application",
+    "Actualización Flatpak completada": "Flatpak update completed",
+    "Ya tienes la última versión": "You have the latest version",
+    "Nueva AppImage descargada": "New AppImage downloaded",
+    "No se pudo actualizar": "Unable to update",
+})
+TRADUCCIONES["fr"].update({
+    "Buscar actualizaciones": "Rechercher des mises à jour",
+    "Actualizar esta aplicación": "Mettre à jour cette application",
+    "Actualización Flatpak completada": "Mise à jour Flatpak terminée",
+    "Ya tienes la última versión": "Vous avez la dernière version",
+    "Nueva AppImage descargada": "Nouvelle AppImage téléchargée",
+    "No se pudo actualizar": "Mise à jour impossible",
+})
+TRADUCCIONES["zh"].update({
+    "Buscar actualizaciones": "检查更新",
+    "Actualizar esta aplicación": "更新此应用",
+    "Actualización Flatpak completada": "Flatpak 更新完成",
+    "Ya tienes la última versión": "已是最新版本",
+    "Nueva AppImage descargada": "已下载新 AppImage",
+    "No se pudo actualizar": "更新失败",
+})
+
+
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)
 
@@ -1350,7 +1377,7 @@ class VentanaPrincipal(Gtk.Window):
         self._escribir("[!] %s\n" % mensaje, "aviso")
 
     def _actualizar_sensibilidad(self):
-        disponible = not self.en_curso
+        disponible = not self.en_curso and not self.comprobando_actualizacion
         self.btn_iniciar.set_sensitive(disponible)
         if self.btn_actualizar is not None:
             self.btn_actualizar.set_sensitive(disponible and not self.comprobando_actualizacion)
