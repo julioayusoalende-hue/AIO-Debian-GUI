@@ -21,6 +21,7 @@
     <value key="flathub::verification::website">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</value>
   </custom>
   <releases>
+    <release version="1.0.18" date="2026-11-13"><description><p>Identifica el formato de instalación en la cabecera y añade actualización DEB desde APT.</p></description></release>
     <release version="1.0.17" date="2026-11-13"><description><p>Añade actualizaciones de AppImage y Flatpak desde la interfaz.</p></description></release>
     <release version="1.0.16" date="2026-11-13"/>
   </releases>
