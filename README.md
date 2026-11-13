@@ -71,7 +71,7 @@ Descarga `aio-debian-gui_1.0.16_x86_64.flatpak` desde [Releases](../../releases/
 y, con Flathub configurado, instala el runtime y la aplicación:
 
 ```bash
-flatpak install flathub org.gnome.Platform//48
+flatpak install flathub org.gnome.Platform//51
 flatpak install --user ./aio-debian-gui_1.0.16_x86_64.flatpak
 ```
 
