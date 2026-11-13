@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.2.0
+
+- Detecta Debian y Ubuntu 24.04/26.04 LTS en el anfitrión y bloquea el mantenimiento administrativo en sistemas no compatibles.
+- Opciones específicas por distribución: contrib/non-free y Backports solo en Debian; universe/restricted/multiverse y HWE oficial opcional en Ubuntu LTS.
+- El asistente privilegiado valida la distribución y rechaza tareas cruzadas aunque se le llame sin interfaz gráfica.
+- Pruebas con perfiles Debian y Ubuntu simulados, sin modificar repositorios del equipo de pruebas.
+
 ## 1.1.0
 
 - Extrae la lógica de versiones/AppImage, historial y preferencias a `aio_core`, sin dependencias GTK.
