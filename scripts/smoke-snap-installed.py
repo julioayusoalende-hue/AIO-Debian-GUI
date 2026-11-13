@@ -24,16 +24,13 @@ def main():
     print("Instalación Snap:", info.splitlines()[-1])
     print("Confinamiento:", check(["snap", "info", "aio-debian-gui"]).split("confinement:")[-1].splitlines()[0].strip()
           if "confinement:" in check(["snap", "info", "aio-debian-gui"]) else "consultar snap info")
-    path = check(["snap", "get", "aio-debian-gui", "nonexistent-test-key"]) if False else None
-    del path
-    result = subprocess.run(["snap", "run", "--shell", "aio-debian-gui", "-c",
-                             'test -f "$SNAP/usr/bin/aio-debian-gui" && '
-                             'test -f "$SNAP/usr/lib/aio-debian-gui/aio_core/updates.py" && '
-                             'test -f "$SNAP/usr/share/aio-debian-gui/ubuntu-logo.svg"'],
-                            text=True, capture_output=True, timeout=20)
-    if result.returncode:
-        print("No se pudieron verificar los recursos del Snap:", result.stderr, file=sys.stderr)
-        return 1
+    snap_root = pathlib.Path("/snap/aio-debian-gui/current")
+    for relative in ("usr/bin/aio-debian-gui",
+                     "usr/lib/aio-debian-gui/aio_core/updates.py",
+                     "usr/share/aio-debian-gui/ubuntu-logo.svg"):
+        if not (snap_root / relative).is_file():
+            print("Recurso ausente:", relative, file=sys.stderr)
+            return 1
     print("Recursos Python e iconos verificados.")
     print("PENDIENTE MANUAL: abrir la interfaz desde el menú y comprobar Polkit con supervisión.")
     return 0
