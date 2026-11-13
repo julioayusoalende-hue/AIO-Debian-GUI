@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.1.0
+
+- Extrae la lógica de versiones/AppImage, historial y preferencias a `aio_core`, sin dependencias GTK.
+- Mantiene una capa de compatibilidad para la interfaz y el asistente Polkit.
+- Incluye módulos en los paquetes DEB, AppImage y Flatpak y los prueba directamente en CI.
+- Conserva los mecanismos de firma GPG y las actualizaciones de los tres formatos.
+
 ## 1.0.20
 
 - Vista previa y confirmación de tareas seleccionadas antes de ejecutar el mantenimiento.
