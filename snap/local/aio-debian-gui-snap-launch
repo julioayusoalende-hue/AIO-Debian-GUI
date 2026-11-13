@@ -1,0 +1,9 @@
+#!/bin/sh
+# Snap experimental. No instala automáticamente código privilegiado en el host.
+set -eu
+: "${SNAP:?Este lanzador debe ejecutarse desde un snap}"
+if [ ! -x "$SNAP/usr/bin/python3" ]; then
+    echo "Falta el intérprete Python 3 incluido en el Snap." >&2
+    exit 1
+fi
+exec "$SNAP/usr/bin/python3" "$SNAP/usr/bin/aio-debian-gui" "$@"
