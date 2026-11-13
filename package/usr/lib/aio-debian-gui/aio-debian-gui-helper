@@ -910,7 +910,15 @@ CRITICOS=" upgrade backports-kernel-mesa "
 
 mostrar_estados() {
     local tarea funcion
+    local distro
+    distro=$(leer_distribucion) || distro=desconocida
     for tarea in repos tools backports-kernel-mesa ubuntu-hwe gnome-plugin ext-manager; do
+        # Las tareas exclusivas de otra distribución se marcan como no configuradas.
+        case "$distro:$tarea" in
+            ubuntu:backports-kernel-mesa|debian:ubuntu-hwe|desconocida:backports-kernel-mesa|desconocida:ubuntu-hwe)
+                printf '##STATUS:%s:0\n' "$tarea"
+                continue ;;
+        esac
         case "$tarea" in
             repos) funcion=estado_repos ;;
             tools) funcion=estado_tools ;;
