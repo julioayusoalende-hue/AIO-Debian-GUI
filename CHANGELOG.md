@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.0.19
+
+- Endurece Polkit: únicamente sesiones activas y autorización de administrador sin caché persistente.
+- Se retira la posibilidad de activar acceso sin contraseña; el paquete DEB revoca reglas antiguas creadas por AiO en el proceso de actualización.
+- Los botones DEB, Flatpak y AppImage comprueban si existe una versión nueva y piden confirmación antes de instalar o descargar.
+- Comprueba que el asistente privilegiado del anfitrión coincide con la versión Flatpak antes de ejecutar mantenimiento.
+
 ## 1.0.18
 
 - La cabecera identifica el formato activo: DEB, AppImage o Flatpak.
