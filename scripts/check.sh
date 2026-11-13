@@ -42,22 +42,25 @@ if command -v desktop-file-validate >/dev/null; then
     desktop-file-validate package/usr/share/applications/*.desktop && bien "archivo .desktop" || fallo "archivo .desktop"
 fi
 
-REGLA=$(bash -c 'source "$1"; generar_regla_polkit "test-user"' _ "$HELPER") || {
-    fallo "generación de regla polkit"
-    REGLA=""
-}
-if printf '%s\n' "$REGLA" | grep -Fq 'action.id === "es.aiodebian.gui.mantenimiento"' &&
-   printf '%s\n' "$REGLA" | grep -Fq 'action.lookup("program") === "/usr/lib/aio-debian-gui/aio-debian-gui-helper"' &&
-   printf '%s\n' "$REGLA" | grep -Fq 'subject.user === "test-user"' &&
-   printf '%s\n' "$REGLA" | grep -Fq "subject.local" &&
-   printf '%s\n' "$REGLA" | grep -Fq "subject.active"; then
-    bien "regla polkit limitada al usuario y al asistente de AiO"
+# La política no debe autorizar sesiones inactivas ni retener privilegios.
+if grep -Fq '<allow_any>no</allow_any>' package/usr/share/polkit-1/actions/es.aiodebian.gui.policy &&
+   grep -Fq '<allow_inactive>no</allow_inactive>' package/usr/share/polkit-1/actions/es.aiodebian.gui.policy &&
+   grep -Fq '<allow_active>auth_admin</allow_active>' package/usr/share/polkit-1/actions/es.aiodebian.gui.policy &&
+   grep -Fq 'La autorización permanente sin contraseña se ha retirado' "$HELPER"; then
+    bien "Polkit requiere autorización activa y no permite nuevas reglas sin contraseña"
 else
-    fallo "la regla polkit no limita correctamente la autorización"
+    fallo "revisión de seguridad de la política Polkit"
 fi
+sh -n package/DEBIAN/postinst && bien "sintaxis postinst" || fallo "sintaxis postinst"
 
 # La versión del control debe tener su entrada de novedades en la GUI y en el CHANGELOG
 V=$(sed -n 's/^Version: //p' package/DEBIAN/control)
+[ "$(bash "$HELPER" --version)" = "$V" ] &&
+    bien "versión del asistente coincide con el paquete" ||
+    fallo "versión del asistente incompatible con el paquete"
+grep -Fq -- '--check-update-self)' "$HELPER" &&
+    bien "actualizador APT con comprobación previa" ||
+    fallo "falta comprobación previa APT"
 grep -q "\"$V\":" "$GUI"   && bien "novedad $V en la GUI"      || fallo "falta la novedad $V en $GUI (NOVEDADES)"
 grep -q "^## $V" CHANGELOG.md && bien "entrada $V en CHANGELOG.md" || fallo "falta '## $V' en CHANGELOG.md"
 

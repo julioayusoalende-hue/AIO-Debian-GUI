@@ -31,6 +31,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 
 LISTAS_ACTUALIZADAS=0
 REINICIO_REQUERIDO=0
+HELPER_VERSION=1.0.19
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 POLKIT_RULES_DIR=/etc/polkit-1/rules.d
@@ -809,6 +810,10 @@ mostrar_estados() {
 }
 
 main() {
+    if [ "${1:-}" = "--version" ] && [ "$#" -eq 1 ]; then
+        printf '%s\n' "$HELPER_VERSION"
+        return 0
+    fi
     if [ "${1:-}" = "--status" ] && [ "$#" -eq 1 ]; then
         mostrar_estados
         return 0
@@ -828,6 +833,23 @@ main() {
     fi
 
     case "${1:-}" in
+        --check-update-self)
+            [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --check-update-self"; exit 2; }
+            paquete_instalado aio-debian-gui || { err "AiO Debian GUI no está instalado como DEB."; exit 1; }
+            asegurar_listas || exit 1
+            instalada=$(dpkg-query -W -f='${Version}' aio-debian-gui) || exit 1
+            disponible=$(apt-cache policy aio-debian-gui | awk '/^[[:space:]]*Candidate:/ { print $2; exit }')
+            [ -n "$disponible" ] && [ "$disponible" != "(none)" ] || {
+                err "No existe versión candidata de AiO Debian GUI en los repositorios APT."
+                exit 1
+            }
+            if dpkg --compare-versions "$disponible" gt "$instalada"; then
+                printf '##UPDATE:%s:%s\n' "$instalada" "$disponible"
+            else
+                printf '##NOUPDATE:%s:%s\n' "$instalada" "$disponible"
+            fi
+            exit 0
+            ;;
         --update-self)
             [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --update-self"; exit 2; }
             # Solo actualiza el paquete oficial ya instalado por APT. No hay rutas,
@@ -845,9 +867,8 @@ main() {
             exit 0
             ;;
         --enable-passwordless)
-            [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --enable-passwordless"; exit 2; }
-            habilitar_sin_contrasena
-            exit $?
+            err "La autorización permanente sin contraseña se ha retirado por seguridad desde 1.0.19."
+            exit 2
             ;;
         --disable-passwordless)
             [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --disable-passwordless"; exit 2; }

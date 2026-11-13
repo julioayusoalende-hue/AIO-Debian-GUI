@@ -49,7 +49,7 @@ en el sistema `python3-gi`, GTK 3, `pkexec`, APT y FUSE 2 (`libfuse2` en Debian 
 por el paquete `.deb`, el AppImage reutiliza ese asistente para respetar la ruta fija de Polkit,
 aunque sea de otra versión. Las tareas normales dependen de las funciones disponibles en ese
 asistente. La tarea de kernel y Mesa desde Backports requiere que incluya esa función (v1.0.7 o
-superior); la autorización sin contraseña requiere v1.0.6 o superior. Si no hay `.deb` instalado,
+superior). Si no hay `.deb` instalado,
 el AppImage prepara su asistente en un directorio temporal accesible para Polkit y lo ejecuta
 mediante Bash del sistema; la política y el asistente se instalan al activar la autorización sin
 contraseña.
@@ -140,8 +140,7 @@ sudo install -D -o root -g root -m 0644 \
 ```
 
 Reinicia AiO Debian GUI para que compruebe el asistente del anfitrión. Las tareas
-administrativas requieren autorización Polkit; **no recomendamos activar la opción
-de ejecutar sin contraseña**. Si ya hay un asistente instalado por un paquete
+administrativas requieren autorización Polkit; desde la v1.0.19 no se admite habilitar una autorización permanente sin contraseña. Si ya hay un asistente instalado por un paquete
 `.deb`, no lo sobrescribas sin comprobar la versión y el origen.
 
 Para eliminar la integración manual, **solo si no la gestiona el paquete .deb**:
@@ -184,25 +183,27 @@ sudo apt install ./dist/aio-debian-gui_*_all.deb
 El AppImage se construye para `x86_64` y usa el runtime de Debian; instala
 `appimagetool` para generarlo.
 
-## Actualizar desde la interfaz (v1.0.18 y posteriores)
+## Actualizar desde la interfaz (v1.0.19 y posteriores)
 
-La cabecera indica si estás utilizando **DEB**, **AppImage** o **Flatpak**. En los tres formatos aparece el botón **«Buscar actualizaciones»**.
+La cabecera indica si estás utilizando **DEB**, **AppImage** o **Flatpak**. En los tres formatos aparece el botón **«Buscar actualizaciones»**, que consulta las versiones disponibles y solicita confirmación antes de aplicar cambios.
 
 - **AppImage:** consulta la última versión estable en GitHub Releases. Si existe una versión nueva, descarga el AppImage en **Descargas**, comprueba su integridad con el archivo `SHA256SUMS` oficial y lo deja preparado para ejecutarlo. No sobrescribe ni elimina el AppImage actualmente abierto: cierra la versión anterior y ejecuta el archivo recién descargado.
 - **Flatpak:** ejecuta `flatpak update --user --noninteractive -y io.github.julioayusoalende_hue.aio_debian_gui` en el anfitrión mediante `flatpak-spawn --host`. Requiere instalar desde nuestro `.flatpakref` y conservar el repositorio firmado. Reinicia la aplicación para cargar la nueva versión si se ha actualizado.
 - **Paquete .deb:** utiliza el asistente Polkit existente para comprobar el repositorio APT e instalar solamente una actualización del paquete `aio-debian-gui`, si existe. Se solicita autorización de administrador; no se realiza una actualización general del sistema.
 
-**Aviso:** actualizar el Flatpak **no modifica el asistente privilegiado ni la política Polkit instalados manualmente en Debian**. Si cambia su interfaz o compatibilidad, es necesario mantener también ese componente del anfitrión.
+**Aviso:** actualizar el Flatpak **no modifica el asistente privilegiado ni la política Polkit instalados manualmente en Debian**. Desde la v1.0.19, el Flatpak comprueba que la versión del asistente anfitrión coincide con la aplicación antes de ejecutar tareas administrativas; si no coincide, actualiza la integración manual siguiendo estas instrucciones.
 
 ## Uso
 
 Busca *AiO Debian GUI* en el menú de aplicaciones, o ejecuta `aio-debian-gui` como usuario
-normal. Por defecto, solicita autorización de administrador al pulsar «Iniciar tareas». La opción
-de autorización sin contraseña queda desactivada inicialmente; al activarla, se solicita
-autorización una vez y se crea una regla persistente de Polkit para el usuario actual, limitada
-al asistente de AiO en sesiones locales activas. Desactívala desde la misma opción para revocarla.
-Mientras esté activa, todas las tareas de mantenimiento de AiO podrán ejecutarse como
-administrador sin volver a pedir contraseña. La instalación del kernel y Mesa desde Backports
+normal. Las operaciones administrativas requieren autenticación de administrador en
+una sesión local activa. Desde la versión 1.0.19 se ha retirado la posibilidad de
+habilitar autorizaciones Polkit persistentes sin contraseña. El paquete DEB revoca
+al actualizar las reglas antiguas que coinciden con la plantilla de AiO. En AppImage
+o integraciones manuales, si queda una autorización antigua, utiliza la opción de
+revocación (si aparece activa) o retira la regla identificada como
+`/etc/polkit-1/rules.d/50-aiodebian-gui-UID.rules` tras comprobar su contenido.
+La instalación del kernel y Mesa desde Backports
 también está desactivada por defecto; al activarla, puede añadirse la fuente oficial
 `<codename>-backports` y puede ser necesario reiniciar después.
 Las tareas de repositorios, herramientas, Backports y complementos de GNOME se marcan cuando ya
