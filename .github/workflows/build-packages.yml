@@ -72,15 +72,20 @@ jobs:
           test -n "$FLATPAK"
           dpkg-deb --info "$DEB"
           dpkg-deb --contents "$DEB" >/dev/null
+          dpkg-deb --contents "$DEB" | grep -q 'usr/lib/aio-debian-gui/aio_core/updates.py'
           file "$APPIMAGE"
           chmod +x "$APPIMAGE"
           "$APPIMAGE" --appimage-extract >/dev/null
           test -x squashfs-root/AppRun
+          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/history.py
+          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/updates.py
           rm -rf squashfs-root
           file "$FLATPAK"
           appstreamcli validate --no-net flatpak/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml
           flatpak install --user --noninteractive --bundle "$FLATPAK"
           flatpak info --user --show-metadata io.github.julioayusoalende_hue.aio_debian_gui >/dev/null
+          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/updates.py
+          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/history.py
           flatpak run --user --command=python3 io.github.julioayusoalende_hue.aio_debian_gui -c 'import gi; gi.require_version("Gtk", "3.0"); from gi.repository import Gtk'
           flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -x /app/share/aio-debian-gui/host-integration/aio-debian-gui-helper
           flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/share/aio-debian-gui/host-integration/es.aiodebian.gui.policy
