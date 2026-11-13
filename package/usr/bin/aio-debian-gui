@@ -1013,7 +1013,7 @@ class VentanaPrincipal(Gtk.Window):
                         GLib.idle_add(self._terminar_actualizacion, Gtk.MessageType.INFO,
                                       "Ya tienes la última versión", f"Versión instalada: {actual}.")
                         return
-                    detalle = f"Versión instalada: {actual}.\\nVersión disponible: {nueva}.\\n\\n¿Actualizar mediante APT?"
+                    detalle = f"Versión instalada: {actual}.\nVersión disponible: {nueva}.\n\n¿Actualizar mediante APT?"
                     datos = None
                 elif formato == "flatpak":
                     # Sin privilegios: actualizar metadatos y consultar revisiones pendientes.
@@ -1037,7 +1037,7 @@ class VentanaPrincipal(Gtk.Window):
                         GLib.idle_add(self._terminar_actualizacion, Gtk.MessageType.INFO,
                                       "Ya tienes la última versión", f"Versión instalada: {version_app()}.")
                         return
-                    detalle = ("Hay una actualización Flatpak disponible en el repositorio firmado.\\n"
+                    detalle = ("Hay una actualización Flatpak disponible en el repositorio firmado.\n"
                                "¿Quieres instalarla ahora?")
                     datos = None
                 elif formato == "appimage":
@@ -1049,7 +1049,7 @@ class VentanaPrincipal(Gtk.Window):
                         GLib.idle_add(self._terminar_actualizacion, Gtk.MessageType.INFO,
                                       "Ya tienes la última versión", f"Versión instalada: {version_app()}.")
                         return
-                    detalle = (f"Versión instalada: {version_app()}.\\nVersión disponible: {version}.\\n\\n"
+                    detalle = (f"Versión instalada: {version_app()}.\nVersión disponible: {version}.\n\n"
                                "Se descargará el nuevo AppImage, verificado mediante SHA-256, "
                                "sin sustituir el archivo actual. ¿Continuar?")
                     datos = (version, nombre, url, url_hash)
@@ -1107,8 +1107,8 @@ class VentanaPrincipal(Gtk.Window):
                     version, nombre, url, url_hash = datos
                     destino = descargar_appimage_verificado(version, nombre, url, url_hash)
                     titulo = "Nueva AppImage descargada"
-                    detalle_final = (f"Versión {version} verificada mediante SHA-256.\\n"
-                                     f"Archivo: {destino}\\n\\n"
+                    detalle_final = (f"Versión {version} verificada mediante SHA-256.\n"
+                                     f"Archivo: {destino}\n\n"
                                      "Cierra la aplicación y ejecuta el archivo nuevo.")
                 GLib.idle_add(self._terminar_actualizacion, Gtk.MessageType.INFO,
                               titulo, detalle_final)
