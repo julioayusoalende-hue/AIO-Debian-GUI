@@ -25,22 +25,20 @@ apps:
 
 parts:
   aio-debian-gui:
-    plugin: dump
+    plugin: nil
     source: .
-    organize:
-      package/usr/bin/aio-debian-gui: usr/bin/aio-debian-gui
-      snap/local/aio-debian-gui-snap: usr/bin/aio-debian-gui-snap
-      package/usr/lib/aio-debian-gui: usr/lib/aio-debian-gui
-      package/usr/share/aio-debian-gui: usr/share/aio-debian-gui
-      package/usr/share/icons/hicolor: usr/share/icons/hicolor
-      package/usr/share/polkit-1/actions: usr/share/polkit-1/actions
-    stage:
-      - usr/bin/aio-debian-gui
-      - usr/bin/aio-debian-gui-snap
-      - usr/lib/aio-debian-gui
-      - usr/share/aio-debian-gui
-      - usr/share/icons/hicolor
-      - usr/share/polkit-1/actions
+    override-build: |
+      set -eu
+      SRC="$CRAFT_PART_SRC"
+      DEST="$CRAFT_PART_INSTALL/usr"
+      install -D -m 0755 "$SRC/package/usr/bin/aio-debian-gui" "$DEST/bin/aio-debian-gui"
+      install -D -m 0755 "$SRC/snap/local/aio-debian-gui-snap" "$DEST/bin/aio-debian-gui-snap"
+      mkdir -p "$DEST/lib/aio-debian-gui"
+      cp -a "$SRC/package/usr/lib/aio-debian-gui/aio_core" "$DEST/lib/aio-debian-gui/"
+      install -D -m 0755 "$SRC/package/usr/lib/aio-debian-gui/aio-debian-gui-helper" "$DEST/lib/aio-debian-gui/aio-debian-gui-helper"
+      cp -a "$SRC/package/usr/share/aio-debian-gui" "$DEST/share/"
+      cp -a "$SRC/package/usr/share/icons/hicolor" "$DEST/share/icons/"
+      install -D -m 0644 "$SRC/package/usr/share/polkit-1/actions/es.aiodebian.gui.policy" "$DEST/share/polkit-1/actions/es.aiodebian.gui.policy"
     stage-packages:
       - python3
       - python3-gi
