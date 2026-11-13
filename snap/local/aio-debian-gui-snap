@@ -1,0 +1,8 @@
+#!/bin/sh
+# The Snap's bundled UI is always unprivileged; its privileged Bash helper
+# is only launched on user request through the host's polkit (pkexec).
+set -eu
+export AIO_DEBIAN_GUI_VERSION="${SNAP_VERSION:-1.2.1}"
+# Classic snaps may use the host system Python/GTK dependencies. The application
+# modules and resources are always read from the current mounted snap revision.
+exec /usr/bin/python3 "$SNAP/usr/bin/aio-debian-gui" "$@"
