@@ -97,8 +97,9 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          if gh release view v1.0.16 >/dev/null 2>&1; then
-            gh release upload v1.0.16 source/dist/aio-debian-gui_1.0.16_x86_64.flatpak --clobber
+          VERSION="$(sed -n 's/^Version: //p' source/package/DEBIAN/control | head -n 1)"
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            gh release upload "v$VERSION" "source/dist/aio-debian-gui_${VERSION}_x86_64.flatpak" --clobber
           else
-            echo 'Release v1.0.16 not yet available; signed repository is published.'
+            echo "Release v$VERSION not yet available; signed repository is published."
           fi
