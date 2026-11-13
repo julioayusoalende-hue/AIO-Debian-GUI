@@ -493,6 +493,27 @@ TRADUCCIONES["zh"].update({
     "Mantenimiento cancelado antes de comenzar.": "维护已在开始前取消。",
 })
 
+
+# Adaptación de tareas Debian / Ubuntu LTS.
+TRADUCCIONES["en"].update({
+    "Configurar repositorios oficiales": "Configure official repositories",
+    "En Debian habilita contrib/non-free; en Ubuntu LTS habilita universe/restricted/multiverse.": "Enable contrib/non-free on Debian or universe/restricted/multiverse on Ubuntu LTS.",
+    "Instalar kernel HWE oficial de Ubuntu": "Install official Ubuntu HWE kernel",
+    "Instala el metapaquete HWE de Ubuntu LTS solo si está disponible en los repositorios oficiales; puede requerir reinicio.": "Install the Ubuntu LTS HWE metapackage only when officially available; a reboot may be needed.",
+})
+TRADUCCIONES["fr"].update({
+    "Configurar repositorios oficiales": "Configurer les dépôts officiels",
+    "En Debian habilita contrib/non-free; en Ubuntu LTS habilita universe/restricted/multiverse.": "Active contrib/non-free sur Debian ou universe/restricted/multiverse sur Ubuntu LTS.",
+    "Instalar kernel HWE oficial de Ubuntu": "Installer le noyau HWE officiel d'Ubuntu",
+    "Instala el metapaquete HWE de Ubuntu LTS solo si está disponible en los repositorios oficiales; puede requerir reinicio.": "Installe le métapaquet HWE d'Ubuntu LTS seulement s'il est disponible ; un redémarrage peut être nécessaire.",
+})
+TRADUCCIONES["zh"].update({
+    "Configurar repositorios oficiales": "配置官方软件源",
+    "En Debian habilita contrib/non-free; en Ubuntu LTS habilita universe/restricted/multiverse.": "Debian 启用 contrib/non-free；Ubuntu LTS 启用 universe/restricted/multiverse。",
+    "Instalar kernel HWE oficial de Ubuntu": "安装 Ubuntu 官方 HWE 内核",
+    "Instala el metapaquete HWE de Ubuntu LTS solo si está disponible en los repositorios oficiales; puede requerir reinicio.": "仅在官方软件源提供时安装 Ubuntu LTS HWE 元软件包；可能需要重启。",
+})
+
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)
 
