@@ -1,0 +1,70 @@
+name: Build Debian packages
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build and validation dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            dpkg-dev fakeroot \
+            python3 python3-gi gir1.2-gtk-3.0 \
+            shellcheck desktop-file-utils libfuse2 \
+            curl ca-certificates file xz-utils
+
+      - name: Run project checks
+        run: ./scripts/check.sh
+
+      - name: Install appimagetool
+        run: |
+          curl --fail --location --retry 3 \
+            https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage \
+            --output /usr/local/bin/appimagetool
+          sudo chmod 0755 /usr/local/bin/appimagetool
+          appimagetool --version || true
+
+      - name: Build DEB
+        run: ./scripts/build-deb.sh
+
+      - name: Build AppImage
+        run: ./scripts/build-appimage.sh
+
+      - name: Validate generated packages
+        run: |
+          set -euo pipefail
+          DEB=$(find dist -maxdepth 1 -name '*.deb' -print -quit)
+          APPIMAGE=$(find dist -maxdepth 1 -name '*.AppImage' -print -quit)
+          test -n "$DEB"
+          test -n "$APPIMAGE"
+          dpkg-deb --info "$DEB"
+          dpkg-deb --contents "$DEB" >/dev/null
+          file "$APPIMAGE"
+          chmod +x "$APPIMAGE"
+          "$APPIMAGE" --appimage-extract >/dev/null
+          test -x squashfs-root/AppRun
+          rm -rf squashfs-root
+          (cd dist && sha256sum *.deb *.AppImage > SHA256SUMS)
+          cat dist/SHA256SUMS
+
+      - name: Upload release candidates
+        uses: actions/upload-artifact@v4
+        with:
+          name: aio-debian-gui-1.0.16-linux-x86_64
+          path: |
+            dist/*.deb
+            dist/*.AppImage
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
