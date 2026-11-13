@@ -25,7 +25,7 @@ jobs:
             python3 python3-gi gir1.2-gtk-3.0 \
             shellcheck desktop-file-utils libfuse2 \
             curl ca-certificates file xz-utils \
-            flatpak flatpak-builder appstream
+            flatpak flatpak-builder appstream appstream-util
 
       - name: Run project checks
         run: ./scripts/check.sh
