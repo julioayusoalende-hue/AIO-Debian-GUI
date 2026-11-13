@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.0.17
+
+- Nuevo botón «Buscar actualizaciones» visible para AppImage y Flatpak.
+- Flatpak actualiza desde el repositorio firmado del usuario y aplica cambios al reiniciar la aplicación.
+- AppImage consulta la última Release, verifica el archivo con SHA-256 y lo descarga sin sustituir el ejecutable en uso.
+
+
 ## 1.0.16
 Comprueba correctamente los errores de `autoremove` y `autoclean`; modifica únicamente
 stanzas Deb822 de repositorios oficiales de Debian; actualiza y limpia Flatpak por separado
