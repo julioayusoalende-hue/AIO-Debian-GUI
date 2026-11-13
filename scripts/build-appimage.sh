@@ -43,6 +43,7 @@ mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/lib/aio-debian-gui" \
          "$APPDIR/usr/share/doc/aio-debian-gui" "$APPDIR/usr/share/polkit-1/actions"
 
 install -m 755 package/usr/bin/aio-debian-gui "$APPDIR/usr/bin/aio-debian-gui"
+cp -a package/usr/lib/aio-debian-gui/aio_core "$APPDIR/usr/lib/aio-debian-gui/aio_core"
 install -m 755 package/usr/lib/aio-debian-gui/aio-debian-gui-helper \
     "$APPDIR/usr/lib/aio-debian-gui/aio-debian-gui-helper"
 install -m 644 package/usr/share/aio-debian-gui/debian-openlogo.png \
