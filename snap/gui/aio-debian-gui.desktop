@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=AiO Debian GUI (Snap experimental)
+Comment=Mantenimiento de Debian y Ubuntu LTS; requiere integración Polkit del anfitrión
+Exec=aio-debian-gui.aio-debian-gui
+Icon=${SNAP}/snap/gui/aio-debian-gui.png
+Terminal=false
+Categories=System;Settings;
