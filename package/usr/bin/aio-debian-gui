@@ -42,7 +42,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
-    "1.0.16": "Corrige el manejo de errores APT, limita cambios Deb822 a repositorios Debian y separa Flatpak de sistema y usuario.",
+    "1.0.16": "Corrige APT y Deb822, separa Flatpak de usuario y sistema y añade distribución Flatpak con asistente anfitrión.",
     "1.0.15": "Corrige la autorización del asistente incluido en AppImage.",
     "1.0.14": "Mantiene disponibles las opciones mientras comprueba su estado en segundo plano.",
     "1.0.13": "Añade una dedicatoria personal enlazada en la ventana «Acerca de».",
