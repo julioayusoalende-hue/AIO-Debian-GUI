@@ -18,6 +18,8 @@ Es un proyecto independiente: no necesita el script de consola
 
 Pensado para Debian 12 (bookworm) o superior y derivados con `apt`.
 
+**Actualizaciones:** la instalación mediante `.deb` usa el repositorio APT del proyecto; la instalación mediante `.flatpakref` usa nuestro **repositorio Flatpak firmado**, alojado en GitHub Pages, sin depender de que la aplicación esté publicada en Flathub. La edición AppImage se actualiza descargando una nueva versión.
+
 ### Opción 1: descargar el .deb
 
 Descarga el último `aio-debian-gui_X.Y.Z_all.deb` desde [Releases](../../releases/latest) y:
@@ -57,7 +59,54 @@ chmod +x aio-debian-gui_*_x86_64.AppImage
 ./aio-debian-gui_*_x86_64.AppImage
 ```
 
-### Opción 4: Flatpak (descarga independiente con integración manual)
+### Opción 4: Flatpak con actualizaciones desde nuestro repositorio (recomendada para Flatpak)
+
+La instalación habitual se hace con el archivo `.flatpakref` publicado en GitHub Pages; este
+archivo registra automáticamente el repositorio firmado de AiO Debian GUI. **No hace falta
+descargar cada nueva versión desde Releases.** Instala antes Flatpak en Debian si aún no
+lo tienes (`sudo apt install flatpak`).
+
+```bash
+flatpak install --user https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.flatpakref
+```
+
+Después, las nuevas versiones se reciben desde ese origen con:
+
+```bash
+flatpak update --user
+```
+
+GNOME Software o Discover también pueden ofrecer actualizaciones en segundo plano si el
+sistema tiene configurada la integración Flatpak y la actualización automática. No se garantiza
+que todas las instalaciones de Debian actualicen aplicaciones sin intervención del usuario.
+Puedes comprobar el origen instalado con:
+
+```bash
+flatpak info --user --show-origin io.github.julioayusoalende_hue.aio_debian_gui
+```
+
+**¿Ya instalaste un archivo `.flatpak` antiguo?** Comprueba su origen con el comando
+anterior. Si no tiene un origen de actualización asociado, instala desde el enlace
+`.flatpakref` anterior; si Flatpak no permite asociar ese origen a la instalación
+existente, guarda primero tus preferencias/datos y reinstala la aplicación desde el
+`.flatpakref`. No borres datos de la aplicación sin una copia. También puedes añadir
+manualmente el repositorio de confianza firmado:
+
+```bash
+flatpak remote-add --user --if-not-exists aio-debian-gui \
+  https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.flatpakrepo
+```
+
+El archivo independiente `.flatpak` continúa disponible en
+[GitHub Releases](../../releases/latest) como alternativa de descarga. La versión
+publicada con `--repo-url` incluye información sobre el origen de actualización;
+el método `.flatpakref` es el recomendado para nuevas instalaciones.
+
+**Importante sobre las tareas administrativas:** actualizar la interfaz Flatpak **no
+actualiza** el asistente privilegiado instalado manualmente en Debian. Si este asistente
+necesita una versión nueva, debes actualizarlo explícitamente o mediante el paquete
+`.deb`, según cómo lo instalaras. El repositorio de actualizaciones tampoco concede
+privilegios automáticamente.
 
 El Flatpak **incluye la interfaz, el asistente de mantenimiento y la política Polkit**
 en el mismo archivo `.flatpak`. No es necesario descargar ni instalar el `.deb`.
@@ -65,7 +114,7 @@ Para administrar APT y el Debian anfitrión, **sí es necesaria una integración
 privilegiada explícita**: Flatpak y Flatseal no pueden instalar automáticamente
 un servicio de sistema ni conceder privilegios de administrador.
 
-1. Instala el Flatpak (requiere el runtime GNOME 51 disponible en Flathub):
+1. Instala la aplicación con el comando `.flatpakref` anterior (requiere el runtime GNOME 51 disponible en Flathub). Como alternativa, puedes descargar el paquete `.flatpak` de Releases:
 
 ```bash
 flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
@@ -159,9 +208,8 @@ Las tareas de repositorios, herramientas, Backports y complementos de GNOME se m
 están completas y su selector queda desactivado; el estado se vuelve a comprobar al abrir la
 aplicación. Si la espera de autorización de Polkit no responde, puede cancelarse desde la interfaz
 y se cancela automáticamente tras 90 segundos.
-La comprobación inicial de las tareas se ejecuta en segundo plano: las opciones permanecen
-disponibles mientras se comprueba y el botón de inicio se habilita al terminar. Si la comprobación
-se bloquea, se cancela automáticamente tras 30 segundos.
+La comprobación inicial de las tareas se ejecuta en segundo plano; el botón de inicio
+permanece disponible para las tareas seleccionadas aunque falle o se retrase la consulta de estados.
 El menú superior permite elegir el idioma de la interfaz (español, inglés, francés o chino),
 el tema claro u oscuro y el modo simple, que oculta la salida detallada de las tareas. Las
 preferencias se guardan para el usuario actual; el español, el tema claro y la interfaz completa
@@ -184,6 +232,7 @@ scripts/
   appimage/AppRun                         lanzador del AppImage
   check.sh                                comprobaciones previas a publicar
   publish-apt-repo.sh                     añade el .deb al repositorio APT y lo firma
+  publish-flatpak-repo.sh                 construye y publica el repositorio Flatpak firmado
   recolor-icon.py                         regenera los iconos con otro color de fondo
 assets/icon-original-512.png              icono original (fondo azul), base de recolor-icon.py
 .github/workflows/                        CI y publicación automática
@@ -211,8 +260,12 @@ El icono usa fondo verde para distinguirse del de `aio-debian`. Para otro color
    APPIMAGETOOL=/ruta/a/appimagetool ./scripts/build-appimage.sh
    ```
 
-5. Publica ambos archivos en la *Release* de GitHub y actualiza el repositorio APT con
+5. Publica los paquetes en la *Release* de GitHub y actualiza el repositorio APT con
    `scripts/publish-apt-repo.sh` sobre la rama `gh-pages`.
+6. El workflow [Publish signed Flatpak update repository](.github/workflows/publish-flatpak.yml)
+   actualiza el repositorio Flatpak firmado de GitHub Pages y el bundle Flatpak de la Release
+   al publicar cambios relevantes en `main`. También se puede ejecutar manualmente desde Actions.
+   Consulta [actualizaciones Flatpak](docs/flatpak-actualizaciones.md).
 
 ## Configuración inicial en GitHub (una sola vez)
 
