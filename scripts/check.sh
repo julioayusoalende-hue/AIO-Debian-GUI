@@ -55,6 +55,12 @@ sh -n package/DEBIAN/postinst && bien "sintaxis postinst" || fallo "sintaxis pos
 
 # La versión del control debe tener su entrada de novedades en la GUI y en el CHANGELOG
 V=$(sed -n 's/^Version: //p' package/DEBIAN/control)
+[ "$(bash "$HELPER" --version)" = "$V" ] &&
+    bien "versión del asistente coincide con el paquete" ||
+    fallo "versión del asistente incompatible con el paquete"
+grep -Fq -- '--check-update-self)' "$HELPER" &&
+    bien "actualizador APT con comprobación previa" ||
+    fallo "falta comprobación previa APT"
 grep -q "\"$V\":" "$GUI"   && bien "novedad $V en la GUI"      || fallo "falta la novedad $V en $GUI (NOVEDADES)"
 grep -q "^## $V" CHANGELOG.md && bien "entrada $V en CHANGELOG.md" || fallo "falta '## $V' en CHANGELOG.md"
 
