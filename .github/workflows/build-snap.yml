@@ -1,11 +1,22 @@
 name: Experimental Snap build (no store publication)
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'snap/**'
+      - 'scripts/test-snap.py'
+      - 'scripts/smoke-snap-installed.py'
+      - 'package/usr/bin/aio-debian-gui'
+      - 'package/usr/lib/aio-debian-gui/aio_core/**'
+      - '.github/workflows/build-snap.yml'
   pull_request:
     paths:
       - 'snap/**'
       - 'package/usr/bin/aio-debian-gui'
       - 'package/usr/lib/aio-debian-gui/aio_core/**'
+      - 'scripts/test-snap.py'
+      - 'scripts/smoke-snap-installed.py'
       - '.github/workflows/build-snap.yml'
   workflow_dispatch:
 
@@ -22,9 +33,23 @@ jobs:
           set -euo pipefail
           sh -n snap/local/aio-debian-gui-snap-launch
           python3 scripts/test-snap.py
+          python3 -m py_compile scripts/smoke-snap-installed.py
       - name: Build experimental Snap
         id: snapcraft
         uses: snapcore/action-build@v1
+      - name: Verify snap archive contains desktop, core and distro logos
+        shell: bash
+        env:
+          SNAP_FILE: ${{ steps.snapcraft.outputs.snap }}
+        run: |
+          set -euo pipefail
+          test -s "$SNAP_FILE"
+          sudo apt-get update
+          sudo apt-get install -y squashfs-tools
+          unsquashfs -ll "$SNAP_FILE" > /tmp/snap-files.txt
+          for file in bin/aio-debian-gui-snap-launch usr/bin/aio-debian-gui usr/lib/aio-debian-gui/aio_core/updates.py usr/share/aio-debian-gui/ubuntu-logo.svg usr/share/aio-debian-gui/debian-openlogo.png; do
+            grep -F "/$file" /tmp/snap-files.txt >/dev/null
+          done
       - name: Upload test artifact (not published to Snap Store)
         uses: actions/upload-artifact@v4
         with:
