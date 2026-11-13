@@ -184,6 +184,16 @@ sudo apt install ./dist/aio-debian-gui_*_all.deb
 El AppImage se construye para `x86_64` y usa el runtime de Debian; instala
 `appimagetool` para generarlo.
 
+## Actualizar desde la interfaz (v1.0.17 y posteriores)
+
+Cuando se ejecuta como **AppImage** o **Flatpak**, aparece el botón **«Buscar actualizaciones»** en la barra superior.
+
+- **AppImage:** consulta la última versión estable en GitHub Releases. Si existe una versión nueva, descarga el AppImage en **Descargas**, comprueba su integridad con el archivo `SHA256SUMS` oficial y lo deja preparado para ejecutarlo. No sobrescribe ni elimina el AppImage actualmente abierto: cierra la versión anterior y ejecuta el archivo recién descargado.
+- **Flatpak:** ejecuta `flatpak update --user --noninteractive -y io.github.julioayusoalende_hue.aio_debian_gui` en el anfitrión mediante `flatpak-spawn --host`. Requiere instalar desde nuestro `.flatpakref` y conservar el repositorio firmado. Reinicia la aplicación para cargar la nueva versión si se ha actualizado.
+- **Paquete .deb:** conserva las actualizaciones normales por APT, sin botón duplicado.
+
+**Aviso:** actualizar el Flatpak **no modifica el asistente privilegiado ni la política Polkit instalados manualmente en Debian**. Si cambia su interfaz o compatibilidad, es necesario mantener también ese componente del anfitrión.
+
 ## Uso
 
 Busca *AiO Debian GUI* en el menú de aplicaciones, o ejecuta `aio-debian-gui` como usuario
