@@ -1,0 +1,33 @@
+name: Experimental Snap build (no store publication)
+
+on:
+  pull_request:
+    paths:
+      - 'snap/**'
+      - 'package/usr/bin/aio-debian-gui'
+      - 'package/usr/lib/aio-debian-gui/aio_core/**'
+      - '.github/workflows/build-snap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snap:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate basic Snap files
+        run: |
+          set -euo pipefail
+          sh -n snap/local/aio-debian-gui-snap-launch
+          python3 scripts/test-snap.py
+      - name: Build experimental Snap
+        id: snapcraft
+        uses: snapcore/action-build@v1
+      - name: Upload test artifact (not published to Snap Store)
+        uses: actions/upload-artifact@v4
+        with:
+          name: aio-debian-gui-experimental-snap
+          path: ${{ steps.snapcraft.outputs.snap }}
+          if-no-files-found: error
