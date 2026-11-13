@@ -48,7 +48,7 @@ jobs:
         run: |
           set -euo pipefail
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-          flatpak install --user --noninteractive -y flathub org.gnome.Platform//48 org.gnome.Sdk//48
+          flatpak install --user --noninteractive -y flathub org.gnome.Platform//51 org.gnome.Sdk//51
 
       - name: Build Flatpak bundle
         run: |
@@ -80,6 +80,7 @@ jobs:
           appstreamcli validate --no-net flatpak/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml
           flatpak install --user --noninteractive --bundle "$FLATPAK"
           flatpak info --user --show-metadata io.github.julioayusoalende_hue.aio_debian_gui >/dev/null
+          flatpak run --user --command=python3 io.github.julioayusoalende_hue.aio_debian_gui -c 'import gi; gi.require_version("Gtk", "3.0"); from gi.repository import Gtk'
           (cd dist && sha256sum *.deb *.AppImage *.flatpak > SHA256SUMS)
           cat dist/SHA256SUMS
 
