@@ -1,5 +1,11 @@
 # Cambios
 
+## 1.2.1
+
+- La tarjeta Información del sistema muestra el logotipo Debian o Ubuntu según `/etc/os-release` del anfitrión.
+- Logotipo Ubuntu escalado de forma proporcional y con texto accesible, integrado en los paquetes DEB, AppImage y Flatpak.
+- La falta de cargador de imágenes no impide abrir la aplicación.
+
 ## 1.2.0
 
 - Detecta Debian y Ubuntu 24.04/26.04 LTS en el anfitrión y bloquea el mantenimiento administrativo en sistemas no compatibles.
