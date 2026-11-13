@@ -10,9 +10,9 @@
     <description>Ejecutar el mantenimiento del sistema con AiO Debian GUI</description>
     <message>Se necesita autenticación para ejecutar el mantenimiento del sistema (apt, Flatpak, repositorios)</message>
     <defaults>
-      <allow_any>auth_admin</allow_any>
-      <allow_inactive>auth_admin</allow_inactive>
-      <allow_active>auth_admin_keep</allow_active>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin</allow_active>
     </defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/aio-debian-gui/aio-debian-gui-helper</annotate>
     <annotate key="org.freedesktop.policykit.exec.allow_gui">false</annotate>
