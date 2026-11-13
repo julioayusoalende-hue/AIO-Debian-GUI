@@ -635,6 +635,8 @@ MAX_APPIMAGE_SIZE = 256 * 1024 * 1024
 
 
 def formato_actualizacion():
+    if os.environ.get("SNAP"):
+        return "snap"
     if es_flatpak():
         return "flatpak"
     if os.environ.get("APPDIR"):
@@ -982,7 +984,7 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_iniciar.connect("clicked", self._iniciar)
         hb.pack_start(self.btn_iniciar)
         self.btn_actualizar = None
-        if formato_actualizacion():
+        if formato in ("deb", "flatpak", "appimage"):
             self.btn_actualizar = Gtk.Button(label=traducir("Buscar actualizaciones"))
             self.btn_actualizar.set_tooltip_text(traducir("Actualizar esta aplicación"))
             self.btn_actualizar.connect("clicked", self._buscar_actualizacion)
