@@ -18,6 +18,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 
 import gi
 
@@ -42,6 +43,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.0.16": "Corrige APT y Deb822, separa Flatpak de usuario y sistema y añade distribución Flatpak con asistente anfitrión.",
     "1.0.15": "Corrige la autorización del asistente incluido en AppImage.",
     "1.0.14": "Mantiene disponibles las opciones mientras comprueba su estado en segundo plano.",
     "1.0.13": "Añade una dedicatoria personal enlazada en la ventana «Acerca de».",
@@ -465,10 +467,36 @@ def aplicar_tema(tema):
 # ------------------------------------------------------------------------------
 # Información del sistema (no necesita privilegios)
 # ------------------------------------------------------------------------------
+def es_flatpak():
+    return bool(os.environ.get("FLATPAK_ID"))
+
+
+def comando_host(*argumentos):
+    if es_flatpak():
+        return ["flatpak-spawn", "--host", *argumentos]
+    return list(argumentos)
+
+
+def leer_texto(ruta):
+    if es_flatpak():
+        try:
+            resultado = subprocess.run(
+                comando_host("cat", ruta), capture_output=True, text=True, timeout=10
+            )
+            return resultado.stdout if resultado.returncode == 0 else None
+        except (OSError, subprocess.SubprocessError):
+            return None
+    try:
+        with open(ruta, encoding="utf-8") as archivo:
+            return archivo.read()
+    except OSError:
+        return None
+
+
 def paquete_instalado(nombre):
     try:
         out = subprocess.run(
-            ["dpkg-query", "-W", "-f=${Status}", nombre],
+            comando_host("dpkg-query", "-W", "-f=${Status}", nombre),
             capture_output=True, text=True, timeout=10,
         ).stdout
     except (OSError, subprocess.SubprocessError):
@@ -482,7 +510,7 @@ def version_app():
         return version
     try:
         out = subprocess.run(
-            ["dpkg-query", "-W", "-f=${Status}|${Version}", "aio-debian-gui"],
+            comando_host("dpkg-query", "-W", "-f=${Status}|${Version}", "aio-debian-gui"),
             capture_output=True, text=True, timeout=10,
         ).stdout
         estado, _, version = out.partition("|")
@@ -494,13 +522,11 @@ def version_app():
 
 
 def sistema_operativo():
-    try:
-        with open("/etc/os-release", encoding="utf-8") as f:
-            for linea in f:
-                if linea.startswith("PRETTY_NAME="):
-                    return linea.split("=", 1)[1].strip().strip('"')
-    except OSError:
-        pass
+    contenido = leer_texto("/etc/os-release")
+    if contenido:
+        for linea in contenido.splitlines():
+            if linea.startswith("PRETTY_NAME="):
+                return linea.split("=", 1)[1].strip().strip('"')
     return "Debian GNU/Linux"
 
 
@@ -513,6 +539,10 @@ def _ejecutar(cmd):
 
 def helper_mantenimiento():
     global _helper_appimage_temporal
+    # El Flatpak es solo la interfaz: las operaciones administrativas se delegan
+    # al asistente instalado en el Debian anfitrión por el paquete .deb.
+    if es_flatpak():
+        return HELPER_SISTEMA
     if os.environ.get("APPDIR") and os.path.isfile(HELPER_SISTEMA):
         return HELPER_SISTEMA
     if os.environ.get("APPDIR"):
@@ -550,17 +580,29 @@ _directorios_helper_appimage = []
 _helper_appimage_temporal = None
 
 
+def helper_disponible(ruta):
+    if es_flatpak():
+        try:
+            return subprocess.run(
+                comando_host("test", "-x", ruta),
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10,
+            ).returncode == 0
+        except (OSError, subprocess.SubprocessError):
+            return False
+    return os.path.isfile(ruta)
+
+
 def comando_pkexec(helper, lang, *argumentos):
+    if es_flatpak():
+        return ["flatpak-spawn", "--host", "pkexec", helper, "--lang", lang, *argumentos]
     if os.environ.get("APPDIR") and helper != HELPER_SISTEMA:
         return ["pkexec", "/bin/bash", helper, "--lang", lang, *argumentos]
     return ["pkexec", helper, "--lang", lang, *argumentos]
 
 
 def helper_admite_autorizacion_sin_contrasena(ruta):
-    try:
-        with open(ruta, encoding="utf-8") as helper:
-            contenido = helper.read()
-    except OSError:
+    contenido = leer_texto(ruta)
+    if contenido is None:
         return False
     return (
         "--enable-passwordless" in contenido
@@ -569,11 +611,8 @@ def helper_admite_autorizacion_sin_contrasena(ruta):
 
 
 def helper_admite_tarea(ruta, tarea):
-    try:
-        with open(ruta, encoding="utf-8") as helper:
-            return "[%s]=" % tarea in helper.read()
-    except OSError:
-        return False
+    contenido = leer_texto(ruta)
+    return contenido is not None and "[%s]=" % tarea in contenido
 
 
 def autorizacion_sin_contrasena_activa():
@@ -581,9 +620,10 @@ def autorizacion_sin_contrasena_activa():
     rule_path = "/etc/polkit-1/rules.d/50-aiodebian-gui-%s.rules" % uid
     try:
         username = pwd.getpwuid(uid).pw_name
-        with open(rule_path, encoding="utf-8") as regla:
-            contenido = regla.read()
+        contenido = leer_texto(rule_path)
     except (OSError, KeyError):
+        return False
+    if contenido is None:
         return False
     return (
         ('action.id === "%s"' % POLKIT_ACTION) in contenido
@@ -596,6 +636,9 @@ def autorizacion_sin_contrasena_activa():
 
 def fecha_instalacion():
     """De más a menos fiable. Devuelve datetime.date o None."""
+    # El root del sandbox no es el sistema de archivos raíz del anfitrión.
+    if es_flatpak():
+        return None
     candidatos = []
 
     # 1) Creación del sistema de archivos raíz (solo si se puede leer sin root)
@@ -758,7 +801,7 @@ class VentanaPrincipal(Gtk.Window):
         self.filas = {}
         self.indicadores = {}
 
-        self.flatpak_presente = shutil.which("flatpak") is not None
+        self.flatpak_presente = es_flatpak() or shutil.which("flatpak") is not None
         self.gnome_presente = paquete_instalado("gnome-shell")
 
         self._construir_cabecera()
@@ -1045,57 +1088,43 @@ class VentanaPrincipal(Gtk.Window):
         if inicial:
             self.estado.set_text(traducir("Comprobando tareas ya instaladas…"))
         self._actualizar_sensibilidad()
-        try:
-            self.proceso_estados = Gio.Subprocess.new(
-                ["bash", HELPER, "--status"],
-                Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE,
-            )
-        except GLib.Error as e:
-            self._finalizar_consulta_estados(False, str(e.message))
-            return
-        self.flujo_estados = Gio.DataInputStream.new(self.proceso_estados.get_stdout_pipe())
-        self.timeout_estados_id = GLib.timeout_add_seconds(
-            30, self._consulta_estados_agotada
+        comando_estado = (
+            ["flatpak-spawn", "--host", HELPER_SISTEMA, "--status"]
+            if es_flatpak() else ["bash", HELPER, "--status"]
         )
-        self._leer_linea_estado()
 
-    def _consulta_estados_agotada(self):
-        self.timeout_estados_id = None
+        # Do not rely on GIO stdout async EOF delivery on all desktops.
+        # Only the main GTK thread updates widgets; worker collects subprocess output.
+        def comprobar():
+            try:
+                resultado = subprocess.run(
+                    comando_estado, capture_output=True, text=True,
+                    timeout=15, check=False,
+                )
+                codigo, salida, error = (
+                    resultado.returncode, resultado.stdout, resultado.stderr,
+                )
+            except subprocess.TimeoutExpired:
+                codigo, salida, error = -1, "", (
+                    "El asistente no respondió en 15 segundos."
+                )
+            except (OSError, subprocess.SubprocessError) as exc:
+                codigo, salida, error = -1, "", str(exc)
+            GLib.idle_add(self._estados_terminados, codigo, salida, error)
+
+        threading.Thread(target=comprobar, daemon=True).start()
+
+    def _estados_terminados(self, codigo, salida, error=""):
         if not self.consultando_estados:
             return GLib.SOURCE_REMOVE
-        self.proceso_estados.force_exit()
-        self._finalizar_consulta_estados(
-            False, "La comprobación de tareas superó el límite de 30 segundos."
-        )
-        return GLib.SOURCE_REMOVE
-
-    def _leer_linea_estado(self):
-        self.flujo_estados.read_line_async(
-            GLib.PRIORITY_DEFAULT, None, self._linea_estado_leida
-        )
-
-    def _linea_estado_leida(self, flujo, res):
-        if not self.consultando_estados:
-            return
-        try:
-            r = flujo.read_line_finish_utf8(res)
-            datos = r[0] if isinstance(r, tuple) else r
-        except GLib.Error:
-            datos = None
-        if datos is None:
-            self.proceso_estados.wait_async(None, self._estados_terminados)
-            return
-        self.salida_estados.append(datos)
-        self._leer_linea_estado()
-
-    def _estados_terminados(self, proceso, res):
-        if not self.consultando_estados:
-            return
-        try:
-            proceso.wait_finish(res)
-            codigo = proceso.get_exit_status()
-        except GLib.Error:
-            codigo = -1
+        self.salida_estados = (salida or "").splitlines()
+        if codigo != 0:
+            self._finalizar_consulta_estados(
+                False, "El asistente terminó con código %s: %s" % (
+                    codigo, (error or "sin detalles").strip()[:350],
+                )
+            )
+            return GLib.SOURCE_REMOVE
         estados = {}
         for linea in self.salida_estados:
             campos = linea.split(":")
@@ -1173,7 +1202,7 @@ class VentanaPrincipal(Gtk.Window):
 
     def _actualizar_sensibilidad(self):
         disponible = not self.en_curso
-        self.btn_iniciar.set_sensitive(disponible and not self.consultando_estados)
+        self.btn_iniciar.set_sensitive(disponible)
         self.chk_sin_contrasena.set_sensitive(disponible)
         self.btn_menu.set_sensitive(disponible)
         for boton in self.botones_preset:
@@ -1268,10 +1297,16 @@ class VentanaPrincipal(Gtk.Window):
         except OSError as e:
             self._mensaje(Gtk.MessageType.ERROR, "No se pudo preparar el asistente", str(e))
             return
-        if not os.path.exists(helper):
+        if not helper_disponible(helper):
             self._mensaje(Gtk.MessageType.ERROR, "Falta el asistente",
-                          traducir("No se encuentra %s.\nReinstala el paquete aio-debian-gui.")
-                          % helper)
+                          (
+                              "El Flatpak incluye el asistente, pero todavía no está instalado "
+                              "en el Debian anfitrión. Para habilitar las tareas administrativas, "
+                              "consulta la sección «Flatpak» del README oficial y sigue los pasos "
+                              "de integración manual con Polkit. Flatseal no puede instalarlo."
+                              if es_flatpak() else
+                              traducir("No se encuentra %s.\nReinstala el paquete aio-debian-gui.") % helper
+                          ))
             return
 
         if ("backports-kernel-mesa" in pasos and
@@ -1357,13 +1392,18 @@ class VentanaPrincipal(Gtk.Window):
                 Gtk.MessageType.ERROR, "No se pudo preparar el asistente", str(e)
             )
             return
-        if not os.path.exists(helper):
+        if not helper_disponible(helper):
             self._restablecer_opcion_sin_contrasena(autorizacion_sin_contrasena_activa())
             self._mensaje(
                 Gtk.MessageType.ERROR,
                 "Falta el asistente",
-                traducir("No se encuentra %s.\nReinstala el paquete aio-debian-gui.")
-                % helper,
+                (
+                    "El Flatpak necesita la integración manual del asistente con Polkit "
+                    "en el Debian anfitrión. Consulta la sección «Flatpak» del README oficial. "
+                    "Flatseal no concede privilegios de administrador."
+                    if es_flatpak() else
+                    traducir("No se encuentra %s.\nReinstala el paquete aio-debian-gui.") % helper
+                ),
             )
             return
 
@@ -1638,7 +1678,7 @@ class VentanaPrincipal(Gtk.Window):
         if r == Gtk.ResponseType.YES:
             self._escribir("[*] Reiniciando el sistema...\n", "info")
             try:
-                subprocess.Popen(["systemctl", "reboot"])
+                subprocess.Popen(comando_host("systemctl", "reboot"))
             except OSError as e:
                 self._mensaje(Gtk.MessageType.ERROR, "No se pudo reiniciar", str(e))
         else:

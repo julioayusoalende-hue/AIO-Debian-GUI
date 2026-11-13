@@ -1,53 +1,31 @@
 app-id: io.github.julioayusoalende_hue.aio_debian_gui
 runtime: org.gnome.Platform
-runtime-version: '48'
+runtime-version: '51'
 sdk: org.gnome.Sdk
 command: aio-debian-gui
+branch: stable
+appstream-compose: true
 finish-args:
   - --share=ipc
-  - --socket=x11
   - --socket=wayland
-  - --device=dri
-  - --socket=pulseaudio
-  - --share=network
-  - --filesystem=/etc:ro
-  - --filesystem=/var/lib/apt:ro
-  - --filesystem=/tmp
-  - --filesystem=/run/user
-  - --filesystem=xdg-config
-  - --filesystem=xdg-data
+  - --socket=fallback-x11
   - --talk-name=org.freedesktop.Flatpak
-  - --talk-name=org.freedesktop.PolicyKit1
-  - --system-talk-name=org.freedesktop.PolicyKit1
-  - --env=GTK_THEME=Adwaita:light
+  # Required only for flatpak-spawn --host; does not grant root privileges.
+  - --env=AIO_DEBIAN_GUI_VERSION=1.0.16
 modules:
   - name: aio-debian-gui
     buildsystem: simple
+    build-commands:
+      - install -D -m 755 package/usr/bin/aio-debian-gui /app/bin/aio-debian-gui
+      - install -D -m 755 package/usr/lib/aio-debian-gui/aio-debian-gui-helper /app/share/aio-debian-gui/host-integration/aio-debian-gui-helper
+      - install -D -m 644 package/usr/share/polkit-1/actions/es.aiodebian.gui.policy /app/share/aio-debian-gui/host-integration/es.aiodebian.gui.policy
+      - install -D -m 644 package/usr/share/aio-debian-gui/debian-openlogo.png /app/share/aio-debian-gui/debian-openlogo.png
+      - install -D -m 644 package/usr/share/aio-debian-gui/adri-y-lu.jpg /app/share/aio-debian-gui/adri-y-lu.jpg
+      - install -D -m 644 package/usr/share/applications/aio-debian-gui.desktop /app/share/applications/io.github.julioayusoalende_hue.aio_debian_gui.desktop
+      - install -D -m 644 flatpak/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml /app/share/metainfo/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml
+      - cp -a package/usr/share/icons/hicolor /app/share/icons/
+      - install -D -m 644 package/usr/share/icons/hicolor/128x128/apps/aio-debian-gui.png /app/share/icons/hicolor/128x128/apps/io.github.julioayusoalende_hue.aio_debian_gui.png
+      - install -D -m 644 package/usr/share/icons/hicolor/512x512/apps/aio-debian-gui.png /app/share/icons/hicolor/512x512/apps/io.github.julioayusoalende_hue.aio_debian_gui.png
     sources:
       - type: dir
         path: ..
-    install: |
-      set -eux
-      install -d /app/bin /app/lib/aio-debian-gui /app/share/aio-debian-gui /app/share/applications /app/share/icons /app/share/polkit-1/actions
-
-      install -m 755 package/usr/bin/aio-debian-gui /app/bin/aio-debian-gui
-      install -m 755 package/usr/lib/aio-debian-gui/aio-debian-gui-helper /app/lib/aio-debian-gui/aio-debian-gui-helper
-      install -m 644 package/usr/share/aio-debian-gui/debian-openlogo.png /app/share/aio-debian-gui/debian-openlogo.png
-      install -m 644 package/usr/share/aio-debian-gui/adri-y-lu.jpg /app/share/aio-debian-gui/adri-y-lu.jpg
-      install -m 644 package/usr/share/polkit-1/actions/es.aiodebian.gui.policy /app/share/polkit-1/actions/es.aiodebian.gui.policy
-      cp -a package/usr/share/icons/hicolor /app/share/icons/
-      install -m 644 package/usr/share/applications/aio-debian-gui.desktop /app/share/applications/aio-debian-gui.desktop
-      install -m 644 package/usr/share/icons/hicolor/512x512/apps/aio-debian-gui.png /app/aio-debian-gui.png
-
-      sed -i 's/^Exec=aio-debian-gui$/Exec=aio-debian-gui/' /app/share/applications/aio-debian-gui.desktop
-      sed -i 's/^Icon=.*/Icon=aio-debian-gui/' /app/share/applications/aio-debian-gui.desktop
-      sed -i 's|^Categories=.*|Categories=System;Settings;Utility;|' /app/share/applications/aio-debian-gui.desktop
-
-      for path in /app/share/icons/hicolor/*/apps/*; do
-        if [ -f "$path" ]; then
-          chmod 644 "$path"
-        fi
-      done
-
-      chmod 755 /app/bin/aio-debian-gui
-      chmod 755 /app/lib/aio-debian-gui/aio-debian-gui-helper
