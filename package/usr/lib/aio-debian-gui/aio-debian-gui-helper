@@ -31,7 +31,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 
 LISTAS_ACTUALIZADAS=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.1.0
+HELPER_VERSION=1.2.0
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 POLKIT_RULES_DIR=/etc/polkit-1/rules.d
@@ -39,6 +39,110 @@ POLKIT_RULES_DIR=/etc/polkit-1/rules.d
 # ------------------------------------------------------------------------------
 # Utilidades
 # ------------------------------------------------------------------------------
+# La decisión sobre la distribución la toma siempre el anfitrión, nunca el sandbox.
+# OS_RELEASE_FILE solo se permite en pruebas sin privilegios; se ignora al ejecutar como root.
+leer_distribucion() {
+    local archivo=/etc/os-release
+    if [ "$EUID" -ne 0 ] && [ -n "${AIO_TEST_OS_RELEASE:-}" ]; then
+        archivo="$AIO_TEST_OS_RELEASE"
+    fi
+    [ -r "$archivo" ] || return 1
+    (
+      ID= VERSION_ID=
+      . "$archivo"
+      case "${ID:-}" in
+        debian) printf '%s\n' debian ;;
+        ubuntu)
+          case "${VERSION_ID:-}" in
+            24.04|26.04) printf '%s\n' ubuntu ;;
+            *) return 1 ;;
+          esac
+          ;;
+        *) return 1 ;;
+      esac
+    )
+}
+
+distribucion_soportada() {
+    local id
+    id=$(leer_distribucion) || {
+        err "Este sistema no es Debian ni Ubuntu 24.04/26.04 LTS. Se han bloqueado las operaciones administrativas."
+        return 1
+    }
+    printf '%s\n' "$id"
+}
+
+ubuntu_hwe_paquete() {
+    local version
+    [ "$(leer_distribucion)" = ubuntu ] || return 1
+    . /etc/os-release
+    version=${VERSION_ID:-}
+    [ "$version" = 24.04 ] || [ "$version" = 26.04 ] || return 1
+    printf 'linux-generic-hwe-%s\n' "$version"
+}
+
+estado_ubuntu_hwe() {
+    local paquete
+    paquete=$(ubuntu_hwe_paquete) || return 1
+    paquete_instalado "$paquete"
+}
+
+paso_ubuntu_hwe() {
+    local paquete
+    paquete=$(ubuntu_hwe_paquete) || return 1
+    asegurar_listas || return 1
+    if ! apt-cache show "$paquete" >/dev/null 2>&1; then
+        err "No hay paquete HWE disponible para esta versión de Ubuntu. No se realizarán cambios."
+        return 1
+    fi
+    info "Instalando el metapaquete oficial $paquete desde los repositorios configurados..."
+    if ! apt-get "${APT_OPTS[@]}" install "$paquete"; then
+        err "No se pudo instalar el kernel HWE."
+        return 1
+    fi
+    REINICIO_REQUERIDO=1
+    echo "##REBOOT:1"
+    ok "Kernel HWE solicitado. Reinicia para activarlo."
+}
+
+estado_ubuntu_repos() {
+    # Deb822 y formato clásico. Detectar componentes sin modificar archivos.
+    local carpeta="${1:-/etc/apt}" f linea
+    local encontrado_universe=0 encontrado_multiverse=0 encontrado_restricted=0
+    shopt -s nullglob
+    for f in "$carpeta/sources.list" "$carpeta"/sources.list.d/*.list "$carpeta"/sources.list.d/*.sources; do
+        [ -f "$f" ] || continue
+        while IFS= read -r linea; do
+            case "$linea" in
+                \#*) continue ;;
+            esac
+            if [[ "$linea" =~ ^Components: ]] || [[ "$linea" =~ ^deb[[:space:]] ]]; then
+                [[ " $linea " == *" universe "* ]] && encontrado_universe=1
+                [[ " $linea " == *" multiverse "* ]] && encontrado_multiverse=1
+                [[ " $linea " == *" restricted "* ]] && encontrado_restricted=1
+            fi
+        done < "$f"
+    done
+    shopt -u nullglob
+    [ "$encontrado_universe" = 1 ] && [ "$encontrado_multiverse" = 1 ] && [ "$encontrado_restricted" = 1 ]
+}
+
+paso_ubuntu_repos() {
+    local componente
+    asegurar_listas || return 1
+    if ! command -v add-apt-repository >/dev/null 2>&1; then
+        info "Instalando software-properties-common para gestionar repositorios oficiales Ubuntu..."
+        apt-get "${APT_OPTS[@]}" install software-properties-common || return 1
+    fi
+    for componente in universe restricted multiverse; do
+        info "Habilitando el componente oficial $componente..."
+        add-apt-repository -y "$componente" || return 1
+    done
+    LISTAS_ACTUALIZADAS=0
+    asegurar_listas || return 1
+    ok "Componentes oficiales de Ubuntu configurados."
+}
+
 pkexec_uid() {
     local uid="${PKEXEC_UID:-}"
     if [[ ! "$uid" =~ ^[1-9][0-9]*$ ]]; then
@@ -404,6 +508,10 @@ paso_clock() {
 }
 
 paso_repos() {
+    if [ "$(leer_distribucion)" = ubuntu ]; then
+        paso_ubuntu_repos
+        return $?
+    fi
     info "Verificando los repositorios 'contrib' y 'non-free'..."
     local cambios=0 f
     shopt -s nullglob
@@ -440,6 +548,10 @@ fuente_debian_relevante() {
 }
 
 estado_repos() {
+    if [ "$(leer_distribucion)" = ubuntu ]; then
+        estado_ubuntu_repos "${1:-/etc/apt}"
+        return $?
+    fi
     local root="${1:-/etc/apt}" f temporal relevantes=0 pendientes=0 indice=0
     local -a fuentes
     shopt -s nullglob
@@ -776,9 +888,10 @@ paso_rebootcheck() {
 # ------------------------------------------------------------------------------
 declare -A TITULOS=(
     [clock]="Sincronizar el reloj"
-    [repos]="Habilitar contrib y non-free"
+    [repos]="Configurar componentes oficiales de repositorios"
     [tools]="Instalar herramientas auxiliares"
     [backports-kernel-mesa]="Instalar kernel y Mesa desde Backports"
+    [ubuntu-hwe]="Instalar kernel HWE oficial de Ubuntu"
     [flatpak-setup]="Instalar Flatpak y Flathub"
     [gnome-plugin]="Plugin Flatpak para GNOME Software"
     [ext-manager]="Extension Manager de GNOME"
@@ -793,11 +906,12 @@ CRITICOS=" upgrade backports-kernel-mesa "
 
 mostrar_estados() {
     local tarea funcion
-    for tarea in repos tools backports-kernel-mesa gnome-plugin ext-manager; do
+    for tarea in repos tools backports-kernel-mesa ubuntu-hwe gnome-plugin ext-manager; do
         case "$tarea" in
             repos) funcion=estado_repos ;;
             tools) funcion=estado_tools ;;
             backports-kernel-mesa) funcion=estado_backports ;;
+            ubuntu-hwe) funcion=estado_ubuntu_hwe ;;
             gnome-plugin) funcion=estado_gnome_plugin ;;
             ext-manager) funcion=estado_ext_manager ;;
         esac
@@ -818,6 +932,9 @@ main() {
         mostrar_estados
         return 0
     fi
+
+    # Negar las operaciones administrativas en distribuciones no probadas.
+    distribucion_soportada >/dev/null || exit 1
 
     if [ "$EUID" -ne 0 ]; then
         err "Este asistente debe ejecutarse con privilegios de administrador." >&2
@@ -886,6 +1003,15 @@ main() {
         pasos+=("$s")
     done
     [ ${#pasos[@]} -gt 0 ] || { err "No se indicó ningún paso." >&2; exit 2; }
+    local distro
+    distro=$(leer_distribucion) || exit 1
+    for s in "${pasos[@]}"; do
+        case "$distro:$s" in
+            ubuntu:backports-kernel-mesa|debian:ubuntu-hwe)
+                err "La tarea $s no es compatible con la distribución detectada."
+                exit 2 ;;
+        esac
+    done
 
     local total=${#pasos[@]} i=0 fallos=0
     for s in "${pasos[@]}"; do
