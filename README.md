@@ -168,9 +168,17 @@ sudo install -D -o root -g root -m 0644 \
   /usr/share/polkit-1/actions/es.aiodebian.gui.policy
 ```
 
-Reinicia AiO Debian GUI para que compruebe el asistente del anfitrión. Las tareas
-administrativas requieren autorización Polkit; desde la v1.0.19 no se admite habilitar una autorización permanente sin contraseña. Si ya hay un asistente instalado por un paquete
-`.deb`, no lo sobrescribas sin comprobar la versión y el origen.
+Reinicia AiO Debian GUI para que compruebe el asistente del anfitrión. Desde la
+versión 1.2.3, la actualización exclusiva de Flatpak del usuario no requiere
+`pkexec` ni integración privilegiada. Las tareas administrativas del anfitrión
+requieren autorización Polkit por defecto. Si lo deseas, puedes activar desde
+la interfaz la opción **«No solicitar contraseña de administrador en AiO
+(opcional)»**, que crea una excepción persistente y reversible para tu usuario
+local activo y solo para la acción de mantenimiento de AiO. La activación
+requiere una autorización inicial y conlleva los riesgos indicados en
+[Autorización y Flatpak](#autorización-y-flatpak-v123).
+Si ya hay un asistente instalado por un paquete `.deb`, no lo sobrescribas sin
+comprobar la versión y el origen.
 
 Para eliminar la integración manual, **solo si no la gestiona el paquete .deb**:
 
@@ -253,13 +261,19 @@ Se recomienda una copia de seguridad antes de habilitar nuevos repositorios o in
 ## Uso
 
 Busca *AiO Debian GUI* en el menú de aplicaciones, o ejecuta `aio-debian-gui` como usuario
-normal. Las operaciones administrativas requieren autenticación de administrador en
-una sesión local activa. Desde la versión 1.0.19 se ha retirado la posibilidad de
-habilitar autorizaciones Polkit persistentes sin contraseña. El paquete DEB revoca
-al actualizar las reglas antiguas que coinciden con la plantilla de AiO. En AppImage
-o integraciones manuales, si queda una autorización antigua, utiliza la opción de
-revocación (si aparece activa) o retira la regla identificada como
-`/etc/polkit-1/rules.d/50-aiodebian-gui-UID.rules` tras comprobar su contenido.
+normal. Por defecto, las tareas administrativas requieren autorización de
+administrador mediante Polkit en una sesión local activa. La actualización
+exclusiva de Flatpak del usuario no solicita contraseña desde la versión 1.2.3.
+
+La casilla **«No solicitar contraseña de administrador en AiO (opcional)»**
+permite ejecutar sin contraseña las tareas administrativas admitidas por AiO
+(APT, repositorios, kernel y Flatpak del sistema), bajo responsabilidad del
+usuario. Requiere autenticarse una vez para activarla y se puede desmarcar para
+revocar la excepción. No desactiva Polkit globalmente ni autoriza a otras
+aplicaciones, pero **otros procesos de tu cuenta también podrían invocar el
+asistente privilegiado de AiO sin contraseña**. La opción está desactivada por
+defecto. Consulta los [riesgos y límites](#autorización-y-flatpak-v123).
+
 La instalación del kernel y Mesa desde Backports
 también está desactivada por defecto; al activarla, puede añadirse la fuente oficial
 `<codename>-backports` y puede ser necesario reiniciar después.
