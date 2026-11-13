@@ -19,6 +19,9 @@ import ast, sys
 ast.parse(open(sys.argv[1], encoding="utf-8").read())
 PY
 
+python3 -m compileall -q package/usr/lib/aio-debian-gui/aio_core &&
+    bien "módulos core Python válidos" || fallo "sintaxis módulos core"
+python3 scripts/test-core-preferences.py && bien "preferencias modulares" || fallo "pruebas de preferencias core"
 python3 scripts/test-updater.py && bien "actualizador AppImage: versiones y SHA-256" || fallo "pruebas de actualizador"
 python3 scripts/test-history.py && bien "historial de mantenimiento y persistencia" || fallo "pruebas del historial"
 python3 scripts/test-install-format.py && bien "detección de formato DEB/AppImage/Flatpak" || fallo "detección de formato"
