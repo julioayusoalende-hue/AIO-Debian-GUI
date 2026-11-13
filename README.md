@@ -184,9 +184,9 @@ sudo apt install ./dist/aio-debian-gui_*_all.deb
 El AppImage se construye para `x86_64` y usa el runtime de Debian; instala
 `appimagetool` para generarlo.
 
-## Actualizar desde la interfaz (v1.0.18 y posteriores)
+## Actualizar desde la interfaz (v1.0.19 y posteriores)
 
-La cabecera indica si estás utilizando **DEB**, **AppImage** o **Flatpak**. En los tres formatos aparece el botón **«Buscar actualizaciones»**.
+La cabecera indica si estás utilizando **DEB**, **AppImage** o **Flatpak**. En los tres formatos aparece el botón **«Buscar actualizaciones»**, que consulta las versiones disponibles y solicita confirmación antes de aplicar cambios.
 
 - **AppImage:** consulta la última versión estable en GitHub Releases. Si existe una versión nueva, descarga el AppImage en **Descargas**, comprueba su integridad con el archivo `SHA256SUMS` oficial y lo deja preparado para ejecutarlo. No sobrescribe ni elimina el AppImage actualmente abierto: cierra la versión anterior y ejecuta el archivo recién descargado.
 - **Flatpak:** ejecuta `flatpak update --user --noninteractive -y io.github.julioayusoalende_hue.aio_debian_gui` en el anfitrión mediante `flatpak-spawn --host`. Requiere instalar desde nuestro `.flatpakref` y conservar el repositorio firmado. Reinicia la aplicación para cargar la nueva versión si se ha actualizado.
