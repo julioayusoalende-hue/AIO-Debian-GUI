@@ -39,6 +39,26 @@ variar según la versión de Snapcraft.
   se oculta en esta edición.
 - Nunca se debe instalar el snap experimental con `--devmode` para intentar saltarse estas limitaciones.
 
+## Preparación de revisión en Snap Store
+
+He incluido un [borrador técnico para la solicitud a Canonical](snap-store-review-request.md)
+que detalla las necesidades de privilegios, sus limitaciones y las pruebas pendientes.
+No se ha enviado ni aprobado ninguna solicitud.
+
+La revisión oficial [desaconseja solicitar classic únicamente por acceso directo a
+`pkexec`](https://snapcraft.io/docs/reference/administration/reviewing-classic-confinement-snaps/).
+Por ello, si Canonical no aprueba esta arquitectura, la alternativa será una interfaz
+Snap con confinamiento estricto y mantenimiento administrativo mediante el DEB nativo.
+
+Para comprobar una instalación experimental sin cambiar repositorios ni invocar Polkit:
+
+```bash
+python3 scripts/smoke-snap-installed.py
+```
+
+Este script es un chequeo básico de recursos; **no prueba la interfaz gráfica ni
+la ejecución de tareas administrativas**.
+
 ## Publicación futura
 
 1. Verificar el prototipo en Ubuntu 24.04 y 26.04 LTS con la interfaz y el asistente.
