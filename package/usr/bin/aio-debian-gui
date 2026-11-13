@@ -1819,6 +1819,9 @@ class VentanaPrincipal(Gtk.Window):
         if not self._confirmar_tareas(pasos):
             self.estado.set_text(traducir("Mantenimiento cancelado antes de comenzar."))
             return
+        if pasos == ["flatpak-update"]:
+            self._iniciar_flatpak_usuario()
+            return
         try:
             helper = helper_mantenimiento()
         except OSError as e:
@@ -1929,6 +1932,41 @@ class VentanaPrincipal(Gtk.Window):
         self.flujo = Gio.DataInputStream.new(self.proceso.get_stdout_pipe())
         if not solo_flatpak_usuario:
             self._iniciar_espera_autorizacion()
+        self._leer_linea()
+
+    def _iniciar_flatpak_usuario(self):
+        """Actualización de Flatpak del usuario sin helper root ni pkexec."""
+        script = (
+            'printf "##STEP:1:1:Actualizar Flatpak del usuario\\n"; '
+            'if ! command -v flatpak >/dev/null 2>&1; then '
+            'echo "[-] Flatpak no está instalado."; echo "##DONE:1"; exit 1; fi; '
+            'if flatpak --user update -y && flatpak --user uninstall --unused -y; then '
+            'echo "##DONE:0"; else echo "##DONE:1"; exit 1; fi'
+        )
+        self.buf.set_text("")
+        self.necesita_reinicio = False
+        self.hubo_errores = False
+        self.fin_recibido = False
+        self.terminado_gestionado = False
+        self.cancelacion_autorizacion = None
+        self.tareas_en_ejecucion = ["flatpak-update"]
+        self.total_pasos = 1
+        self._poner_ocupado(True)
+        self.estado.set_text("Actualizando Flatpak del usuario sin contraseña…")
+        self._escribir("[*] Operación Flatpak de usuario; sin pkexec.\\n", "info")
+        self.barra.set_fraction(0)
+        self.barra.set_text("")
+        self.barra.set_show_text(False)
+        try:
+            self.proceso = Gio.Subprocess.new(
+                comando_host("bash", "-c", script),
+                Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE,
+            )
+        except GLib.Error as error:
+            self._poner_ocupado(False)
+            self._mensaje(Gtk.MessageType.ERROR, "No se pudo iniciar", str(error.message))
+            return
+        self.flujo = Gio.DataInputStream.new(self.proceso.get_stdout_pipe())
         self._leer_linea()
 
     def _cambiar_sin_contrasena(self, boton):
