@@ -57,34 +57,75 @@ chmod +x aio-debian-gui_*_x86_64.AppImage
 ./aio-debian-gui_*_x86_64.AppImage
 ```
 
-### Opción 4: Flatpak
+### Opción 4: Flatpak (descarga independiente con integración manual)
 
-El Flatpak ofrece la interfaz gráfica dentro de un sandbox. Por diseño, no instala
-ni modifica componentes privilegiados del sistema anfitrión. Para ejecutar tareas
-de mantenimiento (APT, repositorios, Backports, Flatpak del anfitrión y Polkit),
-**primero instala en Debian el paquete .deb de AiO Debian GUI de la misma versión**.
-El Flatpak delega esas operaciones al asistente del anfitrión mediante
-`flatpak-spawn` y Polkit; no concede acceso general al sistema de archivos ni
-incluye permisos privilegiados dentro del sandbox.
+El Flatpak **incluye la interfaz, el asistente de mantenimiento y la política Polkit**
+en el mismo archivo `.flatpak`. No es necesario descargar ni instalar el `.deb`.
+Para administrar APT y el Debian anfitrión, **sí es necesaria una integración
+privilegiada explícita**: Flatpak y Flatseal no pueden instalar automáticamente
+un servicio de sistema ni conceder privilegios de administrador.
 
-Descarga `aio-debian-gui_1.0.16_x86_64.flatpak` desde [Releases](../../releases/latest)
-y, con Flathub configurado, instala el runtime y la aplicación:
-
-```bash
-flatpak install flathub org.gnome.Platform//51
-flatpak install --user ./aio-debian-gui_1.0.16_x86_64.flatpak
-```
-
-Si no tienes Flathub configurado:
+1. Instala el Flatpak (requiere el runtime GNOME 51 disponible en Flathub):
 
 ```bash
 flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+flatpak install --user ./aio-debian-gui_1.0.16_x86_64.flatpak
 ```
 
-**Importante:** el Flatpak no es una instalación autónoma para administrar Debian.
-Sin el paquete .deb anfitrión, la interfaz puede abrirse, pero las tareas administrativas
-no estarán disponibles. Para una instalación independiente y completa, utiliza el .deb
-o la AppImage.
+2. Si quieres utilizar las funciones de mantenimiento, extrae **del Flatpak
+instalado** el asistente y la política Polkit en una carpeta temporal. Revísalos
+antes de instalarlos con privilegios de administrador:
+
+```bash
+APP=io.github.julioayusoalende_hue.aio_debian_gui
+mkdir -p "$HOME/aio-debian-gui-integracion"
+flatpak run --command=cat "$APP" /app/share/aio-debian-gui/host-integration/aio-debian-gui-helper \
+  > "$HOME/aio-debian-gui-integracion/aio-debian-gui-helper"
+flatpak run --command=cat "$APP" /app/share/aio-debian-gui/host-integration/es.aiodebian.gui.policy \
+  > "$HOME/aio-debian-gui-integracion/es.aiodebian.gui.policy"
+less "$HOME/aio-debian-gui-integracion/aio-debian-gui-helper"
+less "$HOME/aio-debian-gui-integracion/es.aiodebian.gui.policy"
+```
+
+3. Si aceptas otorgar permisos administrativos a este asistente, instala los
+archivos en el anfitrión (se solicitará la contraseña de administrador):
+
+```bash
+sudo install -D -o root -g root -m 0755 \
+  "$HOME/aio-debian-gui-integracion/aio-debian-gui-helper" \
+  /usr/lib/aio-debian-gui/aio-debian-gui-helper
+sudo install -D -o root -g root -m 0644 \
+  "$HOME/aio-debian-gui-integracion/es.aiodebian.gui.policy" \
+  /usr/share/polkit-1/actions/es.aiodebian.gui.policy
+```
+
+Reinicia AiO Debian GUI para que compruebe el asistente del anfitrión. Las tareas
+administrativas requieren autorización Polkit; **no recomendamos activar la opción
+de ejecutar sin contraseña**. Si ya hay un asistente instalado por un paquete
+`.deb`, no lo sobrescribas sin comprobar la versión y el origen.
+
+Para eliminar la integración manual, **solo si no la gestiona el paquete .deb**:
+
+```bash
+sudo rm /usr/lib/aio-debian-gui/aio-debian-gui-helper
+sudo rm /usr/share/polkit-1/actions/es.aiodebian.gui.policy
+```
+
+#### Permisos opcionales con Flatseal
+
+Puedes instalar Flatseal desde Flathub y modificar los permisos de AiO Debian GUI.
+Los permisos predeterminados permiten la interfaz gráfica y la comunicación con
+`flatpak-spawn --host`. **Flatseal no sustituye el asistente Polkit**.
+No concedas `filesystem=host`, `--device=all`, acceso indiscriminado al bus
+D-Bus ni permisos equivalentes: no son necesarios para este flujo y amplían el
+riesgo. Si revocas el permiso de comunicación con `org.freedesktop.Flatpak`,
+la integración con el anfitrión dejará de funcionar.
+
+**Aviso de seguridad:** el asistente se ejecuta como administrador cuando
+Polkit lo autoriza y puede modificar paquetes, repositorios y kernel. Comprueba
+siempre que el archivo procede de una versión confiable. La instalación manual
+del asistente no se actualiza automáticamente al actualizar el Flatpak: repite
+la extracción e instalación tras cada actualización que cambie el asistente.
 
 ### Opción 5: compilar desde el código
 
