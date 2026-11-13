@@ -72,7 +72,7 @@ jobs:
           test -n "$FLATPAK"
           dpkg-deb --info "$DEB"
           dpkg-deb --contents "$DEB" >/dev/null
-          dpkg-deb --contents "$DEB" | grep -q 'usr/lib/aio-debian-gui/aio_core/updates.py'
+          dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/updates.py' >/dev/null
           file "$APPIMAGE"
           chmod +x "$APPIMAGE"
           "$APPIMAGE" --appimage-extract >/dev/null
