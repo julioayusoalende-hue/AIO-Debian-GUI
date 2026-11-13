@@ -57,13 +57,46 @@ chmod +x aio-debian-gui_*_x86_64.AppImage
 ./aio-debian-gui_*_x86_64.AppImage
 ```
 
-### Opción 4: compilar desde el código
+### Opción 4: Flatpak
+
+El Flatpak ofrece la interfaz gráfica dentro de un sandbox. Por diseño, no instala
+ni modifica componentes privilegiados del sistema anfitrión. Para ejecutar tareas
+de mantenimiento (APT, repositorios, Backports, Flatpak del anfitrión y Polkit),
+**primero instala en Debian el paquete .deb de AiO Debian GUI de la misma versión**.
+El Flatpak delega esas operaciones al asistente del anfitrión mediante
+`flatpak-spawn` y Polkit; no concede acceso general al sistema de archivos ni
+incluye permisos privilegiados dentro del sandbox.
+
+Descarga `aio-debian-gui_1.0.16_x86_64.flatpak` desde [Releases](../../releases/latest)
+y, con Flathub configurado, instala el runtime y la aplicación:
+
+```bash
+flatpak install flathub org.gnome.Platform//48
+flatpak install --user ./aio-debian-gui_1.0.16_x86_64.flatpak
+```
+
+Si no tienes Flathub configurado:
+
+```bash
+flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+```
+
+**Importante:** el Flatpak no es una instalación autónoma para administrar Debian.
+Sin el paquete .deb anfitrión, la interfaz puede abrirse, pero las tareas administrativas
+no estarán disponibles. Para una instalación independiente y completa, utiliza el .deb
+o la AppImage.
+
+### Opción 5: compilar desde el código
 
 ```bash
 git clone https://github.com/julioayusoalende-hue/AIO-Debian-GUI.git
 cd AIO-Debian-GUI
 ./scripts/build-deb.sh
 APPIMAGETOOL=/ruta/a/appimagetool ./scripts/build-appimage.sh
+flatpak-builder --user --force-clean --install-deps-from=flathub --repo=flatpak-repo \
+  flatpak-build flatpak/io.github.julioayusoalende_hue.aio_debian_gui.yml
+flatpak build-bundle flatpak-repo dist/aio-debian-gui_1.0.16_x86_64.flatpak \
+  io.github.julioayusoalende_hue.aio_debian_gui stable
 sudo apt install ./dist/aio-debian-gui_*_all.deb
 ```
 
