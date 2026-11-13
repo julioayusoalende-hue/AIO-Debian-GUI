@@ -1,0 +1,77 @@
+name: Publish signed APT update repository
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'package/**'
+      - 'scripts/build-deb.sh'
+      - 'scripts/publish-apt-repo.sh'
+      - 'scripts/site-index.html'
+      - '.github/workflows/publish-apt.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aio-gh-pages-publication
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          path: source
+          persist-credentials: false
+      - name: Checkout existing Pages repository
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: site
+          persist-credentials: true
+      - name: Verify signing key secret
+        env:
+          PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          test -n "$PRIVATE_KEY" || { echo "::error::Missing GPG_PRIVATE_KEY secret"; exit 1; }
+      - name: Install APT build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev fakeroot gnupg
+      - name: Build DEB and import signing key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          export GNUPGHOME="$RUNNER_TEMP/apt-gnupg"
+          mkdir -m 0700 -p "$GNUPGHOME"
+          printf '%s\n' 'allow-loopback-pinentry' > "$GNUPGHOME/gpg-agent.conf"
+          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
+          cd source
+          bash scripts/build-deb.sh
+      - name: Publish signed APT metadata and DEB
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          cd source
+          DEB="$(find dist -maxdepth 1 -name '*.deb' -print -quit)"
+          test -n "$DEB"
+          bash scripts/publish-apt-repo.sh "$DEB" ../site
+      - name: Deploy APT files (preserve Flatpak)
+        run: |
+          set -euo pipefail
+          git -C site config user.name 'github-actions[bot]'
+          git -C site config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C site add pool dists aio-debian-gui.gpg index.html .nojekyll
+          if git -C site diff --cached --quiet; then
+            echo 'APT repository unchanged.'
+          else
+            git -C site commit -m "Publish signed APT repository from ${GITHUB_SHA:0:12}"
+            git -C site push origin HEAD:gh-pages
+          fi
