@@ -1,0 +1,60 @@
+name: Build experimental Snap package
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'snap/**'
+      - 'package/usr/**'
+      - '.github/workflows/build-snap.yml'
+  push:
+    branches: ['feat/**', 'fix/**', main]
+    paths:
+      - 'snap/**'
+      - 'package/usr/**'
+      - '.github/workflows/build-snap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-snap:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Snap recipe and launcher
+        run: |
+          set -eu
+          python3 scripts/test-snap-package.py
+          sh -n snap/local/aio-debian-gui-snap
+
+      - name: Build Snapcraft candidate
+        id: build
+        uses: snapcore/action-build@v1
+
+      - name: Inspect package contents
+        shell: bash
+        env:
+          SNAP_PACKAGE: ${{ steps.build.outputs.snap }}
+        run: |
+          set -euo pipefail
+          test -s "$SNAP_PACKAGE"
+          command -v unsquashfs >/dev/null || sudo apt-get install -y squashfs-tools
+          unsquashfs -ll "$SNAP_PACKAGE" | tee /tmp/aio-snap-content.txt >/dev/null
+          for path in usr/bin/aio-debian-gui usr/bin/aio-debian-gui-snap usr/lib/aio-debian-gui/aio_core/updates.py usr/lib/aio-debian-gui/aio-debian-gui-helper usr/share/aio-debian-gui/ubuntu-logo.svg usr/share/aio-debian-gui/debian-openlogo.png; do
+            grep -F "/$path" /tmp/aio-snap-content.txt
+          done
+
+      - name: Upload experimental Snap
+        uses: actions/upload-artifact@v4
+        with:
+          name: aio-debian-gui-snap-experimental
+          path: ${{ steps.build.outputs.snap }}
+          if-no-files-found: error
+          retention-days: 30
+
+# Deliberately no automatic Snap Store publication:
+# classic confinement needs Store review and author account credentials.
