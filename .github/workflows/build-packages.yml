@@ -83,7 +83,7 @@ jobs:
           flatpak run --user --command=python3 io.github.julioayusoalende_hue.aio_debian_gui -c 'import gi; gi.require_version("Gtk", "3.0"); from gi.repository import Gtk'
           flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -x /app/share/aio-debian-gui/host-integration/aio-debian-gui-helper
           flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/share/aio-debian-gui/host-integration/es.aiodebian.gui.policy
-          (cd dist && sha256sum *.deb *.AppImage *.flatpak > SHA256SUMS)
+          (cd dist && sha256sum *.deb *.AppImage > SHA256SUMS)
           cat dist/SHA256SUMS
 
       - name: Upload release candidates
@@ -109,7 +109,7 @@ jobs:
             exit 0
           fi
           gh release create v1.0.16 \
-            dist/*.deb dist/*.AppImage dist/*.flatpak dist/SHA256SUMS \
+            dist/*.deb dist/*.AppImage dist/SHA256SUMS \
             --target "$GITHUB_SHA" \
             --title "AiO Debian GUI 1.0.16" \
             --notes "Versión estable 1.0.16. Mejoras en tareas de mantenimiento y gestión de APT y repositorios Deb822, correcciones del estado y disponibilidad de Iniciar tareas en Cinnamon, y paquetes DEB, AppImage y Flatpak. Nota: el estado de las tareas puede seguir mostrando un aviso de tiempo de espera en ciertos entornos; la ejecución manual permanece disponible." \
