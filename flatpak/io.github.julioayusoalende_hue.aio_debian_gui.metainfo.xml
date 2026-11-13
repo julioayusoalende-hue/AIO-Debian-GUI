@@ -16,12 +16,6 @@
   </developer>
   <url type="homepage">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</url>
   <url type="bugtracker">https://github.com/julioayusoalende-hue/AIO-Debian-GUI/issues</url>
-  <metadata>
-    <value key="flathub::verification::website">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</value>
-  </metadata>
-  <provides>
-    <id>aio-debian-gui.desktop</id>
-  </provides>
   <releases>
     <release version="1.0.16" date="2026-11-13"/>
   </releases>
