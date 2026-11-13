@@ -10,7 +10,7 @@
     <p>La edición Flatpak funciona como interfaz aislada y delega las operaciones administrativas en el asistente del sistema mediante flatpak-spawn y Polkit.</p>
     <p>Importante: para ejecutar tareas de mantenimiento, primero debe estar instalado en el Debian anfitrión el paquete aio-debian-gui de la misma versión o una versión compatible. El Flatpak por sí solo no instala componentes privilegiados en el sistema anfitrión.</p>
   </description>
-  <launchable type="desktop-id">aio-debian-gui.desktop</launchable>
+  <launchable type="desktop-id">io.github.julioayusoalende_hue.aio_debian_gui.desktop</launchable>
   <developer id="io.github.julioayusoalende_hue">
     <name>Julio Ayuso</name>
   </developer>
