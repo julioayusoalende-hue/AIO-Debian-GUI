@@ -232,6 +232,15 @@ son los valores iniciales.
 La ventana «Acerca de» muestra el crédito del autor y permite abrir una dedicatoria con una foto
 proporcionada por el usuario.
 
+## Arquitectura modular (v1.1.0)
+
+La interfaz GTK continúa en `package/usr/bin/aio-debian-gui`, pero la lógica de
+actualizaciones AppImage, historial y preferencias está separada en
+`package/usr/lib/aio-debian-gui/aio_core/`, sin dependencias GTK.
+La interfaz utiliza funciones adaptadoras para mantener la compatibilidad y los tres
+formatos incluyen los mismos módulos. Las pruebas offline comprueban cada módulo
+sin ejecutar tareas de mantenimiento privilegiadas.
+
 ## Estructura
 
 ```

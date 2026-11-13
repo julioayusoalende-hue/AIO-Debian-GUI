@@ -29,6 +29,13 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import GdkPixbuf, Gio, GLib, Gtk, Pango  # noqa: E402
 
+# Ruta equivalente en DEB (/usr), AppImage (AppDir/usr) y Flatpak (/app).
+CORE_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                      "../lib/aio-debian-gui"))
+if CORE_DIR not in sys.path:
+    sys.path.insert(0, CORE_DIR)
+from aio_core import history as core_history, preferences as core_preferences, updates as core_updates  # noqa: E402
+
 PRGNAME = "aio-debian-gui"
 POLKIT_ACTION = "es.aiodebian.gui.mantenimiento"
 HELPER = os.path.normpath(
@@ -46,6 +53,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.1.0": "Separa lógica de actualizaciones, preferencias e historial en módulos probables y amplía pruebas.",
     "1.0.20": "Añade vista previa de tareas, historial local de mantenimiento y exportación de resultados.",
     "1.0.19": "Endurece Polkit, comprueba nuevas versiones antes de actualizar y valida el asistente Flatpak.",
     "1.0.18": "Identifica DEB, AppImage y Flatpak en la cabecera y permite actualizar la edición DEB desde APT.",
@@ -491,88 +499,29 @@ def traducir(texto):
 
 # Registro local: se almacenan resultados y nombres de tareas, no credenciales
 # ni salidas completas de comandos potencialmente sensibles.
-MAX_HISTORIAL = 100
+MAX_HISTORIAL = core_history.MAX_HISTORIAL
+
 def ruta_historial():
-    return os.path.join(GLib.get_user_state_dir(), PRGNAME, "history.json")
+    return core_history.ruta_historial(GLib.get_user_state_dir())
 
 def leer_historial(ruta=None):
-    ruta = ruta or ruta_historial()
-    try:
-        with open(ruta, encoding="utf-8") as archivo:
-            datos = json.load(archivo)
-        if not isinstance(datos, list):
-            return []
-        return [v for v in datos[-MAX_HISTORIAL:] if
-                isinstance(v, dict) and isinstance(v.get("fecha"), str)
-                and isinstance(v.get("tareas"), list) and isinstance(v.get("resultado"), str)]
-    except (OSError, ValueError, TypeError):
-        return []
+    return core_history.leer_historial(ruta or ruta_historial())
 
 def guardar_registro_mantenimiento(tareas, resultado, reinicio=False, ruta=None):
-    ruta = ruta or ruta_historial()
-    registros = leer_historial(ruta)
-    registro = {
-        "fecha": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
-        "formato": formato_actualizacion() or "desarrollo",
-        "version": version_app(),
-        "tareas": [str(t) for t in tareas][:40],
-        "resultado": resultado,
-        "reinicio_recomendado": bool(reinicio),
-    }
-    registros.append(registro)
-    directorio = os.path.dirname(ruta)
-    os.makedirs(directorio, mode=0o700, exist_ok=True)
-    fd, temporal = tempfile.mkstemp(prefix=".history-", dir=directorio)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as archivo:
-            json.dump(registros[-MAX_HISTORIAL:], archivo, ensure_ascii=False, indent=2)
-            archivo.write("\n")
-            archivo.flush()
-            os.fsync(archivo.fileno())
-        os.chmod(temporal, 0o600)
-        os.replace(temporal, ruta)
-    finally:
-        if os.path.exists(temporal):
-            os.unlink(temporal)
+    return core_history.guardar_registro_mantenimiento(
+        tareas, resultado, reinicio, ruta or ruta_historial(),
+        formato=formato_actualizacion() or "desarrollo", version=version_app(),
+    )
 
 def ruta_preferencias():
     return os.path.join(GLib.get_user_config_dir(), PRGNAME, "preferences.json")
 
 
 def cargar_preferencias(ruta=None):
-    ruta = ruta or ruta_preferencias()
-    try:
-        with open(ruta, encoding="utf-8") as archivo:
-            datos = json.load(archivo)
-    except FileNotFoundError:
-        return PREFERENCIAS_DEFECTO.copy()
-    if not isinstance(datos, dict):
-        raise ValueError("El archivo de preferencias debe contener un objeto JSON.")
-    preferencias = PREFERENCIAS_DEFECTO.copy()
-    preferencias.update({clave: datos[clave] for clave in PREFERENCIAS_DEFECTO if clave in datos})
-    if not isinstance(preferencias["idioma"], str) or preferencias["idioma"] not in IDIOMAS:
-        raise ValueError("Idioma de interfaz no válido en las preferencias.")
-    if not isinstance(preferencias["tema"], str) or preferencias["tema"] not in TEMAS:
-        raise ValueError("Tema de interfaz no válido en las preferencias.")
-    if type(preferencias["modo_simple"]) is not bool:
-        raise ValueError("El modo simple de las preferencias debe ser verdadero o falso.")
-    return preferencias
-
+    return core_preferences.cargar_preferencias(ruta or ruta_preferencias(), PREFERENCIAS_DEFECTO)
 
 def guardar_preferencias(preferencias, ruta=None):
-    ruta = ruta or ruta_preferencias()
-    directorio = os.path.dirname(ruta)
-    os.makedirs(directorio, exist_ok=True)
-    descriptor, temporal = tempfile.mkstemp(prefix=".preferences-", dir=directorio)
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8") as archivo:
-            json.dump(preferencias, archivo, ensure_ascii=False, indent=2)
-            archivo.write("\n")
-        os.replace(temporal, ruta)
-    finally:
-        if os.path.exists(temporal):
-            os.unlink(temporal)
-
+    return core_preferences.guardar_preferencias(preferencias, ruta or ruta_preferencias())
 
 def aplicar_tema(tema):
     settings = Gtk.Settings.get_default()
@@ -658,73 +607,16 @@ def formato_actualizacion():
 
 
 def version_numerica(version):
-    match = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)", version)
-    return tuple(map(int, match.groups())) if match else None
-
+    return core_updates.version_numerica(version)
 
 def obtener_release_actualizacion():
-    request = urllib.request.Request(
-        RELEASE_API, headers={"User-Agent": "aio-debian-gui-updater", "Accept": "application/vnd.github+json"}
-    )
-    with urllib.request.urlopen(request, timeout=15) as respuesta:
-        if respuesta.status != 200:
-            raise RuntimeError("No se pudo consultar GitHub Releases.")
-        datos = json.load(respuesta)
-    version = str(datos.get("tag_name", "")).lstrip("v")
-    if not version_numerica(version):
-        raise RuntimeError("La versión de GitHub no tiene un formato válido.")
-    archivos = {a.get("name"): a.get("browser_download_url") for a in datos.get("assets", [])}
-    nombre = f"aio-debian-gui_{version}_x86_64.AppImage"
-    url = archivos.get(nombre)
-    url_hash = archivos.get("SHA256SUMS")
-    if not (url and url_hash and url.startswith(HOMEPAGE + "/releases/download/") and
-            url_hash.startswith(HOMEPAGE + "/releases/download/")):
-        raise RuntimeError("La Release no contiene un AppImage y SHA256SUMS válidos.")
-    return version, nombre, url, url_hash
-
+    return core_updates.obtener_release_actualizacion()
 
 def descargar_appimage_verificado(version, nombre, url, url_hash):
-    with urllib.request.urlopen(
-        urllib.request.Request(url_hash, headers={"User-Agent": "aio-debian-gui-updater"}), timeout=20
-    ) as respuesta:
-        checksums = respuesta.read(65536).decode("utf-8")
-    esperada = None
-    for linea in checksums.splitlines():
-        partes = linea.split()
-        if len(partes) == 2 and partes[1].lstrip("*") == nombre and re.fullmatch(r"[0-9a-fA-F]{64}", partes[0]):
-            esperada = partes[0].lower()
-    if not esperada:
-        raise RuntimeError("No existe una suma SHA-256 verificable para el AppImage.")
-    destino = os.path.join(GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOWNLOAD) or
-                           os.path.expanduser("~/Downloads"), nombre)
-    os.makedirs(os.path.dirname(destino), exist_ok=True)
-    # Descarga a archivo temporal privado y renombrado atómico; nunca reemplaza el AppImage activo.
-    fd, temporal = tempfile.mkstemp(prefix=".aio-debian-gui-", suffix=".part", dir=os.path.dirname(destino))
-    try:
-        resumen = hashlib.sha256()
-        acumulado = 0
-        with os.fdopen(fd, "wb") as archivo:
-            with urllib.request.urlopen(
-                urllib.request.Request(url, headers={"User-Agent": "aio-debian-gui-updater"}), timeout=45
-            ) as respuesta:
-                while True:
-                    bloque = respuesta.read(1024 * 1024)
-                    if not bloque:
-                        break
-                    acumulado += len(bloque)
-                    if acumulado > MAX_APPIMAGE_SIZE:
-                        raise RuntimeError("El AppImage excede el tamaño máximo permitido.")
-                    resumen.update(bloque)
-                    archivo.write(bloque)
-        if resumen.hexdigest() != esperada:
-            raise RuntimeError("La suma SHA-256 no coincide: se ha descartado la descarga.")
-        os.chmod(temporal, 0o755)
-        os.replace(temporal, destino)
-        return destino
-    finally:
-        if os.path.exists(temporal):
-            os.unlink(temporal)
-
+    destino = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOWNLOAD)
+    return core_updates.descargar_appimage_verificado(
+        version, nombre, url, url_hash, directorio_descargas=destino,
+    )
 
 def sistema_operativo():
     contenido = leer_texto("/etc/os-release")

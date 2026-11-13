@@ -2,6 +2,8 @@
 # Comprobaciones rápidas antes de publicar (las usa también la integración continua)
 set -uo pipefail
 cd "$(dirname "$0")/.."
+# Evitar bytecode __pycache__ en los paquetes finales durante los tests.
+export PYTHONDONTWRITEBYTECODE=1
 fallos=0
 fallo() { echo "✘ $*" >&2; fallos=1; }
 bien()  { echo "✔ $*"; }
@@ -19,6 +21,9 @@ import ast, sys
 ast.parse(open(sys.argv[1], encoding="utf-8").read())
 PY
 
+python3 -c 'import ast, pathlib; [ast.parse(p.read_text(encoding="utf-8"), filename=str(p)) for p in pathlib.Path("package/usr/lib/aio-debian-gui/aio_core").glob("*.py")]' &&
+    bien "módulos core Python válidos" || fallo "sintaxis módulos core"
+python3 scripts/test-core-preferences.py && bien "preferencias modulares" || fallo "pruebas de preferencias core"
 python3 scripts/test-updater.py && bien "actualizador AppImage: versiones y SHA-256" || fallo "pruebas de actualizador"
 python3 scripts/test-history.py && bien "historial de mantenimiento y persistencia" || fallo "pruebas del historial"
 python3 scripts/test-install-format.py && bien "detección de formato DEB/AppImage/Flatpak" || fallo "detección de formato"
