@@ -509,7 +509,7 @@ def version_app():
         return version
     try:
         out = subprocess.run(
-            ["dpkg-query", "-W", "-f=${Status}|${Version}", "aio-debian-gui"],
+            comando_host("dpkg-query", "-W", "-f=${Status}|${Version}", "aio-debian-gui"),
             capture_output=True, text=True, timeout=10,
         ).stdout
         estado, _, version = out.partition("|")
@@ -521,13 +521,11 @@ def version_app():
 
 
 def sistema_operativo():
-    try:
-        with open("/etc/os-release", encoding="utf-8") as f:
-            for linea in f:
-                if linea.startswith("PRETTY_NAME="):
-                    return linea.split("=", 1)[1].strip().strip('"')
-    except OSError:
-        pass
+    contenido = leer_texto("/etc/os-release")
+    if contenido:
+        for linea in contenido.splitlines():
+            if linea.startswith("PRETTY_NAME="):
+                return linea.split("=", 1)[1].strip().strip('"')
     return "Debian GNU/Linux"
 
 
@@ -637,6 +635,9 @@ def autorizacion_sin_contrasena_activa():
 
 def fecha_instalacion():
     """De más a menos fiable. Devuelve datetime.date o None."""
+    # El root del sandbox no es el sistema de archivos raíz del anfitrión.
+    if es_flatpak():
+        return None
     candidatos = []
 
     # 1) Creación del sistema de archivos raíz (solo si se puede leer sin root)
