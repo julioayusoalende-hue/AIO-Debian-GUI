@@ -16,6 +16,10 @@
   </developer>
   <url type="homepage">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</url>
   <url type="bugtracker">https://github.com/julioayusoalende-hue/AIO-Debian-GUI/issues</url>
+  <custom>
+    <value key="flathub::manifest">https://github.com/julioayusoalende-hue/AIO-Debian-GUI/blob/main/flatpak/io.github.julioayusoalende_hue.aio_debian_gui.yml</value>
+    <value key="flathub::verification::website">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</value>
+  </custom>
   <releases>
     <release version="1.0.16" date="2026-11-13"/>
   </releases>
@@ -24,5 +28,5 @@
     <category>System</category>
     <category>Settings</category>
   </categories>
-  <icon type="stock">aio-debian-gui</icon>
+  <icon type="stock">io.github.julioayusoalende_hue.aio_debian_gui</icon>
 </component>
