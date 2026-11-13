@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Ubuntu Circle of Friends pictogram, Ubuntu orange; shipped with AiO Debian GUI. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <title>Ubuntu — Circle of Friends</title>
+  <g fill="none" stroke="#E95420" stroke-width="13" stroke-linecap="round">
+    <path d="M 64 29 A 35 35 0 0 1 94.31 81.50"/>
+    <path d="M 94.31 81.50 A 35 35 0 0 1 33.69 81.50"/>
+    <path d="M 33.69 81.50 A 35 35 0 0 1 64 29"/>
+  </g>
+  <g fill="#E95420" stroke="#FFFFFF" stroke-width="3">
+    <circle cx="64" cy="17" r="11"/>
+    <circle cx="104.70" cy="87.50" r="11"/>
+    <circle cx="23.30" cy="87.50" r="11"/>
+  </g>
+</svg>
