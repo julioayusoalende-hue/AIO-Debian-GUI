@@ -34,7 +34,7 @@ CORE_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file_
                                       "../lib/aio-debian-gui"))
 if CORE_DIR not in sys.path:
     sys.path.insert(0, CORE_DIR)
-from aio_core import history as core_history, preferences as core_preferences, updates as core_updates  # noqa: E402
+from aio_core import appearance as core_appearance, history as core_history, preferences as core_preferences, updates as core_updates  # noqa: E402
 
 PRGNAME = "aio-debian-gui"
 POLKIT_ACTION = "es.aiodebian.gui.mantenimiento"
@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.2.2": "Sigue el tema claro u oscuro del sistema con cambios en directo, sin perder la selección manual.",
     "1.2.1": "Muestra el logotipo de Debian o Ubuntu según el sistema anfitrión en la información inicial.",
     "1.2.0": "Añade compatibilidad controlada con Ubuntu 24.04 y 26.04 LTS, repositorios oficiales y kernel HWE.",
     "1.1.0": "Separa lógica de actualizaciones, preferencias e historial en módulos probables y amplía pruebas.",
@@ -94,11 +95,11 @@ NOVEDADES = {
 IDIOMA_ACTUAL = "es"
 PREFERENCIAS_DEFECTO = {
     "idioma": "es",
-    "tema": "claro",
+    "tema": "sistema",
     "modo_simple": False,
 }
 IDIOMAS = {"es", "en", "fr", "zh"}
-TEMAS = {"claro", "oscuro"}
+TEMAS = {"sistema", "claro", "oscuro"}
 
 TRADUCCIONES = {
     "en": {
@@ -532,6 +533,11 @@ TRADUCCIONES["fr"]["Logotipo de Ubuntu"] = "Logo Ubuntu"
 TRADUCCIONES["zh"]["Logotipo de Ubuntu"] = "Ubuntu 标志"
 
 
+TRADUCCIONES["en"]["Seguir el sistema"] = "Follow system"
+TRADUCCIONES["fr"]["Seguir el sistema"] = "Suivre le système"
+TRADUCCIONES["zh"]["Seguir el sistema"] = "跟随系统"
+
+
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)
 
@@ -563,10 +569,106 @@ def cargar_preferencias(ruta=None):
 def guardar_preferencias(preferencias, ruta=None):
     return core_preferences.guardar_preferencias(preferencias, ruta or ruta_preferencias())
 
+class MonitorTemaSistema:
+    """Observa el portal de apariencia y, como respaldo, GNOME/tema GTK."""
+
+    def __init__(self):
+        self.modo = "sistema"
+        self.portal = None
+        self.gnome = None
+        self.gtk = Gtk.Settings.get_default()
+        self._creando = True
+        try:
+            self.portal = Gio.DBusProxy.new_for_bus_sync(
+                Gio.BusType.SESSION, Gio.DBusProxyFlags.DO_NOT_AUTO_START,
+                None, "org.freedesktop.portal.Desktop",
+                "/org/freedesktop/portal/desktop",
+                "org.freedesktop.portal.Settings", None,
+            )
+            if self.portal.get_name_owner():
+                self.portal.connect("g-signal", self._cambio_portal)
+            else:
+                self.portal = None
+        except GLib.Error:
+            self.portal = None
+        schema = Gio.SettingsSchemaSource.get_default()
+        if schema and schema.lookup("org.gnome.desktop.interface", True):
+            try:
+                self.gnome = Gio.Settings.new("org.gnome.desktop.interface")
+                self.gnome.connect("changed::color-scheme", self._cambio_sistema)
+            except GLib.Error:
+                self.gnome = None
+        if self.gtk is not None:
+            self.gtk.connect("notify::gtk-theme-name", self._cambio_sistema)
+        self._creando = False
+
+    @staticmethod
+    def _valor_portal(variant):
+        # Read devuelve (v) y el propio valor puede llegar envuelto otra vez.
+        while isinstance(variant, GLib.Variant):
+            variant = variant.unpack()
+            if isinstance(variant, tuple) and len(variant) == 1:
+                variant = variant[0]
+        return core_appearance.preferencia_portal(variant)
+
+    def _tema_detectado(self):
+        if self.portal is not None:
+            try:
+                dato = self.portal.call_sync(
+                    "Read", GLib.Variant(
+                        "(ss)", ("org.freedesktop.appearance", "color-scheme")
+                    ), Gio.DBusCallFlags.NONE, 1500, None,
+                )
+                tema = self._valor_portal(dato)
+                if tema:
+                    return tema
+            except (GLib.Error, TypeError, ValueError):
+                pass
+        if self.gnome is not None:
+            tema = core_appearance.preferencia_gnome(
+                self.gnome.get_string("color-scheme")
+            )
+            if tema:
+                return tema
+        if self.gtk is not None:
+            return core_appearance.tema_de_nombre(
+                self.gtk.get_property("gtk-theme-name")
+            )
+        return "claro"
+
+    def _aplicar(self):
+        if self.gtk is not None:
+            tema = self._tema_detectado() if self.modo == "sistema" else self.modo
+            self.gtk.set_property(
+                "gtk-application-prefer-dark-theme", tema == "oscuro"
+            )
+
+    def _cambio_sistema(self, *_args):
+        if not self._creando and self.modo == "sistema":
+            self._aplicar()
+
+    def _cambio_portal(self, _proxy, _sender, nombre, parametros):
+        if nombre == "SettingChanged" and self.modo == "sistema":
+            try:
+                espacio, clave, _valor = parametros.unpack()
+                if espacio == "org.freedesktop.appearance" and clave == "color-scheme":
+                    self._aplicar()
+            except (TypeError, ValueError):
+                pass
+
+    def cambiar_modo(self, modo):
+        self.modo = modo
+        self._aplicar()
+
+
+_monitor_tema = None
+
+
 def aplicar_tema(tema):
-    settings = Gtk.Settings.get_default()
-    if settings is not None:
-        settings.set_property("gtk-application-prefer-dark-theme", tema == "oscuro")
+    global _monitor_tema
+    if _monitor_tema is None:
+        _monitor_tema = MonitorTemaSistema()
+    _monitor_tema.cambiar_modo(tema)
 
 
 # ------------------------------------------------------------------------------
@@ -1262,6 +1364,7 @@ class VentanaPrincipal(Gtk.Window):
         grid.attach(combo_idioma, 1, 0, 1, 1)
 
         combo_tema = Gtk.ComboBoxText()
+        combo_tema.append("sistema", traducir("Seguir el sistema"))
         combo_tema.append("claro", traducir("Claro"))
         combo_tema.append("oscuro", traducir("Oscuro"))
         combo_tema.set_active_id(self.preferencias["tema"])
