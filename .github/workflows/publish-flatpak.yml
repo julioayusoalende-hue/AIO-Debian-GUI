@@ -1,0 +1,105 @@
+name: Publish signed Flatpak update repository
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'flatpak/**'
+      - 'package/**'
+      - 'scripts/publish-flatpak-repo.sh'
+      - '.github/workflows/publish-flatpak.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aio-flatpak-gh-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out application sources
+        uses: actions/checkout@v4
+        with:
+          path: source
+          persist-credentials: false
+
+      - name: Check out the existing Pages branch (preserve APT files)
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: site
+          persist-credentials: true
+
+      - name: Verify existing signing secret
+        env:
+          PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          if [ -z "$PRIVATE_KEY" ]; then
+            echo "::error::Configure repository secret GPG_PRIVATE_KEY (same key already used for APT)."
+            exit 1
+          fi
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder gnupg appstream
+
+      - name: Install GNOME runtime and SDK
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user --noninteractive -y flathub org.gnome.Platform//51 org.gnome.Sdk//51
+
+      - name: Import GPG key for signed commits
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          export GNUPGHOME="$RUNNER_TEMP/flatpak-gnupg"
+          mkdir -p "$GNUPGHOME"
+          chmod 0700 "$GNUPGHOME"
+          printf '%s\n' 'allow-loopback-pinentry' > "$GNUPGHOME/gpg-agent.conf"
+          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          FPR="$(gpg --show-keys --with-colons source/package/usr/share/keyrings/aio-debian-gui.gpg | awk -F: '$1=="fpr"{print $10;exit}')"
+          if [[ -n "$GPG_PASSPHRASE" ]]; then
+            printf 'test' | gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --local-user "$FPR" --detach-sign -o "$RUNNER_TEMP/flatpak-sign-test.sig"
+          fi
+          echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
+
+      - name: Build and sign Flatpak repository
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          cd source
+          bash scripts/publish-flatpak-repo.sh ../site
+
+      - name: Preserve APT content and deploy only Flatpak files
+        run: |
+          set -euo pipefail
+          git -C site config user.name 'github-actions[bot]'
+          git -C site config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C site add flatpak-repo aio-debian-gui.flatpakrepo aio-debian-gui.flatpakref .nojekyll
+          if git -C site diff --cached --quiet; then
+            echo 'No Flatpak repository changes.'
+          else
+            git -C site commit -m "Publish signed Flatpak repository from ${GITHUB_SHA:0:12}"
+            git -C site push origin HEAD:gh-pages
+          fi
+
+      - name: Update standalone Flatpak bundle in existing GitHub Release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          VERSION="$(sed -n 's/^Version: //p' source/package/DEBIAN/control | head -n 1)"
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            gh release upload "v$VERSION" "source/dist/aio-debian-gui_${VERSION}_x86_64.flatpak" --clobber
+          else
+            echo "Release v$VERSION not yet available; signed repository is published."
+          fi
