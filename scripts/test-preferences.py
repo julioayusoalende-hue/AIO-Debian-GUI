@@ -123,8 +123,8 @@ if Gtk.init_check([])[0]:
     ventana.consultando_estados = True
     ventana._actualizar_sensibilidad()
     assert not ventana.btn_iniciar.get_sensitive()
-    # Solo se permite revocar reglas antiguas; nunca crear nuevas.
-    assert ventana.chk_sin_contrasena.get_sensitive() == ventana.chk_sin_contrasena.get_active()
+    # Configuración de Polkit deshabilitada mientras hay una operación activa.
+    assert not ventana.chk_sin_contrasena.get_sensitive()
     assert ventana.btn_menu.get_sensitive()
     assert all(boton.get_sensitive() for boton in ventana.botones_preset)
     assert all(fila.get_sensitive() for fila in ventana.filas.values())
