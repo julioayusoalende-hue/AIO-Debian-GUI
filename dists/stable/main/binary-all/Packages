@@ -1,21 +1,21 @@
 Package: aio-debian-gui
-Version: 1.1.0
+Version: 1.2.0
 Architecture: all
 Maintainer: Julio Ayuso <epdc@msn.com>
 Depends: bash, apt, coreutils, diffutils, grep, sed, util-linux, python3, python3-gi, gir1.2-gtk-3.0, pkexec | policykit-1
 Conflicts: aio-debian (= 1.1.0), aio-debian (= 1.1.1)
 Replaces: aio-debian (= 1.1.0), aio-debian (= 1.1.1)
-Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.1.0_all.deb
-Size: 427420
-MD5sum: 4f2bf05e614d9e71c0c6ebfa23f8aa71
-SHA1: e2f25d51137003fd5d3a820865cfbca2b01078df
-SHA256: 98e7cfa7c1f0760a7263d90bfe19e2bf8b6020663b6017a3aa870f67d1270a76
+Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.2.0_all.deb
+Size: 429008
+MD5sum: db1502c61023244e7bdd51967ef2a91a
+SHA1: f38b4f96c82c4d9f7fb01e7deb35b0d2c14d6bb8
+SHA256: 6d35a8faeee6a7d1e4d2769797319644a33e44725ef9e475eb7191bd52d54ee0
 Section: admin
 Priority: optional
 Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
-Description: Interfaz gráfica de mantenimiento y configuración para Debian
+Description: Interfaz gráfica de mantenimiento y configuración para Debian y Ubuntu LTS
  Aplicación gráfica que actualiza el sistema con apt (update, dist-upgrade,
- autoremove, autoclean), habilita contrib y non-free, sincroniza el reloj,
+ autoremove, autoclean), configura repositorios de Debian o Ubuntu LTS, sincroniza el reloj,
  añade soporte Flatpak con Flathub y FUSE para AppImage, ofrece complementos
  para GNOME y comprueba si hace falta reiniciar.
  Este paquete configura su propio repositorio APT para recibir actualizaciones.
