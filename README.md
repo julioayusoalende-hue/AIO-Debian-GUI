@@ -193,6 +193,19 @@ La cabecera indica si estás utilizando **DEB**, **AppImage** o **Flatpak**. En 
 
 **Aviso:** actualizar el Flatpak **no modifica el asistente privilegiado ni la política Polkit instalados manualmente en Debian**. Desde la v1.0.19, el Flatpak comprueba que la versión del asistente anfitrión coincide con la aplicación antes de ejecutar tareas administrativas; si no coincide, actualiza la integración manual siguiendo estas instrucciones.
 
+## Historial y vista previa (desde v1.0.20)
+
+Antes de iniciar el mantenimiento se muestra una lista de las tareas seleccionadas y
+se solicita confirmación. **Esta vista previa no calcula la resolución de dependencias
+de APT**, que puede instalar, actualizar o eliminar paquetes adicionales. El usuario
+debe prestar atención especial a las operaciones de Backports y eliminación.
+
+Desde el menú superior puedes abrir **Historial de mantenimiento** y exportar los
+resultados a JSON. Se registran hasta 100 ejecuciones por usuario, con fecha, versión,
+tareas y resultado, en el directorio de estado de usuario (`$XDG_STATE_HOME/aio-debian-gui/history.json`,
+o `~/.local/state/aio-debian-gui/history.json`). No se guardan credenciales ni salidas
+completas de la consola. El historial no registra operaciones que aún no hayan comenzado.
+
 ## Uso
 
 Busca *AiO Debian GUI* en el menú de aplicaciones, o ejecuta `aio-debian-gui` como usuario

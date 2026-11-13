@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.0.20
+
+- Vista previa y confirmación de tareas seleccionadas antes de ejecutar el mantenimiento.
+- Historial local de hasta 100 ejecuciones, con fecha, resultado, versión y tareas, sin almacenar el registro completo de comandos.
+- Consulta y exportación JSON del historial desde el menú de preferencias.
+- Mantiene las protecciones Polkit de la versión 1.0.19.
+
 ## 1.0.19
 
 - Endurece Polkit: únicamente sesiones activas y autorización de administrador sin caché persistente.

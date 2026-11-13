@@ -46,6 +46,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.0.20": "Añade vista previa de tareas, historial local de mantenimiento y exportación de resultados.",
     "1.0.19": "Endurece Polkit, comprueba nuevas versiones antes de actualizar y valida el asistente Flatpak.",
     "1.0.18": "Identifica DEB, AppImage y Flatpak en la cabecera y permite actualizar la edición DEB desde APT.",
     "1.0.17": "Añade un botón de actualización para AppImage y Flatpak con verificación de descargas.",
@@ -454,9 +455,85 @@ TRADUCCIONES["zh"].update({
 })
 
 
+
+TRADUCCIONES["en"].update({
+    "Historial de mantenimiento": "Maintenance history",
+    "Exportar historial": "Export history",
+    "Vista previa del mantenimiento": "Maintenance preview",
+    "Reinicio recomendado": "Restart recommended",
+    "Todavía no hay operaciones registradas.": "No operations have been recorded yet.",
+    "No se pudo exportar el historial": "Could not export history",
+    "Mantenimiento cancelado antes de comenzar.": "Maintenance cancelled before starting.",
+})
+TRADUCCIONES["fr"].update({
+    "Historial de mantenimiento": "Historique de maintenance",
+    "Exportar historial": "Exporter l'historique",
+    "Vista previa del mantenimiento": "Aperçu de maintenance",
+    "Reinicio recomendado": "Redémarrage recommandé",
+    "Todavía no hay operaciones registradas.": "Aucune opération enregistrée.",
+    "No se pudo exportar el historial": "Impossible d'exporter l'historique",
+    "Mantenimiento cancelado antes de comenzar.": "Maintenance annulée avant le début.",
+})
+TRADUCCIONES["zh"].update({
+    "Historial de mantenimiento": "维护历史",
+    "Exportar historial": "导出历史",
+    "Vista previa del mantenimiento": "维护预览",
+    "Reinicio recomendado": "建议重新启动",
+    "Todavía no hay operaciones registradas.": "尚无操作记录。",
+    "No se pudo exportar el historial": "无法导出历史",
+    "Mantenimiento cancelado antes de comenzar.": "维护已在开始前取消。",
+})
+
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)
 
+
+
+# Registro local: se almacenan resultados y nombres de tareas, no credenciales
+# ni salidas completas de comandos potencialmente sensibles.
+MAX_HISTORIAL = 100
+def ruta_historial():
+    return os.path.join(GLib.get_user_state_dir(), PRGNAME, "history.json")
+
+def leer_historial(ruta=None):
+    ruta = ruta or ruta_historial()
+    try:
+        with open(ruta, encoding="utf-8") as archivo:
+            datos = json.load(archivo)
+        if not isinstance(datos, list):
+            return []
+        return [v for v in datos[-MAX_HISTORIAL:] if
+                isinstance(v, dict) and isinstance(v.get("fecha"), str)
+                and isinstance(v.get("tareas"), list) and isinstance(v.get("resultado"), str)]
+    except (OSError, ValueError, TypeError):
+        return []
+
+def guardar_registro_mantenimiento(tareas, resultado, reinicio=False, ruta=None):
+    ruta = ruta or ruta_historial()
+    registros = leer_historial(ruta)
+    registro = {
+        "fecha": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+        "formato": formato_actualizacion() or "desarrollo",
+        "version": version_app(),
+        "tareas": [str(t) for t in tareas][:40],
+        "resultado": resultado,
+        "reinicio_recomendado": bool(reinicio),
+    }
+    registros.append(registro)
+    directorio = os.path.dirname(ruta)
+    os.makedirs(directorio, mode=0o700, exist_ok=True)
+    fd, temporal = tempfile.mkstemp(prefix=".history-", dir=directorio)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as archivo:
+            json.dump(registros[-MAX_HISTORIAL:], archivo, ensure_ascii=False, indent=2)
+            archivo.write("\n")
+            archivo.flush()
+            os.fsync(archivo.fileno())
+        os.chmod(temporal, 0o600)
+        os.replace(temporal, ruta)
+    finally:
+        if os.path.exists(temporal):
+            os.unlink(temporal)
 
 def ruta_preferencias():
     return os.path.join(GLib.get_user_config_dir(), PRGNAME, "preferences.json")
@@ -925,6 +1002,7 @@ class VentanaPrincipal(Gtk.Window):
         self.estados_tareas = set()
         self.salida_estados = []
         self.comprobando_actualizacion = False
+        self.tareas_en_ejecucion = []
         self.actualizando_preset = False
         self.switches = {}
         self.filas = {}
@@ -974,6 +1052,9 @@ class VentanaPrincipal(Gtk.Window):
         btn_preferencias = Gtk.Button(label=traducir("Preferencias"))
         btn_preferencias.connect("clicked", self._abrir_preferencias)
         menu.pack_start(btn_preferencias, False, False, 0)
+        btn_historial = Gtk.Button(label=traducir("Historial de mantenimiento"))
+        btn_historial.connect("clicked", self._mostrar_historial)
+        menu.pack_start(btn_historial, False, False, 0)
         popover.add(menu)
         menu.show_all()
         self.btn_menu.set_popover(popover)
@@ -1125,6 +1206,75 @@ class VentanaPrincipal(Gtk.Window):
         self._actualizar_sensibilidad()
         self._mensaje(tipo, titulo, detalle)
         return False
+
+
+    def _confirmar_tareas(self, pasos):
+        nombres = {pid: titulo for pid, titulo, *_ in PASOS}
+        dialogo = Gtk.MessageDialog(
+            transient_for=self, modal=True, message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.NONE, text=traducir("Vista previa del mantenimiento"),
+        )
+        dialogo.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
+        dialogo.add_button(traducir("Continuar"), Gtk.ResponseType.OK)
+        dialogo.set_default_response(Gtk.ResponseType.CANCEL)
+        detalle = "\n".join("• " + traducir(nombres[p]) for p in pasos)
+        detalle += ("\n\n" + traducir(
+            "Esta es una vista previa de las tareas seleccionadas, no una simulación de APT. "
+            "APT puede instalar, actualizar o eliminar dependencias. "
+            "Comprueba especialmente las tareas de Backports y eliminación de paquetes."
+        ))
+        dialogo.format_secondary_text(detalle)
+        aceptado = dialogo.run() == Gtk.ResponseType.OK
+        dialogo.destroy()
+        return aceptado
+
+    def _mostrar_historial(self, _boton):
+        self.menu_popover.popdown()
+        registros = leer_historial()
+        dialogo = Gtk.Dialog(title=traducir("Historial de mantenimiento"), transient_for=self,
+                             modal=True)
+        dialogo.set_default_size(700, 430)
+        dialogo.add_button(traducir("Cerrar"), Gtk.ResponseType.CLOSE)
+        dialogo.add_button(traducir("Exportar historial"), Gtk.ResponseType.APPLY)
+        area = dialogo.get_content_area()
+        vista = Gtk.TextView(editable=False, cursor_visible=False)
+        vista.set_monospace(True)
+        vista.set_wrap_mode(Gtk.WrapMode.WORD)
+        texto = []
+        for registro in reversed(registros):
+            texto.append(f"{registro['fecha']} — {registro['resultado']} — "
+                         f"{registro.get('formato', '?')} {registro.get('version', '?')}")
+            texto.append("  " + ", ".join(registro["tareas"]))
+            if registro.get("reinicio_recomendado"):
+                texto.append("  " + traducir("Reinicio recomendado"))
+            texto.append("")
+        vista.get_buffer().set_text("\n".join(texto) if texto else
+                                    traducir("Todavía no hay operaciones registradas."))
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_min_content_height(320)
+        scroll.add(vista)
+        area.pack_start(scroll, True, True, 8)
+        dialogo.show_all()
+        while dialogo.run() == Gtk.ResponseType.APPLY:
+            selector = Gtk.FileChooserDialog(
+                title=traducir("Exportar historial"), transient_for=dialogo,
+                action=Gtk.FileChooserAction.SAVE,
+                buttons=(traducir("Cancelar"), Gtk.ResponseType.CANCEL,
+                         traducir("Guardar"), Gtk.ResponseType.OK),
+            )
+            selector.set_do_overwrite_confirmation(True)
+            selector.set_current_name("aio-debian-gui-history.json")
+            if selector.run() == Gtk.ResponseType.OK:
+                destino = selector.get_filename()
+                try:
+                    with open(destino, "w", encoding="utf-8") as archivo:
+                        json.dump(registros, archivo, ensure_ascii=False, indent=2)
+                        archivo.write("\n")
+                except OSError as error:
+                    self._mensaje(Gtk.MessageType.ERROR, "No se pudo exportar el historial",
+                                  str(error))
+            selector.destroy()
+        dialogo.destroy()
 
     def _abrir_preferencias(self, _boton):
         self.menu_popover.popdown()
@@ -1574,6 +1724,9 @@ class VentanaPrincipal(Gtk.Window):
         if not pasos:
             self._mensaje(Gtk.MessageType.INFO, "Nada que hacer", "Activa al menos una tarea.")
             return
+        if not self._confirmar_tareas(pasos):
+            self.estado.set_text(traducir("Mantenimiento cancelado antes de comenzar."))
+            return
         try:
             helper = helper_mantenimiento()
         except OSError as e:
@@ -1650,6 +1803,7 @@ class VentanaPrincipal(Gtk.Window):
         self.fin_recibido = False
         self.terminado_gestionado = False
         self.cancelacion_autorizacion = None
+        self.tareas_en_ejecucion = list(pasos)
         self.total_pasos = len(pasos)
         self._poner_ocupado(True)
         self.estado.set_text(traducir("Esperando autenticación de administrador…"))
@@ -1937,6 +2091,10 @@ class VentanaPrincipal(Gtk.Window):
         self.barra.set_show_text(False)
 
         if cancelacion:
+            try:
+                guardar_registro_mantenimiento(self.tareas_en_ejecucion, "cancelado")
+            except OSError:
+                pass
             self.estado.set_text(
                 traducir("Espera de autorización agotada.")
                 if cancelacion == "agotada"
@@ -1955,12 +2113,26 @@ class VentanaPrincipal(Gtk.Window):
                            "==================================================\n"
                            "         ❤️ Made by JULIO AYUSO\n", "ok")
         elif codigo in (126, 127) and self.barra.get_fraction() == 0:
+            try:
+                guardar_registro_mantenimiento(self.tareas_en_ejecucion, "autorización denegada")
+            except OSError:
+                pass
             self.estado.set_text(traducir("No se obtuvo autorización de administrador."))
             self._escribir("[-] Autenticación cancelada o denegada. No se ha hecho ningún cambio.\n", "error")
             return
         else:
             self.estado.set_text(traducir("Terminó con errores. Revisa el registro."))
             self._escribir("\n[-] El proceso terminó con errores (código %s).\n" % codigo, "error")
+
+        # Registrar el resultado incluso si el mantenimiento terminó con errores.
+        try:
+            guardar_registro_mantenimiento(
+                self.tareas_en_ejecucion,
+                "correcto" if codigo == 0 and self.fin_recibido and not self.hubo_errores
+                else "error", self.necesita_reinicio,
+            )
+        except OSError as error:
+            self._escribir("[!] No se pudo guardar el historial: %s\n" % error, "aviso")
 
         if self.necesita_reinicio:
             self._preguntar_reinicio()
