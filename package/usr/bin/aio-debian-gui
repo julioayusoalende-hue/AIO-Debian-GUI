@@ -1099,11 +1099,14 @@ class VentanaPrincipal(Gtk.Window):
         except GLib.Error as e:
             self._finalizar_consulta_estados(False, str(e.message))
             return
-        self.flujo_estados = Gio.DataInputStream.new(self.proceso_estados.get_stdout_pipe())
         self.timeout_estados_id = GLib.timeout_add_seconds(
             30, self._consulta_estados_agotada
         )
-        self._leer_linea_estado()
+        # Recoger salida y fin del proceso en una única operación asíncrona.
+        # Evita la carrera entre read_line_async(), EOF y wait_async().
+        self.proceso_estados.communicate_utf8_async(
+            None, None, self._estados_terminados
+        )
 
     def _consulta_estados_agotada(self):
         self.timeout_estados_id = None
@@ -1115,33 +1118,16 @@ class VentanaPrincipal(Gtk.Window):
         )
         return GLib.SOURCE_REMOVE
 
-    def _leer_linea_estado(self):
-        self.flujo_estados.read_line_async(
-            GLib.PRIORITY_DEFAULT, None, self._linea_estado_leida
-        )
-
-    def _linea_estado_leida(self, flujo, res):
-        if not self.consultando_estados:
-            return
-        try:
-            r = flujo.read_line_finish_utf8(res)
-            datos = r[0] if isinstance(r, tuple) else r
-        except GLib.Error:
-            datos = None
-        if datos is None:
-            self.proceso_estados.wait_async(None, self._estados_terminados)
-            return
-        self.salida_estados.append(datos)
-        self._leer_linea_estado()
-
     def _estados_terminados(self, proceso, res):
         if not self.consultando_estados:
             return
         try:
-            proceso.wait_finish(res)
+            _ok, salida, _errores = proceso.communicate_utf8_finish(res)
             codigo = proceso.get_exit_status()
-        except GLib.Error:
-            codigo = -1
+            self.salida_estados = (salida or "").splitlines()
+        except GLib.Error as e:
+            self._finalizar_consulta_estados(False, str(e.message))
+            return
         estados = {}
         for linea in self.salida_estados:
             campos = linea.split(":")
