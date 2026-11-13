@@ -1316,8 +1316,14 @@ class VentanaPrincipal(Gtk.Window):
             return
         if not helper_disponible(helper):
             self._mensaje(Gtk.MessageType.ERROR, "Falta el asistente",
-                          traducir("No se encuentra %s.\nReinstala el paquete aio-debian-gui.")
-                          % helper)
+                          (
+                              "El Flatpak incluye el asistente, pero todavía no está instalado "
+                              "en el Debian anfitrión. Para habilitar las tareas administrativas, "
+                              "consulta la sección «Flatpak» del README oficial y sigue los pasos "
+                              "de integración manual con Polkit. Flatseal no puede instalarlo."
+                              if es_flatpak() else
+                              traducir("No se encuentra %s.\nReinstala el paquete aio-debian-gui.") % helper
+                          ))
             return
 
         if ("backports-kernel-mesa" in pasos and
@@ -1408,8 +1414,13 @@ class VentanaPrincipal(Gtk.Window):
             self._mensaje(
                 Gtk.MessageType.ERROR,
                 "Falta el asistente",
-                traducir("No se encuentra %s.\nReinstala el paquete aio-debian-gui.")
-                % helper,
+                (
+                    "El Flatpak necesita la integración manual del asistente con Polkit "
+                    "en el Debian anfitrión. Consulta la sección «Flatpak» del README oficial. "
+                    "Flatseal no concede privilegios de administrador."
+                    if es_flatpak() else
+                    traducir("No se encuentra %s.\nReinstala el paquete aio-debian-gui.") % helper
+                ),
             )
             return
 
