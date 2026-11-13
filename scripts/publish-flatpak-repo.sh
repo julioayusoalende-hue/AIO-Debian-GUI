@@ -53,9 +53,5 @@ IsRuntime=false
 RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
 GPGKey=$GPG_KEY
 EOF
-mkdir -p "$ROOT/dist"
-flatpak build-bundle --repo-url="$REPO_URL" \
-  --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
-  "$REPO" "$ROOT/dist/aio-debian-gui_${VERSION}_x86_64.flatpak" "$APP_ID" stable
 touch "$SITE/.nojekyll"
 echo "Repositorio Flatpak firmado preparado en $REPO"

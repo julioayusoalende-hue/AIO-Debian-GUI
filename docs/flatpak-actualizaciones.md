@@ -24,7 +24,7 @@ Tras publicar nuevas versiones, se instalan mediante `flatpak update --user`, GN
 
 El workflow `.github/workflows/publish-flatpak.yml` se dispara al cambiar los archivos relevantes en `main` y admite ejecución manual. Reutiliza `secrets.GPG_PRIVATE_KEY` y `secrets.GPG_PASSPHRASE` del repositorio APT; **no subas ninguna clave privada al código**. No se crea un origen sin firmas. El primer workflow debe terminar correctamente antes de compartir enlaces del repositorio.
 
-Cada ejecución utiliza como base la rama `gh-pages` existente, añade nuevas revisiones OSTree y actualiza los archivos .flatpakref/.flatpakrepo. La publicación del bundle en GitHub Releases se actualiza para incluir la URL del repositorio y su clave, de modo que futuras instalaciones desde ese bundle registren su origen.
+Cada ejecución utiliza como base la rama `gh-pages` existente, añade nuevas revisiones OSTree y actualiza los archivos .flatpakref/.flatpakrepo. Ya no publicamos un bundle `.flatpak` independiente en GitHub Releases: los usuarios deben instalar mediante `.flatpakref`, que incorpora la URL y la clave pública del repositorio firmado.
 
 **Limitaciones:** las actualizaciones se refieren únicamente a la interfaz Flatpak. El helper privilegiado y la política Polkit que el usuario haya instalado manualmente en Debian **no se actualizan por Flatpak**. La tarea de host debe actualizarse mediante el paquete .deb o un procedimiento administrativo explícito y verificado. Si se cambia la clave GPG, se necesita un plan de transición; no sustituirla silenciosamente.
 

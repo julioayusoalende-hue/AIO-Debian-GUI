@@ -1,0 +1,39 @@
+name: Retire standalone Flatpak from v1.0.16 Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/retire-standalone-flatpak.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Remove old release asset and refresh SHA256SUMS
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          VERSION=v1.0.16
+          if ! gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "::error::Release $VERSION was not found"
+            exit 1
+          fi
+          # Removal is intentionally scoped to the obsolete standalone Flatpak.
+          if gh release view "$VERSION" --json assets --jq '.assets[].name' | grep -Fxq 'aio-debian-gui_1.0.16_x86_64.flatpak'; then
+            gh release delete-asset "$VERSION" aio-debian-gui_1.0.16_x86_64.flatpak --yes
+          fi
+          mkdir -p downloaded
+          cd downloaded
+          gh release download "$VERSION" --pattern '*.deb' --pattern '*.AppImage'
+          test -n "$(find . -maxdepth 1 -name '*.deb' -print -quit)"
+          test -n "$(find . -maxdepth 1 -name '*.AppImage' -print -quit)"
+          sha256sum ./*.deb ./*.AppImage | sed 's|  ./|  |' > SHA256SUMS
+          gh release upload "$VERSION" SHA256SUMS --clobber
+          echo 'Retired standalone Flatpak asset; checksum list now includes only DEB and AppImage.'

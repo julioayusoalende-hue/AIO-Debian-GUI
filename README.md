@@ -18,7 +18,7 @@ Es un proyecto independiente: no necesita el script de consola
 
 Pensado para Debian 12 (bookworm) o superior y derivados con `apt`.
 
-**Actualizaciones:** la instalación mediante `.deb` usa el repositorio APT del proyecto; la instalación mediante `.flatpakref` usa nuestro **repositorio Flatpak firmado**, alojado en GitHub Pages, sin depender de que la aplicación esté publicada en Flathub. La edición AppImage se actualiza descargando una nueva versión.
+**Actualizaciones:** la instalación mediante `.deb` usa el repositorio APT del proyecto; la instalación mediante `.flatpakref` usa nuestro **repositorio Flatpak firmado**, alojado en GitHub Pages, sin depender de que la aplicación esté publicada en Flathub. **No se ofrece un `.flatpak` independiente**. La edición AppImage se actualiza descargando una nueva versión.
 
 ### Opción 1: descargar el .deb
 
@@ -59,9 +59,9 @@ chmod +x aio-debian-gui_*_x86_64.AppImage
 ./aio-debian-gui_*_x86_64.AppImage
 ```
 
-### Opción 4: Flatpak con actualizaciones desde nuestro repositorio (recomendada para Flatpak)
+### Opción 4: Flatpak con actualizaciones desde nuestro repositorio
 
-La instalación habitual se hace con el archivo `.flatpakref` publicado en GitHub Pages; este
+La instalación se hace con el archivo `.flatpakref` publicado en GitHub Pages; este
 archivo registra automáticamente el repositorio firmado de AiO Debian GUI. **No hace falta
 descargar cada nueva versión desde Releases.** Instala antes Flatpak en Debian si aún no
 lo tienes (`sudo apt install flatpak`).
@@ -97,10 +97,7 @@ flatpak remote-add --user --if-not-exists aio-debian-gui \
   https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.flatpakrepo
 ```
 
-El archivo independiente `.flatpak` continúa disponible en
-[GitHub Releases](../../releases/latest) como alternativa de descarga. La versión
-publicada con `--repo-url` incluye información sobre el origen de actualización;
-el método `.flatpakref` es el recomendado para nuevas instalaciones.
+**Distribución oficial Flatpak:** solo mediante el repositorio firmado y el enlace `.flatpakref`. Ya no distribuimos archivos `.flatpak` independientes en Releases. El manifiesto de `flatpak/` se conserva porque es necesario para compilar la aplicación y publicar las actualizaciones.
 
 **Importante sobre las tareas administrativas:** actualizar la interfaz Flatpak **no
 actualiza** el asistente privilegiado instalado manualmente en Debian. Si este asistente
@@ -108,18 +105,12 @@ necesita una versión nueva, debes actualizarlo explícitamente o mediante el pa
 `.deb`, según cómo lo instalaras. El repositorio de actualizaciones tampoco concede
 privilegios automáticamente.
 
-El Flatpak **incluye la interfaz, el asistente de mantenimiento y la política Polkit**
-en el mismo archivo `.flatpak`. No es necesario descargar ni instalar el `.deb`.
+La instalación Flatpak **incluye la interfaz, el asistente de mantenimiento y la política Polkit** en el paquete obtenido del repositorio firmado. No es necesario descargar ni instalar el `.deb` para obtener estos archivos.
 Para administrar APT y el Debian anfitrión, **sí es necesaria una integración
 privilegiada explícita**: Flatpak y Flatseal no pueden instalar automáticamente
 un servicio de sistema ni conceder privilegios de administrador.
 
-1. Instala la aplicación con el comando `.flatpakref` anterior (requiere el runtime GNOME 51 disponible en Flathub). Como alternativa, puedes descargar el paquete `.flatpak` de Releases:
-
-```bash
-flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-flatpak install --user ./aio-debian-gui_1.0.16_x86_64.flatpak
-```
+1. Instala la aplicación con el comando `.flatpakref` anterior (requiere el runtime GNOME 51 disponible en Flathub, que Flatpak descargará si fuera necesario).
 
 2. Si quieres utilizar las funciones de mantenimiento, extrae **del Flatpak
 instalado** el asistente y la política Polkit en una carpeta temporal. Revísalos
@@ -185,8 +176,8 @@ cd AIO-Debian-GUI
 APPIMAGETOOL=/ruta/a/appimagetool ./scripts/build-appimage.sh
 flatpak-builder --user --force-clean --install-deps-from=flathub --repo=flatpak-repo \
   flatpak-build flatpak/io.github.julioayusoalende_hue.aio_debian_gui.yml
-flatpak build-bundle flatpak-repo dist/aio-debian-gui_1.0.16_x86_64.flatpak \
-  io.github.julioayusoalende_hue.aio_debian_gui stable
+flatpak remote-add --user --if-not-exists aio-debian-gui \
+  https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.flatpakrepo
 sudo apt install ./dist/aio-debian-gui_*_all.deb
 ```
 
@@ -260,10 +251,10 @@ El icono usa fondo verde para distinguirse del de `aio-debian`. Para otro color
    APPIMAGETOOL=/ruta/a/appimagetool ./scripts/build-appimage.sh
    ```
 
-5. Publica los paquetes en la *Release* de GitHub y actualiza el repositorio APT con
+5. Publica los paquetes `.deb` y AppImage en la *Release* de GitHub y actualiza el repositorio APT con
    `scripts/publish-apt-repo.sh` sobre la rama `gh-pages`.
 6. El workflow [Publish signed Flatpak update repository](.github/workflows/publish-flatpak.yml)
-   actualiza el repositorio Flatpak firmado de GitHub Pages y el bundle Flatpak de la Release
+   actualiza exclusivamente el repositorio Flatpak firmado de GitHub Pages
    al publicar cambios relevantes en `main`. También se puede ejecutar manualmente desde Actions.
    Consulta [actualizaciones Flatpak](docs/flatpak-actualizaciones.md).
 
