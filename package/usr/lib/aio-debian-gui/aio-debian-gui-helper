@@ -31,7 +31,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 
 LISTAS_ACTUALIZADAS=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.2.2
+HELPER_VERSION=1.2.3
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 POLKIT_RULES_DIR=/etc/polkit-1/rules.d
@@ -235,7 +235,7 @@ habilitar_sin_contrasena() {
         err "No se pudo activar la regla polkit."
         return 1
     fi
-    ok "AiO Debian GUI ya no pedirá la contraseña a este usuario en esta sesión."
+    ok "Excepción de Polkit activada para el usuario y la acción específica de AiO Debian GUI."
 }
 
 generar_regla_polkit() {
@@ -940,6 +940,21 @@ main() {
         printf '%s\n' "$HELPER_VERSION"
         return 0
     fi
+    # Actualizar exclusivamente Flatpak del usuario sin elevar privilegios.
+    # Sin --system ni instalaciones de root; no requiere polkit ni pkexec.
+    if [ "${1:-}" = "--flatpak-user-update" ] && [ "$#" -eq 1 ]; then
+        [ "$EUID" -ne 0 ] || { err "Flatpak de usuario nunca se ejecuta como root."; return 1; }
+        command -v flatpak >/dev/null 2>&1 || { err "Flatpak no está instalado."; return 1; }
+        echo "##STEP:1:1:Actualizar aplicaciones Flatpak del usuario"
+        if flatpak --user update -y && flatpak --user uninstall --unused -y; then
+            ok "Flatpak de usuario actualizado y dependencias sin uso eliminadas."
+            echo "##DONE:0"
+            return 0
+        fi
+        err "No se pudieron actualizar los Flatpak de usuario."
+        echo "##DONE:1"
+        return 1
+    fi
     if [ "${1:-}" = "--status" ] && [ "$#" -eq 1 ]; then
         mostrar_estados
         return 0
@@ -996,8 +1011,9 @@ main() {
             exit 0
             ;;
         --enable-passwordless)
-            err "La autorización permanente sin contraseña se ha retirado por seguridad desde 1.0.19."
-            exit 2
+            [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --enable-passwordless"; exit 2; }
+            habilitar_sin_contrasena
+            exit $?
             ;;
         --disable-passwordless)
             [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --disable-passwordless"; exit 2; }
