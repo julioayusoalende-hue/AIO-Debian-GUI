@@ -1202,7 +1202,7 @@ class VentanaPrincipal(Gtk.Window):
 
     def _actualizar_sensibilidad(self):
         disponible = not self.en_curso
-        self.btn_iniciar.set_sensitive(disponible and not self.consultando_estados)
+        self.btn_iniciar.set_sensitive(disponible)
         self.chk_sin_contrasena.set_sensitive(disponible)
         self.btn_menu.set_sensitive(disponible)
         for boton in self.botones_preset:
