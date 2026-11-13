@@ -1,6 +1,6 @@
 app-id: io.github.julioayusoalende_hue.aio_debian_gui
 runtime: org.gnome.Platform
-runtime-version: '48'
+runtime-version: '51'
 sdk: org.gnome.Sdk
 command: aio-debian-gui
 finish-args:
@@ -19,7 +19,6 @@ modules:
       - install -D -m 644 package/usr/share/applications/aio-debian-gui.desktop /app/share/applications/aio-debian-gui.desktop
       - install -D -m 644 flatpak/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml /app/share/metainfo/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml
       - cp -a package/usr/share/icons/hicolor /app/share/icons/
-      - chmod 644 /app/share/icons/hicolor/*/apps/*.png
     sources:
       - type: dir
         path: ..
