@@ -2,6 +2,12 @@
 
 The file `io.github.julioayusoalende_hue.aio_debian_gui.yml` is a **candidate** for Flathub submission. It fetches a pinned Git commit rather than relying on a local `path: ..` source. The file in this directory is **not yet published to Flathub**.
 
+## Significant Flathub inclusion-policy risk
+
+Current Flathub requirements explicitly say that **system utilities generally used on the host** and **applications dependent on host components or complicated post-install steps for core functionality** are not accepted, except case-by-case exceptions. AiO Debian GUI presently fits both categories. A correct manifest alone does not fix that. Before submission, request a pre-submission opinion/exception from Flathub maintainers; do not submit a misleading or nonfunctional sandbox-only build.
+
+See https://docs.flathub.org/docs/for-app-authors/requirements (Impermissible submissions).
+
 ## Blocking prerequisites
 
 1. Add authentic application screenshots to AppStream metadata using stable, publicly accessible image URLs. Flathub requires screenshots; there are none in this project's repository at present. Do not invent or generate mock screenshots purporting to demonstrate the app.
