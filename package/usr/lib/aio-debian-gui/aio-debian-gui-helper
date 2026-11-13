@@ -828,6 +828,22 @@ main() {
     fi
 
     case "${1:-}" in
+        --update-self)
+            [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --update-self"; exit 2; }
+            # Solo actualiza el paquete oficial ya instalado por APT. No hay rutas,
+            # URLs ni argumentos controlados por el usuario.
+            if ! dpkg-query -W -f='${db:Status-Status}' aio-debian-gui 2>/dev/null | grep -qx installed; then
+                err "AiO Debian GUI no está instalado como paquete DEB."
+                exit 1
+            fi
+            asegurar_listas || exit 1
+            if ! apt-get "${APT_OPTS[@]}" --only-upgrade install aio-debian-gui; then
+                err "No se pudo actualizar AiO Debian GUI mediante APT."
+                exit 1
+            fi
+            ok "Comprobación y actualización del paquete DEB completadas."
+            exit 0
+            ;;
         --enable-passwordless)
             [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --enable-passwordless"; exit 2; }
             habilitar_sin_contrasena

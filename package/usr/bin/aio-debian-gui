@@ -46,6 +46,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.0.18": "Identifica DEB, AppImage y Flatpak en la cabecera y permite actualizar la edición DEB desde APT.",
     "1.0.17": "Añade un botón de actualización para AppImage y Flatpak con verificación de descargas.",
     "1.0.16": "Corrige APT y Deb822, separa Flatpak de usuario y sistema y añade distribución Flatpak con asistente anfitrión.",
     "1.0.15": "Corrige la autorización del asistente incluido en AppImage.",
@@ -422,6 +423,7 @@ TRADUCCIONES = {
 # Textos del actualizador integrados con las traducciones existentes.
 TRADUCCIONES["en"].update({
     "Buscar actualizaciones": "Check for updates",
+    "Actualización DEB completada": "DEB update completed",
     "Actualizar esta aplicación": "Update this application",
     "Actualización Flatpak completada": "Flatpak update completed",
     "Ya tienes la última versión": "You have the latest version",
@@ -430,6 +432,7 @@ TRADUCCIONES["en"].update({
 })
 TRADUCCIONES["fr"].update({
     "Buscar actualizaciones": "Rechercher des mises à jour",
+    "Actualización DEB completada": "Mise à jour DEB terminée",
     "Actualizar esta aplicación": "Mettre à jour cette application",
     "Actualización Flatpak completada": "Mise à jour Flatpak terminée",
     "Ya tienes la última versión": "Vous avez la dernière version",
@@ -438,6 +441,7 @@ TRADUCCIONES["fr"].update({
 })
 TRADUCCIONES["zh"].update({
     "Buscar actualizaciones": "检查更新",
+    "Actualización DEB completada": "DEB 更新完成",
     "Actualizar esta aplicación": "更新此应用",
     "Actualización Flatpak completada": "Flatpak 更新完成",
     "Ya tienes la última versión": "已是最新版本",
@@ -565,6 +569,10 @@ def formato_actualizacion():
         return "flatpak"
     if os.environ.get("APPDIR"):
         return "appimage"
+    # El paquete DEB instala el ejecutable exactamente en /usr/bin.
+    # No etiquetar como DEB una ejecución desde el código fuente.
+    if os.path.realpath(__file__) == "/usr/bin/aio-debian-gui":
+        return "deb"
     return None
 
 
@@ -929,7 +937,8 @@ class VentanaPrincipal(Gtk.Window):
     def _construir_cabecera(self):
         hb = Gtk.HeaderBar()
         hb.set_show_close_button(True)
-        hb.set_title("AiO Debian")
+        formato = formato_actualizacion()
+        hb.set_title(f"AiO Debian — {formato.upper()}" if formato else "AiO Debian")
         hb.set_subtitle(traducir("Mantenimiento y configuración del sistema"))
 
         self.btn_iniciar = Gtk.Button(label=traducir("Iniciar tareas"))
@@ -978,7 +987,20 @@ class VentanaPrincipal(Gtk.Window):
 
         def ejecutar():
             try:
-                if formato == "flatpak":
+                if formato == "deb":
+                    # Reutiliza la acción Polkit existente, sin ejecutar comandos arbitrarios.
+                    # El backend solo permite actualizar el paquete aio-debian-gui.
+                    resultado = subprocess.run(
+                        comando_pkexec(HELPER_SISTEMA, "C.UTF-8", "--update-self"),
+                        capture_output=True, text=True, timeout=300,
+                    )
+                    if resultado.returncode:
+                        raise RuntimeError((resultado.stderr or resultado.stdout).strip()[-1200:] or
+                                           "No se pudo actualizar el paquete DEB.")
+                    titulo = "Actualización DEB completada"
+                    detalle = ("APT ha comprobado e instalado la versión disponible de AiO Debian GUI. "
+                               "Cierra y vuelve a abrir la aplicación para utilizar los cambios.")
+                elif formato == "flatpak":
                     # Solo instalación del usuario actual; no se solicitan privilegios.
                     resultado = subprocess.run(
                         ["flatpak-spawn", "--host", "flatpak", "update",

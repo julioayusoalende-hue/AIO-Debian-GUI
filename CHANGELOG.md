@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.0.18
+
+- La cabecera identifica el formato activo: DEB, AppImage o Flatpak.
+- Nuevo botón «Buscar actualizaciones» en DEB, que usa APT a través del asistente Polkit.
+- Solo se actualiza el paquete aio-debian-gui; no se actualiza el resto del sistema.
+- Las versiones AppImage y Flatpak mantienen su actualizador.
+
 ## 1.0.17
 
 - Nuevo botón «Buscar actualizaciones» visible para AppImage y Flatpak.

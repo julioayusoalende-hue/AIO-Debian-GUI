@@ -14,7 +14,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: aio-flatpak-gh-pages
+  group: aio-gh-pages-publication
   cancel-in-progress: false
 
 jobs:
