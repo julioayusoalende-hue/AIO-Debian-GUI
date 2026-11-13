@@ -7,6 +7,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SITE="${1:?Uso: $0 <directorio-gh-pages>}"
 SITE="$(realpath "$SITE")"
 APP_ID=io.github.julioayusoalende_hue.aio_debian_gui
+VERSION="$(sed -n 's/^Version: //p' "$ROOT/package/DEBIAN/control" | head -n 1)"
+test -n "$VERSION"
 BASE_URL=https://julioayusoalende-hue.github.io/AIO-Debian-GUI
 REPO_URL="$BASE_URL/flatpak-repo"
 REPO="$SITE/flatpak-repo"
@@ -22,7 +24,7 @@ gpg --batch --list-secret-keys "$EXPECTED_FPR" >/dev/null 2>&1 || {
 # en futuras versiones. Nunca generar una clave efímera en CI.
 export GPG_TTY="$(tty 2>/dev/null || true)"
 if [[ -n "${GPG_PASSPHRASE:-}" ]]; then
-  export FLATPAK_GPG_PASSPHRASE="$GPG_PASSPHRASE"
+  # The workflow unlocks the GPG agent before the build.
 fi
 flatpak-builder --user --force-clean --disable-rofiles-fuse \
   --install-deps-from=flathub \
@@ -56,6 +58,6 @@ EOF
 mkdir -p "$ROOT/dist"
 flatpak build-bundle --repo-url="$REPO_URL" \
   --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
-  "$REPO" "$ROOT/dist/aio-debian-gui_1.0.16_x86_64.flatpak" "$APP_ID" stable
+  "$REPO" "$ROOT/dist/aio-debian-gui_${VERSION}_x86_64.flatpak" "$APP_ID" stable
 touch "$SITE/.nojekyll"
 echo "Repositorio Flatpak firmado preparado en $REPO"
