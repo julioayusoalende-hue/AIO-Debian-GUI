@@ -3,6 +3,8 @@ name: Build Debian packages
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: ['fix/**']
   workflow_dispatch:
 
 permissions:
