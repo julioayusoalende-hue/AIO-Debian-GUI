@@ -1,0 +1,49 @@
+name: aio-debian-gui
+base: core24
+version: '1.2.1'
+summary: System maintenance for Debian and Ubuntu LTS
+description: |
+  AiO Debian GUI is a GTK application for maintenance of Debian and Ubuntu LTS.
+  It supports APT, Flatpak, optional distribution-specific repositories,
+  previews of maintenance tasks and per-user history.
+  This is a development build. System maintenance needs administrator
+  authentication and must be tested on supported distributions.
+license: GPL-3.0-or-later
+website: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
+source-code: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
+issues: https://github.com/julioayusoalende-hue/AIO-Debian-GUI/issues
+grade: devel
+# Maintenance changes /etc/apt and invokes pkexec; strict confinement cannot
+# provide that access. Classic requires individual Snap Store approval.
+confinement: classic
+
+apps:
+  aio-debian-gui:
+    command: usr/bin/aio-debian-gui-snap
+    environment:
+      AIO_DEBIAN_GUI_VERSION: '1.2.1'
+
+parts:
+  aio-debian-gui:
+    plugin: dump
+    source: .
+    organize:
+      package/usr/bin/aio-debian-gui: usr/bin/aio-debian-gui
+      snap/local/aio-debian-gui-snap: usr/bin/aio-debian-gui-snap
+      package/usr/lib/aio-debian-gui: usr/lib/aio-debian-gui
+      package/usr/share/aio-debian-gui: usr/share/aio-debian-gui
+      package/usr/share/icons/hicolor: usr/share/icons/hicolor
+      package/usr/share/polkit-1/actions: usr/share/polkit-1/actions
+    stage:
+      - usr/bin/aio-debian-gui
+      - usr/bin/aio-debian-gui-snap
+      - usr/lib/aio-debian-gui
+      - usr/share/aio-debian-gui
+      - usr/share/icons/hicolor
+      - usr/share/polkit-1/actions
+    stage-packages:
+      - python3
+      - python3-gi
+      - gir1.2-gtk-3.0
+      - python3-cairo
+      - librsvg2-common
