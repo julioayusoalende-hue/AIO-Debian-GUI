@@ -10,12 +10,15 @@ finish-args:
   - --socket=wayland
   - --socket=fallback-x11
   - --talk-name=org.freedesktop.Flatpak
+  # Required only for flatpak-spawn --host; does not grant root privileges.
   - --env=AIO_DEBIAN_GUI_VERSION=1.0.16
 modules:
   - name: aio-debian-gui
     buildsystem: simple
     build-commands:
       - install -D -m 755 package/usr/bin/aio-debian-gui /app/bin/aio-debian-gui
+      - install -D -m 755 package/usr/lib/aio-debian-gui/aio-debian-gui-helper /app/share/aio-debian-gui/host-integration/aio-debian-gui-helper
+      - install -D -m 644 package/usr/share/polkit-1/actions/es.aiodebian.gui.policy /app/share/aio-debian-gui/host-integration/es.aiodebian.gui.policy
       - install -D -m 644 package/usr/share/aio-debian-gui/debian-openlogo.png /app/share/aio-debian-gui/debian-openlogo.png
       - install -D -m 644 package/usr/share/aio-debian-gui/adri-y-lu.jpg /app/share/aio-debian-gui/adri-y-lu.jpg
       - install -D -m 644 package/usr/share/applications/aio-debian-gui.desktop /app/share/applications/io.github.julioayusoalende_hue.aio_debian_gui.desktop
