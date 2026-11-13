@@ -466,10 +466,36 @@ def aplicar_tema(tema):
 # ------------------------------------------------------------------------------
 # Información del sistema (no necesita privilegios)
 # ------------------------------------------------------------------------------
+def es_flatpak():
+    return bool(os.environ.get("FLATPAK_ID"))
+
+
+def comando_host(*argumentos):
+    if es_flatpak():
+        return ["flatpak-spawn", "--host", *argumentos]
+    return list(argumentos)
+
+
+def leer_texto(ruta):
+    if es_flatpak():
+        try:
+            resultado = subprocess.run(
+                comando_host("cat", ruta), capture_output=True, text=True, timeout=10
+            )
+            return resultado.stdout if resultado.returncode == 0 else None
+        except (OSError, subprocess.SubprocessError):
+            return None
+    try:
+        with open(ruta, encoding="utf-8") as archivo:
+            return archivo.read()
+    except OSError:
+        return None
+
+
 def paquete_instalado(nombre):
     try:
         out = subprocess.run(
-            ["dpkg-query", "-W", "-f=${Status}", nombre],
+            comando_host("dpkg-query", "-W", "-f=${Status}", nombre),
             capture_output=True, text=True, timeout=10,
         ).stdout
     except (OSError, subprocess.SubprocessError):
@@ -514,6 +540,10 @@ def _ejecutar(cmd):
 
 def helper_mantenimiento():
     global _helper_appimage_temporal
+    # El Flatpak es solo la interfaz: las operaciones administrativas se delegan
+    # al asistente instalado en el Debian anfitrión por el paquete .deb.
+    if es_flatpak():
+        return HELPER_SISTEMA
     if os.environ.get("APPDIR") and os.path.isfile(HELPER_SISTEMA):
         return HELPER_SISTEMA
     if os.environ.get("APPDIR"):
@@ -551,17 +581,29 @@ _directorios_helper_appimage = []
 _helper_appimage_temporal = None
 
 
+def helper_disponible(ruta):
+    if es_flatpak():
+        try:
+            return subprocess.run(
+                comando_host("test", "-x", ruta),
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10,
+            ).returncode == 0
+        except (OSError, subprocess.SubprocessError):
+            return False
+    return os.path.isfile(ruta)
+
+
 def comando_pkexec(helper, lang, *argumentos):
+    if es_flatpak():
+        return ["flatpak-spawn", "--host", "pkexec", helper, "--lang", lang, *argumentos]
     if os.environ.get("APPDIR") and helper != HELPER_SISTEMA:
         return ["pkexec", "/bin/bash", helper, "--lang", lang, *argumentos]
     return ["pkexec", helper, "--lang", lang, *argumentos]
 
 
 def helper_admite_autorizacion_sin_contrasena(ruta):
-    try:
-        with open(ruta, encoding="utf-8") as helper:
-            contenido = helper.read()
-    except OSError:
+    contenido = leer_texto(ruta)
+    if contenido is None:
         return False
     return (
         "--enable-passwordless" in contenido
@@ -570,11 +612,8 @@ def helper_admite_autorizacion_sin_contrasena(ruta):
 
 
 def helper_admite_tarea(ruta, tarea):
-    try:
-        with open(ruta, encoding="utf-8") as helper:
-            return "[%s]=" % tarea in helper.read()
-    except OSError:
-        return False
+    contenido = leer_texto(ruta)
+    return contenido is not None and "[%s]=" % tarea in contenido
 
 
 def autorizacion_sin_contrasena_activa():
@@ -582,9 +621,10 @@ def autorizacion_sin_contrasena_activa():
     rule_path = "/etc/polkit-1/rules.d/50-aiodebian-gui-%s.rules" % uid
     try:
         username = pwd.getpwuid(uid).pw_name
-        with open(rule_path, encoding="utf-8") as regla:
-            contenido = regla.read()
+        contenido = leer_texto(rule_path)
     except (OSError, KeyError):
+        return False
+    if contenido is None:
         return False
     return (
         ('action.id === "%s"' % POLKIT_ACTION) in contenido
@@ -759,7 +799,7 @@ class VentanaPrincipal(Gtk.Window):
         self.filas = {}
         self.indicadores = {}
 
-        self.flatpak_presente = shutil.which("flatpak") is not None
+        self.flatpak_presente = es_flatpak() or shutil.which("flatpak") is not None
         self.gnome_presente = paquete_instalado("gnome-shell")
 
         self._construir_cabecera()
@@ -1047,8 +1087,12 @@ class VentanaPrincipal(Gtk.Window):
             self.estado.set_text(traducir("Comprobando tareas ya instaladas…"))
         self._actualizar_sensibilidad()
         try:
+            comando_estado = (
+                ["flatpak-spawn", "--host", HELPER_SISTEMA, "--status"]
+                if es_flatpak() else ["bash", HELPER, "--status"]
+            )
             self.proceso_estados = Gio.Subprocess.new(
-                ["bash", HELPER, "--status"],
+                comando_estado,
                 Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE,
             )
         except GLib.Error as e:
@@ -1269,7 +1313,7 @@ class VentanaPrincipal(Gtk.Window):
         except OSError as e:
             self._mensaje(Gtk.MessageType.ERROR, "No se pudo preparar el asistente", str(e))
             return
-        if not os.path.exists(helper):
+        if not helper_disponible(helper):
             self._mensaje(Gtk.MessageType.ERROR, "Falta el asistente",
                           traducir("No se encuentra %s.\nReinstala el paquete aio-debian-gui.")
                           % helper)
@@ -1358,7 +1402,7 @@ class VentanaPrincipal(Gtk.Window):
                 Gtk.MessageType.ERROR, "No se pudo preparar el asistente", str(e)
             )
             return
-        if not os.path.exists(helper):
+        if not helper_disponible(helper):
             self._restablecer_opcion_sin_contrasena(autorizacion_sin_contrasena_activa())
             self._mensaje(
                 Gtk.MessageType.ERROR,
@@ -1639,7 +1683,7 @@ class VentanaPrincipal(Gtk.Window):
         if r == Gtk.ResponseType.YES:
             self._escribir("[*] Reiniciando el sistema...\n", "info")
             try:
-                subprocess.Popen(["systemctl", "reboot"])
+                subprocess.Popen(comando_host("systemctl", "reboot"))
             except OSError as e:
                 self._mensaje(Gtk.MessageType.ERROR, "No se pudo reiniciar", str(e))
         else:
