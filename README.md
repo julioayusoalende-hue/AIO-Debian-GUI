@@ -14,6 +14,26 @@ Interfaz gráfica de mantenimiento y configuración todo en uno para Debian.
 Es un proyecto independiente: no necesita el script de consola
 [aio-debian](https://github.com/julioayusoalende-hue/aio-debian) (puedes tener ambos).
 
+## Autorización y Flatpak (v1.2.3)
+
+Al seleccionar **únicamente** «Actualizar aplicaciones Flatpak», la interfaz ejecuta
+`flatpak --user update -y` seguido de `flatpak --user uninstall --unused -y`,
+sin contraseña de administrador, sin `pkexec` y sin instalar un asistente privilegiado.
+Esto solo afecta a las aplicaciones Flatpak **del usuario**. Para actualizar las
+instalaciones Flatpak **del sistema**, instalar Flatpak con APT o ejecutar tareas
+mixtas que requieran root, seguirá siendo necesario Polkit.
+
+La casilla **«No solicitar contraseña de administrador en AiO (opcional)»**
+permite activar voluntariamente una excepción persistente de Polkit, solo para
+la acción de mantenimiento de AiO y el usuario local activo. Se solicita la
+contraseña una vez al activarla. La casilla puede desmarcarse para revocarla.
+Por defecto está desactivada y Polkit seguirá solicitando autenticación.
+**Riesgo:** cualquier otro proceso con acceso a la misma cuenta de usuario
+podría invocar el asistente privilegiado de AiO sin contraseña y ejecutar
+sus tareas administrativas (APT, repositorios, kernel, etc.). No utilices
+esta opción en equipos compartidos o donde la seguridad sea prioritaria.
+No se habilita ningún permiso sin contraseña para el resto de aplicaciones.
+
 ## Apariencia
 
 En Preferencias → Apariencia se puede elegir **Seguir el sistema**, **Claro** u **Oscuro**.
