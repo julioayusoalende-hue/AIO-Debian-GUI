@@ -23,9 +23,7 @@ gpg --batch --list-secret-keys "$EXPECTED_FPR" >/dev/null 2>&1 || {
 # Reutilizar la clave pública estable garantiza que los clientes confíen
 # en futuras versiones. Nunca generar una clave efímera en CI.
 export GPG_TTY="$(tty 2>/dev/null || true)"
-if [[ -n "${GPG_PASSPHRASE:-}" ]]; then
-  # The workflow unlocks the GPG agent before the build.
-fi
+# The workflow unlocks the GPG agent before the build.
 flatpak-builder --user --force-clean --disable-rofiles-fuse \
   --install-deps-from=flathub \
   --gpg-sign="$EXPECTED_FPR" \
