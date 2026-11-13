@@ -46,6 +46,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.0.19": "Endurece Polkit, comprueba nuevas versiones antes de actualizar y valida el asistente Flatpak.",
     "1.0.18": "Identifica DEB, AppImage y Flatpak en la cabecera y permite actualizar la edición DEB desde APT.",
     "1.0.17": "Añade un botón de actualización para AppImage y Flatpak con verificación de descargas.",
     "1.0.16": "Corrige APT y Deb822, separa Flatpak de usuario y sistema y añade distribución Flatpak con asistente anfitrión.",
@@ -423,6 +424,7 @@ TRADUCCIONES = {
 # Textos del actualizador integrados con las traducciones existentes.
 TRADUCCIONES["en"].update({
     "Buscar actualizaciones": "Check for updates",
+    "Confirmar actualización": "Confirm update",
     "Actualización DEB completada": "DEB update completed",
     "Actualizar esta aplicación": "Update this application",
     "Actualización Flatpak completada": "Flatpak update completed",
@@ -432,6 +434,7 @@ TRADUCCIONES["en"].update({
 })
 TRADUCCIONES["fr"].update({
     "Buscar actualizaciones": "Rechercher des mises à jour",
+    "Confirmar actualización": "Confirmer la mise à jour",
     "Actualización DEB completada": "Mise à jour DEB terminée",
     "Actualizar esta aplicación": "Mettre à jour cette application",
     "Actualización Flatpak completada": "Mise à jour Flatpak terminée",
@@ -441,6 +444,7 @@ TRADUCCIONES["fr"].update({
 })
 TRADUCCIONES["zh"].update({
     "Buscar actualizaciones": "检查更新",
+    "Confirmar actualización": "确认更新",
     "Actualización DEB completada": "DEB 更新完成",
     "Actualizar esta aplicación": "更新此应用",
     "Actualización Flatpak completada": "Flatpak 更新完成",
@@ -978,6 +982,7 @@ class VentanaPrincipal(Gtk.Window):
         self.set_titlebar(hb)
 
 
+
     def _buscar_actualizacion(self, _boton):
         if self.comprobando_actualizacion or self.en_curso:
             return
@@ -985,11 +990,98 @@ class VentanaPrincipal(Gtk.Window):
         self._actualizar_sensibilidad()
         formato = formato_actualizacion()
 
-        def ejecutar():
+        def comprobar():
             try:
                 if formato == "deb":
-                    # Reutiliza la acción Polkit existente, sin ejecutar comandos arbitrarios.
-                    # El backend solo permite actualizar el paquete aio-debian-gui.
+                    # Refresca la información APT de forma autorizada, sin instalar nada.
+                    resultado = subprocess.run(
+                        comando_pkexec(HELPER_SISTEMA, "C.UTF-8", "--check-update-self"),
+                        capture_output=True, text=True, timeout=180,
+                    )
+                    if resultado.returncode:
+                        raise RuntimeError((resultado.stderr or resultado.stdout).strip()[-1200:] or
+                                           "No se pudo consultar APT.")
+                    lineas = [line for line in resultado.stdout.splitlines()
+                              if line.startswith(("##UPDATE:", "##NOUPDATE:"))]
+                    if len(lineas) != 1:
+                        raise RuntimeError("El asistente no devolvió información válida de APT.")
+                    campos = lineas[0].split(":")
+                    if len(campos) != 3:
+                        raise RuntimeError("Formato de versiones APT no válido.")
+                    actual, nueva = campos[1:]
+                    if lineas[0].startswith("##NOUPDATE:"):
+                        GLib.idle_add(self._terminar_actualizacion, Gtk.MessageType.INFO,
+                                      "Ya tienes la última versión", f"Versión instalada: {actual}.")
+                        return
+                    detalle = f"Versión instalada: {actual}.\\nVersión disponible: {nueva}.\\n\\n¿Actualizar mediante APT?"
+                    datos = None
+                elif formato == "flatpak":
+                    # Sin privilegios: actualizar metadatos y consultar revisiones pendientes.
+                    metadatos = subprocess.run(
+                        ["flatpak-spawn", "--host", "flatpak", "update", "--user",
+                         "--appstream", "--noninteractive"],
+                        capture_output=True, text=True, timeout=90,
+                    )
+                    if metadatos.returncode:
+                        raise RuntimeError((metadatos.stderr or metadatos.stdout).strip()[-1200:] or
+                                           "No se pudo actualizar el catálogo Flatpak.")
+                    resultado = subprocess.run(
+                        ["flatpak-spawn", "--host", "flatpak", "remote-ls", "--user",
+                         "--updates", "--app", "--columns=application"],
+                        capture_output=True, text=True, timeout=40,
+                    )
+                    if resultado.returncode:
+                        raise RuntimeError((resultado.stderr or resultado.stdout).strip()[-1200:] or
+                                           "No se pudo consultar el repositorio Flatpak.")
+                    if APP_ID_FLATPAK not in resultado.stdout.splitlines():
+                        GLib.idle_add(self._terminar_actualizacion, Gtk.MessageType.INFO,
+                                      "Ya tienes la última versión", f"Versión instalada: {version_app()}.")
+                        return
+                    detalle = ("Hay una actualización Flatpak disponible en el repositorio firmado.\\n"
+                               "¿Quieres instalarla ahora?")
+                    datos = None
+                elif formato == "appimage":
+                    version, nombre, url, url_hash = obtener_release_actualizacion()
+                    instalada = version_numerica(version_app())
+                    if instalada is None:
+                        raise RuntimeError("No se pudo identificar la versión instalada.")
+                    if version_numerica(version) <= instalada:
+                        GLib.idle_add(self._terminar_actualizacion, Gtk.MessageType.INFO,
+                                      "Ya tienes la última versión", f"Versión instalada: {version_app()}.")
+                        return
+                    detalle = (f"Versión instalada: {version_app()}.\\nVersión disponible: {version}.\\n\\n"
+                               "Se descargará el nuevo AppImage, verificado mediante SHA-256, "
+                               "sin sustituir el archivo actual. ¿Continuar?")
+                    datos = (version, nombre, url, url_hash)
+                else:
+                    raise RuntimeError("No se pudo identificar el formato de instalación.")
+                GLib.idle_add(self._confirmar_actualizacion, formato, detalle, datos)
+            except (OSError, ValueError, RuntimeError, urllib.error.URLError,
+                    subprocess.SubprocessError) as error:
+                GLib.idle_add(self._terminar_actualizacion, Gtk.MessageType.ERROR,
+                              "No se pudo actualizar", str(error))
+
+        threading.Thread(target=comprobar, daemon=True).start()
+
+    def _confirmar_actualizacion(self, formato, detalle, datos):
+        dialogo = Gtk.MessageDialog(
+            transient_for=self, modal=True, message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.NONE, text=traducir("Confirmar actualización"),
+        )
+        dialogo.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
+        dialogo.add_button(traducir("Continuar"), Gtk.ResponseType.OK)
+        dialogo.set_default_response(Gtk.ResponseType.CANCEL)
+        dialogo.format_secondary_text(detalle)
+        aceptar = dialogo.run() == Gtk.ResponseType.OK
+        dialogo.destroy()
+        if not aceptar:
+            self.comprobando_actualizacion = False
+            self._actualizar_sensibilidad()
+            return False
+
+        def aplicar():
+            try:
+                if formato == "deb":
                     resultado = subprocess.run(
                         comando_pkexec(HELPER_SISTEMA, "C.UTF-8", "--update-self"),
                         capture_output=True, text=True, timeout=300,
@@ -998,43 +1090,35 @@ class VentanaPrincipal(Gtk.Window):
                         raise RuntimeError((resultado.stderr or resultado.stdout).strip()[-1200:] or
                                            "No se pudo actualizar el paquete DEB.")
                     titulo = "Actualización DEB completada"
-                    detalle = ("APT ha comprobado e instalado la versión disponible de AiO Debian GUI. "
-                               "Cierra y vuelve a abrir la aplicación para utilizar los cambios.")
+                    detalle_final = ("APT ha instalado la actualización disponible. "
+                                     "Cierra y vuelve a abrir AiO Debian GUI.")
                 elif formato == "flatpak":
-                    # Solo instalación del usuario actual; no se solicitan privilegios.
                     resultado = subprocess.run(
                         ["flatpak-spawn", "--host", "flatpak", "update",
                          "--user", "--noninteractive", "-y", APP_ID_FLATPAK],
-                        capture_output=True, text=True, timeout=240,
+                        capture_output=True, text=True, timeout=300,
                     )
                     if resultado.returncode:
-                        raise RuntimeError((resultado.stderr or resultado.stdout).strip()[:1000] or
+                        raise RuntimeError((resultado.stderr or resultado.stdout).strip()[-1200:] or
                                            "No se pudo actualizar el Flatpak.")
                     titulo = "Actualización Flatpak completada"
-                    detalle = ("Se ha comprobado el repositorio Flatpak. Si había una versión nueva, "
-                               "quedará disponible al cerrar y volver a abrir la aplicación.")
+                    detalle_final = "La nueva versión estará disponible al reiniciar AiO Debian GUI."
                 else:
-                    version, nombre, url, url_hash = obtener_release_actualizacion()
-                    instalada = version_numerica(version_app())
-                    if instalada is None:
-                        raise RuntimeError("No se pudo identificar la versión instalada.")
-                    if version_numerica(version) <= instalada:
-                        titulo = "Ya tienes la última versión"
-                        detalle = f"Versión instalada: {version_app()}."
-                    else:
-                        ruta = descargar_appimage_verificado(version, nombre, url, url_hash)
-                        titulo = "Nueva AppImage descargada"
-                        detalle = (f"Versión {version} verificada mediante SHA-256.\n"
-                                   f"Archivo: {ruta}\n\n"
-                                   "Cierra esta aplicación y ejecuta el nuevo AppImage. "
-                                   "Puedes eliminar el anterior después de comprobar que funciona.")
-                GLib.idle_add(self._terminar_actualizacion, Gtk.MessageType.INFO, titulo, detalle)
+                    version, nombre, url, url_hash = datos
+                    destino = descargar_appimage_verificado(version, nombre, url, url_hash)
+                    titulo = "Nueva AppImage descargada"
+                    detalle_final = (f"Versión {version} verificada mediante SHA-256.\\n"
+                                     f"Archivo: {destino}\\n\\n"
+                                     "Cierra la aplicación y ejecuta el archivo nuevo.")
+                GLib.idle_add(self._terminar_actualizacion, Gtk.MessageType.INFO,
+                              titulo, detalle_final)
             except (OSError, ValueError, RuntimeError, urllib.error.URLError,
                     subprocess.SubprocessError) as error:
                 GLib.idle_add(self._terminar_actualizacion, Gtk.MessageType.ERROR,
                               "No se pudo actualizar", str(error))
 
-        threading.Thread(target=ejecutar, daemon=True).start()
+        threading.Thread(target=aplicar, daemon=True).start()
+        return False
 
     def _terminar_actualizacion(self, tipo, titulo, detalle):
         self.comprobando_actualizacion = False
@@ -1247,20 +1331,18 @@ class VentanaPrincipal(Gtk.Window):
 
         self.chk_sin_contrasena = Gtk.CheckButton(
             label=traducir(
-                "No pedir contraseña para las tareas de AiO (solo este usuario)"
+                "Revocar autorización sin contraseña anterior (opción retirada por seguridad)"
             )
         )
         self.chk_sin_contrasena.set_tooltip_text(
-            traducir(
-                "La activación requiere autorización de administrador una vez. "
-                "Puedes desmarcar esta opción para revocarla."
-            )
+            "La versión 1.0.19 ya no permite activar autorizaciones permanentes sin contraseña. "
+            "Si estaba activada, desmárcala para revocarla."
         )
         self.chk_sin_contrasena.set_active(autorizacion_sin_contrasena_activa())
         self.chk_sin_contrasena.connect("toggled", self._cambiar_sin_contrasena)
         externa.pack_start(self.chk_sin_contrasena, False, False, 0)
         externa.pack_start(
-            etiqueta("Permite ejecutar las tareas de AiO sin contraseña en la sesión local activa.", dim=True),
+            etiqueta("Por seguridad, las tareas administrativas requieren autorización de administrador.", dim=True),
             False, False, 0,
         )
 
@@ -1403,7 +1485,7 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_iniciar.set_sensitive(disponible)
         if self.btn_actualizar is not None:
             self.btn_actualizar.set_sensitive(disponible and not self.comprobando_actualizacion)
-        self.chk_sin_contrasena.set_sensitive(disponible)
+        self.chk_sin_contrasena.set_sensitive(disponible and self.chk_sin_contrasena.get_active())
         self.btn_menu.set_sensitive(disponible)
         for boton in self.botones_preset:
             boton.set_sensitive(disponible)
@@ -1509,6 +1591,24 @@ class VentanaPrincipal(Gtk.Window):
                           ))
             return
 
+        if es_flatpak():
+            try:
+                comprobacion = subprocess.run(
+                    ["flatpak-spawn", "--host", HELPER_SISTEMA, "--version"],
+                    capture_output=True, text=True, timeout=10,
+                )
+                version_helper = comprobacion.stdout.strip() if comprobacion.returncode == 0 else ""
+            except (OSError, subprocess.SubprocessError):
+                version_helper = ""
+            if version_helper != version_app():
+                self._mensaje(
+                    Gtk.MessageType.WARNING, "Asistente del sistema desactualizado",
+                    "El asistente privilegiado del anfitrión no corresponde a esta versión "
+                    "de AiO Debian GUI. Actualiza su integración manual con Polkit según "
+                    "el README antes de ejecutar operaciones administrativas."
+                )
+                return
+
         if ("backports-kernel-mesa" in pasos and
                 not helper_admite_tarea(helper, "backports-kernel-mesa")):
             self._mensaje(
@@ -1580,6 +1680,11 @@ class VentanaPrincipal(Gtk.Window):
             return
 
         habilitar = boton.get_active()
+        if habilitar:
+            self._restablecer_opcion_sin_contrasena(False)
+            self._mensaje(Gtk.MessageType.WARNING, "Opción deshabilitada",
+                          "Las autorizaciones permanentes sin contraseña ya no están permitidas.")
+            return
         try:
             helper = helper_mantenimiento()
         except OSError as e:
@@ -1971,7 +2076,7 @@ class VentanaPrincipal(Gtk.Window):
             d.destroy()
 
     def _al_cerrar(self, *_a):
-        if not self.en_curso:
+        if not self.en_curso and not self.comprobando_actualizacion:
             return False
         self._mensaje(
             Gtk.MessageType.WARNING, "Mantenimiento en curso",
