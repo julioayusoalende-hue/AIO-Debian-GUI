@@ -21,6 +21,7 @@
     <value key="flathub::verification::website">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</value>
   </custom>
   <releases>
+    <release version="1.2.0" date="2026-11-13"><description><p>Compatibilidad controlada con Ubuntu 24.04/26.04 LTS y tareas específicas por distribución.</p></description></release>
     <release version="1.1.0" date="2026-11-13"><description><p>Refactoriza la lógica de actualizaciones, preferencias e historial en módulos probados independientemente.</p></description></release>
     <release version="1.0.20" date="2026-11-13"><description><p>Añade vista previa de tareas e historial local de mantenimiento.</p></description></release>
     <release version="1.0.19" date="2026-11-13"><description><p>Refuerza la seguridad Polkit y comprueba nuevas versiones antes de instalarlas.</p></description></release>

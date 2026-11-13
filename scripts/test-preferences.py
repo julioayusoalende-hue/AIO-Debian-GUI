@@ -84,12 +84,12 @@ if Gtk.init_check([])[0]:
         ventana = app.VentanaPrincipal(
             {"idioma": idioma, "tema": "claro", "modo_simple": False}
         )
-        assert ventana.get_titlebar().get_subtitle() == subtitulo
+        assert ventana.get_titlebar().get_subtitle().startswith(subtitulo)
         ventana.show_all()
         menu = ventana.menu_popover.get_child()
         assert menu.get_visible()
         botones_menu = menu.get_children()
-        assert len(botones_menu) == 1
+        assert len(botones_menu) == 2
         assert botones_menu[0].get_visible()
         assert botones_menu[0].get_label() == app.traducir("Preferencias")
         ventana.btn_menu.set_active(True)

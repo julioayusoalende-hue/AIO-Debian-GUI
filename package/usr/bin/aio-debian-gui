@@ -53,6 +53,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.2.0": "Añade compatibilidad controlada con Ubuntu 24.04 y 26.04 LTS, repositorios oficiales y kernel HWE.",
     "1.1.0": "Separa lógica de actualizaciones, preferencias e historial en módulos probables y amplía pruebas.",
     "1.0.20": "Añade vista previa de tareas, historial local de mantenimiento y exportación de resultados.",
     "1.0.19": "Endurece Polkit, comprueba nuevas versiones antes de actualizar y valida el asistente Flatpak.",
@@ -492,6 +493,27 @@ TRADUCCIONES["zh"].update({
     "Mantenimiento cancelado antes de comenzar.": "维护已在开始前取消。",
 })
 
+
+# Adaptación de tareas Debian / Ubuntu LTS.
+TRADUCCIONES["en"].update({
+    "Configurar repositorios oficiales": "Configure official repositories",
+    "En Debian habilita contrib/non-free; en Ubuntu LTS habilita universe/restricted/multiverse.": "Enable contrib/non-free on Debian or universe/restricted/multiverse on Ubuntu LTS.",
+    "Instalar kernel HWE oficial de Ubuntu": "Install official Ubuntu HWE kernel",
+    "Instala el metapaquete HWE de Ubuntu LTS solo si está disponible en los repositorios oficiales; puede requerir reinicio.": "Install the Ubuntu LTS HWE metapackage only when officially available; a reboot may be needed.",
+})
+TRADUCCIONES["fr"].update({
+    "Configurar repositorios oficiales": "Configurer les dépôts officiels",
+    "En Debian habilita contrib/non-free; en Ubuntu LTS habilita universe/restricted/multiverse.": "Active contrib/non-free sur Debian ou universe/restricted/multiverse sur Ubuntu LTS.",
+    "Instalar kernel HWE oficial de Ubuntu": "Installer le noyau HWE officiel d'Ubuntu",
+    "Instala el metapaquete HWE de Ubuntu LTS solo si está disponible en los repositorios oficiales; puede requerir reinicio.": "Installe le métapaquet HWE d'Ubuntu LTS seulement s'il est disponible ; un redémarrage peut être nécessaire.",
+})
+TRADUCCIONES["zh"].update({
+    "Configurar repositorios oficiales": "配置官方软件源",
+    "En Debian habilita contrib/non-free; en Ubuntu LTS habilita universe/restricted/multiverse.": "Debian 启用 contrib/non-free；Ubuntu LTS 启用 universe/restricted/multiverse。",
+    "Instalar kernel HWE oficial de Ubuntu": "安装 Ubuntu 官方 HWE 内核",
+    "Instala el metapaquete HWE de Ubuntu LTS solo si está disponible en los repositorios oficiales; puede requerir reinicio.": "仅在官方软件源提供时安装 Ubuntu LTS HWE 元软件包；可能需要重启。",
+})
+
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)
 
@@ -617,6 +639,22 @@ def descargar_appimage_verificado(version, nombre, url, url_hash):
     return core_updates.descargar_appimage_verificado(
         version, nombre, url, url_hash, directorio_descargas=destino,
     )
+
+def distribucion_anfitrion():
+    """Identifica Debian y Ubuntu LTS mediante /etc/os-release del anfitrión."""
+    contenido = leer_texto("/etc/os-release")
+    valores = {}
+    for linea in (contenido or "").splitlines():
+        if "=" in linea and not linea.startswith("#"):
+            clave, valor = linea.split("=", 1)
+            if clave in ("ID", "VERSION_ID"):
+                valores[clave] = valor.strip().strip('"').strip("'")
+    if valores.get("ID") == "debian":
+        return "debian"
+    if valores.get("ID") == "ubuntu" and valores.get("VERSION_ID") in ("24.04", "26.04"):
+        return "ubuntu"
+    return "no-soportada"
+
 
 def sistema_operativo():
     contenido = leer_texto("/etc/os-release")
@@ -822,12 +860,15 @@ def informacion_sistema():
 PASOS = [
     ("clock", "Sincronizar el reloj",
      "Un reloj desfasado rompe la validación de certificados (apt, Flathub…).", True, "apt"),
-    ("repos", "Habilitar contrib y non-free",
-     "Añade los componentes a los repositorios oficiales de Debian (con copia .bak).", True, "apt"),
+    ("repos", "Configurar repositorios oficiales",
+     "En Debian habilita contrib/non-free; en Ubuntu LTS habilita universe/restricted/multiverse.", True, "apt"),
     ("tools", "Instalar herramientas auxiliares",
      "needrestart, fastfetch, kitty, synaptic y soporte FUSE para AppImage, si faltan.", True, "apt"),
     ("backports-kernel-mesa", "Instalar kernel y Mesa desde Backports",
      "Instala el kernel y los controladores gráficos Mesa de Debian Backports; puede requerir reinicio.",
+     False, "apt"),
+    ("ubuntu-hwe", "Instalar kernel HWE oficial de Ubuntu",
+     "Instala el metapaquete HWE de Ubuntu LTS solo si está disponible en los repositorios oficiales; puede requerir reinicio.",
      False, "apt"),
     ("upgrade", "Actualizar los paquetes del sistema",
      "apt-get update y apt-get dist-upgrade.", True, "apt"),
@@ -900,6 +941,7 @@ class VentanaPrincipal(Gtk.Window):
         self.filas = {}
         self.indicadores = {}
 
+        self.distribucion = distribucion_anfitrion()
         self.flatpak_presente = es_flatpak() or shutil.which("flatpak") is not None
         self.gnome_presente = paquete_instalado("gnome-shell")
 
@@ -913,7 +955,9 @@ class VentanaPrincipal(Gtk.Window):
         hb.set_show_close_button(True)
         formato = formato_actualizacion()
         hb.set_title(f"AiO Debian — {formato.upper()}" if formato else "AiO Debian")
-        hb.set_subtitle(traducir("Mantenimiento y configuración del sistema"))
+        hb.set_subtitle(traducir("Mantenimiento y configuración del sistema") +
+                        (" · Ubuntu LTS" if self.distribucion == "ubuntu" else
+                         " · Debian" if self.distribucion == "debian" else " · Sistema no compatible"))
 
         self.btn_iniciar = Gtk.Button(label=traducir("Iniciar tareas"))
         self.btn_iniciar.get_style_context().add_class("suggested-action")
@@ -1452,13 +1496,13 @@ class VentanaPrincipal(Gtk.Window):
             campos = linea.split(":")
             if (len(campos) == 3 and campos[0] == "##STATUS"
                     and campos[1] in (
-                        "repos", "tools", "backports-kernel-mesa",
+                        "repos", "tools", "backports-kernel-mesa", "ubuntu-hwe",
                         "gnome-plugin", "ext-manager",
                     )
                     and campos[2] in ("0", "1")):
                 estados[campos[1]] = campos[2] == "1"
         requeridos = {
-            "repos", "tools", "backports-kernel-mesa", "gnome-plugin", "ext-manager",
+            "repos", "tools", "backports-kernel-mesa", "ubuntu-hwe", "gnome-plugin", "ext-manager",
         }
         if codigo != 0 or set(estados) != requeridos:
             self._finalizar_consulta_estados(
@@ -1471,6 +1515,7 @@ class VentanaPrincipal(Gtk.Window):
             "repos": "✓ Ya configurados",
             "tools": "✓ Ya instaladas",
             "backports-kernel-mesa": "✓ Ya instalados",
+            "ubuntu-hwe": "✓ Ya instalado",
             "gnome-plugin": "✓ Ya instalado",
             "ext-manager": "✓ Ya instalado",
         }
@@ -1523,7 +1568,7 @@ class VentanaPrincipal(Gtk.Window):
         self._escribir("[!] %s\n" % mensaje, "aviso")
 
     def _actualizar_sensibilidad(self):
-        disponible = not self.en_curso and not self.comprobando_actualizacion
+        disponible = not self.en_curso and not self.comprobando_actualizacion and self.distribucion != "no-soportada"
         self.btn_iniciar.set_sensitive(disponible)
         if self.btn_actualizar is not None:
             self.btn_actualizar.set_sensitive(disponible and not self.comprobando_actualizacion)
@@ -1537,6 +1582,10 @@ class VentanaPrincipal(Gtk.Window):
             self.switches[pid][0].set_sensitive(habilitada)
 
     def _visible(self, pid):
+        if pid == "backports-kernel-mesa":
+            return self.distribucion == "debian"
+        if pid == "ubuntu-hwe":
+            return self.distribucion == "ubuntu"
         if pid == "flatpak-setup":
             return not self.flatpak_presente
         if pid in ("gnome-plugin", "ext-manager"):
@@ -1606,6 +1655,7 @@ class VentanaPrincipal(Gtk.Window):
             p[0] for p in PASOS
             if p[0] in self.switches
             and p[0] not in self.estados_tareas
+            and self._visible(p[0])
             and self.switches[p[0]][0].get_active()
         ]
         # La instalación/actualización de Flatpak no tiene sentido sin soporte Flatpak
@@ -1613,6 +1663,10 @@ class VentanaPrincipal(Gtk.Window):
 
     def _iniciar(self, _b):
         pasos = self._pasos_seleccionados()
+        if self.distribucion == "no-soportada":
+            self._mensaje(Gtk.MessageType.ERROR, "Sistema no compatible",
+                          "Las operaciones administrativas solo están disponibles en Debian y Ubuntu 24.04/26.04 LTS.")
+            return
         if not pasos:
             self._mensaje(Gtk.MessageType.INFO, "Nada que hacer", "Activa al menos una tarea.")
             return
@@ -1628,7 +1682,7 @@ class VentanaPrincipal(Gtk.Window):
             self._mensaje(Gtk.MessageType.ERROR, "Falta el asistente",
                           (
                               "El Flatpak incluye el asistente, pero todavía no está instalado "
-                              "en el Debian anfitrión. Para habilitar las tareas administrativas, "
+                              "en el sistema anfitrión. Para habilitar las tareas administrativas, "
                               "consulta la sección «Flatpak» del README oficial y sigue los pasos "
                               "de integración manual con Polkit. Flatseal no puede instalarlo."
                               if es_flatpak() else
