@@ -206,9 +206,9 @@ tareas y resultado, en el directorio de estado de usuario (`$XDG_STATE_HOME/aio-
 o `~/.local/state/aio-debian-gui/history.json`). No se guardan credenciales ni salidas
 completas de la consola. El historial no registra operaciones que aún no hayan comenzado.
 
-## Debian y Ubuntu LTS (v1.2.0)
+## Debian y Ubuntu LTS (desde v1.2.0)
 
-La aplicación lee `/etc/os-release` del sistema anfitrión para identificar Debian o Ubuntu.
+La aplicación lee `/etc/os-release` del sistema anfitrión para identificar Debian o Ubuntu. La tarjeta de información inicial muestra automáticamente el logotipo correspondiente (desde v1.2.1), también al usar AppImage o Flatpak.
 En **Debian** muestra contrib/non-free y Backports; en **Ubuntu 24.04/26.04 LTS**
 muestra la activación de los componentes oficiales `universe`, `restricted` y
 `multiverse` mediante `add-apt-repository`, y una tarea opcional para instalar el
