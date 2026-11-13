@@ -18,6 +18,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 
 import gi
 
@@ -1087,47 +1088,43 @@ class VentanaPrincipal(Gtk.Window):
         if inicial:
             self.estado.set_text(traducir("Comprobando tareas ya instaladas…"))
         self._actualizar_sensibilidad()
-        try:
-            comando_estado = (
-                ["flatpak-spawn", "--host", HELPER_SISTEMA, "--status"]
-                if es_flatpak() else ["bash", HELPER, "--status"]
-            )
-            self.proceso_estados = Gio.Subprocess.new(
-                comando_estado,
-                Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE,
-            )
-        except GLib.Error as e:
-            self._finalizar_consulta_estados(False, str(e.message))
-            return
-        self.timeout_estados_id = GLib.timeout_add_seconds(
-            30, self._consulta_estados_agotada
-        )
-        # Recoger salida y fin del proceso en una única operación asíncrona.
-        # Evita la carrera entre read_line_async(), EOF y wait_async().
-        self.proceso_estados.communicate_utf8_async(
-            None, None, self._estados_terminados
+        comando_estado = (
+            ["flatpak-spawn", "--host", HELPER_SISTEMA, "--status"]
+            if es_flatpak() else ["bash", HELPER, "--status"]
         )
 
-    def _consulta_estados_agotada(self):
-        self.timeout_estados_id = None
+        # Do not rely on GIO stdout async EOF delivery on all desktops.
+        # Only the main GTK thread updates widgets; worker collects subprocess output.
+        def comprobar():
+            try:
+                resultado = subprocess.run(
+                    comando_estado, capture_output=True, text=True,
+                    timeout=15, check=False,
+                )
+                codigo, salida, error = (
+                    resultado.returncode, resultado.stdout, resultado.stderr,
+                )
+            except subprocess.TimeoutExpired:
+                codigo, salida, error = -1, "", (
+                    "El asistente no respondió en 15 segundos."
+                )
+            except (OSError, subprocess.SubprocessError) as exc:
+                codigo, salida, error = -1, "", str(exc)
+            GLib.idle_add(self._estados_terminados, codigo, salida, error)
+
+        threading.Thread(target=comprobar, daemon=True).start()
+
+    def _estados_terminados(self, codigo, salida, error=""):
         if not self.consultando_estados:
             return GLib.SOURCE_REMOVE
-        self.proceso_estados.force_exit()
-        self._finalizar_consulta_estados(
-            False, "La comprobación de tareas superó el límite de 30 segundos."
-        )
-        return GLib.SOURCE_REMOVE
-
-    def _estados_terminados(self, proceso, res):
-        if not self.consultando_estados:
-            return
-        try:
-            _ok, salida, _errores = proceso.communicate_utf8_finish(res)
-            codigo = proceso.get_exit_status()
-            self.salida_estados = (salida or "").splitlines()
-        except GLib.Error as e:
-            self._finalizar_consulta_estados(False, str(e.message))
-            return
+        self.salida_estados = (salida or "").splitlines()
+        if codigo != 0:
+            self._finalizar_consulta_estados(
+                False, "El asistente terminó con código %s: %s" % (
+                    codigo, (error or "sin detalles").strip()[:350],
+                )
+            )
+            return GLib.SOURCE_REMOVE
         estados = {}
         for linea in self.salida_estados:
             campos = linea.split(":")
