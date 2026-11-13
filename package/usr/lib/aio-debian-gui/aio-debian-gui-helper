@@ -833,6 +833,23 @@ main() {
     fi
 
     case "${1:-}" in
+        --check-update-self)
+            [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --check-update-self"; exit 2; }
+            paquete_instalado aio-debian-gui || { err "AiO Debian GUI no está instalado como DEB."; exit 1; }
+            asegurar_listas || exit 1
+            instalada=$(dpkg-query -W -f='${Version}' aio-debian-gui) || exit 1
+            disponible=$(apt-cache policy aio-debian-gui | awk '/^[[:space:]]*Candidate:/ { print $2; exit }')
+            [ -n "$disponible" ] && [ "$disponible" != "(none)" ] || {
+                err "No existe versión candidata de AiO Debian GUI en los repositorios APT."
+                exit 1
+            }
+            if dpkg --compare-versions "$disponible" gt "$instalada"; then
+                printf '##UPDATE:%s:%s\n' "$instalada" "$disponible"
+            else
+                printf '##NOUPDATE:%s:%s\n' "$instalada" "$disponible"
+            fi
+            exit 0
+            ;;
         --update-self)
             [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --update-self"; exit 2; }
             # Solo actualiza el paquete oficial ya instalado por APT. No hay rutas,
