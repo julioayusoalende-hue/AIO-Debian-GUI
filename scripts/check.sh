@@ -2,6 +2,8 @@
 # Comprobaciones rápidas antes de publicar (las usa también la integración continua)
 set -uo pipefail
 cd "$(dirname "$0")/.."
+# Evitar bytecode __pycache__ en los paquetes finales durante los tests.
+export PYTHONDONTWRITEBYTECODE=1
 fallos=0
 fallo() { echo "✘ $*" >&2; fallos=1; }
 bien()  { echo "✔ $*"; }
