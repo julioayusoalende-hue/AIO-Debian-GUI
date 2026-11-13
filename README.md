@@ -221,6 +221,40 @@ también en el asistente privilegiado, incluso si se invoca directamente.
 para confirmar el funcionamiento completo de cada combinación de Ubuntu, escritorio y formato.
 Se recomienda una copia de seguridad antes de habilitar nuevos repositorios o instalar HWE.
 
+## Edición Snap experimental
+
+El repositorio incluye una receta Snapcraft en `snap/snapcraft.yaml` y el workflow
+**Build experimental Snap package**, que genera un archivo `.snap` descargable desde
+los artefactos de GitHub Actions. Esta edición **todavía no está publicada en la
+Snap Store** ni cuenta con certificación de funcionamiento completo.
+
+La app modifica paquetes APT, repositorios y kernel, operaciones no compatibles
+con el confinamiento estricto habitual de Snap. Por eso se construye con
+`confinement: classic` y `grade: devel`, pendiente de la aprobación correspondiente
+por parte de la Snap Store. La interfaz se ejecuta como usuario normal y delega
+las tareas privilegiadas en Polkit; deben comprobarse en máquinas de prueba antes
+de distribuir esta variante. El Snap muestra `SNAP` en su cabecera y las
+actualizaciones de la propia aplicación las gestiona `snapd` (no el botón de APT).
+
+Para generar la edición experimental en una máquina Ubuntu con Snapcraft:
+
+```bash
+snapcraft
+sudo snap install --dangerous --classic ./aio-debian-gui_*.snap
+```
+
+El comando anterior instala un paquete local **sin verificación de la Snap Store**,
+solo para pruebas y cuando se confía en su origen. No se recomienda instalarlo
+en sistemas de producción antes de validar GTK, Polkit, APT y las tareas de ambas
+distribuciones.
+
+Para publicarlo es imprescindible registrar `aio-debian-gui` (si el nombre
+está disponible) con una **cuenta de desarrollador de Snapcraft**, obtener el visto
+bueno de la Store para confinamiento clásico y generar credenciales de publicación.
+No se almacenan credenciales en el repositorio. Una vez aprobado y validado,
+se podrá pasar a `grade: stable`, subir con `snapcraft upload` y publicar en
+el canal correspondiente. La revisión y aprobación dependen de Canonical.
+
 ## Uso
 
 Busca *AiO Debian GUI* en el menú de aplicaciones, o ejecuta `aio-debian-gui` como usuario
