@@ -542,7 +542,7 @@ def formato_actualizacion():
 
 
 def version_numerica(version):
-    match = re.fullmatch(r"v?(\\d+)\\.(\\d+)\\.(\\d+)", version)
+    match = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)", version)
     return tuple(map(int, match.groups())) if match else None
 
 
@@ -975,8 +975,8 @@ class VentanaPrincipal(Gtk.Window):
                     else:
                         ruta = descargar_appimage_verificado(version, nombre, url, url_hash)
                         titulo = "Nueva AppImage descargada"
-                        detalle = (f"Versión {version} verificada mediante SHA-256.\\n"
-                                   f"Archivo: {ruta}\\n\\n"
+                        detalle = (f"Versión {version} verificada mediante SHA-256.\n"
+                                   f"Archivo: {ruta}\n\n"
                                    "Cierra esta aplicación y ejecuta el nuevo AppImage. "
                                    "Puedes eliminar el anterior después de comprobar que funciona.")
                 GLib.idle_add(self._terminar_actualizacion, Gtk.MessageType.INFO, titulo, detalle)
