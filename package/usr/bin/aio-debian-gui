@@ -610,6 +610,8 @@ def paquete_instalado(nombre):
 
 
 def version_app():
+    if os.environ.get("SNAP_VERSION"):
+        return os.environ["SNAP_VERSION"]
     version = os.environ.get("AIO_DEBIAN_GUI_VERSION")
     if version:
         return version
@@ -635,6 +637,8 @@ MAX_APPIMAGE_SIZE = 256 * 1024 * 1024
 
 
 def formato_actualizacion():
+    if os.environ.get("SNAP"):
+        return "snap"
     if es_flatpak():
         return "flatpak"
     if os.environ.get("APPDIR"):
@@ -692,6 +696,10 @@ def _ejecutar(cmd):
 
 def helper_mantenimiento():
     global _helper_appimage_temporal
+    # Snap no instala un asistente de root fuera del propio snap.
+    # Reutilizar exclusivamente el asistente del anfitrión autorizado por Polkit.
+    if os.environ.get("SNAP"):
+        return HELPER_SISTEMA
     # El Flatpak es solo la interfaz: las operaciones administrativas se delegan
     # al asistente instalado en el Debian anfitrión por el paquete .deb.
     if es_flatpak():
@@ -982,7 +990,7 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_iniciar.connect("clicked", self._iniciar)
         hb.pack_start(self.btn_iniciar)
         self.btn_actualizar = None
-        if formato_actualizacion():
+        if formato in ("deb", "flatpak", "appimage"):
             self.btn_actualizar = Gtk.Button(label=traducir("Buscar actualizaciones"))
             self.btn_actualizar.set_tooltip_text(traducir("Actualizar esta aplicación"))
             self.btn_actualizar.connect("clicked", self._buscar_actualizacion)
@@ -1718,10 +1726,10 @@ class VentanaPrincipal(Gtk.Window):
                           ))
             return
 
-        if es_flatpak():
+        if es_flatpak() or os.environ.get("SNAP"):
             try:
                 comprobacion = subprocess.run(
-                    ["flatpak-spawn", "--host", HELPER_SISTEMA, "--version"],
+                    comando_host(HELPER_SISTEMA, "--version"),
                     capture_output=True, text=True, timeout=10,
                 )
                 version_helper = comprobacion.stdout.strip() if comprobacion.returncode == 0 else ""
