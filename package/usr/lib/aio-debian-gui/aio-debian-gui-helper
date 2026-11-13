@@ -75,7 +75,11 @@ distribucion_soportada() {
 ubuntu_hwe_paquete() {
     local version
     [ "$(leer_distribucion)" = ubuntu ] || return 1
-    . /etc/os-release
+    local archivo=/etc/os-release
+    if [ "$EUID" -ne 0 ] && [ -n "${AIO_TEST_OS_RELEASE:-}" ]; then
+        archivo="$AIO_TEST_OS_RELEASE"
+    fi
+    . "$archivo"
     version=${VERSION_ID:-}
     [ "$version" = 24.04 ] || [ "$version" = 26.04 ] || return 1
     printf 'linux-generic-hwe-%s\n' "$version"
