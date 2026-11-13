@@ -46,6 +46,18 @@ HOMEPAGE = "https://github.com/julioayusoalende-hue/AIO-Debian-GUI"
 DEBIAN_LOGO = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/debian-openlogo.png")
 )
+UBUNTU_LOGO = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/ubuntu-logo.svg")
+)
+
+def logo_distribucion(distribucion):
+    """Devuelve el recurso y el nombre accesible para cada sistema soportado."""
+    if distribucion == "ubuntu":
+        return UBUNTU_LOGO, "Logotipo de Ubuntu"
+    if distribucion == "debian":
+        return DEBIAN_LOGO, "Logotipo de Debian"
+    return None, None
+
 FOTO_INSPIRACION = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/adri-y-lu.jpg")
 )
@@ -53,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.2.1": "Muestra el logotipo de Debian o Ubuntu según el sistema anfitrión en la información inicial.",
     "1.2.0": "Añade compatibilidad controlada con Ubuntu 24.04 y 26.04 LTS, repositorios oficiales y kernel HWE.",
     "1.1.0": "Separa lógica de actualizaciones, preferencias e historial en módulos probables y amplía pruebas.",
     "1.0.20": "Añade vista previa de tareas, historial local de mantenimiento y exportación de resultados.",
@@ -513,6 +526,11 @@ TRADUCCIONES["zh"].update({
     "Instalar kernel HWE oficial de Ubuntu": "安装 Ubuntu 官方 HWE 内核",
     "Instala el metapaquete HWE de Ubuntu LTS solo si está disponible en los repositorios oficiales; puede requerir reinicio.": "仅在官方软件源提供时安装 Ubuntu LTS HWE 元软件包；可能需要重启。",
 })
+
+TRADUCCIONES["en"]["Logotipo de Ubuntu"] = "Ubuntu logo"
+TRADUCCIONES["fr"]["Logotipo de Ubuntu"] = "Logo Ubuntu"
+TRADUCCIONES["zh"]["Logotipo de Ubuntu"] = "Ubuntu 标志"
+
 
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)
@@ -1377,11 +1395,21 @@ class VentanaPrincipal(Gtk.Window):
             grid.attach(v, 1, i, 1, 1)
         contenido.pack_start(grid, True, True, 0)
 
-        logo = Gtk.Image.new_from_file(DEBIAN_LOGO)
-        logo.set_tooltip_text(traducir("Logotipo de Debian"))
-        logo.set_valign(Gtk.Align.CENTER)
-        logo.get_accessible().set_name("Logotipo de Debian")
-        contenido.pack_end(logo, False, False, 0)
+        ruta_logo, nombre_logo = logo_distribucion(self.distribucion)
+        if ruta_logo and os.path.isfile(ruta_logo):
+            try:
+                # Ambos logos se muestran en el mismo espacio, sin deformarlos.
+                imagen_logo = GdkPixbuf.Pixbuf.new_from_file_at_scale(
+                    ruta_logo, 112, 112, True,
+                )
+                logo = Gtk.Image.new_from_pixbuf(imagen_logo)
+                logo.set_tooltip_text(traducir(nombre_logo))
+                logo.set_valign(Gtk.Align.CENTER)
+                logo.get_accessible().set_name(traducir(nombre_logo))
+                contenido.pack_end(logo, False, False, 0)
+            except GLib.Error:
+                # Un problema con el cargador de imágenes no bloquea la app.
+                pass
         caja.pack_start(contenido, False, False, 0)
 
         nov = NOVEDADES.get(version)
