@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.2.3": "Actualiza Flatpak de usuario sin contraseña y recupera la autorización opcional y reversible de Polkit para las tareas de AiO.",
     "1.2.2": "Sigue el tema claro u oscuro del sistema con cambios en directo, sin perder la selección manual.",
     "1.2.1": "Muestra el logotipo de Debian o Ubuntu según el sistema anfitrión en la información inicial.",
     "1.2.0": "Añade compatibilidad controlada con Ubuntu 24.04 y 26.04 LTS, repositorios oficiales y kernel HWE.",
@@ -537,6 +538,10 @@ TRADUCCIONES["en"]["Seguir el sistema"] = "Follow system"
 TRADUCCIONES["fr"]["Seguir el sistema"] = "Suivre le système"
 TRADUCCIONES["zh"]["Seguir el sistema"] = "跟随系统"
 
+
+TRADUCCIONES["en"]["No solicitar contraseña de administrador en AiO (opcional)"] = "Do not request administrator password in AiO (optional)"
+TRADUCCIONES["fr"]["No solicitar contraseña de administrador en AiO (opcional)"] = "Ne pas demander le mot de passe administrateur dans AiO (optionnel)"
+TRADUCCIONES["zh"]["No solicitar contraseña de administrador en AiO (opcional)"] = "AiO 中不要求管理员密码（可选）"
 
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)
@@ -1556,18 +1561,20 @@ class VentanaPrincipal(Gtk.Window):
 
         self.chk_sin_contrasena = Gtk.CheckButton(
             label=traducir(
-                "Revocar autorización sin contraseña anterior (opción retirada por seguridad)"
+                "No solicitar contraseña de administrador en AiO (opcional)"
             )
         )
         self.chk_sin_contrasena.set_tooltip_text(
-            "La versión 1.0.19 ya no permite activar autorizaciones permanentes sin contraseña. "
-            "Si estaba activada, desmárcala para revocarla."
+            "Excepción persistente de Polkit solo para el asistente de AiO y este usuario local activo. "
+            "Permite ejecutar todas las tareas de AiO como administrador sin contraseña; "
+            "otros procesos del mismo usuario también podrían invocar el asistente. "
+            "Desmarca para revocarla."
         )
         self.chk_sin_contrasena.set_active(autorizacion_sin_contrasena_activa())
         self.chk_sin_contrasena.connect("toggled", self._cambiar_sin_contrasena)
         externa.pack_start(self.chk_sin_contrasena, False, False, 0)
         externa.pack_start(
-            etiqueta("Por seguridad, las tareas administrativas requieren autorización de administrador.", dim=True),
+            etiqueta("Por defecto Polkit solicita contraseña. Esta excepción es voluntaria y aumenta los riesgos de seguridad.", dim=True),
             False, False, 0,
         )
 
@@ -1711,7 +1718,7 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_iniciar.set_sensitive(disponible)
         if self.btn_actualizar is not None:
             self.btn_actualizar.set_sensitive(disponible and not self.comprobando_actualizacion)
-        self.chk_sin_contrasena.set_sensitive(disponible and self.chk_sin_contrasena.get_active())
+        self.chk_sin_contrasena.set_sensitive(disponible)
         self.btn_menu.set_sensitive(disponible)
         for boton in self.botones_preset:
             boton.set_sensitive(disponible)
@@ -1812,6 +1819,9 @@ class VentanaPrincipal(Gtk.Window):
         if not self._confirmar_tareas(pasos):
             self.estado.set_text(traducir("Mantenimiento cancelado antes de comenzar."))
             return
+        if pasos == ["flatpak-update"]:
+            self._iniciar_flatpak_usuario()
+            return
         try:
             helper = helper_mantenimiento()
         except OSError as e:
@@ -1880,7 +1890,12 @@ class VentanaPrincipal(Gtk.Window):
                 return
 
         lang = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or "C"
-        cmd = comando_pkexec(helper, lang, *pasos)
+        # Si solo se actualiza Flatpak del usuario no se invoca pkexec.
+        solo_flatpak_usuario = pasos == ["flatpak-update"]
+        if solo_flatpak_usuario:
+            cmd = comando_host(helper, "--flatpak-user-update")
+        else:
+            cmd = comando_pkexec(helper, lang, *pasos)
 
         self.buf.set_text("")
         self.necesita_reinicio = False
@@ -1891,12 +1906,16 @@ class VentanaPrincipal(Gtk.Window):
         self.tareas_en_ejecucion = list(pasos)
         self.total_pasos = len(pasos)
         self._poner_ocupado(True)
-        self.estado.set_text(traducir("Esperando autenticación de administrador…"))
-        self._escribir("[*] Solicitando autorización de administrador…\n", "info")
-        self._escribir(
-            "[*] Si no aparece el diálogo, cancela la espera y comprueba el agente de Polkit.\n",
-            "info",
-        )
+        if solo_flatpak_usuario:
+            self.estado.set_text("Actualizando Flatpak de usuario sin privilegios…")
+            self._escribir("[*] Flatpak --user, sin contraseña de administrador.\\n", "info")
+        else:
+            self.estado.set_text(traducir("Esperando autenticación de administrador…"))
+            self._escribir("[*] Solicitando autorización de administrador…\\n", "info")
+            self._escribir(
+                "[*] Si no aparece el diálogo, cancela la espera y comprueba el agente de Polkit.\\n",
+                "info",
+            )
         self.barra.set_fraction(0)
         self.barra.set_text("")
         self.barra.set_show_text(False)
@@ -1911,7 +1930,43 @@ class VentanaPrincipal(Gtk.Window):
             return
 
         self.flujo = Gio.DataInputStream.new(self.proceso.get_stdout_pipe())
-        self._iniciar_espera_autorizacion()
+        if not solo_flatpak_usuario:
+            self._iniciar_espera_autorizacion()
+        self._leer_linea()
+
+    def _iniciar_flatpak_usuario(self):
+        """Actualización de Flatpak del usuario sin helper root ni pkexec."""
+        script = (
+            'printf "##STEP:1:1:Actualizar Flatpak del usuario\\n"; '
+            'if ! command -v flatpak >/dev/null 2>&1; then '
+            'echo "[-] Flatpak no está instalado."; echo "##DONE:1"; exit 1; fi; '
+            'if flatpak --user update -y && flatpak --user uninstall --unused -y; then '
+            'echo "##DONE:0"; else echo "##DONE:1"; exit 1; fi'
+        )
+        self.buf.set_text("")
+        self.necesita_reinicio = False
+        self.hubo_errores = False
+        self.fin_recibido = False
+        self.terminado_gestionado = False
+        self.cancelacion_autorizacion = None
+        self.tareas_en_ejecucion = ["flatpak-update"]
+        self.total_pasos = 1
+        self._poner_ocupado(True)
+        self.estado.set_text("Actualizando Flatpak del usuario sin contraseña…")
+        self._escribir("[*] Operación Flatpak de usuario; sin pkexec.\\n", "info")
+        self.barra.set_fraction(0)
+        self.barra.set_text("")
+        self.barra.set_show_text(False)
+        try:
+            self.proceso = Gio.Subprocess.new(
+                comando_host("bash", "-c", script),
+                Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE,
+            )
+        except GLib.Error as error:
+            self._poner_ocupado(False)
+            self._mensaje(Gtk.MessageType.ERROR, "No se pudo iniciar", str(error.message))
+            return
+        self.flujo = Gio.DataInputStream.new(self.proceso.get_stdout_pipe())
         self._leer_linea()
 
     def _cambiar_sin_contrasena(self, boton):
@@ -1919,11 +1974,6 @@ class VentanaPrincipal(Gtk.Window):
             return
 
         habilitar = boton.get_active()
-        if habilitar:
-            self._restablecer_opcion_sin_contrasena(False)
-            self._mensaje(Gtk.MessageType.WARNING, "Opción deshabilitada",
-                          "Las autorizaciones permanentes sin contraseña ya no están permitidas.")
-            return
         try:
             helper = helper_mantenimiento()
         except OSError as e:
@@ -1951,13 +2001,12 @@ class VentanaPrincipal(Gtk.Window):
             )
             return
 
-        if not helper_admite_autorizacion_sin_contrasena(helper):
+        if habilitar and (
+                not helper_admite_autorizacion_sin_contrasena(helper)
+                or not helper_disponible(helper)):
             self._restablecer_opcion_sin_contrasena(autorizacion_sin_contrasena_activa())
-            self._mensaje(
-                Gtk.MessageType.ERROR, "Función no disponible en el asistente instalado",
-                "El asistente del sistema no incluye la autorización sin contraseña. "
-                "Actualiza el paquete .deb a la versión 1.0.6 o posterior.",
-            )
+            self._mensaje(Gtk.MessageType.ERROR, "Función no disponible en el asistente instalado",
+                          "Actualiza el asistente del sistema a AiO Debian GUI 1.2.3 o posterior.")
             return
 
         if habilitar:
@@ -1970,12 +2019,13 @@ class VentanaPrincipal(Gtk.Window):
             d.add_button(traducir("Continuar"), Gtk.ResponseType.OK)
             d.set_default_response(Gtk.ResponseType.CANCEL)
             d.format_secondary_text(
-                traducir(
-                    "Se instalará una autorización persistente de Polkit para este usuario y "
-                "solo para AiO Debian GUI. Todas las tareas de mantenimiento podrán ejecutarse "
-                "como administrador sin volver a pedir contraseña. La activación requiere "
-                    "autorización de administrador una vez; puedes desactivarla desde esta opción."
-                )
+                "AVISO: esta excepción persistente elimina la petición de contraseña para "
+                "TODAS las tareas administrativas disponibles en AiO Debian GUI (APT, "
+                "repositorios, kernel y Flatpak del sistema). No concede permisos generales "
+                "a otras aplicaciones, pero cualquier proceso con acceso a tu cuenta podría "
+                "invocar el asistente de AiO sin contraseña. "
+                "Activarla requiere autorización de administrador una vez. "
+                "Desmarca esta opción para revocarla."
             )
             confirmar = d.run() == Gtk.ResponseType.OK
             d.destroy()

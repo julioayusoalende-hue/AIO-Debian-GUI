@@ -25,6 +25,7 @@ python3 -c 'import ast, pathlib; [ast.parse(p.read_text(encoding="utf-8"), filen
     bien "módulos core Python válidos" || fallo "sintaxis módulos core"
 python3 scripts/test-core-preferences.py && bien "preferencias modulares" || fallo "pruebas de preferencias core"
 python3 scripts/test-appearance.py && bien "tema automático y preferencia manual" || fallo "pruebas de apariencia"
+bash scripts/test-passwordless.sh && bien "reglas Polkit de AiO y Flatpak de usuario" || fallo "pruebas de autorización"
 bash scripts/test-distro.sh && bien "detección Debian/Ubuntu LTS y HWE" || fallo "pruebas de distribución"
 python3 scripts/test-updater.py && bien "actualizador AppImage: versiones y SHA-256" || fallo "pruebas de actualizador"
 python3 scripts/test-history.py && bien "historial de mantenimiento y persistencia" || fallo "pruebas del historial"
@@ -55,8 +56,9 @@ fi
 if grep -Fq '<allow_any>no</allow_any>' package/usr/share/polkit-1/actions/es.aiodebian.gui.policy &&
    grep -Fq '<allow_inactive>no</allow_inactive>' package/usr/share/polkit-1/actions/es.aiodebian.gui.policy &&
    grep -Fq '<allow_active>auth_admin</allow_active>' package/usr/share/polkit-1/actions/es.aiodebian.gui.policy &&
-   grep -Fq 'La autorización permanente sin contraseña se ha retirado' "$HELPER"; then
-    bien "Polkit requiere autorización activa y no permite nuevas reglas sin contraseña"
+   grep -Fq 'subject.active)' "$HELPER" &&
+   grep -Fq 'subject.local &&' "$HELPER"; then
+    bien "Polkit exige autorización por defecto; excepción opcional limitada a sesión local activa"
 else
     fallo "revisión de seguridad de la política Polkit"
 fi

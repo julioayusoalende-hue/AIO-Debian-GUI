@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.2.3
+
+- Cuando la única tarea seleccionada es actualizar Flatpak, se usa `flatpak --user` sin `pkexec`, también desde la interfaz Flatpak, sin depender del asistente privilegiado del anfitrión.
+- Restaurada la casilla opcional «No solicitar contraseña de administrador en AiO». Requiere una autorización inicial, configura una excepción de Polkit para la acción de AiO y el usuario local activo, y puede desactivarse desde la misma casilla.
+- Aviso explícito: otros procesos que actúen bajo esa cuenta podrían invocar el asistente privilegiado de AiO sin contraseña; no equivale a desactivar Polkit globalmente.
+- Las tareas APT, el kernel, los repositorios, instalaciones Flatpak del sistema y ejecuciones mixtas siguen siendo administrativas salvo que el usuario habilite la excepción.
+
 ## 1.2.2
 
 - Nueva opción de apariencia «Seguir el sistema», predeterminada para nuevas instalaciones.
