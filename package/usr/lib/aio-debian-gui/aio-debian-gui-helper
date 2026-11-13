@@ -313,9 +313,9 @@ anadir_componentes() {
                         linea = stanza[i]
                         if (linea ~ /^URIs:[[:space:]]*/) {
                             uri_activa = 1
-                            if (linea ~ /(debian\\.org|\\/debian\\/?([[:space:]]|$))/) debian = 1
+                            if (linea ~ /(debian\.org|\/debian\/?([[:space:]]|$))/) debian = 1
                         } else if (linea ~ /^[[:space:]]+/) {
-                            if (uri_activa && linea ~ /(debian\\.org|\\/debian\\/?([[:space:]]|$))/) debian = 1
+                            if (uri_activa && linea ~ /(debian\.org|\/debian\/?([[:space:]]|$))/) debian = 1
                         } else {
                             uri_activa = 0
                         }
