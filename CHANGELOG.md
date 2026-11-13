@@ -3,7 +3,9 @@
 ## 1.0.16
 Comprueba correctamente los errores de `autoremove` y `autoclean`; modifica únicamente
 stanzas Deb822 de repositorios oficiales de Debian; actualiza y limpia Flatpak por separado
-para instalaciones de sistema y del usuario de la sesión iniciadora.
+para instalaciones de sistema y del usuario de la sesión iniciadora. Añade distribución
+Flatpak con sandbox reducido y delegación explícita de las tareas administrativas al
+asistente instalado en el Debian anfitrión.
 
 
 Al publicar una versión nueva: sube `Version` en `package/DEBIAN/control`, añade la
