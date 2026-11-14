@@ -1,5 +1,10 @@
 # Cambios
 
+## Próxima versión
+
+- Enter inicia las tareas seleccionadas cuando la ventana principal está activa, sin interferir con botones, campos editables ni diálogos.
+- Eliminado el botón redundante «Estado de mantenimiento»; «Diagnosticar» sigue disponible.
+
 ## 2.5.3
 
 - Eliminada la integración de Timeshift y Snapper de la interfaz y del asistente privilegiado.
