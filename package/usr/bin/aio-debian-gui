@@ -2432,8 +2432,11 @@ class VentanaPrincipal(Gtk.Window):
         for boton in self.botones_preset:
             boton.set_sensitive(disponible)
         for pid, fila in self.filas.items():
+            reversión = self.switches.get("revertir-backports")
+            reversion_activa = bool(reversión and reversión[0].get_active())
             habilitada = (disponible and pid not in self.estados_tareas
-                         and (pid != "nvidia-driver" or self.nvidia_presente))
+                         and (pid != "nvidia-driver" or self.nvidia_presente)
+                         and (not reversion_activa or pid == "revertir-backports"))
             fila.set_sensitive(habilitada)
             self.switches[pid][0].set_sensitive(habilitada)
 
@@ -2470,6 +2473,8 @@ class VentanaPrincipal(Gtk.Window):
         caja.pack_end(indicador, False, False, 0)
         caja.pack_end(sw, False, False, 0)
         sw.connect("notify::active", self._cambio_switch_preset)
+        if pid == "revertir-backports":
+            sw.connect("notify::active", self._alternar_reversion_stable)
         fila.add(caja)
         self.switches[pid] = (sw, defecto)
         self.filas[pid] = fila
@@ -2497,6 +2502,20 @@ class VentanaPrincipal(Gtk.Window):
         finally:
             self.actualizando_preset = False
         self._marcar_preset_seleccionado(self.botones_preset[1])
+
+    def _alternar_reversion_stable(self, switch, _propiedad):
+        # La reversión de kernel/Mesa nunca se mezcla con tareas ordinarias.
+        if self.actualizando_preset:
+            return
+        if switch.get_active():
+            self.actualizando_preset = True
+            try:
+                for pid, (otro, _defecto) in self.switches.items():
+                    if pid != "revertir-backports":
+                        otro.set_active(False)
+            finally:
+                self.actualizando_preset = False
+        self._actualizar_sensibilidad()
 
     def _cambio_switch_preset(self, _switch, _propiedad):
         if not self.actualizando_preset:
