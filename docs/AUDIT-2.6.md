@@ -20,3 +20,8 @@
 - Revisar traducciones completas, rendimiento y lectores de pantalla.
 
 No se afirma compatibilidad completa ni recuperación automática hasta superar las pruebas manuales.
+
+## Segunda pasada
+- Reforzada la validación de nombres de usuario antes de interpolarlos en reglas JavaScript Polkit.
+- Añadidas pruebas de rechazo de inyección y casos positivos/negativos de instantáneas Snapper.
+- Los tests de Snapper usan funciones simuladas y no crean instantáneas reales.

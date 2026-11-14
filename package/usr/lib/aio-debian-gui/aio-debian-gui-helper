@@ -240,6 +240,11 @@ habilitar_sin_contrasena() {
 
 generar_regla_polkit() {
     local username="$1"
+    # Los nombres POSIX normales no contienen comillas ni barras invertidas;
+    # validar igualmente antes de interpolarlos en una cadena JavaScript.
+    [[ "$username" =~ ^[a-zA-Z_][a-zA-Z0-9_.-]*[$]?$ ]] || {
+        err "Nombre de usuario no válido para una regla Polkit."; return 1;
+    }
     cat <<EOF
 polkit.addRule(function(action, subject) {
     if (action.id === "es.aiodebian.gui.mantenimiento" &&

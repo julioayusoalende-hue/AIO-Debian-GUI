@@ -25,6 +25,7 @@ python3 -c 'import ast, pathlib; [ast.parse(p.read_text(encoding="utf-8"), filen
     bien "módulos core Python válidos" || fallo "sintaxis módulos core"
 python3 scripts/test-core-preferences.py && bien "preferencias modulares" || fallo "pruebas de preferencias core"
 python3 scripts/test-appearance.py && bien "tema automático y preferencia manual" || fallo "pruebas de apariencia"
+bash scripts/test-polkit-escaping.sh && bien "validación de usuario Polkit" || fallo "validación de usuario Polkit"
 bash scripts/test-passwordless.sh && bien "reglas Polkit de AiO y Flatpak de usuario" || fallo "pruebas de autorización"
 bash scripts/test-distro.sh && bien "detección Debian/Ubuntu LTS y HWE" || fallo "pruebas de distribución"
 python3 scripts/test-updater.py && bien "actualizador AppImage: versiones y SHA-256" || fallo "pruebas de actualizador"
