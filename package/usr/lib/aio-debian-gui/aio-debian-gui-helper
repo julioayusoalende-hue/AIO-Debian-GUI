@@ -31,7 +31,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 
 LISTAS_ACTUALIZADAS=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.2.4
+HELPER_VERSION=2.0.0
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 POLKIT_RULES_DIR=/etc/polkit-1/rules.d
@@ -887,6 +887,127 @@ paso_rebootcheck() {
     echo "##REBOOT:${necesita}"
 }
 
+# NVIDIA: detección PCI del anfitrión, sin depender del driver instalado.
+nvidia_pci_root() {
+    if [ "$EUID" -ne 0 ] && [[ -v AIO_TEST_PCI_ROOT ]]; then
+        printf '%s\n' "$AIO_TEST_PCI_ROOT"
+    else
+        echo /sys/bus/pci/devices
+    fi
+}
+nvidia_gpu_count() {
+    local fabricante="$1" dir ruta v c total=0
+    dir=$(nvidia_pci_root)
+    for ruta in "$dir"/*; do
+        [ -r "$ruta/vendor" ] && [ -r "$ruta/class" ] || continue
+        v=$(cat "$ruta/vendor"); c=$(cat "$ruta/class")
+        case "$c" in 0x0300*|0x0302*|0x0380*) ;; *) continue ;; esac
+        if [ "$fabricante" = integrada ]; then
+            case "$v" in 0x8086|0x1002) total=$((total + 1));; esac
+        elif [ "$v" = "$fabricante" ]; then
+            total=$((total + 1))
+        fi
+    done
+    echo "$total"
+}
+nvidia_presente() { [ "$(nvidia_gpu_count 0x10de)" -gt 0 ]; }
+nvidia_hibrida() {
+    nvidia_presente && [ "$(nvidia_gpu_count integrada)" -gt 0 ]
+}
+nvidia_secure_boot() {
+    local r
+    [ -d /sys/firmware/efi ] || { echo desactivado; return; }
+    command -v mokutil >/dev/null || { echo desconocido; return; }
+    r=$(mokutil --sb-state 2>/dev/null) || { echo desconocido; return; }
+    case "$r" in
+        *"SecureBoot enabled"*|*"Secure Boot enabled"*) echo activado ;;
+        *"SecureBoot disabled"*|*"Secure Boot disabled"*) echo desactivado ;;
+        *) echo desconocido ;;
+    esac
+}
+nvidia_report() {
+    local p=0 h=0 installed=0 candidate=no-disponible
+    if nvidia_presente; then
+        p=1
+        nvidia_hibrida && h=1
+        paquete_instalado nvidia-driver && installed=1
+        candidate=$(apt-cache policy nvidia-driver 2>/dev/null | awk '/Candidate:/ {print $2; exit}')
+        [ -n "$candidate" ] || candidate=no-disponible
+    fi
+    printf '##NVIDIA:present:%s\n' "$p"
+    printf '##NVIDIA:hybrid:%s\n' "$h"
+    printf '##NVIDIA:installed:%s\n' "$installed"
+    printf '##NVIDIA:candidate:%s\n' "$candidate"
+    printf '##NVIDIA:secureboot:%s\n' "$(nvidia_secure_boot)"
+    printf '##NVIDIA:kernel:%s\n' "$(uname -r)"
+}
+paso_nvidia_driver() {
+    local candidate major kernel headers output simulation
+    [ "$(leer_distribucion)" = debian ] || { err "NVIDIA automático solo en Debian."; return 1; }
+    nvidia_presente || { err "No se detectó una GPU NVIDIA PCI."; return 1; }
+    if paquete_instalado nvidia-driver; then
+        ok "El controlador NVIDIA Debian ya está instalado."
+        return 0
+    fi
+    if [ "$(nvidia_secure_boot)" != desactivado ]; then
+        err "Secure Boot activo o desconocido: configura primero la firma DKMS/MOK."
+        return 1
+    fi
+    if paquete_instalado bumblebee || paquete_instalado primus; then
+        err "Bumblebee/Primus detectado: requiere revisión antes de utilizar PRIME."
+        return 1
+    fi
+    asegurar_listas || return 1
+    candidate=$(apt-cache policy nvidia-driver | awk '/Candidate:/ {print $2; exit}')
+    [ -n "$candidate" ] && [ "$candidate" != "(none)" ] || {
+        err "Falta nvidia-driver en APT. Habilita contrib, non-free y non-free-firmware."
+        return 1
+    }
+    major=$(printf '%s' "$candidate" | sed 's/.*://;s/\..*//')
+    [[ "$major" =~ ^[0-9]+$ ]] || { err "Versión NVIDIA no reconocida."; return 1; }
+    kernel=$(uname -r)
+    if dpkg --compare-versions "$(printf '%s' "$kernel" | cut -d- -f1)" ge 6.16 &&
+       [ "$major" -lt 580 ]; then
+        err "Kernel de Backports incompatible con NVIDIA $candidate. No se mezclan ramas."
+        return 1
+    fi
+    headers="linux-headers-$kernel"
+    if ! paquete_instalado "$headers" &&
+       ! apt-cache policy "$headers" | grep -Eq 'Candidate:[[:space:]]+[^ (]'; then
+        err "No hay cabeceras disponibles para el kernel $kernel."
+        return 1
+    fi
+    if ! apt-cache policy nvidia-detect | grep -Eq 'Candidate:[[:space:]]+[^ (]'; then
+        err "No hay nvidia-detect: revisa los componentes non-free."
+        return 1
+    fi
+    simulation=$(apt-get -s install "$headers" nvidia-driver nvidia-kernel-dkms 2>&1) || {
+        err "No se pueden resolver las dependencias: $simulation"; return 1;
+    }
+    if grep -Eq '^Remv |^The following packages will be REMOVED:' <<< "$simulation"; then
+        err "APT propone eliminar paquetes. Se cancela por seguridad."
+        return 1
+    fi
+    instalar_paquete_si_falta nvidia-detect "No se pudo instalar el detector." || return 1
+    output=$(nvidia-detect 2>&1) || { err "Falló nvidia-detect: $output"; return 1; }
+    if ! grep -Eq '^[[:space:]]*nvidia-driver[[:space:]]*$' <<< "$output"; then
+        err "Debian no recomienda nvidia-driver para esta GPU; revisión manual necesaria."
+        return 1
+    fi
+    info "Controlador Debian $candidate para kernel $kernel."
+    if nvidia_hibrida; then
+        info "Equipo híbrido: se conserva la integrada y se usa NVIDIA con PRIME Render Offload."
+        info "PRIME: __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia programa"
+    fi
+    if ! apt-get "${APT_OPTS[@]}" install "$headers" nvidia-driver nvidia-kernel-dkms; then
+        err "Fallo instalando NVIDIA. Consulta logs de DKMS y APT."
+        return 1
+    fi
+    REINICIO_REQUERIDO=1
+    echo "##REBOOT:1"
+    ok "Reinicia y comprueba nvidia-smi."
+}
+
 # ------------------------------------------------------------------------------
 # Principal
 # ------------------------------------------------------------------------------
@@ -895,6 +1016,7 @@ declare -A TITULOS=(
     [repos]="Configurar componentes oficiales de repositorios"
     [tools]="Instalar herramientas auxiliares"
     [backports-kernel-mesa]="Instalar kernel y Mesa desde Backports"
+    [nvidia-driver]="Detectar e instalar el controlador NVIDIA de Debian"
     [ubuntu-hwe]="Instalar kernel HWE oficial de Ubuntu"
     [flatpak-setup]="Instalar Flatpak y Flathub"
     [gnome-plugin]="Plugin Flatpak para GNOME Software"
@@ -906,7 +1028,7 @@ declare -A TITULOS=(
     [rebootcheck]="Comprobar si hace falta reiniciar"
 )
 # Pasos cuyo fallo detiene la ejecución (el resto solo se anota)
-CRITICOS=" upgrade backports-kernel-mesa "
+CRITICOS=" upgrade backports-kernel-mesa nvidia-driver "
 
 mostrar_estados() {
     local tarea funcion
@@ -955,7 +1077,12 @@ main() {
         echo "##DONE:1"
         return 1
     fi
+    if [ "${1:-}" = "--nvidia-report" ] && [ "$#" -eq 1 ]; then
+        nvidia_report
+        return 0
+    fi
     if [ "${1:-}" = "--status" ] && [ "$#" -eq 1 ]; then
+        nvidia_report
         mostrar_estados
         return 0
     fi
@@ -1035,7 +1162,7 @@ main() {
     distro=$(leer_distribucion) || exit 1
     for s in "${pasos[@]}"; do
         case "$distro:$s" in
-            ubuntu:backports-kernel-mesa|debian:ubuntu-hwe)
+            ubuntu:backports-kernel-mesa|ubuntu:nvidia-driver|debian:ubuntu-hwe)
                 err "La tarea $s no es compatible con la distribución detectada."
                 exit 2 ;;
         esac
