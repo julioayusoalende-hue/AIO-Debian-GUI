@@ -1,5 +1,15 @@
 # Cambios
 
+## 2.0.1
+
+- Rediseño de la interfaz GTK en secciones apiladas horizontalmente: información del sistema, tareas de mantenimiento, progreso y consola.
+- Información del sistema y novedades organizadas en la parte superior, con logotipo de la distribución.
+- Botón principal «Iniciar tareas» junto a los indicadores de progreso y estado.
+- Acceso directo a Preferencias en la barra de título, manteniendo el menú e historial existentes.
+- Cabecera de consola con botón «Borrar», deshabilitado durante la ejecución de tareas.
+- Diseño adaptable a ventanas pequeñas mediante desplazamiento de la zona superior; se preserva el modo simple.
+
+
 ## 2.0.0
 
 - Nueva opción NVIDIA exclusiva de Debian, visible tras detectar una GPU NVIDIA PCI.

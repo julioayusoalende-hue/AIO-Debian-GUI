@@ -22,6 +22,10 @@ Principios que deben guiar la implementación: clasificar por ID PCI y rama comp
 
 La versión 2.0.0 permanece en **pruebas** hasta contrastar una matriz de IDs PCI y ramas NVIDIA, kernels Debian estable/Backports, Secure Boot y dispositivos híbridos. El instalador debe fallar de forma conservadora ante compatibilidad no comprobada y nunca cambiar el servidor gráfico de manera implícita.
 
+## Diseño de interfaz (v2.0.1)
+
+La ventana GTK utiliza una distribución **verticalmente apilada** (secciones separadas horizontalmente): información del sistema y novedades arriba, tareas de mantenimiento a todo el ancho, y zona fija de progreso, botón principal «Iniciar tareas» y consola abajo. En pantallas pequeñas, la información y las tareas pueden desplazarse sin perder el control de ejecución. «Preferencias» tiene acceso directo en la cabecera y el menú conserva Historial; la consola dispone de «Borrar» y se oculta en modo simple.
+
 ## NVIDIA en Debian (v2.0.0)
 
 La aplicación consulta los dispositivos PCI del anfitrión. Si detecta una tarjeta NVIDIA y se utiliza Debian, ofrece la tarea optativa **Detectar e instalar controlador NVIDIA**. Reconoce si existe una GPU integrada Intel o AMD junto a NVIDIA (portátil híbrido), informa del driver instalado, la versión candidata en APT y el estado de Secure Boot. No configura NVIDIA automáticamente al arrancar la interfaz.

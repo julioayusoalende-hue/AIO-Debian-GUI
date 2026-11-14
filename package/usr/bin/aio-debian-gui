@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.0.1": "Interfaz más clara con secciones horizontales, tareas a todo el ancho y controles de ejecución mejor distribuidos.",
     "2.0.0": "Detección NVIDIA en Debian, instalación supervisada del controlador compatible y soporte PRIME para equipos híbridos.",
     "1.2.4": "Icono original en rojo Debian y visualización directa en Acerca de en todos los formatos.",
     "1.2.3": "Actualiza Flatpak de usuario sin contraseña y recupera la autorización opcional y reversible de Polkit para las tareas de AiO.",
@@ -1108,16 +1109,12 @@ class VentanaPrincipal(Gtk.Window):
                         (" · Ubuntu LTS" if self.distribucion == "ubuntu" else
                          " · Debian" if self.distribucion == "debian" else " · Sistema no compatible"))
 
-        self.btn_iniciar = Gtk.Button(label=traducir("Iniciar tareas"))
-        self.btn_iniciar.get_style_context().add_class("suggested-action")
-        self.btn_iniciar.connect("clicked", self._iniciar)
-        hb.pack_start(self.btn_iniciar)
         self.btn_actualizar = None
         if formato in ("deb", "flatpak", "appimage"):
             self.btn_actualizar = Gtk.Button(label=traducir("Buscar actualizaciones"))
             self.btn_actualizar.set_tooltip_text(traducir("Actualizar esta aplicación"))
             self.btn_actualizar.connect("clicked", self._buscar_actualizacion)
-            hb.pack_start(self.btn_actualizar)
+            hb.pack_end(self.btn_actualizar)
 
 
         btn_acerca = Gtk.Button.new_from_icon_name("help-about-symbolic", Gtk.IconSize.BUTTON)
@@ -1144,7 +1141,14 @@ class VentanaPrincipal(Gtk.Window):
         menu.show_all()
         self.btn_menu.set_popover(popover)
         self.menu_popover = popover
-        hb.pack_end(self.btn_menu)
+        hb.pack_start(self.btn_menu)
+        self.btn_preferencias_cabecera = Gtk.Button(label=traducir("Preferencias"))
+        self.btn_preferencias_cabecera.set_image(
+            Gtk.Image.new_from_icon_name("preferences-system-symbolic", Gtk.IconSize.BUTTON)
+        )
+        self.btn_preferencias_cabecera.set_always_show_image(True)
+        self.btn_preferencias_cabecera.connect("clicked", self._abrir_preferencias)
+        hb.pack_start(self.btn_preferencias_cabecera)
         self.set_titlebar(hb)
 
 
@@ -1436,10 +1440,13 @@ class VentanaPrincipal(Gtk.Window):
         if modo_simple_activado:
             self.buf.set_text("")
         self.marco_consola.set_no_show_all(nuevas["modo_simple"])
+        self.cabecera_consola.set_no_show_all(nuevas["modo_simple"])
         if nuevas["modo_simple"]:
             self.marco_consola.set_visible(False)
+            self.cabecera_consola.set_visible(False)
         else:
             self.marco_consola.show_all()
+            self.cabecera_consola.show_all()
 
     def _reiniciar_interfaz(self):
         ancho, alto = self.get_size()
@@ -1453,46 +1460,80 @@ class VentanaPrincipal(Gtk.Window):
         self.destroy()
 
     def _construir_cuerpo(self):
-        panel = Gtk.Paned(orientation=Gtk.Orientation.VERTICAL)
-        self.add(panel)
+        # Diseño horizontal apilado: información, tareas, estado y consola.
+        # La zona superior se desplaza si el monitor es pequeño; los controles
+        # de ejecución y la consola permanecen visibles en la parte inferior.
+        principal = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        self.add(principal)
 
-        # --- Parte superior: información + opciones (con scroll)
         sup = Gtk.ScrolledWindow()
         sup.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        sup.set_min_content_height(240)
         caja = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
-        for m in ("top", "bottom", "start", "end"):
-            getattr(caja, "set_margin_" + m)(16)
+        for margen in ("top", "bottom", "start", "end"):
+            getattr(caja, "set_margin_" + margen)(14)
         sup.add(caja)
-        panel.pack1(sup, resize=True, shrink=False)
+        principal.pack_start(sup, True, True, 0)
 
         caja.pack_start(self._tarjeta_info(), False, False, 0)
         caja.pack_start(self._tarjeta_opciones(), False, False, 0)
 
-        # --- Parte inferior: progreso + registro
         inf = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        for m in ("top", "bottom", "start", "end"):
-            getattr(inf, "set_margin_" + m)(12)
-        panel.pack2(inf, resize=True, shrink=False)
+        for margen in ("bottom", "start", "end"):
+            getattr(inf, "set_margin_" + margen)(12)
+        principal.pack_end(inf, False, True, 0)
 
-        fila = Gtk.Box(spacing=10)
+        acciones = Gtk.Frame()
+        acciones_caja = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        for margen in ("top", "bottom", "start", "end"):
+            getattr(acciones_caja, "set_margin_" + margen)(10)
+        acciones.add(acciones_caja)
+        texto_progreso = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7)
+        fila = Gtk.Box(spacing=8)
         self.spinner = Gtk.Spinner()
         self.estado = etiqueta(traducir("Listo. Elige las tareas y pulsa «Iniciar tareas»."))
+        self.estado.set_line_wrap(True)
         self.btn_cancelar = Gtk.Button(label=traducir("Cancelar espera"))
         self.btn_cancelar.set_no_show_all(True)
         self.btn_cancelar.connect("clicked", self._cancelar_espera_autorizacion)
         fila.pack_start(self.spinner, False, False, 0)
         fila.pack_start(self.estado, True, True, 0)
         fila.pack_end(self.btn_cancelar, False, False, 0)
-        inf.pack_start(fila, False, False, 0)
-
+        texto_progreso.pack_start(fila, False, False, 0)
         self.barra = Gtk.ProgressBar()
-        inf.pack_start(self.barra, False, False, 0)
+        texto_progreso.pack_start(self.barra, False, False, 0)
+        acciones_caja.pack_start(texto_progreso, True, True, 0)
+
+        self.btn_iniciar = Gtk.Button(label=traducir("Iniciar tareas"))
+        self.btn_iniciar.set_image(Gtk.Image.new_from_icon_name(
+            "media-playback-start-symbolic", Gtk.IconSize.BUTTON))
+        self.btn_iniciar.set_always_show_image(True)
+        self.btn_iniciar.get_style_context().add_class("suggested-action")
+        self.btn_iniciar.set_size_request(160, 48)
+        self.btn_iniciar.connect("clicked", self._iniciar)
+        acciones_caja.pack_end(self.btn_iniciar, False, False, 0)
+        inf.pack_start(acciones, False, False, 0)
+
+        cabecera_log = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        icono_log = Gtk.Image.new_from_icon_name("utilities-terminal-symbolic", Gtk.IconSize.BUTTON)
+        cabecera_log.pack_start(icono_log, False, False, 0)
+        cabecera_log.pack_start(
+            etiqueta("<b>Salida de la consola</b>", markup=True), True, True, 0)
+        btn_borrar = Gtk.Button(label=traducir("Borrar"))
+        btn_borrar.set_image(Gtk.Image.new_from_icon_name(
+            "edit-clear-symbolic", Gtk.IconSize.BUTTON))
+        btn_borrar.set_always_show_image(True)
+        btn_borrar.connect("clicked", self._borrar_consola)
+        cabecera_log.pack_end(btn_borrar, False, False, 0)
+        self.cabecera_consola = cabecera_log
+        self.cabecera_consola.set_no_show_all(self.preferencias["modo_simple"])
+        inf.pack_start(cabecera_log, False, False, 0)
 
         marco = Gtk.ScrolledWindow()
         marco.set_shadow_type(Gtk.ShadowType.IN)
-        marco.set_min_content_height(140)
+        marco.set_size_request(-1, 132)
+        marco.set_min_content_height(110)
         marco.set_no_show_all(self.preferencias["modo_simple"])
-        marco.set_visible(not self.preferencias["modo_simple"])
         self.marco_consola = marco
         self.log = Gtk.TextView(editable=False, cursor_visible=False)
         self.log.set_monospace(True)
@@ -1506,8 +1547,14 @@ class VentanaPrincipal(Gtk.Window):
         self.buf.create_tag("info", foreground="#1c71d8")
         self.buf.create_tag("paso", weight=Pango.Weight.BOLD)
         marco.add(self.log)
-        inf.pack_start(marco, True, True, 0)
-        panel.set_position(470)
+        inf.pack_start(marco, False, True, 0)
+        if self.preferencias["modo_simple"]:
+            marco.hide()
+            cabecera_log.hide()
+
+    def _borrar_consola(self, _boton):
+        if not self.en_curso:
+            self.buf.set_text("")
 
     def _tarjeta_info(self):
         marco = Gtk.Frame()
@@ -1516,49 +1563,61 @@ class VentanaPrincipal(Gtk.Window):
             getattr(caja, "set_margin_" + m)(12)
         marco.add(caja)
 
-        caja.pack_start(etiqueta("<b>Información del sistema</b>", markup=True), False, False, 0)
+        titulo = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        titulo.pack_start(Gtk.Image.new_from_icon_name(
+            "computer-symbolic", Gtk.IconSize.BUTTON), False, False, 0)
+        titulo.pack_start(etiqueta("<b>Información del sistema</b>", markup=True), False, False, 0)
+        caja.pack_start(titulo, False, False, 0)
+
+        contenido = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=20)
         filas, version = informacion_sistema()
-        contenido = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18)
-        grid = Gtk.Grid(column_spacing=18, row_spacing=4)
+        grid = Gtk.Grid(column_spacing=18, row_spacing=5)
         for i, (clave, valor) in enumerate(filas):
-            grid.attach(etiqueta(clave, dim=True), 0, i, 1, 1)
-            v = etiqueta(valor)
-            v.set_selectable(True)
-            grid.attach(v, 1, i, 1, 1)
+            nombre = etiqueta(clave, dim=True)
+            nombre.set_line_wrap(True)
+            grid.attach(nombre, 0, i, 1, 1)
+            dato = etiqueta(valor)
+            dato.set_line_wrap(True)
+            dato.set_selectable(True)
+            grid.attach(dato, 1, i, 1, 1)
         contenido.pack_start(grid, True, True, 0)
+
+        novedades = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        novedades.set_size_request(240, -1)
+        nov = NOVEDADES.get(version)
+        if nov:
+            novedades.pack_start(etiqueta("<b>Novedades de esta versión:</b>",
+                                          markup=True), False, False, 0)
+            detalle = etiqueta(nov, dim=True)
+            detalle.set_line_wrap(True)
+            detalle.set_max_width_chars(42)
+            novedades.pack_start(detalle, False, False, 0)
+        contenido.pack_start(novedades, True, True, 0)
 
         ruta_logo, nombre_logo = logo_distribucion(self.distribucion)
         if ruta_logo and os.path.isfile(ruta_logo):
             try:
-                # Ambos logos se muestran en el mismo espacio, sin deformarlos.
                 imagen_logo = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                    ruta_logo, 112, 112, True,
-                )
+                    ruta_logo, 96, 96, True)
                 logo = Gtk.Image.new_from_pixbuf(imagen_logo)
                 logo.set_tooltip_text(traducir(nombre_logo))
                 logo.set_valign(Gtk.Align.CENTER)
                 logo.get_accessible().set_name(traducir(nombre_logo))
                 contenido.pack_end(logo, False, False, 0)
             except GLib.Error:
-                # Un problema con el cargador de imágenes no bloquea la app.
                 pass
         caja.pack_start(contenido, False, False, 0)
-
-        nov = NOVEDADES.get(version)
-        if nov:
-            titulo_novedades = traducir("<b>Novedades de esta versión:</b>")
-            nov = GLib.markup_escape_text(traducir(nov))
-            caja.pack_start(
-                etiqueta(titulo_novedades + " " + nov, markup=True),
-                False, False, 4,
-            )
         if self.distribucion == "debian":
             self.nvidia_info_label = etiqueta("Buscando GPU NVIDIA…", dim=True)
             caja.pack_start(self.nvidia_info_label, False, False, 3)
         return marco
 
     def _tarjeta_opciones(self):
-        externa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        externa = Gtk.Frame()
+        tarjeta = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        for margen in ("top", "bottom", "start", "end"):
+            getattr(tarjeta, "set_margin_" + margen)(12)
+        externa.add(tarjeta)
 
         cab = Gtk.Box(spacing=8)
         cab.pack_start(etiqueta("<b>Tareas a realizar</b>", markup=True), True, True, 0)
@@ -1576,7 +1635,7 @@ class VentanaPrincipal(Gtk.Window):
         presets.pack_start(b2, False, False, 0)
         self.botones_preset = (b1, b2)
         cab.pack_end(presets, False, False, 0)
-        externa.pack_start(cab, False, False, 0)
+        tarjeta.pack_start(cab, False, False, 0)
 
         self.chk_sin_contrasena = Gtk.CheckButton(
             label=traducir(
@@ -1591,8 +1650,8 @@ class VentanaPrincipal(Gtk.Window):
         )
         self.chk_sin_contrasena.set_active(autorizacion_sin_contrasena_activa())
         self.chk_sin_contrasena.connect("toggled", self._cambiar_sin_contrasena)
-        externa.pack_start(self.chk_sin_contrasena, False, False, 0)
-        externa.pack_start(
+        tarjeta.pack_start(self.chk_sin_contrasena, False, False, 0)
+        tarjeta.pack_start(
             etiqueta("Por defecto Polkit solicita contraseña. Esta excepción es voluntaria y aumenta los riesgos de seguridad.", dim=True),
             False, False, 0,
         )
@@ -1601,13 +1660,13 @@ class VentanaPrincipal(Gtk.Window):
             visibles = [p for p in PASOS if p[4] == gid and self._visible(p[0])]
             if not visibles:
                 continue
-            externa.pack_start(etiqueta(gtitulo, dim=True), False, False, 2)
+            tarjeta.pack_start(etiqueta(gtitulo, dim=True), False, False, 2)
             marco = Gtk.Frame()
             lista = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
             marco.add(lista)
             for pid, titulo, desc, defecto, _ in visibles:
                 lista.add(self._fila(pid, titulo, desc, defecto))
-            externa.pack_start(marco, False, False, 0)
+            tarjeta.pack_start(marco, False, False, 0)
         return externa
 
     def _consultar_estados_tareas(self, inicial=False):
@@ -1767,6 +1826,7 @@ class VentanaPrincipal(Gtk.Window):
             self.btn_actualizar.set_sensitive(disponible and not self.comprobando_actualizacion)
         self.chk_sin_contrasena.set_sensitive(disponible)
         self.btn_menu.set_sensitive(disponible)
+        self.btn_preferencias_cabecera.set_sensitive(disponible)
         for boton in self.botones_preset:
             boton.set_sensitive(disponible)
         for pid, fila in self.filas.items():
