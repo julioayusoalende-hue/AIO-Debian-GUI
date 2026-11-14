@@ -1,18 +1,67 @@
-# AIO-Debian-GUI
+# AiO Debian GUI
 
-Interfaz gráfica de mantenimiento y configuración todo en uno para Debian.
+**Mantenimiento, diagnóstico y configuración de Debian desde una interfaz gráfica.**
 
-- Actualiza el sistema con apt (`update`, `dist-upgrade`, `autoremove`, `autoclean`).
-- Habilita `contrib` y `non-free`.
-- Instala herramientas auxiliares, incluido el soporte FUSE para AppImage.
-- Permite instalar opcionalmente el kernel y los controladores Mesa desde Debian Backports.
-- Indica si las tareas de repositorios, herramientas y Backports ya están completadas.
-- Sincroniza el reloj, instala Flatpak + Flathub y actualiza las apps Flatpak.
-- Complementos para GNOME (plugin Flatpak de GNOME Software, Extension Manager).
-- Comprueba si hace falta reiniciar y lo ofrece al terminar.
+[![Última versión](https://img.shields.io/github/v/release/julioayusoalende-hue/AIO-Debian-GUI?label=versi%C3%B3n)](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)
+[![Licencia GPL-3.0](https://img.shields.io/badge/licencia-GPL--3.0-blue)](LICENSE)
+[![Descargas](https://img.shields.io/badge/descargas-Releases-red)](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)
 
-Es un proyecto independiente: no necesita el script de consola
-[aio-debian](https://github.com/julioayusoalende-hue/aio-debian) (puedes tener ambos).
+AiO Debian GUI reúne tareas habituales de administración en una aplicación GTK, con **confirmaciones explícitas y comprobaciones preventivas** para las operaciones delicadas. Es un proyecto independiente del script de consola [aio-debian](https://github.com/julioayusoalende-hue/aio-debian).
+
+> **Versión actual: 2.1.0.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
+
+## Funciones principales
+
+| Área | Funciones |
+| --- | --- |
+| Mantenimiento APT | Actualizar índices y paquetes, eliminar dependencias innecesarias y limpiar caché. |
+| Repositorios | Habilitar componentes `contrib` y `non-free` cuando proceda. |
+| Hardware y gráficos | Instalar opcionalmente kernel y Mesa de Backports; detectar NVIDIA y ofrecer instalación conservadora del controlador en Debian. |
+| Retorno a Stable | Preparar el retorno de kernel y Mesa desde Backports con vista previa y simulación APT (2.1.0). |
+| Diagnóstico | Revisar espacio, dpkg/APT, actualizaciones, índices, DKMS, reinicios, servicios y versión de AiO, sin modificar el sistema. |
+| Aplicaciones | Herramientas auxiliares, soporte AppImage, Flatpak/Flathub y complementos GNOME. |
+| Interfaz | Dos paneles ajustables, consola separable, historial, preferencias, temas claro/oscuro y traducciones. |
+| Actualizaciones de AiO | Comprobación desde Diagnosticar y opción de reiniciar la aplicación tras actualizar, según el formato instalado. |
+
+## Novedades destacadas de la rama 2.x
+
+- **2.1.0:** tarea para volver a kernel y Mesa de Debian Stable desde Backports, con simulación y bloqueos de seguridad. **No cambia por sí sola el kernel de arranque**.
+- **2.0.9:** mejoras de traducción al inglés, francés y chino en la interfaz y el diagnóstico.
+- **2.0.7:** comprobación de actualizaciones de la propia aplicación desde Diagnosticar y reinicio opcional tras actualizar.
+- **2.0.5:** diagnóstico preventivo de solo lectura.
+- **2.0.4:** consola de ejecución en una ventana independiente.
+- **2.0.3:** menú único con Preferencias, Historial de mantenimiento, Buscar actualizaciones y Acerca de.
+- **2.0.2:** distribución horizontal de dos paneles.
+- **2.0.0:** detección de NVIDIA y asistencia conservadora de instalación en Debian.
+
+Consulta el [historial de versiones](../../releases) para conocer los cambios completos.
+
+## Instalación rápida
+
+La vía recomendada para una instalación integrada con las actualizaciones del sistema es el **paquete DEB**:
+
+1. Descarga `aio-debian-gui_X.Y.Z_all.deb` desde [Releases](../../releases/latest).
+2. Instálalo desde el directorio donde se haya descargado:
+
+```bash
+sudo apt install ./aio-debian-gui_*_all.deb
+```
+
+También hay instrucciones más abajo para **repositorio APT, AppImage y Flatpak**. La compatibilidad declarada incluye Debian 12 o superior y Ubuntu 24.04/26.04 LTS, aunque algunas funciones son exclusivas de Debian.
+
+## Antes de modificar el sistema
+
+- Haz una **copia de seguridad** antes de cambiar kernel, Mesa, repositorios o controladores.
+- La tarea **Volver a kernel y Mesa Stable** debe ejecutarse por separado; puede bloquearse si detecta NVIDIA propietario o módulos DKMS. Después hay que seleccionar y verificar manualmente el kernel Stable en GRUB.
+- El instalador NVIDIA es deliberadamente conservador y puede rechazar hardware o configuraciones sin compatibilidad comprobada; no desactiva Secure Boot ni modifica automáticamente Xorg, Wayland o GRUB.
+- La excepción opcional de Polkit sin contraseña reduce la protección de la cuenta: mantenla desactivada salvo que comprendas sus implicaciones.
+- El diagnóstico **no repara ni actualiza automáticamente**: informa del estado observado.
+
+## Documentación detallada
+
+Las secciones siguientes amplían las funciones, limitaciones y métodos de instalación. Para incidencias y propuestas utiliza [Issues](../../issues).
+
+---
 
 ## Referencia técnica: MX Linux ddm-mx
 
