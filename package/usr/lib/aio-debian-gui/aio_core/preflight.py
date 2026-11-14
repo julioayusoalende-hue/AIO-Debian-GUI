@@ -4,6 +4,7 @@ La simulación no sustituye la validación final del asistente privilegiado.
 """
 from dataclasses import dataclass
 import os
+import re
 import shutil
 import subprocess
 
@@ -22,12 +23,45 @@ def _run(command, timeout=25):
         return None
 
 
+def _apt_locks():
+    """Detectar bloqueos POSIX existentes sin modificarlos."""
+    try:
+        with open("/proc/locks", encoding="ascii") as stream:
+            lines = stream.readlines()
+        locks = set()
+        for line in lines:
+            if "POSIX" not in line:
+                continue
+            for token in line.split():
+                if re.fullmatch(r"[0-9a-fA-F]+:[0-9a-fA-F]+:[0-9]+", token):
+                    major, minor, inode = token.split(":")
+                    locks.add((int(major, 16), int(minor, 16), int(inode)))
+        busy = []
+        for path in ("/var/lib/dpkg/lock", "/var/lib/dpkg/lock-frontend",
+                     "/var/lib/apt/lists/lock", "/var/cache/apt/archives/lock"):
+            try:
+                st = os.stat(path)
+            except FileNotFoundError:
+                continue
+            if (os.major(st.st_dev), os.minor(st.st_dev), st.st_ino) in locks:
+                busy.append(path)
+        return busy
+    except (OSError, ValueError):
+        return None
+
+
 def check(tasks):
     """Bloquear errores conocidos; avisar de comprobaciones no concluyentes."""
     if tasks == ["flatpak-update"]:
         return Report(False, [])
     messages = []
     blocked = False
+    locks = _apt_locks()
+    if locks:
+        blocked = True
+        messages.append('APT/dpkg ocupado: ' + ', '.join(locks))
+    elif locks is None:
+        messages.append('No se pudo comprobar el bloqueo de APT/dpkg.')
     try:
         free = shutil.disk_usage("/").free
         if free < 1024 ** 3:
@@ -65,8 +99,11 @@ def check(tasks):
                 blocked = True
                 messages.append("No se pudo simular APT: " + cmd[-1])
                 continue
+            installs = [line.split()[1] for line in result.stdout.splitlines() if line.startswith("Inst ") and len(line.split()) > 1]
             removed = [line for line in result.stdout.splitlines()
                        if line.startswith("Rem ")]
+            if installs:
+                messages.append("Paquetes previstos para instalar/actualizar (" + str(len(installs)) + "): " + ", ".join(installs[:15]))
             if removed:
                 blocked = True
                 messages.append("La simulación propone eliminar paquetes: " +

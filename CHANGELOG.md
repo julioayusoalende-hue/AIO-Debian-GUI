@@ -1,5 +1,12 @@
 # Cambios
 
+## 2.3.0
+
+- Comprobaciones de seguridad asíncronas sin bloquear GTK.
+- Detección de bloqueos activos de APT/dpkg.
+- Vista previa de paquetes que se instalarán o actualizarán.
+- Traducciones y pruebas adicionales del modo seguro.
+
 ## 2.2.0
 
 - Nuevo modo de mantenimiento seguro: comprobaciones previas de espacio libre, dpkg, dependencias APT y DKMS.

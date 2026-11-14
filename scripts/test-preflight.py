@@ -17,14 +17,22 @@ def run(cmd, timeout=25):
         return SimpleNamespace(returncode=0, stdout="Rem linux-image-old [1]\n", stderr="")
     return SimpleNamespace(returncode=0, stdout="", stderr="")
 
-with patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), \
+with patch.object(mod, "_apt_locks", return_value=[]), \
+     patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), \
      patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), \
      patch.object(mod, "_run", side_effect=run):
     assert mod.check(["upgrade"]).blocked
     assert not mod.check(["flatpak-update"]).blocked
     assert not mod.check(["autoclean"]).blocked
-with patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=500*1024**2)), \
+with patch.object(mod, "_apt_locks", return_value=[]), \
+     patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=500*1024**2)), \
      patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), \
      patch.object(mod, "_run", side_effect=run):
     assert mod.check(["autoclean"]).blocked
 print("Preflight: OK")
+
+with patch.object(mod, "_apt_locks", return_value=["/var/lib/dpkg/lock"]), \
+     patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), \
+     patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), \
+     patch.object(mod, "_run", side_effect=run):
+    assert mod.check(["autoclean"]).blocked

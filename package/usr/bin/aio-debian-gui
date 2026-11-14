@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.3.0": "Comprobaciones asíncronas, bloqueos APT y vista previa ampliada.",
     "2.2.0": "Modo de mantenimiento seguro: comprobaciones previas de APT, dpkg, espacio, DKMS y simulaciones conservadoras.",
     "2.1.0": "Nueva opción de preparación del retorno a kernel y Mesa Stable desde Backports, con simulación segura.",
     "2.0.9": "2.0.9 — Traducciones completas para los paneles y el diagnóstico preventivo.",
@@ -117,6 +118,9 @@ TEMAS = {"sistema", "claro", "oscuro"}
 
 TRADUCCIONES = {
     "en": {
+        "Comprobando seguridad del mantenimiento…": "Checking maintenance safety…",
+        "Comprobaciones de seguridad": "Safety checks",
+        "No se pudieron completar las comprobaciones de seguridad.": "Safety checks could not be completed.",
         "Actualizar AiO": "Update AiO",
         "Reiniciar AiO automáticamente tras actualizar": "Automatically restart AiO after updating",
         "Reiniciar aplicación": "Restart application",
@@ -243,6 +247,9 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Authorization wait cancelled.",
     },
     "fr": {
+        "Comprobando seguridad del mantenimiento…": "Vérification de la sécurité de la maintenance…",
+        "Comprobaciones de seguridad": "Contrôles de sécurité",
+        "No se pudieron completar las comprobaciones de seguridad.": "Impossible de terminer les contrôles de sécurité.",
         "Actualizar AiO": "Mettre à jour AiO",
         "Reiniciar AiO automáticamente tras actualizar": "Redémarrer automatiquement AiO après la mise à jour",
         "Reiniciar aplicación": "Redémarrer l’application",
@@ -368,6 +375,9 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Attente d’autorisation annulée.",
     },
     "zh": {
+        "Comprobando seguridad del mantenimiento…": "正在检查维护安全性…",
+        "Comprobaciones de seguridad": "安全检查",
+        "No se pudieron completar las comprobaciones de seguridad.": "无法完成安全检查。",
         "Actualizar AiO": "更新 AiO",
         "Reiniciar AiO automáticamente tras actualizar": "更新后自动重启 AiO",
         "Reiniciar aplicación": "重启应用",
@@ -2553,16 +2563,30 @@ class VentanaPrincipal(Gtk.Window):
         if not pasos:
             self._mensaje(Gtk.MessageType.INFO, "Nada que hacer", "Activa al menos una tarea.")
             return
-        # Comprobación conservadora previa a la autorización y a cualquier cambio.
-        informe = core_preflight.check(pasos)
-        if informe.blocked:
+        self._poner_ocupado(True)
+        self.estado.set_text(traducir("Comprobando seguridad del mantenimiento…"))
+        def verificar():
+            try:
+                informe = core_preflight.check(pasos)
+                GLib.idle_add(self._terminar_preflight, pasos, informe, None)
+            except Exception as error:
+                GLib.idle_add(self._terminar_preflight, pasos, None, str(error))
+        threading.Thread(target=verificar, daemon=True).start()
+        return
+
+    def _terminar_preflight(self, pasos, informe, error):
+        self._poner_ocupado(False)
+        if error:
             self._mensaje(Gtk.MessageType.ERROR, "Mantenimiento bloqueado",
-                          "\n".join(informe.messages))
-            return
+                          traducir("No se pudieron completar las comprobaciones de seguridad.") + "\n" + error)
+            return False
+        if informe.blocked:
+            self._mensaje(Gtk.MessageType.ERROR, "Mantenimiento bloqueado", "\n".join(informe.messages))
+            return False
         if informe.messages:
             dialogo_seguro = Gtk.MessageDialog(
                 transient_for=self, modal=True, message_type=Gtk.MessageType.WARNING,
-                buttons=Gtk.ButtonsType.NONE, text="Comprobaciones de seguridad")
+                buttons=Gtk.ButtonsType.NONE, text=traducir("Comprobaciones de seguridad"))
             dialogo_seguro.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
             dialogo_seguro.add_button(traducir("Continuar"), Gtk.ResponseType.OK)
             dialogo_seguro.set_default_response(Gtk.ResponseType.CANCEL)
@@ -2570,7 +2594,11 @@ class VentanaPrincipal(Gtk.Window):
             aceptado = dialogo_seguro.run() == Gtk.ResponseType.OK
             dialogo_seguro.destroy()
             if not aceptado:
-                return
+                return False
+        self._continuar_mantenimiento(pasos)
+        return False
+
+    def _continuar_mantenimiento(self, pasos):
         if not self._confirmar_tareas(pasos):
             self.estado.set_text(traducir("Mantenimiento cancelado antes de comenzar."))
             return
