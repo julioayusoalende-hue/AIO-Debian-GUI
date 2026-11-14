@@ -6,10 +6,10 @@ Depends: bash, apt, coreutils, diffutils, grep, sed, util-linux, python3, python
 Conflicts: aio-debian (= 1.1.0), aio-debian (= 1.1.1)
 Replaces: aio-debian (= 1.1.0), aio-debian (= 1.1.1)
 Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.2.4_all.deb
-Size: 425852
-MD5sum: 5709a1004e7f11be3e3dab7da0da7be8
-SHA1: a8ae6263e5ccf0072ce464c1bec6e69c96b5cc31
-SHA256: 45f02c4fbe57af4dfa9b0617e0c50cb2c161d7009cd005bedbf60ef0e90e11cb
+Size: 425772
+MD5sum: 5705551411e31b5f1aa54a874fa4b2aa
+SHA1: e5eeb73c1a7ab206e12d07ddf5c5ee470f42691e
+SHA256: 688eabfef24f93345dd96fbf06d01973da9dd0e452ce2d5fe5db26e32d6bfeab
 Section: admin
 Priority: optional
 Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
@@ -19,4 +19,5 @@ Description: Interfaz gráfica de mantenimiento y configuración para Debian y U
  añade soporte Flatpak con Flathub y FUSE para AppImage, ofrece complementos
  para GNOME y comprueba si hace falta reiniciar.
  Este paquete configura su propio repositorio APT para recibir actualizaciones.
+ Incluye el icono original en tonos rojos de Debian.
 
