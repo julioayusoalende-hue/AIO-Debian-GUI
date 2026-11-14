@@ -65,7 +65,6 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
-    "1.2.4": "Conserva el icono original con tonos rojos de Debian y corrige su carga en Acerca de para AppImage, Flatpak, Snap y DEB.",
     "1.2.3": "Actualiza Flatpak de usuario sin contraseña y recupera la autorización opcional y reversible de Polkit para las tareas de AiO.",
     "1.2.2": "Sigue el tema claro u oscuro del sistema con cambios en directo, sin perder la selección manual.",
     "1.2.1": "Muestra el logotipo de Debian o Ubuntu según el sistema anfitrión en la información inicial.",
@@ -2352,28 +2351,7 @@ class VentanaPrincipal(Gtk.Window):
         d.set_website(HOMEPAGE)
         d.set_copyright("© 2026 Julio Ayuso")
         d.set_license_type(Gtk.License.GPL_3_0)
-        # La ruta se resuelve respecto al script incluido en cada paquete.
-        # No dependemos del tema de iconos del host ni de su caché.
-        icono = None
-        raiz = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
-        for tamano in (512, 256, 128, 64, 48):
-            icon_path = os.path.join(
-                raiz, "share", "icons", "hicolor",
-                f"{tamano}x{tamano}", "apps", "aio-debian-gui.png",
-            )
-            if os.path.isfile(icon_path):
-                try:
-                    icono = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                        icon_path, 128, 128, True
-                    )
-                    break
-                except GLib.Error:
-                    continue
-        if icono is not None:
-            d.set_logo(icono)
-        else:
-            # Evitar el icono genérico de imagen rota si falta el recurso.
-            d.set_logo_icon_name("applications-system")
+        d.set_logo_icon_name("aio-debian-gui")
         d.show_all()
 
         def buscar_credito(widget):

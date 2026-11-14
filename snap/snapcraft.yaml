@@ -1,6 +1,6 @@
 name: aio-debian-gui
 title: AiO Debian GUI
-version: '1.2.4'
+version: '1.2.3'
 summary: Herramientas de mantenimiento para Debian y Ubuntu LTS
 description: |
   Interfaz GTK para mantenimiento de Debian y Ubuntu LTS.
@@ -29,9 +29,6 @@ parts:
   aio-debian-gui:
     plugin: nil
     source: .
-    build-packages:
-      - python3-pil
-      - python3-numpy
     stage-packages:
       - python3
       - python3-gi
@@ -42,8 +39,6 @@ parts:
       - shared-mime-info
     override-build: |
       set -eu
-      python3 scripts/recolor-icon.py 350
-      cp -a package/usr/share/icons/hicolor "$CRAFT_PART_INSTALL/usr/share/icons/"
       install -Dm755 package/usr/bin/aio-debian-gui "$CRAFT_PART_INSTALL/usr/bin/aio-debian-gui"
       mkdir -p "$CRAFT_PART_INSTALL/usr/lib/aio-debian-gui"
       cp -a package/usr/lib/aio-debian-gui/aio_core "$CRAFT_PART_INSTALL/usr/lib/aio-debian-gui/"

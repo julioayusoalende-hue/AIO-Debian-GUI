@@ -1,5 +1,5 @@
 Package: aio-debian-gui
-Version: 1.2.4
+Version: 1.2.3
 Section: admin
 Priority: optional
 Architecture: all

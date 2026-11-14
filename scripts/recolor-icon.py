@@ -6,7 +6,7 @@ saturados (fondo y mango del destornillador); el remolino blanco y las herramien
 plateadas no cambian. Requiere: python3-pil y python3-numpy.
 
 Uso: scripts/recolor-icon.py [TONO]
-  TONO en grados (0-360). Por defecto 350 (rojo Debian).
+  TONO en grados (0-360). Por defecto 145 (verde).
   Ejemplos: 145 verde · 28 naranja · 275 violeta · 350 rojo · 205 = azul original
 """
 import sys
@@ -56,7 +56,7 @@ def recolorear(img, tono):
 
 
 def main():
-    tono = float(sys.argv[1]) if len(sys.argv) > 1 else 350.0
+    tono = float(sys.argv[1]) if len(sys.argv) > 1 else 145.0
     base = recolorear(Image.open(ORIGEN), tono)
     for t in TAMANOS:
         ruta = DESTINO / f"{t}x{t}" / "apps" / NOMBRE

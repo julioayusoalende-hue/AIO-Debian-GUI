@@ -85,9 +85,6 @@ if Gtk.init_check([])[0]:
             {"idioma": idioma, "tema": "claro", "modo_simple": False}
         )
         assert ventana.get_titlebar().get_subtitle().startswith(subtitulo)
-        acerca = ventana._crear_dialogo_acerca_de()
-        assert acerca.get_logo() is not None, "Falta el icono en Acerca de"
-        acerca.destroy()
         ventana.show_all()
         menu = ventana.menu_popover.get_child()
         assert menu.get_visible()
