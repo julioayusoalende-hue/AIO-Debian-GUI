@@ -27,7 +27,7 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
-from gi.repository import GdkPixbuf, Gio, GLib, Gtk, Pango  # noqa: E402
+from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango  # noqa: E402
 
 # Ruta equivalente en DEB (/usr), AppImage (AppDir/usr) y Flatpak (/app).
 CORE_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -1475,6 +1475,7 @@ class VentanaPrincipal(Gtk.Window):
 
         self._construir_cabecera()
         self._construir_cuerpo()
+        self.connect("key-press-event", self._al_pulsar_tecla)
         self.connect("delete-event", self._al_cerrar)
 
     # -- Construcción ----------------------------------------------------------
@@ -2072,11 +2073,6 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_diagnostico.set_tooltip_text(traducir(
             "Comprobar el sistema sin realizar modificaciones"))
         self.btn_diagnostico.connect("clicked", self._abrir_diagnostico)
-        self.btn_salud = Gtk.Button(label=traducir("Estado de mantenimiento"))
-        self.btn_salud.set_tooltip_text(traducir("Resumen de salud sin modificar paquetes"))
-        self.btn_salud.get_accessible().set_name(traducir("Estado de mantenimiento"))
-        self.btn_salud.connect("clicked", self._abrir_salud)
-        titulo.pack_end(self.btn_salud, False, False, 0)
         titulo.pack_end(self.btn_diagnostico, False, False, 0)
         caja.pack_start(titulo, False, False, 0)
 
@@ -2119,33 +2115,6 @@ class VentanaPrincipal(Gtk.Window):
             self.nvidia_info_label = etiqueta("Buscando GPU NVIDIA…", dim=True)
             caja.pack_start(self.nvidia_info_label, False, False, 3)
         return marco
-
-    def _abrir_salud(self, _boton=None):
-        dialogo = Gtk.Dialog(title=traducir("Estado de mantenimiento"), transient_for=self, modal=False)
-        dialogo.set_default_size(600, 360)
-        dialogo.add_button(traducir("Cerrar"), Gtk.ResponseType.CLOSE)
-        dialogo.connect("response", lambda d, _: d.destroy())
-        texto = Gtk.Label(label=traducir("Comprobando estado del sistema…"))
-        texto.set_selectable(True)
-        texto.set_line_wrap(True)
-        texto.set_xalign(0)
-        texto.set_margin_start(16)
-        texto.set_margin_end(16)
-        texto.get_accessible().set_name(traducir("Estado de mantenimiento"))
-        dialogo.get_content_area().pack_start(texto, True, True, 0)
-        dialogo.show_all()
-        def worker():
-            from aio_core import health
-            try:
-                resultado = "\n".join(health.summary())
-            except Exception:
-                resultado = traducir("No se pudo completar el resumen de salud.")
-            def mostrar():
-                if dialogo.get_visible():
-                    texto.set_text(resultado)
-                return False
-            GLib.idle_add(mostrar)
-        threading.Thread(target=worker, daemon=True).start()
 
     def _abrir_diagnostico(self, _boton=None):
         if self.diagnostico_en_curso:
@@ -2498,7 +2467,6 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_preferencias_menu.set_sensitive(disponible)
         self.btn_borrar.set_sensitive(not self.en_curso)
         self.btn_diagnostico.set_sensitive(not self.en_curso and not self.diagnostico_en_curso)
-        self.btn_salud.set_sensitive(not self.en_curso)
         if self.btn_actualizar_diagnostico is not None:
             self.btn_actualizar_diagnostico.set_sensitive(
                 not self.en_curso and not self.comprobando_actualizacion)
@@ -2603,6 +2571,24 @@ class VentanaPrincipal(Gtk.Window):
                 estilo.add_class("suggested-action")
             else:
                 estilo.remove_class("suggested-action")
+
+    def _al_pulsar_tecla(self, _ventana, evento):
+        """Enter inicia tareas solo desde la ventana principal y fuera de controles interactivos."""
+        if evento.keyval not in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
+            return False
+        if evento.state & (Gdk.ModifierType.CONTROL_MASK |
+                           Gdk.ModifierType.MOD1_MASK |
+                           Gdk.ModifierType.SUPER_MASK):
+            return False
+        if not self.is_active() or self.en_curso or not self.btn_iniciar.get_sensitive():
+            return False
+        foco = self.get_focus()
+        # Respetar el comportamiento normal de botones, campos y controles editables.
+        if isinstance(foco, (Gtk.Button, Gtk.Entry, Gtk.TextView,
+                             Gtk.ComboBox, Gtk.SpinButton, Gtk.TreeView)):
+            return False
+        self._iniciar(self.btn_iniciar)
+        return True
 
     # -- Ejecución ---------------------------------------------------------------
     def _pasos_seleccionados(self):
