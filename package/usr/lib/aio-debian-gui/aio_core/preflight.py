@@ -55,9 +55,9 @@ def check(tasks):
         # No simular operaciones de configuración de repositorios o instalación de
         # paquetes aún no disponibles en índices: la simulación sería engañosa.
         simulations = []
-        if "apt-upgrade" in tasks:
+        if "upgrade" in tasks:
             simulations.append(["apt-get", "-s", "-o", "Debug::NoLocking=1", "dist-upgrade"])
-        if "apt-autoremove" in tasks:
+        if "autoremove" in tasks:
             simulations.append(["apt-get", "-s", "-o", "Debug::NoLocking=1", "autoremove"])
         for cmd in simulations:
             result = _run(cmd, timeout=45)
@@ -82,6 +82,6 @@ def check(tasks):
         if dkms is None or dkms.returncode != 0:
             messages.append("No se pudo comprobar el estado de DKMS.")
         elif dkms.stdout.strip() and any(
-                x in tasks for x in ("backports-kernel-mesa", "revertir-backports", "nvidia")):
+                x in tasks for x in ("backports-kernel-mesa", "revertir-backports", "nvidia-driver", "ubuntu-hwe")):
             messages.append("Hay módulos DKMS registrados; comprueba su compatibilidad.")
     return Report(blocked, messages)

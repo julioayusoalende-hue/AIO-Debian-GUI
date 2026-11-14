@@ -20,11 +20,11 @@ def run(cmd, timeout=25):
 with patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), \
      patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), \
      patch.object(mod, "_run", side_effect=run):
-    assert mod.check(["apt-upgrade"]).blocked
+    assert mod.check(["upgrade"]).blocked
     assert not mod.check(["flatpak-update"]).blocked
-    assert not mod.check(["apt-autoclean"]).blocked
+    assert not mod.check(["autoclean"]).blocked
 with patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=500*1024**2)), \
      patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), \
      patch.object(mod, "_run", side_effect=run):
-    assert mod.check(["apt-autoclean"]).blocked
+    assert mod.check(["autoclean"]).blocked
 print("Preflight: OK")
