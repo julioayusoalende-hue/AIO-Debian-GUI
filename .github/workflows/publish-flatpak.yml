@@ -46,7 +46,7 @@ jobs:
       - name: Install build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder gnupg appstream
+          sudo apt-get install -y flatpak flatpak-builder gnupg appstream python3-pil python3-numpy
 
       - name: Install GNOME runtime and SDK
         run: |
@@ -75,6 +75,7 @@ jobs:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           cd source
+          python3 scripts/recolor-icon.py 350
           bash scripts/publish-flatpak-repo.sh ../site
 
       - name: Preserve APT content and deploy only Flatpak files
