@@ -34,7 +34,7 @@ CORE_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file_
                                       "../lib/aio-debian-gui"))
 if CORE_DIR not in sys.path:
     sys.path.insert(0, CORE_DIR)
-from aio_core import appearance as core_appearance, history as core_history, preferences as core_preferences, updates as core_updates, diagnostics as core_diagnostics  # noqa: E402
+from aio_core import appearance as core_appearance, history as core_history, preferences as core_preferences, updates as core_updates, diagnostics as core_diagnostics, preflight as core_preflight  # noqa: E402
 
 PRGNAME = "aio-debian-gui"
 POLKIT_ACTION = "es.aiodebian.gui.mantenimiento"
@@ -2552,6 +2552,24 @@ class VentanaPrincipal(Gtk.Window):
         if not pasos:
             self._mensaje(Gtk.MessageType.INFO, "Nada que hacer", "Activa al menos una tarea.")
             return
+        # Comprobación conservadora previa a la autorización y a cualquier cambio.
+        informe = core_preflight.check(pasos)
+        if informe.blocked:
+            self._mensaje(Gtk.MessageType.ERROR, "Mantenimiento bloqueado",
+                          "\n".join(informe.messages))
+            return
+        if informe.messages:
+            dialogo_seguro = Gtk.MessageDialog(
+                transient_for=self, modal=True, message_type=Gtk.MessageType.WARNING,
+                buttons=Gtk.ButtonsType.NONE, text="Comprobaciones de seguridad")
+            dialogo_seguro.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
+            dialogo_seguro.add_button(traducir("Continuar"), Gtk.ResponseType.OK)
+            dialogo_seguro.set_default_response(Gtk.ResponseType.CANCEL)
+            dialogo_seguro.format_secondary_text("\n".join(informe.messages))
+            aceptado = dialogo_seguro.run() == Gtk.ResponseType.OK
+            dialogo_seguro.destroy()
+            if not aceptado:
+                return
         if not self._confirmar_tareas(pasos):
             self.estado.set_text(traducir("Mantenimiento cancelado antes de comenzar."))
             return

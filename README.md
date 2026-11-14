@@ -63,6 +63,19 @@ Las secciones siguientes amplían las funciones, limitaciones y métodos de inst
 
 ---
 
+## Modo de mantenimiento seguro (desarrollo de v2.2.0)
+
+Antes de autorizar el mantenimiento, AiO ejecuta comprobaciones de solo lectura:
+espacio libre en la partición raíz, paquetes pendientes de configurar, consistencia
+de dependencias APT y estado de DKMS. Para las tareas compatibles se simula APT;
+si la simulación falla o propone eliminar paquetes, la operación se bloquea.
+Los avisos se muestran antes de la confirmación final. Las simulaciones usan
+los índices locales y **no garantizan** que el resultado real sea idéntico.
+Las operaciones especiales mantienen sus comprobaciones adicionales.
+
+Esta mejora está en el código de desarrollo y **no implica que exista todavía
+una publicación 2.2.0**.
+
 ## Referencia técnica: MX Linux ddm-mx
 
 El diseño de detección NVIDIA de AiO 2.0.0 toma como **referencia técnica** el instalador libre de MX Linux: [ddm-mx](https://github.com/MX-Linux/ddm-mx/blob/master/ddm-mx) y [nvidia-detect-mx](https://github.com/MX-Linux/ddm-mx/blob/master/nvidia-detect-mx), publicados bajo GPL-3.0.
