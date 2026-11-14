@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.2.4": "Conserva el icono original con tonos rojos de Debian y corrige su carga en Acerca de para AppImage, Flatpak, Snap y DEB.",
     "1.2.3": "Actualiza Flatpak de usuario sin contraseña y recupera la autorización opcional y reversible de Polkit para las tareas de AiO.",
     "1.2.2": "Sigue el tema claro u oscuro del sistema con cambios en directo, sin perder la selección manual.",
     "1.2.1": "Muestra el logotipo de Debian o Ubuntu según el sistema anfitrión en la información inicial.",
