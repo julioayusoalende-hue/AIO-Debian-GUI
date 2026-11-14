@@ -1,5 +1,13 @@
 # Cambios
 
+## 2.5.2
+
+- Detección de Timeshift y Snapper instalados y configurados.
+- No se ofrece crear instantáneas si no hay proveedores disponibles.
+- Selección explícita de proveedor cuando ambos están disponibles.
+- Cancelación del mantenimiento si falla la instantánea solicitada.
+- Correcciones de GTK, preflight y comprobaciones Btrfs.
+
 ## 2.5.1
 
 - Vista previa de paquetes APT con versiones.
