@@ -22,6 +22,10 @@ Principios que deben guiar la implementación: clasificar por ID PCI y rama comp
 
 La versión 2.0.0 permanece en **pruebas** hasta contrastar una matriz de IDs PCI y ramas NVIDIA, kernels Debian estable/Backports, Secure Boot y dispositivos híbridos. El instalador debe fallar de forma conservadora ante compatibilidad no comprobada y nunca cambiar el servidor gráfico de manera implícita.
 
+## Diagnóstico preventivo (v2.0.5)
+
+Pulsa **Diagnosticar** en «Información del sistema» para abrir un informe de comprobación de solo lectura: uso de espacio de la partición raíz, paquetes sin configurar (dpkg), dependencias APT, recuento estimado de actualizaciones según los índices locales, antigüedad de índices APT, módulos DKMS, solicitud de reinicio y servicios systemd fallidos. Cada resultado se clasifica como **correcto**, **aviso**, **crítico** o **no comprobado**, con una recomendación cuando corresponda. Se ejecuta en segundo plano y no requiere root, no ejecuta reparaciones ni actualiza índices. Los resultados de APT pueden quedar desactualizados hasta ejecutar `apt update`, y algunas comprobaciones pueden no estar disponibles en Flatpak.
+
 ## Consola en una ventana separada (v2.0.4)
 
 En la cabecera de «Salida de la consola», pulsa **Abrir en otra ventana** para mostrar los mensajes de ejecución en una ventana independiente, ampliable y redimensionable. La consola de la ventana principal se oculta mientras está separada. Ambas vistas utilizan el **mismo buffer GTK**, por lo que el texto, los colores, las nuevas líneas y el historial son idénticos. Para volver a colocarla en la aplicación, pulsa **Volver a integrar** o cierra la ventana de consola. Cerrar esta ventana **no interrumpe** las tareas que se estén ejecutando. El modo simple continúa ocultando la consola.

@@ -1,5 +1,14 @@
 # Cambios
 
+## 2.0.5
+
+- Nuevo diagnóstico preventivo de solo lectura desde «Información del sistema», con ventana independiente y resultados diferenciados.
+- Comprueba espacio libre, paquetes dpkg incompletos, dependencias APT, actualizaciones simuladas, antigüedad de índices, DKMS, reinicio pendiente y servicios systemd.
+- Muestra recomendaciones cuando hay incidencias. La falta de información se distingue de un resultado correcto.
+- Ejecuta las comprobaciones en segundo plano sin congelar GTK y sin usar permisos de administrador.
+- Pruebas de detección de anomalías y fallos de comprobación.
+
+
 ## 2.0.4
 
 - Nueva opción «Abrir en otra ventana» en la cabecera de la consola.
