@@ -97,6 +97,7 @@ def estado_actualizacion_app(formato, version_instalada, app_id):
             proc = subprocess.run(
                 ["apt-cache", "policy", "aio-debian-gui"],
                 capture_output=True, text=True, timeout=12, check=False,
+                env={**os.environ, "LC_ALL": "C"},
             )
             if proc.returncode:
                 raise RuntimeError((proc.stderr or "No se pudo consultar APT.")[:260])

@@ -20,6 +20,8 @@ def process(code=0, out="", err=""):
 def apt_simulated(args, **kw):
     assert kw["check"] is False
     if args[:3] == ["apt-cache", "policy", "aio-debian-gui"]:
+        assert kw["env"]["LC_ALL"] == "C", "apt-cache policy debe ejecutarse en locale C"
+    if args[:3] == ["apt-cache", "policy", "aio-debian-gui"]:
         return process(out="  Installed: 2.0.6\n  Candidate: 2.0.7\n")
     assert args == ["dpkg", "--compare-versions", "2.0.7", "gt", "2.0.6"]
     return process()
@@ -28,6 +30,12 @@ def apt_simulated(args, **kw):
 with patch("subprocess.run", side_effect=apt_simulated):
     r = mod.estado_actualizacion_app("deb", "2.0.6", APPID)
     assert r["status"] == "available" and r["version"] == "2.0.7"
+
+# APT puede estar en español en el escritorio; la implementación
+# debe forzar LC_ALL=C para interpretar Candidate sin traducción.
+with patch.dict("os.environ", {"LANG": "es_ES.UTF-8", "LC_ALL": "es_ES.UTF-8"}):
+    with patch("subprocess.run", side_effect=apt_simulated):
+        assert mod.estado_actualizacion_app("deb", "2.0.6", APPID)["status"] == "available"
 
 with patch("subprocess.run", return_value=process(
         out="  Installed: 2.0.6\n  Candidate: (none)\n")):

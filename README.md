@@ -22,6 +22,10 @@ Principios que deben guiar la implementación: clasificar por ID PCI y rama comp
 
 La versión 2.0.0 permanece en **pruebas** hasta contrastar una matriz de IDs PCI y ramas NVIDIA, kernels Debian estable/Backports, Secure Boot y dispositivos híbridos. El instalador debe fallar de forma conservadora ante compatibilidad no comprobada y nunca cambiar el servidor gráfico de manera implícita.
 
+## Compatibilidad de idioma de APT en el diagnóstico (v2.0.8)
+
+En versiones anteriores, el diagnóstico podía mostrar «No hay versión candidata en los índices APT» incluso cuando sí existía, porque buscaba el campo inglés Candidate y la salida de APT estaba traducida. A partir de la 2.0.8 las consultas internas utilizan LC_ALL=C sin cambiar el idioma de la aplicación. El mismo ajuste se aplica al actualizador DEB.
+
 ## Comprobación y actualización de AiO desde Diagnosticar (v2.0.7)
 
 El panel de diagnóstico incluye el estado de la propia aplicación. En DEB compara la versión instalada con la candidata de APT; en Flatpak consulta las actualizaciones del repositorio configurado; en AppImage compara con la última publicación de GitHub. Estas comprobaciones son de **solo lectura** y los índices APT y metadatos Flatpak pueden no estar actualizados. Si hay una versión disponible aparece **Actualizar AiO**, que abre el actualizador ya existente con su confirmación y sin instalar automáticamente al diagnosticar.
