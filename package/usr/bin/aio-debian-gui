@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.4.0": "Protección contra ejecuciones simultáneas y verificaciones APT/dpkg más estrictas.",
     "2.3.0": "Comprobaciones asíncronas, bloqueos APT y vista previa ampliada.",
     "2.2.0": "Modo de mantenimiento seguro: comprobaciones previas de APT, dpkg, espacio, DKMS y simulaciones conservadoras.",
     "2.1.0": "Nueva opción de preparación del retorno a kernel y Mesa Stable desde Backports, con simulación segura.",
@@ -2555,6 +2556,8 @@ class VentanaPrincipal(Gtk.Window):
         return sel
 
     def _iniciar(self, _b):
+        if self.en_curso:
+            return
         pasos = self._pasos_seleccionados()
         if self.distribucion == "no-soportada":
             self._mensaje(Gtk.MessageType.ERROR, "Sistema no compatible",
@@ -2575,6 +2578,8 @@ class VentanaPrincipal(Gtk.Window):
         return
 
     def _terminar_preflight(self, pasos, informe, error):
+        if not self.en_curso:
+            return False
         self._poner_ocupado(False)
         if error:
             self._mensaje(Gtk.MessageType.ERROR, "Mantenimiento bloqueado",

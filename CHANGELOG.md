@@ -1,5 +1,12 @@
 # Cambios
 
+## 2.4.0
+
+- Prevención de ejecuciones simultáneas desde la interfaz.
+- Bloqueo conservador si no se puede verificar el estado de los locks APT/dpkg.
+- Bloqueo si falta dpkg o la comprobación APT falla; se evitan simulaciones innecesarias.
+- Pruebas de regresión para fallos de detección y dependencias ausentes.
+
 ## 2.3.0
 
 - Comprobaciones de seguridad asíncronas sin bloquear GTK.

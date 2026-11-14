@@ -61,7 +61,8 @@ def check(tasks):
         blocked = True
         messages.append('APT/dpkg ocupado: ' + ', '.join(locks))
     elif locks is None:
-        messages.append('No se pudo comprobar el bloqueo de APT/dpkg.')
+        blocked = True
+        messages.append("No se pudo comprobar el bloqueo de APT/dpkg; operación detenida por seguridad.")
     try:
         free = shutil.disk_usage("/").free
         if free < 1024 ** 3:
@@ -72,20 +73,27 @@ def check(tasks):
     except OSError:
         messages.append("No se pudo comprobar el espacio libre en /.")
 
-    if shutil.which("dpkg"):
+    if not shutil.which("dpkg"):
+        blocked = True
+        messages.append("No se encuentra dpkg para comprobar su estado.")
+    else:
         dpkg = _run(["dpkg", "--audit"])
-        if dpkg is None or dpkg.returncode != 0:
+        if dpkg is None or dpkg.returncode != 0 or dpkg.stderr.strip():
             blocked = True
             messages.append("No se pudo verificar el estado de dpkg.")
         elif dpkg.stdout.strip():
             blocked = True
             messages.append("Hay paquetes pendientes de configurar (dpkg --audit).")
 
+    if blocked:
+        return Report(True, messages)
+
     if shutil.which("apt-get"):
         apt = _run(["apt-get", "-o", "Debug::NoLocking=1", "check"])
         if apt is None or apt.returncode != 0:
             blocked = True
             messages.append("APT informa de dependencias inconsistentes o no se pudo comprobar.")
+            return Report(True, messages)
         # No simular operaciones de configuración de repositorios o instalación de
         # paquetes aún no disponibles en índices: la simulación sería engañosa.
         simulations = []

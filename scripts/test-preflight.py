@@ -36,3 +36,18 @@ with patch.object(mod, "_apt_locks", return_value=["/var/lib/dpkg/lock"]), \
      patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), \
      patch.object(mod, "_run", side_effect=run):
     assert mod.check(["autoclean"]).blocked
+
+# Fallar de forma segura si /proc/locks no es legible.
+with patch.object(mod, "_apt_locks", return_value=None), \
+     patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), \
+     patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), \
+     patch.object(mod, "_run", side_effect=run):
+    assert mod.check(["upgrade"]).blocked
+
+# Bloquear si falta dpkg y no iniciar simulaciones posteriores.
+with patch.object(mod, "_apt_locks", return_value=[]), \
+     patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), \
+     patch.object(mod.shutil, "which", side_effect=lambda cmd: None if cmd == "dpkg" else "/usr/bin/tool"), \
+     patch.object(mod, "_run", side_effect=run) as mocked:
+    assert mod.check(["upgrade"]).blocked
+    mocked.assert_not_called()
