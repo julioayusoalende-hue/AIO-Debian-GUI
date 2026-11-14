@@ -31,7 +31,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 
 LISTAS_ACTUALIZADAS=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=2.0.9
+HELPER_VERSION=2.1.0
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 POLKIT_RULES_DIR=/etc/polkit-1/rules.d
@@ -673,6 +673,100 @@ paso_backports_kernel_mesa() {
     fi
 }
 
+
+# Reversión conservadora: no elimina el kernel en ejecución ni cambia GRUB.
+version_stable_paquete() {
+    local paquete="$1" codename="$2" version origin best=""
+    while IFS='|' read -r _ version origin; do
+        version=${version//[[:space:]]/}
+        if [[ "$origin" =~ (^|[[:space:]])($codename|$codename-security|$codename-updates)/ ]] &&
+           [[ "$version" =~ ^[0-9A-Za-z.+:~_-]+$ ]]; then
+            if [ -z "$best" ] || dpkg --compare-versions "$version" gt "$best"; then
+                best="$version"
+            fi
+        fi
+    done < <(LC_ALL=C apt-cache madison "$paquete" 2>/dev/null)
+    [ -n "$best" ] || return 1
+    printf '%s\n' "$best"
+}
+
+plan_revertir_backports() {
+    local codename kernel headers paquete stable installed spec simulation
+    local -a paquetes especificaciones
+    codename=$(debian_backports_codename) || return 1
+    kernel=$(kernel_backports_package) || return 1
+    headers=${kernel/linux-image/linux-headers}
+    # Evitar la reversión automática de hardware gráfico propietario.
+    if paquete_instalado nvidia-driver ||
+       paquete_instalado nvidia-kernel-dkms ||
+       paquete_instalado nvidia-open-kernel-dkms; then
+        err "Hay un controlador NVIDIA: requiere revisión manual de DKMS/PRIME."
+        return 1
+    fi
+    if command -v dkms >/dev/null 2>&1 && [ -n "$(dkms status 2>/dev/null)" ]; then
+        err "Hay módulos DKMS externos. Se requiere revisión manual."
+        return 1
+    fi
+    paquetes=("$kernel" "$headers" libgl1-mesa-dri)
+    for paquete in mesa-vulkan-drivers mesa-va-drivers mesa-vdpau-drivers; do
+        if paquete_instalado "$paquete"; then paquetes+=("$paquete"); fi
+    done
+    especificaciones=()
+    for paquete in "${paquetes[@]}"; do
+        stable=$(version_stable_paquete "$paquete" "$codename") || {
+            err "No se encontró versión Stable de $paquete. Ningún cambio aplicado."
+            return 1
+        }
+        especificaciones+=("$paquete=$stable")
+        installed=$(dpkg-query -W -f='${Version}' "$paquete" 2>/dev/null || true)
+        info "$paquete: ${installed:-no instalado} -> $stable"
+    done
+    if ! simulation=$(LC_ALL=C apt-get -s -o Debug::NoLocking=1 --allow-downgrades install "${especificaciones[@]}" 2>&1); then
+        err "Falló la simulación APT; no se realizará ningún cambio."
+        printf '%s\n' "$simulation"
+        return 1
+    fi
+    if grep -Eq '^(Remv|Purg) ' <<<"$simulation"; then
+        err "APT propone eliminar paquetes. Reversión bloqueada."
+        printf '%s\n' "$simulation"
+        return 1
+    fi
+    info "Simulación validada: no se eliminarán paquetes ni kernels instalados."
+    for spec in "${especificaciones[@]}"; do
+        printf '##STABLE:%s\n' "$spec"
+    done
+}
+
+paso_revertir_backports() {
+    local codename kernel headers paquete stable
+    local -a paquetes specs
+    asegurar_listas || return 1
+    codename=$(debian_backports_codename) || return 1
+    kernel=$(kernel_backports_package) || return 1
+    headers=${kernel/linux-image/linux-headers}
+    plan_revertir_backports || return 1
+    paquetes=("$kernel" "$headers" libgl1-mesa-dri)
+    for paquete in mesa-vulkan-drivers mesa-va-drivers mesa-vdpau-drivers; do
+        if paquete_instalado "$paquete"; then paquetes+=("$paquete"); fi
+    done
+    specs=()
+    for paquete in "${paquetes[@]}"; do
+        stable=$(version_stable_paquete "$paquete" "$codename") || return 1
+        specs+=("$paquete=$stable")
+    done
+    info "Instalando kernel y Mesa de Debian Stable..."
+    if ! LC_ALL=C apt-get "${APT_OPTS[@]}" --allow-downgrades install "${specs[@]}"; then
+        err "APT no completó la transición a Stable."
+        return 1
+    fi
+    REINICIO_REQUERIDO=1
+    echo "##REBOOT:1"
+    warn "Kernel Backports conservado como respaldo. GRUB no se ha modificado."
+    warn "Reinicia, selecciona el kernel Stable en GRUB y verifica uname -r."
+    warn "No elimines el kernel anterior sin comprobar que el nuevo arranca."
+    ok "Kernel y Mesa Stable preparados; arranque del kernel Stable pendiente."
+}
+
 paquete_instalado_en_suite() {
     local paquete="$1" suite="$2" instalado
     paquete_instalado "$paquete" || return 1
@@ -1016,6 +1110,7 @@ declare -A TITULOS=(
     [repos]="Configurar componentes oficiales de repositorios"
     [tools]="Instalar herramientas auxiliares"
     [backports-kernel-mesa]="Instalar kernel y Mesa desde Backports"
+    [revertir-backports]="Preparar el retorno de kernel y Mesa a Debian Stable"
     [nvidia-driver]="Detectar e instalar el controlador NVIDIA de Debian"
     [ubuntu-hwe]="Instalar kernel HWE oficial de Ubuntu"
     [flatpak-setup]="Instalar Flatpak y Flathub"
@@ -1028,7 +1123,7 @@ declare -A TITULOS=(
     [rebootcheck]="Comprobar si hace falta reiniciar"
 )
 # Pasos cuyo fallo detiene la ejecución (el resto solo se anota)
-CRITICOS=" upgrade backports-kernel-mesa nvidia-driver "
+CRITICOS=" upgrade backports-kernel-mesa revertir-backports nvidia-driver "
 
 mostrar_estados() {
     local tarea funcion
@@ -1076,6 +1171,10 @@ main() {
         err "No se pudieron actualizar los Flatpak de usuario."
         echo "##DONE:1"
         return 1
+    fi
+    if [ "${1:-}" = "--backports-rollback-plan" ] && [ "$#" -eq 1 ]; then
+        plan_revertir_backports
+        return $?
     fi
     if [ "${1:-}" = "--nvidia-report" ] && [ "$#" -eq 1 ]; then
         nvidia_report
@@ -1162,7 +1261,7 @@ main() {
     distro=$(leer_distribucion) || exit 1
     for s in "${pasos[@]}"; do
         case "$distro:$s" in
-            ubuntu:backports-kernel-mesa|ubuntu:nvidia-driver|debian:ubuntu-hwe)
+            ubuntu:backports-kernel-mesa|ubuntu:revertir-backports|ubuntu:nvidia-driver|debian:ubuntu-hwe)
                 err "La tarea $s no es compatible con la distribución detectada."
                 exit 2 ;;
         esac

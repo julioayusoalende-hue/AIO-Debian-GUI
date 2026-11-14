@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.1.0": "Nueva opción de preparación del retorno a kernel y Mesa Stable desde Backports, con simulación segura.",
     "2.0.9": "2.0.9 — Traducciones completas para los paneles y el diagnóstico preventivo.",
     "2.0.8": "La comprobación de actualizaciones de AiO funciona también con APT en español.",
     "2.0.7": "Diagnosticar comprueba la versión de AiO, ofrece actualizar y permite reiniciar automáticamente al terminar.",
@@ -809,6 +810,51 @@ TRADUCCIONES["zh"].update({
     "2.0.9 — Traducciones completas para los paneles y el diagnóstico preventivo.": "2.0.9 — 完善面板和预防性诊断的翻译。",
 })
 
+TRADUCCIONES["en"].update({
+    "Volver a kernel y Mesa Stable": "Return to Stable kernel and Mesa",
+    "Prepara la versión Stable, simula APT y conserva el kernel Backports. Requiere elegir Stable en GRUB tras reiniciar.": "Prepares Stable packages, simulates APT and retains the Backports kernel. Select Stable in GRUB after reboot.",
+    "Reversión de Backports": "Backports rollback",
+    "La vuelta a Stable debe ejecutarse como única tarea. Desactiva las demás opciones.": "Return to Stable must be run as the only task. Disable other options.",
+    "Actualiza el asistente de AiO para revertir Backports.": "Update the AiO helper to revert Backports.",
+    "Reversión no segura": "Unsafe rollback",
+    "No se puede preparar el regreso a Stable. Revisa el diagnóstico y los módulos DKMS.": "Cannot prepare the return to Stable. Check diagnostics and DKMS modules.",
+    "¿Preparar el retorno a Debian Stable?": "Prepare return to Debian Stable?",
+    "Se instalarán las versiones Stable de los siguientes paquetes:": "The following Stable package versions will be installed:",
+    "El kernel Backports NO se eliminará. GRUB no cambiará. Tras reiniciar deberás seleccionar el kernel Stable y comprobar que funciona. La reversión completa requiere verificar ese arranque antes de eliminar el kernel antiguo.": "The Backports kernel will NOT be removed. GRUB will not change. After restarting, select the Stable kernel and verify that it works. Full rollback requires a successful boot before removing the old kernel.",
+    "Preparar Stable": "Prepare Stable",
+    "Nueva opción de preparación del retorno a kernel y Mesa Stable desde Backports, con simulación segura.": "New option to prepare a return from Backports to the Stable kernel and Mesa, with a safe simulation.",
+})
+
+TRADUCCIONES["fr"].update({
+    "Volver a kernel y Mesa Stable": "Revenir au noyau et à Mesa Stable",
+    "Prepara la versión Stable, simula APT y conserva el kernel Backports. Requiere elegir Stable en GRUB tras reiniciar.": "Prépare les paquets Stable, simule APT et conserve le noyau Backports. Choisissez Stable dans GRUB après redémarrage.",
+    "Reversión de Backports": "Retour de Backports",
+    "La vuelta a Stable debe ejecutarse como única tarea. Desactiva las demás opciones.": "Le retour à Stable doit être exécuté seul. Désactivez les autres tâches.",
+    "Actualiza el asistente de AiO para revertir Backports.": "Mettez à jour l’assistant AiO pour revenir de Backports.",
+    "Reversión no segura": "Retour non sûr",
+    "No se puede preparar el regreso a Stable. Revisa el diagnóstico y los módulos DKMS.": "Impossible de préparer le retour à Stable. Vérifiez le diagnostic et les modules DKMS.",
+    "¿Preparar el retorno a Debian Stable?": "Préparer le retour à Debian Stable ?",
+    "Se instalarán las versiones Stable de los siguientes paquetes:": "Les versions Stable suivantes seront installées :",
+    "El kernel Backports NO se eliminará. GRUB no cambiará. Tras reiniciar deberás seleccionar el kernel Stable y comprobar que funciona. La reversión completa requiere verificar ese arranque antes de eliminar el kernel antiguo.": "Le noyau Backports ne sera PAS supprimé. GRUB restera inchangé. Après redémarrage, sélectionnez le noyau Stable et vérifiez son fonctionnement. La suppression de l’ancien noyau nécessite un démarrage Stable réussi.",
+    "Preparar Stable": "Préparer Stable",
+    "Nueva opción de preparación del retorno a kernel y Mesa Stable desde Backports, con simulación segura.": "Nouvelle option de retour de Backports vers le noyau et Mesa Stable avec simulation sécurisée.",
+})
+
+TRADUCCIONES["zh"].update({
+    "Volver a kernel y Mesa Stable": "恢复 Stable 内核和 Mesa",
+    "Prepara la versión Stable, simula APT y conserva el kernel Backports. Requiere elegir Stable en GRUB tras reiniciar.": "准备 Stable 软件包、模拟 APT 并保留 Backports 内核。重启后需在 GRUB 中选择 Stable。",
+    "Reversión de Backports": "回退 Backports",
+    "La vuelta a Stable debe ejecutarse como única tarea. Desactiva las demás opciones.": "恢复 Stable 必须单独执行。请取消其他任务。",
+    "Actualiza el asistente de AiO para revertir Backports.": "请更新 AiO 助手以回退 Backports。",
+    "Reversión no segura": "回退不安全",
+    "No se puede preparar el regreso a Stable. Revisa el diagnóstico y los módulos DKMS.": "无法准备恢复 Stable。请检查诊断和 DKMS 模块。",
+    "¿Preparar el retorno a Debian Stable?": "准备恢复 Debian Stable？",
+    "Se instalarán las versiones Stable de los siguientes paquetes:": "将安装以下 Stable 版本的软件包：",
+    "El kernel Backports NO se eliminará. GRUB no cambiará. Tras reiniciar deberás seleccionar el kernel Stable y comprobar que funciona. La reversión completa requiere verificar ese arranque antes de eliminar el kernel antiguo.": "不会删除 Backports 内核，也不会修改 GRUB。重启后请选择 Stable 内核并验证其正常运行。删除旧内核前必须成功启动 Stable。",
+    "Preparar Stable": "准备 Stable",
+    "Nueva opción de preparación del retorno a kernel y Mesa Stable desde Backports, con simulación segura.": "新增从 Backports 安全准备恢复 Stable 内核和 Mesa 的选项。",
+})
+
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)
 
@@ -1292,6 +1338,9 @@ PASOS = [
      "needrestart, fastfetch, kitty, synaptic y soporte FUSE para AppImage, si faltan.", True, "apt"),
     ("backports-kernel-mesa", "Instalar kernel y Mesa desde Backports",
      "Instala el kernel y los controladores gráficos Mesa de Debian Backports; puede requerir reinicio.",
+     False, "apt"),
+    ("revertir-backports", "Volver a kernel y Mesa Stable",
+     "Prepara la versión Stable, simula APT y conserva el kernel Backports. Requiere elegir Stable en GRUB tras reiniciar.",
      False, "apt"),
     ("nvidia-driver", "Detectar e instalar controlador NVIDIA",
      "En Debian analiza la GPU, el kernel, DKMS y Secure Boot. En portátiles híbridos mantiene PRIME bajo demanda; requiere confirmación.",
@@ -2389,7 +2438,7 @@ class VentanaPrincipal(Gtk.Window):
             self.switches[pid][0].set_sensitive(habilitada)
 
     def _visible(self, pid):
-        if pid == "backports-kernel-mesa":
+        if pid in ("backports-kernel-mesa", "revertir-backports"):
             return self.distribucion == "debian"
         if pid == "nvidia-driver":
             return self.distribucion == "debian"
@@ -2441,7 +2490,7 @@ class VentanaPrincipal(Gtk.Window):
         self.actualizando_preset = True
         try:
             for pid, (sw, _d) in self.switches.items():
-                if pid in ("clock", "repos", "tools", "upgrade", "autoremove", "autoclean", "rebootcheck"):
+                if pid in ("clock", "repos", "tools", "upgrade", "autoremove", "autoclean", "rebootcheck", "backports-kernel-mesa", "revertir-backports", "nvidia-driver"):
                     sw.set_active(False)
                 elif pid == "flatpak-update" and pid not in self.estados_tareas:
                     sw.set_active(True)
@@ -2531,6 +2580,59 @@ class VentanaPrincipal(Gtk.Window):
                 "Actualiza el paquete .deb a la versión 1.0.7 o posterior.",
             )
             return
+
+        if "revertir-backports" in pasos:
+            if len(pasos) != 1:
+                self._mensaje(
+                    Gtk.MessageType.WARNING,
+                    traducir("Reversión de Backports"),
+                    traducir("La vuelta a Stable debe ejecutarse como única tarea. Desactiva las demás opciones."),
+                )
+                return
+            if not helper_admite_tarea(helper, "revertir-backports"):
+                self._mensaje(Gtk.MessageType.ERROR, traducir("Asistente desactualizado"),
+                              traducir("Actualiza el asistente de AiO para revertir Backports."))
+                return
+            cmd = (comando_host(HELPER_SISTEMA, "--backports-rollback-plan")
+                   if es_flatpak() else ["bash", HELPER, "--backports-rollback-plan"])
+            try:
+                resultado = subprocess.run(
+                    cmd, capture_output=True, text=True, timeout=45, check=False,
+                )
+            except (OSError, subprocess.SubprocessError) as exc:
+                self._mensaje(Gtk.MessageType.ERROR, traducir("Reversión de Backports"), str(exc))
+                return
+            if resultado.returncode != 0 or "##STABLE:" not in resultado.stdout:
+                self._mensaje(
+                    Gtk.MessageType.ERROR, traducir("Reversión no segura"),
+                    traducir("No se puede preparar el regreso a Stable. Revisa el diagnóstico y los módulos DKMS.")
+                    + "\n" + (resultado.stdout + resultado.stderr)[-1600:],
+                )
+                return
+            planes = [
+                linea.replace("##STABLE:", "• ", 1)
+                for linea in resultado.stdout.splitlines()
+                if linea.startswith("##STABLE:")
+            ]
+            dialogo = Gtk.MessageDialog(
+                transient_for=self, modal=True, message_type=Gtk.MessageType.WARNING,
+                buttons=Gtk.ButtonsType.NONE,
+                text=traducir("¿Preparar el retorno a Debian Stable?"),
+            )
+            dialogo.format_secondary_text(
+                traducir("Se instalarán las versiones Stable de los siguientes paquetes:")
+                + "\n" + "\n".join(planes) + "\n\n"
+                + traducir("El kernel Backports NO se eliminará. GRUB no cambiará. "
+                          "Tras reiniciar deberás seleccionar el kernel Stable y comprobar que funciona. "
+                          "La reversión completa requiere verificar ese arranque antes de eliminar el kernel antiguo.")
+            )
+            dialogo.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
+            dialogo.add_button(traducir("Preparar Stable"), Gtk.ResponseType.OK)
+            dialogo.set_default_response(Gtk.ResponseType.CANCEL)
+            aprobado = dialogo.run() == Gtk.ResponseType.OK
+            dialogo.destroy()
+            if not aprobado:
+                return
 
         if "nvidia-driver" in pasos:
             if "backports-kernel-mesa" in pasos:

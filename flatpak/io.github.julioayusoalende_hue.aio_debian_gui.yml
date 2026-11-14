@@ -11,7 +11,7 @@ finish-args:
   - --socket=fallback-x11
   - --talk-name=org.freedesktop.Flatpak
   # Required only for flatpak-spawn --host; does not grant root privileges.
-  - --env=AIO_DEBIAN_GUI_VERSION=2.0.9
+  - --env=AIO_DEBIAN_GUI_VERSION=2.1.0
 modules:
   - name: aio-debian-gui
     buildsystem: simple

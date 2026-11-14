@@ -22,6 +22,14 @@ Principios que deben guiar la implementación: clasificar por ID PCI y rama comp
 
 La versión 2.0.0 permanece en **pruebas** hasta contrastar una matriz de IDs PCI y ramas NVIDIA, kernels Debian estable/Backports, Secure Boot y dispositivos híbridos. El instalador debe fallar de forma conservadora ante compatibilidad no comprobada y nunca cambiar el servidor gráfico de manera implícita.
 
+## Retorno conservador a kernel y Mesa Debian Stable (v2.1.0)
+
+En Debian, en **Sistema (APT)**, la tarea **Volver a kernel y Mesa Stable** prepara la transición desde Backports. Es independiente y **debe ser la única tarea seleccionada**. La interfaz pide una vista previa de las versiones de Stable y una confirmación adicional. No habilita ni deshabilita repositorios y no introduce paquetes de otras ramas: instala versiones explícitas de Stable, Stable Security o Stable Updates de los metapaquetes del kernel y cabeceras y de los paquetes Mesa instalados.
+
+El asistente ejecuta una **simulación de APT** antes de cualquier cambio y aborta si propone eliminar paquetes, faltan versiones Stable, se detecta NVIDIA propietario o hay módulos DKMS registrados. Después instala las versiones seleccionadas, **mantiene los kernels antiguos como respaldo y no modifica GRUB**.
+
+**Importante:** esto prepara el retorno, pero **no cambia automáticamente el kernel que arrancará**. Tras el reinicio selecciona el kernel Stable en *Opciones avanzadas para Debian* de GRUB y comprueba `uname -r`, la red y los gráficos. No borres el kernel Backports antes de confirmar que Stable arranca correctamente. Debian advierte que los downgrades no están soportados de forma general y pueden requerir recuperación manual. Haz una copia de seguridad antes de ejecutar la operación.
+
 ## Traducciones de la interfaz y del diagnóstico (v2.0.9)
 
 Se completan las traducciones al inglés, francés y chino de los mensajes de la pantalla principal y del diagnóstico preventivo. Incluye los avisos de Polkit, NVIDIA, novedades de versión, consola y resultados con valores variables. La salida técnica de herramientas externas no se traduce para no alterar su significado. La integración continua incluye pruebas de regresión de las traducciones críticas en los tres idiomas.
