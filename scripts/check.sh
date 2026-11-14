@@ -35,6 +35,7 @@ python3 scripts/test-app-update-diagnostic.py && bien "versiones y actualizació
 python3 scripts/test-install-format.py && bien "detección de formato DEB/AppImage/Flatpak" || fallo "detección de formato"
 python3 scripts/test-system-logo.py && bien "logotipos dinámicos Debian/Ubuntu" || fallo "pruebas de logotipos"
 bash scripts/test-nvidia.sh && bien "detección NVIDIA e híbrida" || fallo "pruebas NVIDIA"
+bash scripts/test-backports-rollback.sh && bien "reversión Backports segura" || fallo "pruebas de reversión Backports"
 
 if python3 -c 'import gi; gi.require_version("Gtk", "3.0")' >/dev/null 2>&1; then
     python3 scripts/test-preferences.py "$GUI" &&
@@ -82,7 +83,9 @@ grep -q "^## $V" CHANGELOG.md && bien "entrada $V en CHANGELOG.md" || fallo "fal
 if grep -Fq '("backports-kernel-mesa",' "$GUI" &&
    grep -Fq 'helper_admite_tarea(helper, "backports-kernel-mesa")' "$GUI" &&
    grep -Fq 'paso_backports_kernel_mesa()' "$HELPER" &&
-   grep -Fq '[backports-kernel-mesa]=' "$HELPER"; then
+   grep -Fq '[backports-kernel-mesa]=' "$HELPER" &&
+   grep -Fq 'paso_revertir_backports()' "$HELPER" &&
+   grep -Fq '("revertir-backports",' "$GUI"; then
     bien "tarea de kernel y Mesa Backports conectada entre GUI y asistente"
 else
     fallo "la tarea de kernel y Mesa Backports no está conectada"

@@ -1,5 +1,15 @@
 # Cambios
 
+## 2.1.0
+
+- Nueva tarea **Volver a kernel y Mesa Stable** para Debian: prepara el retorno desde Backports a las versiones de la rama Stable.
+- Selección explícita de versiones de Stable, Stable Security y Stable Updates para metapaquetes de kernel y cabeceras y controladores Mesa instalados.
+- Vista previa con versiones concretas de paquetes y confirmación independiente. La reversión debe ejecutarse sola, sin mezclar operaciones de mantenimiento.
+- Simulación APT obligatoria y bloqueo si hay eliminaciones de paquetes, incompatibilidades, módulos DKMS externos o controlador NVIDIA propietario.
+- No elimina los kernels antiguos, no modifica GRUB ni desactiva repositorios. Tras instalar, es necesario reiniciar seleccionando y comprobando el kernel Stable desde GRUB.
+- Pruebas de selección de origen Stable, simulación y bloqueos de seguridad.
+
+
 ## 2.0.9
 
 - Traducciones revisadas para inglés, francés y chino: novedades de la versión, mensajes de NVIDIA, aviso de Polkit y encabezado de la consola.
