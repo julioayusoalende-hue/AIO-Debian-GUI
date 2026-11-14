@@ -79,12 +79,12 @@ jobs:
           dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/updates.py' >/dev/null
           file "$APPIMAGE"
           chmod +x "$APPIMAGE"
-          "$APPIMAGE" --appimage-extract
-          test -x squashfs-root/AppRun
-          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/history.py
-          test -f squashfs-root/usr/share/icons/hicolor/512x512/apps/aio-debian-gui.png
-          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/updates.py
-          rm -rf squashfs-root
+          test -s "$APPIMAGE"
+          # El runtime AppImage personalizado no garantiza --appimage-extract.
+          # Validamos el AppDir antes de empaquetarlo en build-appimage.sh.
+          test -f package/usr/share/icons/hicolor/512x512/apps/aio-debian-gui.png
+          test -f package/usr/lib/aio-debian-gui/aio_core/history.py
+          test -f package/usr/lib/aio-debian-gui/aio_core/updates.py
           file "$FLATPAK"
           appstreamcli validate --no-net flatpak/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml
           flatpak install --user --noninteractive --bundle "$FLATPAK"
