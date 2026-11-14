@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.5.3": "Mantenimiento simplificado sin integración de instantáneas y mejoras del registro.",
     "2.5.2": "Detección de Timeshift y Snapper, instantáneas opcionales.",
     "2.5.1": "Vista previa detallada APT, salud asíncrona y accesibilidad.",
     "2.5.0": "Panel de salud, Snapper opcional y traducciones mejoradas.",
@@ -2836,50 +2837,13 @@ class VentanaPrincipal(Gtk.Window):
                 self.estado.set_text(traducir("Instalación desde Backports cancelada."))
                 return
 
-        snapshot_provider = None
-        # Consulta al asistente del anfitrión, sin privilegios, los proveedores
-        # instalados y configurados. No se muestra diálogo si no hay ninguno.
-        try:
-            host_helper = HELPER_SISTEMA if es_flatpak() else helper
-            opciones = subprocess.run(
-                comando_host(host_helper, "--snapshot-options"),
-                capture_output=True, text=True, timeout=8, check=False,
-            )
-            disponibles = [
-                nombre for nombre in ("timeshift", "snapper")
-                if opciones.returncode == 0 and nombre in opciones.stdout.splitlines()
-            ]
-        except (OSError, subprocess.SubprocessError):
-            disponibles = []
-        if disponibles:
-            dialogo_snap = Gtk.MessageDialog(
-                transient_for=self, modal=True,
-                message_type=Gtk.MessageType.QUESTION,
-                buttons=Gtk.ButtonsType.NONE,
-                text=traducir("¿Crear una instantánea antes del mantenimiento?"),
-            )
-            dialogo_snap.format_secondary_text(
-                traducir("Si falla la instantánea, se cancela el mantenimiento. "
-                         "La restauración no es automática.")
-            )
-            dialogo_snap.add_button(traducir("Sin instantánea"), Gtk.ResponseType.NO)
-            for indice, nombre in enumerate(disponibles):
-                dialogo_snap.add_button(
-                    traducir("Crear con %s") % nombre.capitalize(), 100 + indice
-                )
-            dialogo_snap.set_default_response(Gtk.ResponseType.NO)
-            respuesta = dialogo_snap.run()
-            dialogo_snap.destroy()
-            if 100 <= respuesta < 100 + len(disponibles):
-                snapshot_provider = disponibles[respuesta - 100]
-
         lang = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or "C"
         # Si solo se actualiza Flatpak del usuario no se invoca pkexec.
         solo_flatpak_usuario = pasos == ["flatpak-update"]
         if solo_flatpak_usuario:
             cmd = comando_host(helper, "--flatpak-user-update")
         else:
-            cmd = comando_pkexec(helper, lang, *(["--snapshot-provider", snapshot_provider] if snapshot_provider else []), *pasos)
+            cmd = comando_pkexec(helper, lang, *pasos)
 
         self.buf.set_text("")
         self.necesita_reinicio = False
@@ -2895,9 +2859,9 @@ class VentanaPrincipal(Gtk.Window):
             self._escribir("[*] Flatpak --user, sin contraseña de administrador.\\n", "info")
         else:
             self.estado.set_text(traducir("Esperando autenticación de administrador…"))
-            self._escribir("[*] Solicitando autorización de administrador…\\n", "info")
+            self._escribir("[*] Solicitando autorización de administrador…\n", "info")
             self._escribir(
-                "[*] Si no aparece el diálogo, cancela la espera y comprueba el agente de Polkit.\\n",
+                "[*] Si no aparece el diálogo, cancela la espera y comprueba el agente de Polkit.\n",
                 "info",
             )
         self.barra.set_fraction(0)
