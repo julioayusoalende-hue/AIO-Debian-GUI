@@ -2351,7 +2351,20 @@ class VentanaPrincipal(Gtk.Window):
         d.set_website(HOMEPAGE)
         d.set_copyright("© 2026 Julio Ayuso")
         d.set_license_type(Gtk.License.GPL_3_0)
-        d.set_logo_icon_name("aio-debian-gui")
+        # Mostrar el icono empaquetado, también en AppImage, Flatpak y Snap.
+        icon_path = os.path.normpath(os.path.join(
+            os.path.dirname(__file__),
+            "../share/icons/hicolor/512x512/apps/aio-debian-gui.png"
+        ))
+        if os.path.isfile(icon_path):
+            try:
+                d.set_logo(GdkPixbuf.Pixbuf.new_from_file_at_scale(
+                    icon_path, 128, 128, True
+                ))
+            except GLib.Error:
+                d.set_logo_icon_name("aio-debian-gui")
+        else:
+            d.set_logo_icon_name("aio-debian-gui")
         d.show_all()
 
         def buscar_credito(widget):
