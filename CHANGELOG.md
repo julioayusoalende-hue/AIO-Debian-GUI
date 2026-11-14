@@ -1,5 +1,11 @@
 # Cambios
 
+## 2.5.3
+
+- Eliminada la integración de Timeshift y Snapper de la interfaz y del asistente privilegiado.
+- Mantenimiento sin diálogos de instantáneas; se mantienen las comprobaciones previas de seguridad.
+- Corregidos saltos de línea literales en los mensajes de autorización de la consola.
+
 ## 2.5.2
 
 - Detección de Timeshift y Snapper instalados y configurados.
