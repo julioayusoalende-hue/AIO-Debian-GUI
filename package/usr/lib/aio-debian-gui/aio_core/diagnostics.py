@@ -31,6 +31,14 @@ def _run(args, timeout=12):
 def run_diagnostics():
     """Devuelve una lista de comprobaciones sin alterar el sistema."""
     findings = []
+    # La sandbox Flatpak no representa fielmente el sistema anfitrión:
+    # sin conexión de confianza no se deduce salud del host a partir de ella.
+    if Path("/.flatpak-info").exists():
+        return [_check(
+            "Sistema anfitrión", "unknown",
+            "El diagnóstico local está limitado dentro de Flatpak; no se han comprobado APT, dpkg ni systemd del anfitrión.",
+            "Para revisar Debian/Ubuntu usa la edición DEB o AppImage fuera del sandbox."
+        )]
 
     # Espacio libre en la partición del sistema.
     try:
