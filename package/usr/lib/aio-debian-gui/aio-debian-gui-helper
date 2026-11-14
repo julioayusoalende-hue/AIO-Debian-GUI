@@ -708,7 +708,9 @@ plan_revertir_backports() {
         return 1
     fi
     paquetes=("$kernel" "$headers" libgl1-mesa-dri)
-    for paquete in mesa-vulkan-drivers mesa-va-drivers mesa-vdpau-drivers; do
+    for paquete in mesa-vulkan-drivers mesa-va-drivers mesa-vdpau-drivers \
+        libegl-mesa0 libglx-mesa0 libgbm1 libglapi-mesa libosmesa6 libxatracker2 \
+        mesa-libgallium mesa-opencl-icd; do
         if paquete_instalado "$paquete"; then paquetes+=("$paquete"); fi
     done
     especificaciones=()
@@ -746,7 +748,9 @@ paso_revertir_backports() {
     headers=${kernel/linux-image/linux-headers}
     plan_revertir_backports || return 1
     paquetes=("$kernel" "$headers" libgl1-mesa-dri)
-    for paquete in mesa-vulkan-drivers mesa-va-drivers mesa-vdpau-drivers; do
+    for paquete in mesa-vulkan-drivers mesa-va-drivers mesa-vdpau-drivers \
+        libegl-mesa0 libglx-mesa0 libgbm1 libglapi-mesa libosmesa6 libxatracker2 \
+        mesa-libgallium mesa-opencl-icd; do
         if paquete_instalado "$paquete"; then paquetes+=("$paquete"); fi
     done
     specs=()
