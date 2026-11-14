@@ -41,7 +41,7 @@ jobs:
       - name: Install APT build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y dpkg-dev fakeroot gnupg
+          sudo apt-get install -y dpkg-dev fakeroot gnupg python3-pil python3-numpy
       - name: Build DEB and import signing key
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -53,6 +53,7 @@ jobs:
           printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
           echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
           cd source
+          python3 scripts/recolor-icon.py 350
           bash scripts/build-deb.sh
       - name: Publish signed APT metadata and DEB
         env:
