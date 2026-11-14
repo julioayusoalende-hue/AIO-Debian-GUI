@@ -1,5 +1,13 @@
 # Cambios
 
+## 2.0.3
+
+- Menú unificado en este orden: Preferencias, Historial de mantenimiento, Buscar actualizaciones y Acerca de.
+- Eliminados los accesos independientes de cabecera para evitar duplicaciones, preservando la operativa de las cuatro opciones.
+- Buscar actualizaciones permanece visible pero inactivo en ediciones sin mecanismo de actualización integrado.
+- Pruebas del orden y presencia de opciones en GTK.
+
+
 ## 2.0.2
 
 - Dos paneles GTK lado a lado con separador horizontal ajustable: sistema y novedades a la izquierda y tareas a la derecha.
