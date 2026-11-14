@@ -22,6 +22,10 @@ Principios que deben guiar la implementación: clasificar por ID PCI y rama comp
 
 La versión 2.0.0 permanece en **pruebas** hasta contrastar una matriz de IDs PCI y ramas NVIDIA, kernels Debian estable/Backports, Secure Boot y dispositivos híbridos. El instalador debe fallar de forma conservadora ante compatibilidad no comprobada y nunca cambiar el servidor gráfico de manera implícita.
 
+## Menú principal (v2.0.3)
+
+Un único menú en la cabecera agrupa, en este orden: **Preferencias**, **Historial de mantenimiento**, **Buscar actualizaciones** y **Acerca de**. No hay botones duplicados en la cabecera. Las actualizaciones solo se habilitan para instalaciones DEB, AppImage o Flatpak.
+
 ## Diseño de interfaz (v2.0.2)
 
 La ventana muestra **dos paneles lado a lado**: información del sistema y novedades a la izquierda, tareas de mantenimiento a la derecha. La barra divisoria es ajustable y cada panel se desplaza independientemente. En la cabecera hay un único acceso a Preferencias; el menú desplegable conserva el Historial. En la parte inferior siguen disponibles el progreso, el botón principal y la consola.

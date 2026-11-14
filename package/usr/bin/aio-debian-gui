@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.0.3": "Menú unificado: Preferencias, Historial, Buscar actualizaciones y Acerca de en ese orden.",
     "2.0.2": "Dos paneles lado a lado: sistema y tareas, sin duplicar Preferencias y con desplazamiento independiente.",
     "2.0.1": "Interfaz más clara con secciones horizontales, tareas a todo el ancho y controles de ejecución mejor distribuidos.",
     "2.0.0": "Detección NVIDIA en Debian, instalación supervisada del controlador compatible y soporte PRIME para equipos híbridos.",
@@ -1116,48 +1117,44 @@ class VentanaPrincipal(Gtk.Window):
                         (" · Ubuntu LTS" if self.distribucion == "ubuntu" else
                          " · Debian" if self.distribucion == "debian" else " · Sistema no compatible"))
 
-        self.btn_actualizar = None
-        if formato in ("deb", "flatpak", "appimage"):
-            self.btn_actualizar = Gtk.Button(label=traducir("Buscar actualizaciones"))
-            self.btn_actualizar.set_tooltip_text(traducir("Actualizar esta aplicación"))
-            self.btn_actualizar.connect("clicked", self._buscar_actualizacion)
-            hb.pack_end(self.btn_actualizar)
-
-
-        btn_acerca = Gtk.Button.new_from_icon_name("help-about-symbolic", Gtk.IconSize.BUTTON)
-        btn_acerca.set_tooltip_text(traducir("Acerca de AiO Debian"))
-        btn_acerca.connect("clicked", self._acerca_de)
-        hb.pack_end(btn_acerca)
-
         self.btn_menu = Gtk.MenuButton()
-        self.btn_menu.add(Gtk.Image.new_from_icon_name("open-menu-symbolic", Gtk.IconSize.BUTTON))
-        self.btn_menu.set_tooltip_text(traducir("Historial y herramientas"))
+        self.btn_menu.add(Gtk.Image.new_from_icon_name(
+            "open-menu-symbolic", Gtk.IconSize.BUTTON))
+        self.btn_menu.set_tooltip_text(traducir("Menú de preferencias"))
         popover = Gtk.Popover.new(self.btn_menu)
         menu = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         menu.set_margin_top(8)
         menu.set_margin_bottom(8)
         menu.set_margin_start(8)
         menu.set_margin_end(8)
+
+        self.btn_preferencias_menu = Gtk.Button(label=traducir("Preferencias"))
+        self.btn_preferencias_menu.connect("clicked", self._abrir_preferencias)
+        menu.pack_start(self.btn_preferencias_menu, False, False, 0)
+
         btn_historial = Gtk.Button(label=traducir("Historial de mantenimiento"))
         btn_historial.connect("clicked", self._mostrar_historial)
         menu.pack_start(btn_historial, False, False, 0)
+
+        self.btn_actualizar = Gtk.Button(label=traducir("Buscar actualizaciones"))
+        self.btn_actualizar.set_tooltip_text(traducir("Actualizar esta aplicación"))
+        self.btn_actualizar.connect("clicked", self._buscar_actualizacion)
+        menu.pack_start(self.btn_actualizar, False, False, 0)
+
+        btn_acerca = Gtk.Button(label=traducir("Acerca de AiO Debian"))
+        btn_acerca.connect("clicked", self._acerca_de)
+        menu.pack_start(btn_acerca, False, False, 0)
+
         popover.add(menu)
         menu.show_all()
         self.btn_menu.set_popover(popover)
         self.menu_popover = popover
         hb.pack_start(self.btn_menu)
-        self.btn_preferencias_cabecera = Gtk.Button(label=traducir("Preferencias"))
-        self.btn_preferencias_cabecera.set_image(
-            Gtk.Image.new_from_icon_name("preferences-system-symbolic", Gtk.IconSize.BUTTON)
-        )
-        self.btn_preferencias_cabecera.set_always_show_image(True)
-        self.btn_preferencias_cabecera.connect("clicked", self._abrir_preferencias)
-        hb.pack_start(self.btn_preferencias_cabecera)
         self.set_titlebar(hb)
 
 
-
     def _buscar_actualizacion(self, _boton):
+        self.menu_popover.popdown()
         if self.comprobando_actualizacion or self.en_curso:
             return
         self.comprobando_actualizacion = True
@@ -1841,10 +1838,11 @@ class VentanaPrincipal(Gtk.Window):
         disponible = not self.en_curso and not self.comprobando_actualizacion and self.distribucion != "no-soportada"
         self.btn_iniciar.set_sensitive(disponible)
         if self.btn_actualizar is not None:
-            self.btn_actualizar.set_sensitive(disponible and not self.comprobando_actualizacion)
+            self.btn_actualizar.set_sensitive(disponible and not self.comprobando_actualizacion
+                                             and formato_actualizacion() in ("deb", "flatpak", "appimage"))
         self.chk_sin_contrasena.set_sensitive(disponible)
         self.btn_menu.set_sensitive(disponible)
-        self.btn_preferencias_cabecera.set_sensitive(disponible)
+        self.btn_preferencias_menu.set_sensitive(disponible)
         self.btn_borrar.set_sensitive(not self.en_curso)
         for boton in self.botones_preset:
             boton.set_sensitive(disponible)
@@ -2564,6 +2562,7 @@ class VentanaPrincipal(Gtk.Window):
         return d
 
     def _acerca_de(self, _b):
+        self.menu_popover.popdown()
         d = self._crear_dialogo_acerca_de()
         try:
             d.run()

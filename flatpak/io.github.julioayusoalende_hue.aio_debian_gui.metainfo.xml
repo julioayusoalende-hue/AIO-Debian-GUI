@@ -21,6 +21,7 @@
     <value key="flathub::verification::website">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</value>
   </custom>
   <releases>
+    <release version="2.0.3" date="2026-11-14"><description><p>Menú único en cabecera con Preferencias, Historial de mantenimiento, Buscar actualizaciones y Acerca de.</p></description></release>
     <release version="2.0.2" date="2026-11-14"><description><p>Dos paneles horizontales independientes para sistema y tareas; acceso único a Preferencias y menú de historial.</p></description></release>
     <release version="2.0.1" date="2026-11-14"><description><p>Interfaz horizontal reorganizada con información superior, tareas a ancho completo, botón de inicio y consola mejor distribuidos.</p></description></release>
     <release version="2.0.0" date="2026-11-14"><description><p>Detecta GPU NVIDIA en Debian, identifica equipos híbridos y permite instalar bajo confirmación un controlador verificado con PRIME.</p></description></release>
