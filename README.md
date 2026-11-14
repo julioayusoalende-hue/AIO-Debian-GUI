@@ -22,7 +22,11 @@ Principios que deben guiar la implementación: clasificar por ID PCI y rama comp
 
 La versión 2.0.0 permanece en **pruebas** hasta contrastar una matriz de IDs PCI y ramas NVIDIA, kernels Debian estable/Backports, Secure Boot y dispositivos híbridos. El instalador debe fallar de forma conservadora ante compatibilidad no comprobada y nunca cambiar el servidor gráfico de manera implícita.
 
-## Diseño de interfaz (v2.0.1)
+## Diseño de interfaz (v2.0.2)
+
+La ventana muestra **dos paneles lado a lado**: información del sistema y novedades a la izquierda, tareas de mantenimiento a la derecha. La barra divisoria es ajustable y cada panel se desplaza independientemente. En la cabecera hay un único acceso a Preferencias; el menú desplegable conserva el Historial. En la parte inferior siguen disponibles el progreso, el botón principal y la consola.
+
+## Diseño de interfaz anterior (v2.0.1)
 
 La ventana GTK utiliza una distribución **verticalmente apilada** (secciones separadas horizontalmente): información del sistema y novedades arriba, tareas de mantenimiento a todo el ancho, y zona fija de progreso, botón principal «Iniciar tareas» y consola abajo. En pantallas pequeñas, la información y las tareas pueden desplazarse sin perder el control de ejecución. «Preferencias» tiene acceso directo en la cabecera y el menú conserva Historial; la consola dispone de «Borrar» y se oculta en modo simple.
 

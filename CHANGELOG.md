@@ -1,5 +1,13 @@
 # Cambios
 
+## 2.0.2
+
+- Dos paneles GTK lado a lado con separador horizontal ajustable: sistema y novedades a la izquierda y tareas a la derecha.
+- Desplazamiento vertical independiente en cada panel para aprovechar toda la altura de la ventana.
+- Eliminada la entrada duplicada de Preferencias del menú; se conserva el botón directo y el acceso a Historial.
+- Ventana inicial más ancha y pruebas de orientación del panel y del menú.
+
+
 ## 2.0.1
 
 - Rediseño de la interfaz GTK en secciones apiladas horizontalmente: información del sistema, tareas de mantenimiento, progreso y consola.
