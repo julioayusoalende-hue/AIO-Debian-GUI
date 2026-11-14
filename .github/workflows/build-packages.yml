@@ -79,7 +79,7 @@ jobs:
           dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/updates.py' >/dev/null
           file "$APPIMAGE"
           chmod +x "$APPIMAGE"
-          "$APPIMAGE" --appimage-extract >/dev/null
+          "$APPIMAGE" --appimage-extract
           test -x squashfs-root/AppRun
           test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/history.py
           test -f squashfs-root/usr/share/icons/hicolor/512x512/apps/aio-debian-gui.png
