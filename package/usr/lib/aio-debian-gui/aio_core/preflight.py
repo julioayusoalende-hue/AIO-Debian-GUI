@@ -13,6 +13,7 @@ import subprocess
 class Report:
     blocked: bool
     messages: list
+    preview: list = None
 
 
 def _run(command, timeout=25):
@@ -55,6 +56,7 @@ def check(tasks):
     if tasks == ["flatpak-update"]:
         return Report(False, [])
     messages = []
+    preview = []
     blocked = False
     locks = _apt_locks()
     if locks:
@@ -107,6 +109,19 @@ def check(tasks):
                 blocked = True
                 messages.append("No se pudo simular APT: " + cmd[-1])
                 continue
+            for line in result.stdout.splitlines():
+                parts = line.split()
+                if len(parts) < 2 or parts[0] not in ("Inst", "Rem"):
+                    continue
+                if parts[0] == "Rem":
+                    preview.append("ELIMINAR: " + parts[1])
+                elif "[" in line and "]" in line:
+                    previous = line.split("[", 1)[1].split("]", 1)[0]
+                    new = line.split("(", 1)[1].split(" ", 1)[0] if "(" in line else "?"
+                    preview.append("ACTUALIZAR: " + parts[1] + " " + previous + " → " + new)
+                else:
+                    new = line.split("(", 1)[1].split(" ", 1)[0] if "(" in line else "?"
+                    preview.append("INSTALAR: " + parts[1] + " " + new)
             installs = [line.split()[1] for line in result.stdout.splitlines() if line.startswith("Inst ") and len(line.split()) > 1]
             removed = [line for line in result.stdout.splitlines()
                        if line.startswith("Rem ")]
@@ -129,4 +144,4 @@ def check(tasks):
         elif dkms.stdout.strip() and any(
                 x in tasks for x in ("backports-kernel-mesa", "revertir-backports", "nvidia-driver", "ubuntu-hwe")):
             messages.append("Hay módulos DKMS registrados; comprueba su compatibilidad.")
-    return Report(blocked, messages)
+    return Report(blocked, messages, preview)

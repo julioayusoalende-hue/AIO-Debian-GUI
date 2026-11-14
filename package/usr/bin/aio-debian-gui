@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.5.1": "Vista previa detallada APT, salud asíncrona y accesibilidad.",
     "2.5.0": "Panel de salud, Snapper opcional y traducciones mejoradas.",
     "2.4.0": "Protección contra ejecuciones simultáneas y verificaciones APT/dpkg más estrictas.",
     "2.3.0": "Comprobaciones asíncronas, bloqueos APT y vista previa ampliada.",
@@ -120,6 +121,9 @@ TEMAS = {"sistema", "claro", "oscuro"}
 
 TRADUCCIONES = {
     "en": {
+        "Comprobando estado del sistema…": "Checking system status…",
+        "Resumen de salud sin modificar paquetes": "Read-only system health summary",
+        "Detalle de la simulación APT:": "APT simulation details:",
         "Estado de mantenimiento": "Maintenance status",
         "¿Crear instantánea Snapper antes del mantenimiento?": "Create a Snapper snapshot before maintenance?",
         "Sin instantánea": "Without snapshot",
@@ -254,6 +258,9 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Authorization wait cancelled.",
     },
     "fr": {
+        "Comprobando estado del sistema…": "Vérification du système…",
+        "Resumen de salud sin modificar paquetes": "Résumé de santé du système en lecture seule",
+        "Detalle de la simulación APT:": "Détails de la simulation APT :",
         "Estado de mantenimiento": "État de maintenance",
         "¿Crear instantánea Snapper antes del mantenimiento?": "Créer un instantané Snapper avant la maintenance ?",
         "Sin instantánea": "Sans instantané",
@@ -387,6 +394,9 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Attente d’autorisation annulée.",
     },
     "zh": {
+        "Comprobando estado del sistema…": "正在检查系统状态…",
+        "Resumen de salud sin modificar paquetes": "只读系统健康摘要",
+        "Detalle de la simulación APT:": "APT 模拟详情：",
         "Estado de mantenimiento": "维护状态",
         "¿Crear instantánea Snapper antes del mantenimiento?": "维护前创建 Snapper 快照？",
         "Sin instantánea": "不创建快照",
@@ -2061,6 +2071,8 @@ class VentanaPrincipal(Gtk.Window):
             "Comprobar el sistema sin realizar modificaciones"))
         self.btn_diagnostico.connect("clicked", self._abrir_diagnostico)
         self.btn_salud = Gtk.Button(label=traducir("Estado de mantenimiento"))
+        self.btn_salud.set_tooltip_text(traducir("Resumen de salud sin modificar paquetes"))
+        self.btn_salud.get_accessible().set_name(traducir("Estado de mantenimiento"))
         self.btn_salud.connect("clicked", self._abrir_salud)
         titulo.pack_end(self.btn_salud, False, False, 0)
         titulo.pack_end(self.btn_diagnostico, False, False, 0)
@@ -2107,20 +2119,27 @@ class VentanaPrincipal(Gtk.Window):
         return marco
 
     def _abrir_salud(self, _boton=None):
-        dialogo = Gtk.MessageDialog(transient_for=self, modal=True,
-            message_type=Gtk.MessageType.INFO, buttons=Gtk.ButtonsType.CLOSE,
-            text=traducir("Estado de mantenimiento"))
-        try:
-            import shutil as _shutil
-            libre = _shutil.disk_usage("/").free / (1024 ** 3)
-            informe = "Espacio libre: %.1f GiB" % libre
-            informe += "\nReinicio solicitado: " + ("Sí" if os.path.exists("/run/reboot-required") else "No")
-        except OSError:
-            informe = traducir("No se pudo completar el resumen de salud.")
-        dialogo.format_secondary_text(informe)
-        dialogo.run()
-        dialogo.destroy()
-
+        dialogo = Gtk.Dialog(title=traducir("Estado de mantenimiento"), transient_for=self, modal=False)
+        dialogo.set_default_size(600, 360)
+        dialogo.add_button(traducir("Cerrar"), Gtk.ResponseType.CLOSE)
+        dialogo.connect("response", lambda d, _: d.destroy())
+        texto = Gtk.Label(label=traducir("Comprobando estado del sistema…"))
+        texto.set_selectable(True)
+        texto.set_line_wrap(True)
+        texto.set_xalign(0)
+        texto.set_margin_start(16)
+        texto.set_margin_end(16)
+        texto.get_accessible().set_name(traducir("Estado de mantenimiento"))
+        dialogo.get_content_area().pack_start(texto, True, True, 0)
+        dialogo.show_all()
+        def worker():
+            from aio_core import health
+            try:
+                resultado = "\n".join(health.summary())
+            except Exception:
+                resultado = traducir("No se pudo completar el resumen de salud.")
+            GLib.idle_add(lambda: texto.set_text(resultado) or False if dialogo.get_visible() else False)
+        threading.Thread(target=worker, daemon=True).start()
     def _abrir_diagnostico(self, _boton=None):
         if self.diagnostico_en_curso:
             if self.ventana_diagnostico is not None:
@@ -2614,12 +2633,13 @@ class VentanaPrincipal(Gtk.Window):
     def _terminar_preflight(self, pasos, informe, error):
         if not self.en_curso:
             return False
-        self._poner_ocupado(False)
         if error:
+            self._poner_ocupado(False)
             self._mensaje(Gtk.MessageType.ERROR, "Mantenimiento bloqueado",
                           traducir("No se pudieron completar las comprobaciones de seguridad.") + "\n" + error)
             return False
         if informe.blocked:
+            self._poner_ocupado(False)
             self._mensaje(Gtk.MessageType.ERROR, "Mantenimiento bloqueado", "\n".join(informe.messages))
             return False
         if informe.messages:
@@ -2629,12 +2649,15 @@ class VentanaPrincipal(Gtk.Window):
             dialogo_seguro.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
             dialogo_seguro.add_button(traducir("Continuar"), Gtk.ResponseType.OK)
             dialogo_seguro.set_default_response(Gtk.ResponseType.CANCEL)
-            dialogo_seguro.format_secondary_text("\n".join(informe.messages))
+            dialogo_seguro.format_secondary_text("\n".join(informe.messages + ([traducir("Detalle de la simulación APT:")] + informe.preview[:100] if informe.preview else [])))
             aceptado = dialogo_seguro.run() == Gtk.ResponseType.OK
             dialogo_seguro.destroy()
             if not aceptado:
+                self._poner_ocupado(False)
                 return False
         self._continuar_mantenimiento(pasos)
+        if self.proceso is None:
+            self._poner_ocupado(False)
         return False
 
     def _continuar_mantenimiento(self, pasos):

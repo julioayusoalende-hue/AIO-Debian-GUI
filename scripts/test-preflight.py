@@ -51,3 +51,10 @@ with patch.object(mod, "_apt_locks", return_value=[]), \
      patch.object(mod, "_run", side_effect=run) as mocked:
     assert mod.check(["upgrade"]).blocked
     mocked.assert_not_called()
+
+# Vista previa detallada de versiones sin escrituras
+with patch.object(mod, "_apt_locks", return_value=[]), patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), patch.object(mod, "_run", side_effect=lambda cmd, timeout=25: SimpleNamespace(returncode=0, stdout="Inst nano [7.2] (7.3 Debian:stable)\nInst vim (9.1 Debian:stable)\n" if "dist-upgrade" in cmd else "", stderr="")):
+    report = mod.check(["upgrade"])
+    assert not report.blocked
+    assert any("ACTUALIZAR: nano 7.2 → 7.3" in x for x in report.preview)
+    assert any("INSTALAR: vim 9.1" in x for x in report.preview)

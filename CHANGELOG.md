@@ -1,5 +1,11 @@
 # Cambios
 
+## 2.5.1
+
+- Vista previa de paquetes APT con versiones.
+- Panel de salud asíncrono y accesibilidad mejorada.
+- Traducciones y pruebas de regresión.
+
 ## 2.5.0
 
 - Panel de salud con espacio libre y reinicio solicitado.
