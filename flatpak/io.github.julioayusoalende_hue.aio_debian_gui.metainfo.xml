@@ -21,6 +21,7 @@
     <value key="flathub::verification::website">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</value>
   </custom>
   <releases>
+    <release version="2.0.7" date="2026-11-14"><description><p>Diagnóstico de versión instalada y actualización disponible desde la propia herramienta, con reinicio opcional automático tras actualizar.</p></description></release>
     <release version="2.0.6" date="2026-11-14"><description><p>Corrige el falso error crítico por permisos al comprobar dependencias APT sin privilegios.</p></description></release>
     <release version="2.0.5" date="2026-11-14"><description><p>Diagnóstico preventivo de APT, dpkg, almacenamiento, DKMS, reinicio y servicios systemd sin cambios automáticos.</p></description></release>
     <release version="2.0.4" date="2026-11-14"><description><p>Consola opcional en ventana independiente, con salida sincronizada, ventana redimensionable y retorno a la ventana principal.</p></description></release>

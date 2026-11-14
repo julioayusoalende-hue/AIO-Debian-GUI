@@ -1,5 +1,15 @@
 # Cambios
 
+## 2.0.7
+
+- El diagnóstico preventivo consulta si AiO Debian GUI está actualizado según APT, el repositorio Flatpak o GitHub Releases para AppImage.
+- Cuando existe una versión nueva, el informe incluye «Actualizar AiO», que utiliza el mecanismo de actualización existente y su confirmación habitual.
+- Las consultas no instalan paquetes y las fuentes inaccesibles se marcan como no comprobadas.
+- Nueva casilla voluntaria «Reiniciar AiO automáticamente tras actualizar»; también se ofrece reiniciar al terminar si no se eligió la casilla.
+- Tras actualizar DEB se relanza el ejecutable del paquete; Flatpak vuelve a lanzar la aplicación en el host; AppImage ejecuta el nuevo archivo con SHA-256 verificado, conservando el anterior.
+- Pruebas automáticas de los estados de actualización en DEB, Flatpak y AppImage.
+
+
 ## 2.0.6
 
 - El diagnóstico comprueba dependencias con `apt-get -o Debug::NoLocking=1 check`, evitando el bloqueo de dpkg reservado a root.

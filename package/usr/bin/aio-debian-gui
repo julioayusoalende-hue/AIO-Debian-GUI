@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.0.7": "Diagnosticar comprueba la versión de AiO, ofrece actualizar y permite reiniciar automáticamente al terminar.",
     "2.0.6": "Diagnóstico APT sin privilegios: evita falsos avisos críticos por bloqueo de dpkg.",
     "2.0.5": "Diagnóstico preventivo de APT, paquetes, espacio, DKMS y servicios antes del mantenimiento.",
     "2.0.4": "La salida de consola puede abrirse en una ventana independiente, ampliable y sincronizada en tiempo real.",
@@ -112,6 +113,10 @@ TEMAS = {"sistema", "claro", "oscuro"}
 
 TRADUCCIONES = {
     "en": {
+        "Actualizar AiO": "Update AiO",
+        "Reiniciar AiO automáticamente tras actualizar": "Automatically restart AiO after updating",
+        "Reiniciar aplicación": "Restart application",
+        "Hay una actualización disponible. Puedes instalarla desde aquí.": "Update available. You can install it here.",
         "Diagnosticar": "Diagnose",
         "Diagnóstico preventivo del sistema": "Preventive system diagnostics",
         "Abrir en otra ventana": "Open in separate window",
@@ -234,6 +239,10 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Authorization wait cancelled.",
     },
     "fr": {
+        "Actualizar AiO": "Mettre à jour AiO",
+        "Reiniciar AiO automáticamente tras actualizar": "Redémarrer automatiquement AiO après la mise à jour",
+        "Reiniciar aplicación": "Redémarrer l’application",
+        "Hay una actualización disponible. Puedes instalarla desde aquí.": "Une mise à jour est disponible. Vous pouvez l’installer ici.",
         "Diagnosticar": "Diagnostiquer",
         "Diagnóstico preventivo del sistema": "Diagnostic préventif du système",
         "Abrir en otra ventana": "Ouvrir dans une autre fenêtre",
@@ -355,6 +364,10 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Attente d’autorisation annulée.",
     },
     "zh": {
+        "Actualizar AiO": "更新 AiO",
+        "Reiniciar AiO automáticamente tras actualizar": "更新后自动重启 AiO",
+        "Reiniciar aplicación": "重启应用",
+        "Hay una actualización disponible. Puedes instalarla desde aquí.": "发现可用更新。可从此处安装。",
         "Diagnosticar": "诊断",
         "Diagnóstico preventivo del sistema": "系统预防性诊断",
         "Abrir en otra ventana": "在独立窗口打开",
@@ -1110,6 +1123,7 @@ class VentanaPrincipal(Gtk.Window):
         self.comprobando_actualizacion = False
         self.diagnostico_en_curso = False
         self.ventana_diagnostico = None
+        self.btn_actualizar_diagnostico = None
         self.tareas_en_ejecucion = []
         self.actualizando_preset = False
         self.switches = {}
@@ -1262,7 +1276,13 @@ class VentanaPrincipal(Gtk.Window):
         dialogo.add_button(traducir("Continuar"), Gtk.ResponseType.OK)
         dialogo.set_default_response(Gtk.ResponseType.CANCEL)
         dialogo.format_secondary_text(detalle)
+        casilla_reinicio = Gtk.CheckButton(
+            label=traducir("Reiniciar AiO automáticamente tras actualizar"))
+        casilla_reinicio.set_active(False)
+        dialogo.get_content_area().pack_start(casilla_reinicio, False, False, 8)
+        casilla_reinicio.show()
         aceptar = dialogo.run() == Gtk.ResponseType.OK
+        reiniciar_automaticamente = casilla_reinicio.get_active()
         dialogo.destroy()
         if not aceptar:
             self.comprobando_actualizacion = False
@@ -1280,8 +1300,8 @@ class VentanaPrincipal(Gtk.Window):
                         raise RuntimeError((resultado.stderr or resultado.stdout).strip()[-1200:] or
                                            "No se pudo actualizar el paquete DEB.")
                     titulo = "Actualización DEB completada"
-                    detalle_final = ("APT ha instalado la actualización disponible. "
-                                     "Cierra y vuelve a abrir AiO Debian GUI.")
+                    detalle_final = "APT ha instalado la nueva versión de AiO Debian GUI."
+                    reinicio = ("deb", None)
                 elif formato == "flatpak":
                     resultado = subprocess.run(
                         ["flatpak-spawn", "--host", "flatpak", "update",
@@ -1292,16 +1312,18 @@ class VentanaPrincipal(Gtk.Window):
                         raise RuntimeError((resultado.stderr or resultado.stdout).strip()[-1200:] or
                                            "No se pudo actualizar el Flatpak.")
                     titulo = "Actualización Flatpak completada"
-                    detalle_final = "La nueva versión estará disponible al reiniciar AiO Debian GUI."
+                    detalle_final = "La nueva versión Flatpak está instalada."
+                    reinicio = ("flatpak", None)
                 else:
                     version, nombre, url, url_hash = datos
                     destino = descargar_appimage_verificado(version, nombre, url, url_hash)
                     titulo = "Nueva AppImage descargada"
                     detalle_final = (f"Versión {version} verificada mediante SHA-256.\n"
                                      f"Archivo: {destino}\n\n"
-                                     "Cierra la aplicación y ejecuta el archivo nuevo.")
+                                     "La AppImage anterior se conserva como copia.")
+                    reinicio = ("appimage", destino)
                 GLib.idle_add(self._terminar_actualizacion, Gtk.MessageType.INFO,
-                              titulo, detalle_final)
+                              titulo, detalle_final, reinicio, reiniciar_automaticamente)
             except (OSError, ValueError, RuntimeError, urllib.error.URLError,
                     subprocess.SubprocessError) as error:
                 GLib.idle_add(self._terminar_actualizacion, Gtk.MessageType.ERROR,
@@ -1310,11 +1332,62 @@ class VentanaPrincipal(Gtk.Window):
         threading.Thread(target=aplicar, daemon=True).start()
         return False
 
-    def _terminar_actualizacion(self, tipo, titulo, detalle):
+    def _terminar_actualizacion(self, tipo, titulo, detalle,
+                               reinicio=None, automatico=False):
         self.comprobando_actualizacion = False
         self._actualizar_sensibilidad()
-        self._mensaje(tipo, titulo, detalle)
+        if tipo != Gtk.MessageType.INFO or reinicio is None:
+            self._mensaje(tipo, titulo, detalle)
+            return False
+        if automatico:
+            self._reiniciar_aplicacion_actualizada(reinicio)
+            return False
+
+        pregunta = Gtk.MessageDialog(
+            transient_for=self, modal=True,
+            message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.NONE, text=traducir(titulo))
+        pregunta.format_secondary_text(
+            detalle + "\n\n" + traducir("¿Reiniciar AiO Debian GUI ahora?"))
+        pregunta.add_button(traducir("Más tarde"), Gtk.ResponseType.NO)
+        pregunta.add_button(traducir("Reiniciar aplicación"), Gtk.ResponseType.YES)
+        pregunta.set_default_response(Gtk.ResponseType.NO)
+        respuesta = pregunta.run()
+        pregunta.destroy()
+        if respuesta == Gtk.ResponseType.YES:
+            self._reiniciar_aplicacion_actualizada(reinicio)
         return False
+
+    def _reiniciar_aplicacion_actualizada(self, reinicio):
+        """Relanzar solo si la instalación anterior terminó correctamente.
+
+        DEB vuelve a ejecutar el archivo actualizado; Flatpak lanza el host,
+        y AppImage abre únicamente el archivo nuevo con SHA-256 verificado.
+        """
+        if self.en_curso or self.diagnostico_en_curso:
+            self._mensaje(Gtk.MessageType.WARNING, "No se puede reiniciar",
+                          "Hay una operación en curso. Reinicia AiO cuando termine.")
+            return
+        formato, destino = reinicio
+        try:
+            if formato == "deb":
+                os.execv(sys.executable, [sys.executable, "/usr/bin/aio-debian-gui"])
+            elif formato == "flatpak":
+                subprocess.Popen(
+                    ["flatpak-spawn", "--host", "flatpak", "run", "--user", APP_ID_FLATPAK],
+                    start_new_session=True, stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL)
+            elif formato == "appimage" and destino and os.path.isfile(destino):
+                subprocess.Popen(
+                    [destino], start_new_session=True, stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL)
+            else:
+                raise RuntimeError("No se encontró un ejecutable actualizado para reiniciar.")
+        except (OSError, RuntimeError) as exc:
+            self._mensaje(Gtk.MessageType.ERROR, "No se pudo reiniciar AiO",
+                          str(exc))
+            return
+        Gtk.main_quit()
 
 
     def _confirmar_tareas(self, pasos):
@@ -1740,9 +1813,27 @@ class VentanaPrincipal(Gtk.Window):
         dialogo.show_all()
         self.diagnostico_en_curso = True
         self.btn_diagnostico.set_sensitive(False)
+        self.btn_actualizar_diagnostico = None
+        formato = formato_actualizacion()
+        version_instalada = version_app()
+
         def analizar():
             try:
                 resultados = core_diagnostics.run_diagnostics()
+                estado_app = core_updates.estado_actualizacion_app(
+                    formato, version_instalada, APP_ID_FLATPAK)
+                estado = {
+                    "available": "warning", "current": "ok",
+                    "unknown": "unknown", "unsupported": "unknown",
+                }.get(estado_app["status"], "unknown")
+                resultados.append({
+                    "name": "Versión de AiO Debian GUI",
+                    "status": estado,
+                    "detail": estado_app["detail"],
+                    "advice": ("Hay una actualización disponible. Puedes instalarla desde aquí."
+                               if estado_app["status"] == "available" else ""),
+                    "action": ("update" if estado_app["status"] == "available" else None),
+                })
                 error = None
             except Exception as exc:
                 resultados = []
@@ -1750,9 +1841,17 @@ class VentanaPrincipal(Gtk.Window):
             GLib.idle_add(self._diagnostico_terminado, dialogo, resultados, error)
         threading.Thread(target=analizar, daemon=True).start()
 
+    def _actualizar_desde_diagnostico(self, _boton):
+        if self.en_curso or self.comprobando_actualizacion:
+            return
+        if self.ventana_diagnostico is not None:
+            self.ventana_diagnostico.destroy()
+        self._buscar_actualizacion(None)
+
     def _diagnostico_cerrado(self, dialogo):
         if self.ventana_diagnostico is dialogo:
             self.ventana_diagnostico = None
+            self.btn_actualizar_diagnostico = None
 
     def _diagnostico_terminado(self, dialogo, resultados, error):
         self.diagnostico_en_curso = False
@@ -1798,6 +1897,15 @@ class VentanaPrincipal(Gtk.Window):
             if resultado["advice"]:
                 bloque.pack_start(etiqueta(resultado["advice"]), False, False, 0)
             fila.pack_start(bloque, True, True, 0)
+            if resultado.get("action") == "update":
+                boton = Gtk.Button(label=traducir("Actualizar AiO"))
+                boton.set_tooltip_text(traducir(
+                    "Instalar la versión disponible con el actualizador de AiO"))
+                boton.set_sensitive(not self.en_curso and
+                                    not self.comprobando_actualizacion)
+                boton.connect("clicked", self._actualizar_desde_diagnostico)
+                fila.pack_end(boton, False, False, 0)
+                self.btn_actualizar_diagnostico = boton
             self.lista_diagnostico.pack_start(fila, False, False, 0)
             self.lista_diagnostico.pack_start(Gtk.Separator(), False, False, 0)
         self.lista_diagnostico.show_all()
@@ -2021,6 +2129,9 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_preferencias_menu.set_sensitive(disponible)
         self.btn_borrar.set_sensitive(not self.en_curso)
         self.btn_diagnostico.set_sensitive(not self.en_curso and not self.diagnostico_en_curso)
+        if self.btn_actualizar_diagnostico is not None:
+            self.btn_actualizar_diagnostico.set_sensitive(
+                not self.en_curso and not self.comprobando_actualizacion)
         for boton in self.botones_preset:
             boton.set_sensitive(disponible)
         for pid, fila in self.filas.items():

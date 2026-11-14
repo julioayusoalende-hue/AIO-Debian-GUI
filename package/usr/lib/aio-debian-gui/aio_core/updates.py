@@ -78,3 +78,78 @@ def descargar_appimage_verificado(version, nombre, url, url_hash, directorio_des
             os.unlink(temporal)
 
 
+
+
+def estado_actualizacion_app(formato, version_instalada, app_id):
+    """Consulta solo la disponibilidad; no instala ni actualiza índices.
+
+    El formato determina la fuente efectiva. APT y Flatpak consultan sus
+    repositorios configurados (posiblemente con caché antigua). AppImage
+    consulta la última publicación verificada en GitHub.
+    """
+    import subprocess
+
+    def resultado(estado, detalle, version=None):
+        return {"status": estado, "detail": detalle, "version": version}
+
+    if formato == "deb":
+        try:
+            proc = subprocess.run(
+                ["apt-cache", "policy", "aio-debian-gui"],
+                capture_output=True, text=True, timeout=12, check=False,
+            )
+            if proc.returncode:
+                raise RuntimeError((proc.stderr or "No se pudo consultar APT.")[:260])
+            match = re.search(r"^\s*Candidate:\s*(\S+)", proc.stdout, re.M)
+            if not match or match.group(1) == "(none)":
+                return resultado("unknown", "No hay versión candidata en los índices APT.")
+            candidata = match.group(1)
+            if not version_instalada or not re.search(r"^[0-9]", version_instalada):
+                return resultado("unknown", "No se pudo identificar la versión DEB instalada.")
+            compara = subprocess.run(
+                ["dpkg", "--compare-versions", candidata, "gt", version_instalada],
+                capture_output=True, text=True, timeout=10, check=False,
+            )
+            if compara.returncode not in (0, 1):
+                raise RuntimeError("No se pudieron comparar las versiones de Debian.")
+            if compara.returncode == 0:
+                return resultado("available",
+                    f"Instalada: {version_instalada}. Disponible en APT: {candidata}.", candidata)
+            return resultado("current",
+                f"Instalada: {version_instalada}. Al día según los índices APT locales.", candidata)
+        except (OSError, subprocess.TimeoutExpired, RuntimeError) as exc:
+            return resultado("unknown", f"No se pudo consultar APT: {exc}")
+
+    if formato == "flatpak":
+        try:
+            proc = subprocess.run(
+                ["flatpak-spawn", "--host", "flatpak", "remote-ls", "--user",
+                 "--updates", "--app", "--columns=application"],
+                capture_output=True, text=True, timeout=30, check=False,
+            )
+            if proc.returncode:
+                raise RuntimeError((proc.stderr or "Consulta Flatpak fallida.")[:260])
+            if app_id in proc.stdout.splitlines():
+                return resultado("available",
+                    f"Hay una actualización de AiO en el repositorio Flatpak configurado (instalada: {version_instalada}).")
+            return resultado("current",
+                f"Sin actualizaciones según los metadatos Flatpak locales (instalada: {version_instalada}).")
+        except (OSError, subprocess.TimeoutExpired, RuntimeError) as exc:
+            return resultado("unknown", f"No se pudo consultar el repositorio Flatpak: {exc}")
+
+    if formato == "appimage":
+        try:
+            reciente, _nombre, _url, _sha = obtener_release_actualizacion()
+            actual = version_numerica(version_instalada)
+            if actual is None:
+                return resultado("unknown", "No se pudo identificar la versión de la AppImage actual.")
+            if version_numerica(reciente) > actual:
+                return resultado("available",
+                    f"Instalada: {version_instalada}. Última versión publicada: {reciente}.", reciente)
+            return resultado("current",
+                f"Instalada: {version_instalada}. Última versión publicada: {reciente}.", reciente)
+        except Exception as exc:
+            return resultado("unknown", f"No se pudo consultar GitHub Releases: {exc}")
+
+    return resultado("unsupported",
+        "Esta edición no dispone de actualización automática integrada.")

@@ -22,6 +22,12 @@ Principios que deben guiar la implementación: clasificar por ID PCI y rama comp
 
 La versión 2.0.0 permanece en **pruebas** hasta contrastar una matriz de IDs PCI y ramas NVIDIA, kernels Debian estable/Backports, Secure Boot y dispositivos híbridos. El instalador debe fallar de forma conservadora ante compatibilidad no comprobada y nunca cambiar el servidor gráfico de manera implícita.
 
+## Comprobación y actualización de AiO desde Diagnosticar (v2.0.7)
+
+El panel de diagnóstico incluye el estado de la propia aplicación. En DEB compara la versión instalada con la candidata de APT; en Flatpak consulta las actualizaciones del repositorio configurado; en AppImage compara con la última publicación de GitHub. Estas comprobaciones son de **solo lectura** y los índices APT y metadatos Flatpak pueden no estar actualizados. Si hay una versión disponible aparece **Actualizar AiO**, que abre el actualizador ya existente con su confirmación y sin instalar automáticamente al diagnosticar.
+
+Durante la confirmación se ofrece **Reiniciar AiO automáticamente tras actualizar** (desactivado inicialmente). Si se activa, la app relanza el nuevo ejecutable solo cuando la operación termina correctamente. Si no se activa, se ofrece **Reiniciar aplicación** o **Más tarde** al terminar. En DEB se reejecuta el programa instalado, Flatpak se abre desde el host y, para AppImage, se abre el archivo nuevo descargado y verificado por SHA-256 (sin reemplazar la versión anterior). La función no está habilitada en la edición Snap experimental ni desde código fuente.
+
 ## Corrección del diagnóstico APT (v2.0.6)
 
 La comprobación de dependencias APT se hace sin adquirir el bloqueo de dpkg, mediante `Debug::NoLocking=1`. Un fallo por permisos de acceso se presenta como «No comprobado» y no implica que el sistema tenga paquetes dañados. La comprobación es de solo lectura.
