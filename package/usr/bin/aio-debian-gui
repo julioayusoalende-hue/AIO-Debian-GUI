@@ -107,6 +107,8 @@ TEMAS = {"sistema", "claro", "oscuro"}
 
 TRADUCCIONES = {
     "en": {
+        "Salida de la consola": "Console output",
+        "Borrar": "Clear",
         "Detectar e instalar controlador NVIDIA": "Detect and install NVIDIA driver",
         "En Debian analiza la GPU, el kernel, DKMS y Secure Boot. En portátiles híbridos mantiene PRIME bajo demanda; requiere confirmación.": "On Debian, check the GPU, kernel, DKMS and Secure Boot. On hybrid laptops, preserve PRIME on-demand; confirmation required.",
         "Mantenimiento y configuración del sistema": "System maintenance and configuration",
@@ -223,6 +225,8 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Authorization wait cancelled.",
     },
     "fr": {
+        "Salida de la consola": "Sortie de la console",
+        "Borrar": "Effacer",
         "Detectar e instalar controlador NVIDIA": "Détecter et installer le pilote NVIDIA",
         "En Debian analiza la GPU, el kernel, DKMS y Secure Boot. En portátiles híbridos mantiene PRIME bajo demanda; requiere confirmación.": "Sous Debian, vérifie le GPU, le noyau, DKMS et Secure Boot. Sur les portables hybrides, conserve PRIME à la demande ; confirmation requise.",
         "Mantenimiento y configuración del sistema": "Maintenance et configuration du système",
@@ -338,6 +342,8 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Attente d’autorisation annulée.",
     },
     "zh": {
+        "Salida de la consola": "控制台输出",
+        "Borrar": "清除",
         "Detectar e instalar controlador NVIDIA": "检测并安装 NVIDIA 驱动",
         "En Debian analiza la GPU, el kernel, DKMS y Secure Boot. En portátiles híbridos mantiene PRIME bajo demanda; requiere confirmación.": "在 Debian 上检查 GPU、内核、DKMS 和安全启动。混合显卡笔记本保留按需 PRIME；安装须确认。",
         "Mantenimiento y configuración del sistema": "系统维护与配置",
@@ -1524,6 +1530,7 @@ class VentanaPrincipal(Gtk.Window):
             "edit-clear-symbolic", Gtk.IconSize.BUTTON))
         btn_borrar.set_always_show_image(True)
         btn_borrar.connect("clicked", self._borrar_consola)
+        self.btn_borrar = btn_borrar
         cabecera_log.pack_end(btn_borrar, False, False, 0)
         self.cabecera_consola = cabecera_log
         self.cabecera_consola.set_no_show_all(self.preferencias["modo_simple"])
@@ -1827,6 +1834,7 @@ class VentanaPrincipal(Gtk.Window):
         self.chk_sin_contrasena.set_sensitive(disponible)
         self.btn_menu.set_sensitive(disponible)
         self.btn_preferencias_cabecera.set_sensitive(disponible)
+        self.btn_borrar.set_sensitive(not self.en_curso)
         for boton in self.botones_preset:
             boton.set_sensitive(disponible)
         for pid, fila in self.filas.items():
@@ -1854,12 +1862,13 @@ class VentanaPrincipal(Gtk.Window):
             fila.set_no_show_all(True)
         caja = Gtk.Box(spacing=12)
         for m in ("top", "bottom"):
-            getattr(caja, "set_margin_" + m)(8)
+            getattr(caja, "set_margin_" + m)(6)
         for m in ("start", "end"):
             getattr(caja, "set_margin_" + m)(12)
-        textos = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        textos.pack_start(etiqueta(GLib.markup_escape_text(titulo), markup=True), False, False, 0)
-        textos.pack_start(etiqueta(desc, dim=True), False, False, 0)
+        # Fila compacta: el detalle sigue accesible en el tooltip.
+        textos = etiqueta(titulo)
+        textos.set_line_wrap(True)
+        fila.set_tooltip_text(traducir(desc))
         indicador = Gtk.Label()
         indicador.set_no_show_all(True)
         sw = Gtk.Switch(active=defecto, valign=Gtk.Align.CENTER)
