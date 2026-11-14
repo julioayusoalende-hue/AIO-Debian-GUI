@@ -58,3 +58,8 @@ with patch.object(mod, "_apt_locks", return_value=[]), patch.object(mod.shutil, 
     assert not report.blocked
     assert any("ACTUALIZAR: nano 7.2 → 7.3" in x for x in report.preview)
     assert any("INSTALAR: vim 9.1" in x for x in report.preview)
+
+# Avisar de cambios en componentes críticos.
+with patch.object(mod, "_apt_locks", return_value=[]), patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), patch.object(mod, "_run", side_effect=lambda cmd, timeout=25: SimpleNamespace(returncode=0, stdout="Inst linux-image-amd64 [6.1] (6.12 Debian:stable)\n" if "dist-upgrade" in cmd else "", stderr="")):
+    report = mod.check(["upgrade"])
+    assert any("kernel, Mesa o NVIDIA" in m for m in report.messages)

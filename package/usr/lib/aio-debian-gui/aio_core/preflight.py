@@ -144,4 +144,6 @@ def check(tasks):
         elif dkms.stdout.strip() and any(
                 x in tasks for x in ("backports-kernel-mesa", "revertir-backports", "nvidia-driver", "ubuntu-hwe")):
             messages.append("Hay módulos DKMS registrados; comprueba su compatibilidad.")
+    if any(any(marker in item.lower() for marker in ("linux-image", "linux-headers", "mesa", "nvidia")) for item in preview):
+        messages.append("ATENCIÓN: la simulación afecta a kernel, Mesa o NVIDIA; revisa las versiones y la compatibilidad.")
     return Report(blocked, messages, preview)

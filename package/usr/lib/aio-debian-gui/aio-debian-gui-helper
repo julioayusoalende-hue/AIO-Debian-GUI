@@ -31,7 +31,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 
 LISTAS_ACTUALIZADAS=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=2.5.1
+HELPER_VERSION=2.5.2
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 POLKIT_RULES_DIR=/etc/polkit-1/rules.d
@@ -240,6 +240,11 @@ habilitar_sin_contrasena() {
 
 generar_regla_polkit() {
     local username="$1"
+    # Los nombres POSIX normales no contienen comillas ni barras invertidas;
+    # validar igualmente antes de interpolarlos en una cadena JavaScript.
+    [[ "$username" =~ ^[a-zA-Z_][a-zA-Z0-9_.-]*[$]?$ ]] || {
+        err "Nombre de usuario no válido para una regla Polkit."; return 1;
+    }
     cat <<EOF
 polkit.addRule(function(action, subject) {
     if (action.id === "es.aiodebian.gui.mantenimiento" &&
@@ -1156,16 +1161,46 @@ mostrar_estados() {
     done
 }
 
+opciones_instantanea() {
+    # Solo ofrecer proveedores instalados y con configuración existente.
+    if command -v timeshift >/dev/null 2>&1 && [ -f /etc/timeshift/timeshift.json ]; then
+        printf '%s\n' timeshift
+    fi
+    if command -v snapper >/dev/null 2>&1 && command -v findmnt >/dev/null 2>&1 &&
+       [ "$(findmnt -n -o FSTYPE --target /)" = btrfs ] &&
+       [ -f /etc/snapper/configs/root ]; then
+        printf '%s\n' snapper
+    fi
+}
+
 crear_instantanea_previa() {
+    local proveedor="${1:-snapper}"
+    case "$proveedor" in
+        timeshift)
+            command -v timeshift >/dev/null 2>&1 || { err "Timeshift no está instalado."; return 1; }
+            [ -f /etc/timeshift/timeshift.json ] || { err "Timeshift no está configurado."; return 1; }
+            timeshift --create --comments "AiO Debian GUI: antes de mantenimiento" --tags O --scripted ||
+                { err "Timeshift no pudo crear la instantánea; mantenimiento cancelado."; return 1; }
+            ok "Instantánea Timeshift creada; la restauración no es automática."
+            return 0
+            ;;
+        snapper) ;;
+        *) err "Proveedor de instantáneas desconocido."; return 2 ;;
+    esac
     command -v snapper >/dev/null 2>&1 || { err "Snapper no está instalado."; return 1; }
     command -v findmnt >/dev/null 2>&1 || { err "findmnt no está disponible."; return 1; }
     [ "$(findmnt -n -o FSTYPE --target /)" = btrfs ] || { err "La raíz no utiliza Btrfs."; return 1; }
+    [ "$(findmnt -n -o TARGET --target /)" = "/" ] || { err "No se pudo verificar el punto de montaje raíz."; return 1; }
     snapper -c root get-config >/dev/null 2>&1 || { err "Snapper root no configurado."; return 1; }
     snapper -c root create --type single --description "AiO Debian GUI: antes de mantenimiento" || { err "Instantánea fallida."; return 1; }
     ok "Instantánea creada; la restauración no es automática."
 }
 
 main() {
+    if [ "${1:-}" = "--snapshot-options" ] && [ "$#" -eq 1 ]; then
+        opciones_instantanea
+        return 0
+    fi
     if [ "${1:-}" = "--version" ] && [ "$#" -eq 1 ]; then
         printf '%s\n' "$HELPER_VERSION"
         return 0
@@ -1261,10 +1296,16 @@ main() {
             ;;
     esac
 
-    local snapshot_before=0
+    local snapshot_before=""
     if [ "${1:-}" = "--snapshot-before" ]; then
-        snapshot_before=1
+        snapshot_before="snapper"
         shift
+    elif [ "${1:-}" = "--snapshot-provider" ]; then
+        case "${2:-}" in
+            snapper|timeshift) snapshot_before="$2" ;;
+            *) err "Proveedor de instantáneas no válido."; return 2 ;;
+        esac
+        shift 2
     fi
     local pasos=() s
     for s in "$@"; do
@@ -1285,8 +1326,8 @@ main() {
         esac
     done
 
-    if [ "$snapshot_before" -eq 1 ]; then
-        crear_instantanea_previa || { echo "##DONE:1"; return 1; }
+    if [ -n "$snapshot_before" ]; then
+        crear_instantanea_previa "$snapshot_before" || { echo "##DONE:1"; return 1; }
     fi
     local total=${#pasos[@]} i=0 fallos=0
     for s in "${pasos[@]}"; do
