@@ -4,6 +4,7 @@ version: '1.2.4'
 summary: Herramientas de mantenimiento para Debian y Ubuntu LTS
 description: |
   Interfaz GTK para mantenimiento de Debian y Ubuntu LTS.
+  Incluye el icono original en rojo Debian, tambien en Acerca de.
   Paquete experimental. Las operaciones administrativas requieren un
   asistente Polkit compatible instalado por separado en el anfitrión.
   El confinamiento classic requiere aprobación explícita de Snap Store.
