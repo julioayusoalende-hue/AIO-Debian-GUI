@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.2.4
+
+- Se conserva el icono original de AiO Debian GUI y se recolorea en tonos rojos Debian.
+- «Acerca de» muestra el PNG incluido en DEB, AppImage, Flatpak y Snap, sin depender del tema de iconos del sistema.
+- La edición Flatpak utiliza su identificador de icono correcto en el lanzador.
+
+
 ## 1.2.3
 
 - Cuando la única tarea seleccionada es actualizar Flatpak, se usa `flatpak --user` sin `pkexec`, también desde la interfaz Flatpak, sin depender del asistente privilegiado del anfitrión.

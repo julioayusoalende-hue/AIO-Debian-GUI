@@ -1,6 +1,6 @@
 name: aio-debian-gui
 title: AiO Debian GUI
-version: '1.2.3'
+version: '1.2.4'
 summary: Herramientas de mantenimiento para Debian y Ubuntu LTS
 description: |
   Interfaz GTK para mantenimiento de Debian y Ubuntu LTS.
@@ -48,3 +48,4 @@ parts:
       install -Dm755 snap/local/aio-debian-gui-snap-launch "$CRAFT_PART_INSTALL/bin/aio-debian-gui-snap-launch"
       install -Dm644 snap/gui/aio-debian-gui.desktop "$CRAFT_PART_INSTALL/snap/gui/aio-debian-gui.desktop"
       install -Dm644 package/usr/share/icons/hicolor/256x256/apps/aio-debian-gui.png "$CRAFT_PART_INSTALL/snap/gui/aio-debian-gui.png"
+      install -Dm644 package/usr/share/icons/hicolor/256x256/apps/aio-debian-gui.png "$CRAFT_PART_INSTALL/usr/share/icons/hicolor/256x256/apps/aio-debian-gui.png"

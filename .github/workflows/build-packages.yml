@@ -118,7 +118,7 @@ jobs:
             exit 0
           fi
           gh release create "$TAG" \
-            dist/*.deb dist/*.AppImage dist/SHA256SUMS \
+            dist/*.deb dist/*.AppImage dist/*.flatpak dist/SHA256SUMS \
             --target "$GITHUB_SHA" \
             --title "AiO Debian GUI $VERSION" \
             --notes-file CHANGELOG.md \

@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.2.4": "Icono original en rojo Debian y visualización directa en Acerca de en todos los formatos.",
     "1.2.3": "Actualiza Flatpak de usuario sin contraseña y recupera la autorización opcional y reversible de Polkit para las tareas de AiO.",
     "1.2.2": "Sigue el tema claro u oscuro del sistema con cambios en directo, sin perder la selección manual.",
     "1.2.1": "Muestra el logotipo de Debian o Ubuntu según el sistema anfitrión en la información inicial.",
@@ -2351,7 +2352,21 @@ class VentanaPrincipal(Gtk.Window):
         d.set_website(HOMEPAGE)
         d.set_copyright("© 2026 Julio Ayuso")
         d.set_license_type(Gtk.License.GPL_3_0)
-        d.set_logo_icon_name("aio-debian-gui")
+        # El tema de iconos del host no contiene necesariamente nuestro icono
+        # (AppImage, Flatpak y Snap). Mostrar el PNG incluido en el paquete.
+        icono = os.path.normpath(os.path.join(
+            os.path.dirname(__file__),
+            "../share/icons/hicolor/256x256/apps/aio-debian-gui.png",
+        ))
+        if os.path.isfile(icono):
+            try:
+                d.set_logo(GdkPixbuf.Pixbuf.new_from_file_at_scale(
+                    icono, 128, 128, True
+                ))
+            except GLib.Error:
+                d.set_logo_icon_name("applications-system")
+        else:
+            d.set_logo_icon_name("applications-system")
         d.show_all()
 
         def buscar_credito(widget):
