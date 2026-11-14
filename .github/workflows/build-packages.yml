@@ -87,14 +87,14 @@ jobs:
           test -f package/usr/lib/aio-debian-gui/aio_core/updates.py
           file "$FLATPAK"
           appstreamcli validate --no-net flatpak/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml
-          flatpak install --user --noninteractive --bundle "$FLATPAK"
-          flatpak info --user --show-metadata io.github.julioayusoalende_hue.aio_debian_gui >/dev/null
-          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/share/icons/hicolor/512x512/apps/aio-debian-gui.png
-          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/updates.py
-          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/history.py
-          flatpak run --user --command=python3 io.github.julioayusoalende_hue.aio_debian_gui -c 'import gi; gi.require_version("Gtk", "3.0"); from gi.repository import Gtk'
-          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -x /app/share/aio-debian-gui/host-integration/aio-debian-gui-helper
-          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/share/aio-debian-gui/host-integration/es.aiodebian.gui.policy
+          # Comprobar los archivos en el árbol compilado: instalar Flatpak
+          # sobre un runner CI sin sesión de usuario falla sin mensaje útil.
+          test -f flatpak-build/files/share/icons/hicolor/512x512/apps/aio-debian-gui.png
+          test -f flatpak-build/files/lib/aio-debian-gui/aio_core/updates.py
+          test -f flatpak-build/files/lib/aio-debian-gui/aio_core/history.py
+          test -x flatpak-build/files/share/aio-debian-gui/host-integration/aio-debian-gui-helper
+          test -f flatpak-build/files/share/aio-debian-gui/host-integration/es.aiodebian.gui.policy
+          test -s "$FLATPAK"
           (cd dist && sha256sum *.deb *.AppImage > SHA256SUMS)
           cat dist/SHA256SUMS
 
