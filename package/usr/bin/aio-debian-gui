@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.0.2": "Dos paneles lado a lado: sistema y tareas, sin duplicar Preferencias y con desplazamiento independiente.",
     "2.0.1": "Interfaz más clara con secciones horizontales, tareas a todo el ancho y controles de ejecución mejor distribuidos.",
     "2.0.0": "Detección NVIDIA en Debian, instalación supervisada del controlador compatible y soporte PRIME para equipos híbridos.",
     "1.2.4": "Icono original en rojo Debian y visualización directa en Acerca de en todos los formatos.",
@@ -1066,7 +1067,7 @@ class VentanaPrincipal(Gtk.Window):
         self.handler_cierre = None
         global IDIOMA_ACTUAL
         IDIOMA_ACTUAL = self.preferencias["idioma"]
-        self.set_default_size(920, 780)
+        self.set_default_size(1160, 780)
         self.set_icon_name("aio-debian-gui")
 
         self.en_curso = False
@@ -1130,16 +1131,13 @@ class VentanaPrincipal(Gtk.Window):
 
         self.btn_menu = Gtk.MenuButton()
         self.btn_menu.add(Gtk.Image.new_from_icon_name("open-menu-symbolic", Gtk.IconSize.BUTTON))
-        self.btn_menu.set_tooltip_text(traducir("Menú de preferencias"))
+        self.btn_menu.set_tooltip_text(traducir("Historial y herramientas"))
         popover = Gtk.Popover.new(self.btn_menu)
         menu = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         menu.set_margin_top(8)
         menu.set_margin_bottom(8)
         menu.set_margin_start(8)
         menu.set_margin_end(8)
-        btn_preferencias = Gtk.Button(label=traducir("Preferencias"))
-        btn_preferencias.connect("clicked", self._abrir_preferencias)
-        menu.pack_start(btn_preferencias, False, False, 0)
         btn_historial = Gtk.Button(label=traducir("Historial de mantenimiento"))
         btn_historial.connect("clicked", self._mostrar_historial)
         menu.pack_start(btn_historial, False, False, 0)
@@ -1466,23 +1464,39 @@ class VentanaPrincipal(Gtk.Window):
         self.destroy()
 
     def _construir_cuerpo(self):
-        # Diseño horizontal apilado: información, tareas, estado y consola.
-        # La zona superior se desplaza si el monitor es pequeño; los controles
-        # de ejecución y la consola permanecen visibles en la parte inferior.
+        # Paneles realmente lado a lado: información izquierda, tareas derecha.
+        # Cada columna puede desplazarse independientemente sin tapar los
+        # controles de ejecución ni la consola de la parte inferior.
         principal = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.add(principal)
+        paneles = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
+        paneles.set_wide_handle(True)
+        paneles.set_hexpand(True)
+        paneles.set_vexpand(True)
+        self.paneles_principales = paneles
+        principal.pack_start(paneles, True, True, 0)
 
-        sup = Gtk.ScrolledWindow()
-        sup.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        sup.set_min_content_height(240)
-        caja = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
-        for margen in ("top", "bottom", "start", "end"):
-            getattr(caja, "set_margin_" + margen)(14)
-        sup.add(caja)
-        principal.pack_start(sup, True, True, 0)
+        izquierda = Gtk.ScrolledWindow()
+        izquierda.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        izquierda.set_min_content_width(320)
+        izquierda.set_min_content_height(220)
+        caja_izquierda = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        caja_izquierda.set_border_width(12)
+        izquierda.add(caja_izquierda)
+        caja_izquierda.pack_start(self._tarjeta_info(), False, False, 0)
+        paneles.pack1(izquierda, resize=True, shrink=False)
 
-        caja.pack_start(self._tarjeta_info(), False, False, 0)
-        caja.pack_start(self._tarjeta_opciones(), False, False, 0)
+        derecha = Gtk.ScrolledWindow()
+        derecha.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        derecha.set_min_content_width(420)
+        caja_derecha = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        caja_derecha.set_border_width(12)
+        derecha.add(caja_derecha)
+        caja_derecha.pack_start(self._tarjeta_opciones(), False, False, 0)
+        paneles.pack2(derecha, resize=True, shrink=False)
+        # El panel de tareas recibe más espacio; el usuario puede ajustar
+        # la división arrastrando el separador horizontal.
+        paneles.set_position(405)
 
         inf = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         for margen in ("bottom", "start", "end"):
@@ -1576,44 +1590,41 @@ class VentanaPrincipal(Gtk.Window):
         titulo.pack_start(etiqueta("<b>Información del sistema</b>", markup=True), False, False, 0)
         caja.pack_start(titulo, False, False, 0)
 
-        contenido = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=20)
         filas, version = informacion_sistema()
-        grid = Gtk.Grid(column_spacing=18, row_spacing=5)
+        grid = Gtk.Grid(column_spacing=12, row_spacing=6)
         for i, (clave, valor) in enumerate(filas):
             nombre = etiqueta(clave, dim=True)
             nombre.set_line_wrap(True)
+            nombre.set_max_width_chars(20)
             grid.attach(nombre, 0, i, 1, 1)
             dato = etiqueta(valor)
             dato.set_line_wrap(True)
+            dato.set_max_width_chars(25)
             dato.set_selectable(True)
             grid.attach(dato, 1, i, 1, 1)
-        contenido.pack_start(grid, True, True, 0)
-
-        novedades = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        novedades.set_size_request(240, -1)
-        nov = NOVEDADES.get(version)
-        if nov:
-            novedades.pack_start(etiqueta("<b>Novedades de esta versión:</b>",
-                                          markup=True), False, False, 0)
-            detalle = etiqueta(nov, dim=True)
-            detalle.set_line_wrap(True)
-            detalle.set_max_width_chars(42)
-            novedades.pack_start(detalle, False, False, 0)
-        contenido.pack_start(novedades, True, True, 0)
+        caja.pack_start(grid, False, False, 0)
 
         ruta_logo, nombre_logo = logo_distribucion(self.distribucion)
         if ruta_logo and os.path.isfile(ruta_logo):
             try:
                 imagen_logo = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                    ruta_logo, 96, 96, True)
+                    ruta_logo, 76, 76, True)
                 logo = Gtk.Image.new_from_pixbuf(imagen_logo)
                 logo.set_tooltip_text(traducir(nombre_logo))
-                logo.set_valign(Gtk.Align.CENTER)
+                logo.set_halign(Gtk.Align.CENTER)
                 logo.get_accessible().set_name(traducir(nombre_logo))
-                contenido.pack_end(logo, False, False, 0)
+                caja.pack_start(logo, False, False, 6)
             except GLib.Error:
                 pass
-        caja.pack_start(contenido, False, False, 0)
+
+        nov = NOVEDADES.get(version)
+        if nov:
+            caja.pack_start(etiqueta("<b>Novedades de esta versión:</b>",
+                                     markup=True), False, False, 4)
+            detalle = etiqueta(nov, dim=True)
+            detalle.set_line_wrap(True)
+            detalle.set_max_width_chars(44)
+            caja.pack_start(detalle, False, False, 0)
         if self.distribucion == "debian":
             self.nvidia_info_label = etiqueta("Buscando GPU NVIDIA…", dim=True)
             caja.pack_start(self.nvidia_info_label, False, False, 3)

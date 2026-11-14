@@ -89,9 +89,11 @@ if Gtk.init_check([])[0]:
         menu = ventana.menu_popover.get_child()
         assert menu.get_visible()
         botones_menu = menu.get_children()
-        assert len(botones_menu) == 2
+        assert len(botones_menu) == 1
         assert botones_menu[0].get_visible()
-        assert botones_menu[0].get_label() == app.traducir("Preferencias")
+        assert botones_menu[0].get_label() == app.traducir("Historial de mantenimiento")
+        assert ventana.btn_preferencias_cabecera.get_visible()
+        assert ventana.paneles_principales.get_orientation() == Gtk.Orientation.HORIZONTAL
         ventana.btn_menu.set_active(True)
         while Gtk.events_pending():
             Gtk.main_iteration()
