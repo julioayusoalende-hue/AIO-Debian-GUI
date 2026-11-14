@@ -8,7 +8,7 @@
 
 AiO Debian GUI reúne tareas habituales de administración en una aplicación GTK, con **confirmaciones explícitas y comprobaciones preventivas** para las operaciones delicadas. Es un proyecto independiente del script de consola [aio-debian](https://github.com/julioayusoalende-hue/aio-debian).
 
-> **Versión actual: 2.1.0.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
+> **Versión actual: 2.2.0.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
 
 ## Funciones principales
 
@@ -73,8 +73,7 @@ Los avisos se muestran antes de la confirmación final. Las simulaciones usan
 los índices locales y **no garantizan** que el resultado real sea idéntico.
 Las operaciones especiales mantienen sus comprobaciones adicionales.
 
-Esta mejora está en el código de desarrollo y **no implica que exista todavía
-una publicación 2.2.0**.
+Esta funcionalidad se incorpora a la versión 2.2.0.
 
 ## Referencia técnica: MX Linux ddm-mx
 

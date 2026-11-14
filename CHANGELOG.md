@@ -1,5 +1,14 @@
 # Cambios
 
+## 2.2.0
+
+- Nuevo modo de mantenimiento seguro: comprobaciones previas de espacio libre, dpkg, dependencias APT y DKMS.
+- Simulaciones de actualización y limpieza de dependencias; bloqueo preventivo ante propuestas de eliminación de paquetes.
+- Confirmación adicional para avisos y bloqueo de operaciones con incidencias críticas.
+- Pruebas automatizadas de las condiciones de bloqueo y continuidad.
+- Las simulaciones son orientativas y no garantizan el resultado de la ejecución real.
+
+
 ## 2.1.0
 
 - Nueva tarea **Volver a kernel y Mesa Stable** para Debian: prepara el retorno desde Backports a las versiones de la rama Stable.

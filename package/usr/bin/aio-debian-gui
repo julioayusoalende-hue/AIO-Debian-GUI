@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.2.0": "Modo de mantenimiento seguro: comprobaciones previas de APT, dpkg, espacio, DKMS y simulaciones conservadoras.",
     "2.1.0": "Nueva opción de preparación del retorno a kernel y Mesa Stable desde Backports, con simulación segura.",
     "2.0.9": "2.0.9 — Traducciones completas para los paneles y el diagnóstico preventivo.",
     "2.0.8": "La comprobación de actualizaciones de AiO funciona también con APT en español.",
