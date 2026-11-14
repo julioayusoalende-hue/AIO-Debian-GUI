@@ -22,6 +22,10 @@ Principios que deben guiar la implementación: clasificar por ID PCI y rama comp
 
 La versión 2.0.0 permanece en **pruebas** hasta contrastar una matriz de IDs PCI y ramas NVIDIA, kernels Debian estable/Backports, Secure Boot y dispositivos híbridos. El instalador debe fallar de forma conservadora ante compatibilidad no comprobada y nunca cambiar el servidor gráfico de manera implícita.
 
+## Traducciones de la interfaz y del diagnóstico (v2.0.9)
+
+Se completan las traducciones al inglés, francés y chino de los mensajes de la pantalla principal y del diagnóstico preventivo. Incluye los avisos de Polkit, NVIDIA, novedades de versión, consola y resultados con valores variables. La salida técnica de herramientas externas no se traduce para no alterar su significado. La integración continua incluye pruebas de regresión de las traducciones críticas en los tres idiomas.
+
 ## Compatibilidad de idioma de APT en el diagnóstico (v2.0.8)
 
 En versiones anteriores, el diagnóstico podía mostrar «No hay versión candidata en los índices APT» incluso cuando sí existía, porque buscaba el campo inglés Candidate y la salida de APT estaba traducida. A partir de la 2.0.8 las consultas internas utilizan LC_ALL=C sin cambiar el idioma de la aplicación. El mismo ajuste se aplica al actualizador DEB.
