@@ -111,6 +111,21 @@ if Gtk.init_check([])[0]:
         ventana._escribir("visible output")
         inicio, fin = ventana.buf.get_bounds()
         assert ventana.buf.get_text(inicio, fin, True) == "visible output"
+        # Abrir una ventana de consola independiente conserva el mismo buffer
+        # y sigue mostrando la salida en tiempo real, sin duplicar procesos.
+        ventana._alternar_ventana_consola()
+        separada = ventana.ventana_consola
+        assert separada is not None and separada.get_visible()
+        assert separada.get_transient_for() is ventana
+        assert ventana.log_separado.get_buffer() is ventana.buf
+        assert not ventana.marco_consola.get_visible()
+        ventana._escribir(" - detached")
+        inicio, fin = ventana.buf.get_bounds()
+        assert ventana.buf.get_text(inicio, fin, True) == "visible output - detached"
+        ventana._alternar_ventana_consola()
+        assert ventana.ventana_consola is None
+        assert ventana.log_separado is None
+        assert ventana.marco_consola.get_visible()
         ventana.destroy()
 
     ventana = app.VentanaPrincipal(

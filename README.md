@@ -22,6 +22,10 @@ Principios que deben guiar la implementación: clasificar por ID PCI y rama comp
 
 La versión 2.0.0 permanece en **pruebas** hasta contrastar una matriz de IDs PCI y ramas NVIDIA, kernels Debian estable/Backports, Secure Boot y dispositivos híbridos. El instalador debe fallar de forma conservadora ante compatibilidad no comprobada y nunca cambiar el servidor gráfico de manera implícita.
 
+## Consola en una ventana separada (v2.0.4)
+
+En la cabecera de «Salida de la consola», pulsa **Abrir en otra ventana** para mostrar los mensajes de ejecución en una ventana independiente, ampliable y redimensionable. La consola de la ventana principal se oculta mientras está separada. Ambas vistas utilizan el **mismo buffer GTK**, por lo que el texto, los colores, las nuevas líneas y el historial son idénticos. Para volver a colocarla en la aplicación, pulsa **Volver a integrar** o cierra la ventana de consola. Cerrar esta ventana **no interrumpe** las tareas que se estén ejecutando. El modo simple continúa ocultando la consola.
+
 ## Menú principal (v2.0.3)
 
 Un único menú en la cabecera agrupa, en este orden: **Preferencias**, **Historial de mantenimiento**, **Buscar actualizaciones** y **Acerca de**. No hay botones duplicados en la cabecera. Las actualizaciones solo se habilitan para instalaciones DEB, AppImage o Flatpak.
