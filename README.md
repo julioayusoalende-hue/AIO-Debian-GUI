@@ -14,6 +14,24 @@ Interfaz gráfica de mantenimiento y configuración todo en uno para Debian.
 Es un proyecto independiente: no necesita el script de consola
 [aio-debian](https://github.com/julioayusoalende-hue/aio-debian) (puedes tener ambos).
 
+## NVIDIA en Debian (v1.2.5)
+
+La aplicación consulta los dispositivos PCI del anfitrión. Si detecta una tarjeta NVIDIA y se utiliza Debian, ofrece la tarea optativa **Detectar e instalar controlador NVIDIA**. Reconoce si existe una GPU integrada Intel o AMD junto a NVIDIA (portátil híbrido), informa del driver instalado, la versión candidata en APT y el estado de Secure Boot. No configura NVIDIA automáticamente al arrancar la interfaz.
+
+Al activar la tarea aparece una advertencia explícita. El asistente comprueba que exista una GPU NVIDIA, que los repositorios APT tengan `nvidia-driver`, que estén disponibles las cabeceras correspondientes al kernel actual, que la simulación de APT no elimine otros paquetes y que `nvidia-detect` recomiende específicamente `nvidia-driver`. Si alguna condición falla, **no instala el controlador**. Una instalación previa de `nvidia-detect` puede permanecer aunque se cancele posteriormente por incompatibilidad.
+
+**Importante:** el `nvidia-detect` de Debian 13 puede estar desactualizado y algunas generaciones recientes (como Blackwell) o tarjetas antiguas no están cubiertas por el controlador de Debian estable. La comprobación no sustituye una verificación exhaustiva de soporte del ID PCI. Por eso, ante una incompatibilidad detectada o un resultado ambiguo, AiO se detiene y requiere revisión manual. No instala controladores externos con archivos `.run`, no mezcla repositorios de distintas versiones de Debian y nunca desactiva Secure Boot automáticamente.
+
+Para equipos híbridos, el entorno gráfico sigue ejecutándose sobre Intel/AMD y NVIDIA se reserva para aplicaciones exigentes mediante PRIME Render Offload. Por ejemplo:
+
+```bash
+__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia glxinfo -B
+```
+
+En Steam, se puede usar `__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia %command%`. Se recomienda reiniciar tras la instalación y validar `nvidia-smi` y `dkms status`. Las salidas externas conectadas físicamente a la GPU NVIDIA pueden requerir ajustes manuales específicos (Reverse PRIME/MUX); esta opción **no modifica** Xorg, GRUB, Wayland ni el modo MUX. La compatibilidad real depende de la GPU, el kernel y la versión del controlador.
+
+Documentación: https://wiki.debian.org/NvidiaGraphicsDrivers y https://wiki.debian.org/NVIDIA%20Optimus
+
 ## Icono (v1.2.4)
 
 Se conserva el diseño original del icono de AiO Debian GUI, con los tonos azules sustituidos por rojo Debian. Los PNG se incluyen directamente en los paquetes DEB, AppImage, Flatpak y Snap. La ventana «Acerca de» carga el icono instalado, sin depender del tema de iconos del sistema.

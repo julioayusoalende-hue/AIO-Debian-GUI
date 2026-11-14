@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.2.5": "Detección NVIDIA en Debian, instalación supervisada del controlador compatible y soporte PRIME para equipos híbridos.",
     "1.2.4": "Icono original en rojo Debian y visualización directa en Acerca de en todos los formatos.",
     "1.2.3": "Actualiza Flatpak de usuario sin contraseña y recupera la autorización opcional y reversible de Polkit para las tareas de AiO.",
     "1.2.2": "Sigue el tema claro u oscuro del sistema con cambios en directo, sin perder la selección manual.",
@@ -1001,6 +1002,9 @@ PASOS = [
     ("backports-kernel-mesa", "Instalar kernel y Mesa desde Backports",
      "Instala el kernel y los controladores gráficos Mesa de Debian Backports; puede requerir reinicio.",
      False, "apt"),
+    ("nvidia-driver", "Detectar e instalar controlador NVIDIA",
+     "En Debian analiza la GPU, el kernel, DKMS y Secure Boot. En portátiles híbridos mantiene PRIME bajo demanda; requiere confirmación.",
+     False, "apt"),
     ("ubuntu-hwe", "Instalar kernel HWE oficial de Ubuntu",
      "Instala el metapaquete HWE de Ubuntu LTS solo si está disponible en los repositorios oficiales; puede requerir reinicio.",
      False, "apt"),
@@ -1067,6 +1071,11 @@ class VentanaPrincipal(Gtk.Window):
         self.consultando_estados = False
         self.timeout_estados_id = None
         self.estados_tareas = set()
+        self.nvidia_presente = False
+        self.nvidia_hibrida = False
+        self.nvidia_instalada = False
+        self.nvidia_candidata = "no-disponible"
+        self.nvidia_secureboot = "desconocido"
         self.salida_estados = []
         self.comprobando_actualizacion = False
         self.tareas_en_ejecucion = []
@@ -1537,6 +1546,9 @@ class VentanaPrincipal(Gtk.Window):
                 etiqueta(titulo_novedades + " " + nov, markup=True),
                 False, False, 4,
             )
+        if self.distribucion == "debian":
+            self.nvidia_info_label = etiqueta("Buscando GPU NVIDIA…", dim=True)
+            caja.pack_start(self.nvidia_info_label, False, False, 3)
         return marco
 
     def _tarjeta_opciones(self):
@@ -1639,7 +1651,12 @@ class VentanaPrincipal(Gtk.Window):
             )
             return GLib.SOURCE_REMOVE
         estados = {}
+        nvidia = {}
         for linea in self.salida_estados:
+            campos_nvidia = linea.split(":", 2)
+            if (len(campos_nvidia) == 3 and campos_nvidia[0] == "##NVIDIA"
+                    and campos_nvidia[1] in ("present", "hybrid", "installed", "candidate", "secureboot", "kernel")):
+                nvidia[campos_nvidia[1]] = campos_nvidia[2]
             campos = linea.split(":")
             if (len(campos) == 3 and campos[0] == "##STATUS"
                     and campos[1] in (
@@ -1657,17 +1674,40 @@ class VentanaPrincipal(Gtk.Window):
             )
             return
 
+        self.nvidia_presente = nvidia.get("present") == "1"
+        self.nvidia_hibrida = nvidia.get("hybrid") == "1"
+        self.nvidia_instalada = nvidia.get("installed") == "1"
+        self.nvidia_candidata = nvidia.get("candidate", "no-disponible")
+        self.nvidia_secureboot = nvidia.get("secureboot", "desconocido")
+        if self.distribucion == "debian":
+            fila_nvidia = self.filas.get("nvidia-driver")
+            if fila_nvidia is not None:
+                fila_nvidia.set_visible(self.nvidia_presente)
+            if self.nvidia_presente:
+                modo = "Híbrida (integrada + NVIDIA)" if self.nvidia_hibrida else "NVIDIA dedicada"
+                estado = "instalado" if self.nvidia_instalada else "no instalado"
+                self.nvidia_info_label.set_text(
+                    "GPU: %s · driver %s · candidato APT: %s · Secure Boot: %s"
+                    % (modo, estado, self.nvidia_candidata, self.nvidia_secureboot)
+                )
+            else:
+                self.nvidia_info_label.set_text("No se detectó una GPU NVIDIA PCI.")
+        if self.nvidia_presente:
+            estados["nvidia-driver"] = self.nvidia_instalada
         self.estados_tareas = {pid for pid, completada in estados.items() if completada}
         etiquetas = {
             "repos": "✓ Ya configurados",
             "tools": "✓ Ya instaladas",
             "backports-kernel-mesa": "✓ Ya instalados",
             "ubuntu-hwe": "✓ Ya instalado",
+            "nvidia-driver": "✓ Driver NVIDIA instalado",
             "gnome-plugin": "✓ Ya instalado",
             "ext-manager": "✓ Ya instalado",
         }
         for pid, completada in estados.items():
-            indicador = self.indicadores[pid]
+            indicador = self.indicadores.get(pid)
+            if indicador is None:
+                continue
             if completada:
                 indicador.set_markup(
                     "<span foreground='#26a269'><b>%s</b></span>"
@@ -1724,12 +1764,15 @@ class VentanaPrincipal(Gtk.Window):
         for boton in self.botones_preset:
             boton.set_sensitive(disponible)
         for pid, fila in self.filas.items():
-            habilitada = disponible and pid not in self.estados_tareas
+            habilitada = (disponible and pid not in self.estados_tareas
+                         and (pid != "nvidia-driver" or self.nvidia_presente))
             fila.set_sensitive(habilitada)
             self.switches[pid][0].set_sensitive(habilitada)
 
     def _visible(self, pid):
         if pid == "backports-kernel-mesa":
+            return self.distribucion == "debian"
+        if pid == "nvidia-driver":
             return self.distribucion == "debian"
         if pid == "ubuntu-hwe":
             return self.distribucion == "ubuntu"
@@ -1741,6 +1784,8 @@ class VentanaPrincipal(Gtk.Window):
 
     def _fila(self, pid, titulo, desc, defecto):
         fila = Gtk.ListBoxRow(activatable=False)
+        if pid == "nvidia-driver":
+            fila.set_no_show_all(True)
         caja = Gtk.Box(spacing=12)
         for m in ("top", "bottom"):
             getattr(caja, "set_margin_" + m)(8)
@@ -1866,6 +1911,48 @@ class VentanaPrincipal(Gtk.Window):
                 "Actualiza el paquete .deb a la versión 1.0.7 o posterior.",
             )
             return
+
+        if "nvidia-driver" in pasos:
+            if "backports-kernel-mesa" in pasos:
+                self._mensaje(Gtk.MessageType.WARNING, "NVIDIA y Backports",
+                              "Instala primero el kernel de Backports, reinicia y vuelve a comprobar el controlador NVIDIA. No se combinan ambas tareas.")
+                return
+            cmd_report = comando_host(HELPER_SISTEMA, "--nvidia-report") if es_flatpak() else ["bash", HELPER, "--nvidia-report"]
+            try:
+                report = subprocess.run(cmd_report, capture_output=True, text=True, timeout=12)
+            except (OSError, subprocess.SubprocessError) as e:
+                self._mensaje(Gtk.MessageType.ERROR, "Detección NVIDIA", str(e))
+                return
+            if report.returncode or "##NVIDIA:present:1" not in report.stdout:
+                self._mensaje(Gtk.MessageType.WARNING, "Detección NVIDIA",
+                              "El asistente no ha podido verificar una GPU NVIDIA. No se instalará nada.")
+                return
+            hibrida = "##NVIDIA:hybrid:1" in report.stdout
+            advertencia = (
+                "GPU híbrida: se mantendrá Intel/AMD para el escritorio y NVIDIA se usará mediante PRIME Render Offload. "
+                if hibrida else "GPU NVIDIA dedicada detectada. "
+            )
+            advertencia += (
+                "Se instalarán paquetes Debian con DKMS si la compatibilidad, Secure Boot, headers y la simulación APT lo permiten. "
+                "La versión estable puede tener limitaciones de soporte y seguridad. "
+                "No se cambiarán Xorg, GRUB ni Wayland; tras instalar habrá que reiniciar. "
+                "¿Autorizar la instalación NVIDIA bajo estas condiciones?"
+            )
+            dialogo = Gtk.MessageDialog(transient_for=self, modal=True,
+                message_type=Gtk.MessageType.WARNING, buttons=Gtk.ButtonsType.NONE,
+                text="Instalación de controlador NVIDIA")
+            dialogo.format_secondary_text(advertencia)
+            dialogo.add_button("Cancelar", Gtk.ResponseType.CANCEL)
+            dialogo.add_button("Instalar si es compatible", Gtk.ResponseType.OK)
+            dialogo.set_default_response(Gtk.ResponseType.CANCEL)
+            aprobado = dialogo.run() == Gtk.ResponseType.OK
+            dialogo.destroy()
+            if not aprobado:
+                return
+            if not helper_admite_tarea(helper, "nvidia-driver"):
+                self._mensaje(Gtk.MessageType.ERROR, "Asistente desactualizado",
+                              "Instala la nueva versión de AiO y su asistente del sistema para gestionar NVIDIA.")
+                return
 
         if "backports-kernel-mesa" in pasos:
             d = Gtk.MessageDialog(

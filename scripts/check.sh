@@ -31,6 +31,7 @@ python3 scripts/test-updater.py && bien "actualizador AppImage: versiones y SHA-
 python3 scripts/test-history.py && bien "historial de mantenimiento y persistencia" || fallo "pruebas del historial"
 python3 scripts/test-install-format.py && bien "detección de formato DEB/AppImage/Flatpak" || fallo "detección de formato"
 python3 scripts/test-system-logo.py && bien "logotipos dinámicos Debian/Ubuntu" || fallo "pruebas de logotipos"
+bash scripts/test-nvidia.sh && bien "detección NVIDIA e híbrida" || fallo "pruebas NVIDIA"
 
 if python3 -c 'import gi; gi.require_version("Gtk", "3.0")' >/dev/null 2>&1; then
     python3 scripts/test-preferences.py "$GUI" &&

@@ -31,7 +31,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 
 LISTAS_ACTUALIZADAS=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.2.4
+HELPER_VERSION=1.2.5
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 POLKIT_RULES_DIR=/etc/polkit-1/rules.d
@@ -885,6 +885,307 @@ paso_rebootcheck() {
         ok "No hace falta reiniciar."
     fi
     echo "##REBOOT:${necesita}"
+}
+
+
+# NVIDIA: detección PCI del anfitrión, sin depender del driver instalado.
+nvidia_pci_root() {
+    if [ "$EUID" -ne 0 ] && [[ -v AIO_TEST_PCI_ROOT ]]; then
+        printf '%s\n' "$AIO_TEST_PCI_ROOT"
+    else
+        echo /sys/bus/pci/devices
+    fi
+}
+nvidia_gpu_count() {
+    local fabricante="$1" dir ruta v c total=0
+    dir=$(nvidia_pci_root)
+    for ruta in "$dir"/*; do
+        [ -r "$ruta/vendor" ] && [ -r "$ruta/class" ] || continue
+        v=$(cat "$ruta/vendor"); c=$(cat "$ruta/class")
+        case "$c" in 0x0300*|0x0302*|0x0380*) ;; *) continue ;; esac
+        if [ "$fabricante" = integrada ]; then
+            case "$v" in 0x8086|0x1002) total=$((total + 1));; esac
+        elif [ "$v" = "$fabricante" ]; then
+            total=$((total + 1))
+        fi
+    done
+    echo "$total"
+}
+nvidia_presente() { [ "$(nvidia_gpu_count 0x10de)" -gt 0 ]; }
+nvidia_hibrida() {
+    nvidia_presente && [ "$(nvidia_gpu_count integrada)" -gt 0 ]
+}
+nvidia_secure_boot() {
+    local r
+    [ -d /sys/firmware/efi ] || { echo desactivado; return; }
+    command -v mokutil >/dev/null || { echo desconocido; return; }
+    r=$(mokutil --sb-state 2>/dev/null) || { echo desconocido; return; }
+    case "$r" in
+        *"SecureBoot enabled"*|*"Secure Boot enabled"*) echo activado ;;
+        *"SecureBoot disabled"*|*"Secure Boot disabled"*) echo desactivado ;;
+        *) echo desconocido ;;
+    esac
+}
+nvidia_report() {
+    local p=0 h=0 installed=0 candidate=no-disponible
+    if nvidia_presente; then
+        p=1
+        nvidia_hibrida && h=1
+        paquete_instalado nvidia-driver && installed=1
+        candidate=$(apt-cache policy nvidia-driver 2>/dev/null | awk '/Candidate:/ {print $2; exit}')
+        [ -n "$candidate" ] || candidate=no-disponible
+    fi
+    printf '##NVIDIA:present:%s\n' "$p"
+    printf '##NVIDIA:hybrid:%s\n' "$h"
+    printf '##NVIDIA:installed:%s\n' "$installed"
+    printf '##NVIDIA:candidate:%s\n' "$candidate"
+    printf '##NVIDIA:secureboot:%s\n' "$(nvidia_secure_boot)"
+    printf '##NVIDIA:kernel:%s\n' "$(uname -r)"
+}
+paso_nvidia_driver() {
+    local candidate major kernel headers output simulation
+    [ "$(leer_distribucion)" = debian ] || { err "NVIDIA automático solo en Debian."; return 1; }
+    nvidia_presente || { err "No se detectó una GPU NVIDIA PCI."; return 1; }
+    if paquete_instalado nvidia-driver; then
+        ok "El controlador NVIDIA Debian ya está instalado."
+        return 0
+    fi
+    if [ "$(nvidia_secure_boot)" != desactivado ]; then
+        err "Secure Boot activo o desconocido: configura primero la firma DKMS/MOK."
+        return 1
+    fi
+    if paquete_instalado bumblebee || paquete_instalado primus; then
+        err "Bumblebee/Primus detectado: requiere revisión antes de utilizar PRIME."
+        return 1
+    fi
+    asegurar_listas || return 1
+    candidate=$(apt-cache policy nvidia-driver | awk '/Candidate:/ {print $2; exit}')
+    [ -n "$candidate" ] && [ "$candidate" != "(none)" ] || {
+        err "Falta nvidia-driver en APT. Habilita contrib, non-free y non-free-firmware."
+        return 1
+    }
+    major=$(printf '%s' "$candidate" | sed 's/.*://;s/\..*//')
+    [[ "$major" =~ ^[0-9]+$ ]] || { err "Versión NVIDIA no reconocida."; return 1; }
+    kernel=$(uname -r)
+    if dpkg --compare-versions "$(printf '%s' "$kernel" | cut -d- -f1)" ge 6.16 &&
+       [ "$major" -lt 580 ]; then
+        err "Kernel de Backports incompatible con NVIDIA $candidate. No se mezclan ramas."
+        return 1
+    fi
+    headers="linux-headers-$kernel"
+    if ! paquete_instalado "$headers" &&
+       ! apt-cache policy "$headers" | grep -Eq 'Candidate:[[:space:]]+[^ (]'; then
+        err "No hay cabeceras disponibles para el kernel $kernel."
+        return 1
+    fi
+    if ! apt-cache policy nvidia-detect | grep -Eq 'Candidate:[[:space:]]+[^ (]'; then
+        err "No hay nvidia-detect: revisa los componentes non-free."
+        return 1
+    fi
+    simulation=$(apt-get -s install "$headers" nvidia-driver nvidia-kernel-dkms 2>&1) || {
+        err "No se pueden resolver las dependencias: $simulation"; return 1;
+    }
+    if grep -Eq '^Remv |^The following packages will be REMOVED:' <<< "$simulation"; then
+        err "APT propone eliminar paquetes. Se cancela por seguridad."
+        return 1
+    fi
+    instalar_paquete_si_falta nvidia-detect "No se pudo instalar el detector." || return 1
+    output=$(nvidia-detect 2>&1) || { err "Falló nvidia-detect: $output"; return 1; }
+    if ! grep -Eq '^[[:space:]]*nvidia-driver[[:space:]]*
+declare -A TITULOS=(
+    [clock]="Sincronizar el reloj"
+    [repos]="Configurar componentes oficiales de repositorios"
+    [tools]="Instalar herramientas auxiliares"
+    [backports-kernel-mesa]="Instalar kernel y Mesa desde Backports"
+    [nvidia-driver]="Detectar e instalar el controlador NVIDIA de Debian"
+    [ubuntu-hwe]="Instalar kernel HWE oficial de Ubuntu"
+    [flatpak-setup]="Instalar Flatpak y Flathub"
+    [gnome-plugin]="Plugin Flatpak para GNOME Software"
+    [ext-manager]="Extension Manager de GNOME"
+    [upgrade]="Actualizar paquetes del sistema"
+    [autoremove]="Eliminar dependencias huérfanas"
+    [autoclean]="Limpiar caché de paquetes"
+    [flatpak-update]="Actualizar aplicaciones Flatpak"
+    [rebootcheck]="Comprobar si hace falta reiniciar"
+)
+# Pasos cuyo fallo detiene la ejecución (el resto solo se anota)
+CRITICOS=" upgrade backports-kernel-mesa nvidia-driver "
+
+mostrar_estados() {
+    local tarea funcion
+    local distro
+    distro=$(leer_distribucion) || distro=desconocida
+    for tarea in repos tools backports-kernel-mesa ubuntu-hwe gnome-plugin ext-manager; do
+        # Las tareas exclusivas de otra distribución se marcan como no configuradas.
+        case "$distro:$tarea" in
+            ubuntu:backports-kernel-mesa|debian:ubuntu-hwe|desconocida:backports-kernel-mesa|desconocida:ubuntu-hwe)
+                printf '##STATUS:%s:0\n' "$tarea"
+                continue ;;
+        esac
+        case "$tarea" in
+            repos) funcion=estado_repos ;;
+            tools) funcion=estado_tools ;;
+            backports-kernel-mesa) funcion=estado_backports ;;
+            ubuntu-hwe) funcion=estado_ubuntu_hwe ;;
+            gnome-plugin) funcion=estado_gnome_plugin ;;
+            ext-manager) funcion=estado_ext_manager ;;
+        esac
+        if "$funcion"; then
+            printf '##STATUS:%s:1\n' "$tarea"
+        else
+            printf '##STATUS:%s:0\n' "$tarea"
+        fi
+    done
+}
+
+main() {
+    if [ "${1:-}" = "--version" ] && [ "$#" -eq 1 ]; then
+        printf '%s\n' "$HELPER_VERSION"
+        return 0
+    fi
+    # Actualizar exclusivamente Flatpak del usuario sin elevar privilegios.
+    # Sin --system ni instalaciones de root; no requiere polkit ni pkexec.
+    if [ "${1:-}" = "--flatpak-user-update" ] && [ "$#" -eq 1 ]; then
+        [ "$EUID" -ne 0 ] || { err "Flatpak de usuario nunca se ejecuta como root."; return 1; }
+        command -v flatpak >/dev/null 2>&1 || { err "Flatpak no está instalado."; return 1; }
+        echo "##STEP:1:1:Actualizar aplicaciones Flatpak del usuario"
+        if flatpak --user update -y && flatpak --user uninstall --unused -y; then
+            ok "Flatpak de usuario actualizado y dependencias sin uso eliminadas."
+            echo "##DONE:0"
+            return 0
+        fi
+        err "No se pudieron actualizar los Flatpak de usuario."
+        echo "##DONE:1"
+        return 1
+    fi
+    if [ "${1:-}" = "--nvidia-report" ] && [ "$#" -eq 1 ]; then
+        nvidia_report
+        return 0
+    fi
+    if [ "${1:-}" = "--status" ] && [ "$#" -eq 1 ]; then
+        nvidia_report
+        mostrar_estados
+        return 0
+    fi
+
+    # Negar las operaciones administrativas en distribuciones no probadas.
+    distribucion_soportada >/dev/null || exit 1
+
+    if [ "$EUID" -ne 0 ]; then
+        err "Este asistente debe ejecutarse con privilegios de administrador." >&2
+        exit 1
+    fi
+
+    # Idioma de los mensajes de apt/flatpak (pkexec limpia el entorno)
+    if [ "${1:-}" = "--lang" ]; then
+        if [[ "${2:-}" =~ ^[A-Za-z0-9_.@-]{1,40}$ ]]; then
+            export LANG="$2"
+        fi
+        shift; [ $# -gt 0 ] && shift
+    fi
+
+    case "${1:-}" in
+        --check-update-self)
+            [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --check-update-self"; exit 2; }
+            paquete_instalado aio-debian-gui || { err "AiO Debian GUI no está instalado como DEB."; exit 1; }
+            asegurar_listas || exit 1
+            instalada=$(dpkg-query -W -f='${Version}' aio-debian-gui) || exit 1
+            disponible=$(apt-cache policy aio-debian-gui | awk '/^[[:space:]]*Candidate:/ { print $2; exit }')
+            [ -n "$disponible" ] && [ "$disponible" != "(none)" ] || {
+                err "No existe versión candidata de AiO Debian GUI en los repositorios APT."
+                exit 1
+            }
+            if dpkg --compare-versions "$disponible" gt "$instalada"; then
+                printf '##UPDATE:%s:%s\n' "$instalada" "$disponible"
+            else
+                printf '##NOUPDATE:%s:%s\n' "$instalada" "$disponible"
+            fi
+            exit 0
+            ;;
+        --update-self)
+            [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --update-self"; exit 2; }
+            # Solo actualiza el paquete oficial ya instalado por APT. No hay rutas,
+            # URLs ni argumentos controlados por el usuario.
+            if ! dpkg-query -W -f='${db:Status-Status}' aio-debian-gui 2>/dev/null | grep -qx installed; then
+                err "AiO Debian GUI no está instalado como paquete DEB."
+                exit 1
+            fi
+            asegurar_listas || exit 1
+            if ! apt-get "${APT_OPTS[@]}" --only-upgrade install aio-debian-gui; then
+                err "No se pudo actualizar AiO Debian GUI mediante APT."
+                exit 1
+            fi
+            ok "Comprobación y actualización del paquete DEB completadas."
+            exit 0
+            ;;
+        --enable-passwordless)
+            [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --enable-passwordless"; exit 2; }
+            habilitar_sin_contrasena
+            exit $?
+            ;;
+        --disable-passwordless)
+            [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --disable-passwordless"; exit 2; }
+            deshabilitar_sin_contrasena
+            exit $?
+            ;;
+    esac
+
+    local pasos=() s
+    for s in "$@"; do
+        if [ -z "${TITULOS[$s]+x}" ]; then
+            err "Paso desconocido: $s" >&2
+            exit 2
+        fi
+        pasos+=("$s")
+    done
+    [ ${#pasos[@]} -gt 0 ] || { err "No se indicó ningún paso." >&2; exit 2; }
+    local distro
+    distro=$(leer_distribucion) || exit 1
+    for s in "${pasos[@]}"; do
+        case "$distro:$s" in
+            ubuntu:backports-kernel-mesa|ubuntu:nvidia-driver|debian:ubuntu-hwe)
+                err "La tarea $s no es compatible con la distribución detectada."
+                exit 2 ;;
+        esac
+    done
+
+    local total=${#pasos[@]} i=0 fallos=0
+    for s in "${pasos[@]}"; do
+        i=$((i + 1))
+        echo "##STEP:${i}:${total}:${TITULOS[$s]}"
+        if ! "paso_${s//-/_}"; then
+            fallos=1
+            if [[ "$CRITICOS" == *" $s "* ]]; then
+                echo "##DONE:1"
+                exit 1
+            fi
+        fi
+    done
+
+    echo "##DONE:${fallos}"
+    [ "$fallos" -eq 0 ]
+}
+
+# Permite hacer 'source' del archivo para pruebas sin ejecutar nada
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    main "$@"
+fi
+ <<< "$output"; then
+        err "El detector no recomienda exactamente nvidia-driver. Revisión manual necesaria."
+        return 1
+    fi
+    info "Debian propone NVIDIA $candidate para kernel $kernel."
+    if nvidia_hibrida; then
+        info "GPU híbrida: se conserva la integrada y se utiliza PRIME bajo demanda."
+        info "PRIME: __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia programa"
+    fi
+    if ! apt-get -y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confold install "$headers" nvidia-driver nvidia-kernel-dkms; then
+        err "Fallo instalando NVIDIA; comprueba los registros de DKMS y APT."
+        return 1
+    fi
+    REINICIO_REQUERIDO=1
+    echo "##REBOOT:1"
+    ok "Reinicia y comprueba nvidia-smi. No se ha alterado Xorg, GRUB ni la GPU principal."
 }
 
 # ------------------------------------------------------------------------------

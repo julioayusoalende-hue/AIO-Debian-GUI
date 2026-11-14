@@ -1,5 +1,16 @@
 # Cambios
 
+## 1.2.5
+
+- Nueva opción NVIDIA exclusiva de Debian, visible tras detectar una GPU NVIDIA PCI.
+- Detección de equipos híbridos Intel/AMD + NVIDIA, manteniendo la integrada y utilizando PRIME Render Offload bajo demanda.
+- Diagnóstico de driver instalado, versión candidata APT, kernel y Secure Boot.
+- Instalación opcional y explícita desde repositorios Debian con comprobaciones de nvidia-detect, cabeceras DKMS y simulación APT.
+- Se rechazan configuraciones no verificadas: Secure Boot sin firma DKMS/MOK, kernels de Backports incompatibles, conflictos Bumblebee/Primus y eliminaciones propuestas por APT.
+- No se ejecuta instalador NVIDIA .run, no se modifica Xorg ni se fuerza NVIDIA como GPU principal.
+- Pruebas de detección PCI/híbrida y bloqueo sin NVIDIA.
+
+
 ## 1.2.4
 
 - Se conserva el icono original de AiO Debian GUI y se recolorea en tonos rojos Debian.
