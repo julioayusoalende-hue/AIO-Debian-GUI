@@ -14,6 +14,14 @@ Interfaz gráfica de mantenimiento y configuración todo en uno para Debian.
 Es un proyecto independiente: no necesita el script de consola
 [aio-debian](https://github.com/julioayusoalende-hue/aio-debian) (puedes tener ambos).
 
+## Referencia técnica: MX Linux ddm-mx
+
+El diseño de detección NVIDIA de AiO 2.0.0 toma como **referencia técnica** el instalador libre de MX Linux: [ddm-mx](https://github.com/MX-Linux/ddm-mx/blob/master/ddm-mx) y [nvidia-detect-mx](https://github.com/MX-Linux/ddm-mx/blob/master/nvidia-detect-mx), publicados bajo GPL-3.0.
+
+Principios que deben guiar la implementación: clasificar por ID PCI y rama compatible (incluidos modelos legacy), distinguir Optimus/híbrida, elegir entre paquetes Debian y Backports sin mezclar suites, simular APT antes de instalar, preparar DKMS/headers, y ofrecer diagnóstico, rollback y recuperación. Los repositorios y utilidades específicos de MX no se incorporan a Debian directamente.
+
+La versión 2.0.0 permanece en **pruebas** hasta contrastar una matriz de IDs PCI y ramas NVIDIA, kernels Debian estable/Backports, Secure Boot y dispositivos híbridos. El instalador debe fallar de forma conservadora ante compatibilidad no comprobada y nunca cambiar el servidor gráfico de manera implícita.
+
 ## NVIDIA en Debian (v2.0.0)
 
 La aplicación consulta los dispositivos PCI del anfitrión. Si detecta una tarjeta NVIDIA y se utiliza Debian, ofrece la tarea optativa **Detectar e instalar controlador NVIDIA**. Reconoce si existe una GPU integrada Intel o AMD junto a NVIDIA (portátil híbrido), informa del driver instalado, la versión candidata en APT y el estado de Secure Boot. No configura NVIDIA automáticamente al arrancar la interfaz.
