@@ -5,7 +5,7 @@ Origin: aio-debian-gui
 Label: aio-debian-gui
 Suite: stable
 Codename: stable
-Date: Sat, 14 Nov 2026 00:29:38 UTC
+Date: Sat, 14 Nov 2026 00:49:31 UTC
 Architectures: all
 Components: main
 Description: Repositorio APT de aio-debian-gui
@@ -19,17 +19,17 @@ SHA256:
  a0d621fa173c19cc411be00a1eaf31d629a1844aced8e7976fd94e5965e2c4a3              812 main/binary-all/Packages.xz
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEBKUjgaIDXVuVJMpq4OZLjuD5AAwFAmr3q3IACgkQ4OZLjuD5
-AAxGZRAAgDgTN6XecaTQy81Jjyw+qSWz7LShAGcPqnMNLybz5s1HPLQnGH3DFCO/
-wpDQv0PEifH57XEHHB2z4yS1KT+el8N7REb3in5hHGIMeHw+qd57rtTlud0xyR4k
-QC6tzL+mVgoL+pxybGTi4MMyp2yzkFxDPas8SC1cPKK6KBMoM7bUVzdMR8ifIS2f
-APiDjjlE0XLrP8gnOqBZkTJgeLHwnjQD9VVhMyn5STcETu32p8mAX0sv7LyRrQdh
-bqEMQCwo+oEe84A2Lc/C6PXYlRyCZh8NHwXbQIy3tPu6Ll48YRlIvxDTyKhMNexI
-PTaBMqi6jey1gZan9qziKLvmfbORWOwQk3k3fBQzmei9DsSZu9o2Jo0xHjEcAEzT
-rEZxO22KOoKedKwWwLksPBnDJlfEVbkXy0oYs3PasyZxbZhjWyNzIHvZrvgUqGX8
-EmLylAOztXJtsi+amtm6HoGV8C+1KohCaPLVNd1nDooxyxw7h55jJXXZwo4Tbh01
-QWSen8OeMdNurMUEUcWWbXSAmBEJI6IUnejUawGlN/tyOvRgArAhNadxXmR/zgAK
-GZWbzyxNYw3whQGfDyaMCmnucfn2q6F9m7ZPQy8g2OV9lbKc/94XHjp3MueI8HgO
-GPoP/RzIaDms8mQ+f2t2QKGgul1URRwdoN1YLXQQXXMkvHLDNG4=
-=1l/Q
+iQIzBAEBCgAdFiEEBKUjgaIDXVuVJMpq4OZLjuD5AAwFAmr3sBsACgkQ4OZLjuD5
+AAz/HhAAkpOG4m7e1jSqs5tu439IiXRk5fYsr8VipxCLdcgJEf0ydBqiSxqUsUHy
+YVVs1KYRHTcRAc+dyFoBBUmqrVt2xCDikDOg0CK3+mG3KRrnficFlywXQkmGJzBC
+LbI6xwRDv6CXyOjNPZYRVhDk9reYCnc+u8CSIg86x3tSpjONACz3AQHUp59TpexF
+7ghlCJiRSADGX2mA0iPeYITOnTaZd6xA64ltizAHBSYbgu2v23hFGpK+7Df15hy8
+E6QxCtU92c7por1qIKl1f//6JbFTyOtFyicm+DWEB1XXrCzfAqx+gPSFIkVZCfny
+2CkajquqWLiwluuNVISVaGZNSnb9v6/hv4sPyJT9nQeKqqz9FbYMygKzahPVjlUa
+IXP32G/L4tEnOonHNVHSnWlxIVFYVobxxEgimAgLue3LirDf+t+i8AQevTN8qKU4
+iRaO1qpmllrrV1zwE6zNVJlq7M2Ib4TtoABU+KnMt6NEzJz383RyY9qMng/w2L5B
+Ahs7mlBp26szTb1CsdarvjqNLXheSFaJu0IeokcMwZWH0hHFnBpg6SW5S+bPLuyO
+t3zi1bv+Ito1prX2pth9KgTU2vku7+Dk/fB+HamYKlpELf0bOe2OpD6zVeL7n2+P
+fuchrPObpluUoT0urOygiyfOot0JAGb2Tf+Z6pXmiV2E7Hg07pI=
+=sACT
 -----END PGP SIGNATURE-----
