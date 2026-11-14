@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.0.8": "La comprobación de actualizaciones de AiO funciona también con APT en español.",
     "2.0.7": "Diagnosticar comprueba la versión de AiO, ofrece actualizar y permite reiniciar automáticamente al terminar.",
     "2.0.6": "Diagnóstico APT sin privilegios: evita falsos avisos críticos por bloqueo de dpkg.",
     "2.0.5": "Diagnóstico preventivo de APT, paquetes, espacio, DKMS y servicios antes del mantenimiento.",

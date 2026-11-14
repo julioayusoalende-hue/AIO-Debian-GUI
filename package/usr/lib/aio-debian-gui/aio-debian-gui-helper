@@ -31,7 +31,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 
 LISTAS_ACTUALIZADAS=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=2.0.7
+HELPER_VERSION=2.0.8
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 POLKIT_RULES_DIR=/etc/polkit-1/rules.d
@@ -1109,7 +1109,7 @@ main() {
             paquete_instalado aio-debian-gui || { err "AiO Debian GUI no está instalado como DEB."; exit 1; }
             asegurar_listas || exit 1
             instalada=$(dpkg-query -W -f='${Version}' aio-debian-gui) || exit 1
-            disponible=$(apt-cache policy aio-debian-gui | awk '/^[[:space:]]*Candidate:/ { print $2; exit }')
+            disponible=$(LC_ALL=C apt-cache policy aio-debian-gui | awk '/^[[:space:]]*Candidate:/ { print $2; exit }')
             [ -n "$disponible" ] && [ "$disponible" != "(none)" ] || {
                 err "No existe versión candidata de AiO Debian GUI en los repositorios APT."
                 exit 1

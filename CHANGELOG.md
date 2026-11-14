@@ -1,5 +1,13 @@
 # Cambios
 
+## 2.0.8
+
+- Corregida la comprobación de la versión de AiO desde «Diagnosticar» en Debian con idioma español u otros idiomas distintos del inglés.
+- Las consultas internas de APT fuerzan LC_ALL=C para interpretar correctamente el campo Candidate sin modificar el idioma de la interfaz.
+- Corregido el mismo problema en el asistente privilegiado usado para buscar actualizaciones de la edición DEB.
+- Prueba de regresión con entorno de idioma español.
+
+
 ## 2.0.7
 
 - El diagnóstico preventivo consulta si AiO Debian GUI está actualizado según APT, el repositorio Flatpak o GitHub Releases para AppImage.
