@@ -2351,20 +2351,28 @@ class VentanaPrincipal(Gtk.Window):
         d.set_website(HOMEPAGE)
         d.set_copyright("© 2026 Julio Ayuso")
         d.set_license_type(Gtk.License.GPL_3_0)
-        # Mostrar el icono empaquetado, también en AppImage, Flatpak y Snap.
-        icon_path = os.path.normpath(os.path.join(
-            os.path.dirname(__file__),
-            "../share/icons/hicolor/512x512/apps/aio-debian-gui.png"
-        ))
-        if os.path.isfile(icon_path):
-            try:
-                d.set_logo(GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                    icon_path, 128, 128, True
-                ))
-            except GLib.Error:
-                d.set_logo_icon_name("aio-debian-gui")
+        # La ruta se resuelve respecto al script incluido en cada paquete.
+        # No dependemos del tema de iconos del host ni de su caché.
+        icono = None
+        raiz = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+        for tamano in (512, 256, 128, 64, 48):
+            icon_path = os.path.join(
+                raiz, "share", "icons", "hicolor",
+                f"{tamano}x{tamano}", "apps", "aio-debian-gui.png",
+            )
+            if os.path.isfile(icon_path):
+                try:
+                    icono = GdkPixbuf.Pixbuf.new_from_file_at_scale(
+                        icon_path, 128, 128, True
+                    )
+                    break
+                except GLib.Error:
+                    continue
+        if icono is not None:
+            d.set_logo(icono)
         else:
-            d.set_logo_icon_name("aio-debian-gui")
+            # Evitar el icono genérico de imagen rota si falta el recurso.
+            d.set_logo_icon_name("applications-system")
         d.show_all()
 
         def buscar_credito(widget):
