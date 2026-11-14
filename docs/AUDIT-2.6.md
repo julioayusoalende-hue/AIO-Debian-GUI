@@ -25,3 +25,10 @@ No se afirma compatibilidad completa ni recuperación automática hasta superar 
 - Reforzada la validación de nombres de usuario antes de interpolarlos en reglas JavaScript Polkit.
 - Añadidas pruebas de rechazo de inyección y casos positivos/negativos de instantáneas Snapper.
 - Los tests de Snapper usan funciones simuladas y no crean instantáneas reales.
+
+## Integración Timeshift (rama de auditoría)
+- Consulta sin privilegios `--snapshot-options`: solo presenta Timeshift con configuración y Snapper root sobre Btrfs.
+- Sin proveedores disponibles no aparece el diálogo de instantáneas.
+- Si hay ambos, el usuario elige el proveedor; por defecto no se crea ninguna instantánea.
+- El helper vuelve a validar la configuración y cancela el mantenimiento si falla la creación.
+- Pendiente: pruebas funcionales de Timeshift con configuraciones rsync/Btrfs y GNOME.

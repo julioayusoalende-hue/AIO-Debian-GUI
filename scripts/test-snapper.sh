@@ -19,5 +19,7 @@ if crear_instantanea_previa; then echo "ERROR: montaje ajeno aceptado"; exit 1; 
 FAKE_TARGET=/ FAKE_SNAPPER=fail
 if crear_instantanea_previa; then echo "ERROR: Snapper fallido aceptado"; exit 1; fi
 FAKE_SNAPPER=ok
-crear_instantanea_previa
+crear_instantanea_previa snapper
+# Los proveedores desconocidos nunca se ejecutan.
+if crear_instantanea_previa proveedor-invalido; then echo "ERROR: proveedor desconocido aceptado"; exit 1; fi
 echo "Snapper: casos positivos y negativos OK"
