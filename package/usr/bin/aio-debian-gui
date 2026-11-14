@@ -34,7 +34,7 @@ CORE_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file_
                                       "../lib/aio-debian-gui"))
 if CORE_DIR not in sys.path:
     sys.path.insert(0, CORE_DIR)
-from aio_core import appearance as core_appearance, history as core_history, preferences as core_preferences, updates as core_updates  # noqa: E402
+from aio_core import appearance as core_appearance, history as core_history, preferences as core_preferences, updates as core_updates, diagnostics as core_diagnostics  # noqa: E402
 
 PRGNAME = "aio-debian-gui"
 POLKIT_ACTION = "es.aiodebian.gui.mantenimiento"
@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.0.5": "Diagnóstico preventivo de APT, paquetes, espacio, DKMS y servicios antes del mantenimiento.",
     "2.0.4": "La salida de consola puede abrirse en una ventana independiente, ampliable y sincronizada en tiempo real.",
     "2.0.3": "Menú unificado: Preferencias, Historial, Buscar actualizaciones y Acerca de en ese orden.",
     "2.0.2": "Dos paneles lado a lado: sistema y tareas, sin duplicar Preferencias y con desplazamiento independiente.",
@@ -110,6 +111,8 @@ TEMAS = {"sistema", "claro", "oscuro"}
 
 TRADUCCIONES = {
     "en": {
+        "Diagnosticar": "Diagnose",
+        "Diagnóstico preventivo del sistema": "Preventive system diagnostics",
         "Abrir en otra ventana": "Open in separate window",
         "Volver a integrar": "Return to main window",
         "Salida de la consola": "Console output",
@@ -230,6 +233,8 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Authorization wait cancelled.",
     },
     "fr": {
+        "Diagnosticar": "Diagnostiquer",
+        "Diagnóstico preventivo del sistema": "Diagnostic préventif du système",
         "Abrir en otra ventana": "Ouvrir dans une autre fenêtre",
         "Volver a integrar": "Réintégrer à la fenêtre",
         "Salida de la consola": "Sortie de la console",
@@ -349,6 +354,8 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Attente d’autorisation annulée.",
     },
     "zh": {
+        "Diagnosticar": "诊断",
+        "Diagnóstico preventivo del sistema": "系统预防性诊断",
         "Abrir en otra ventana": "在独立窗口打开",
         "Volver a integrar": "返回主窗口",
         "Salida de la consola": "控制台输出",
@@ -1100,6 +1107,8 @@ class VentanaPrincipal(Gtk.Window):
         self.nvidia_secureboot = "desconocido"
         self.salida_estados = []
         self.comprobando_actualizacion = False
+        self.diagnostico_en_curso = False
+        self.ventana_diagnostico = None
         self.tareas_en_ejecucion = []
         self.actualizando_preset = False
         self.switches = {}
@@ -1648,6 +1657,11 @@ class VentanaPrincipal(Gtk.Window):
         titulo.pack_start(Gtk.Image.new_from_icon_name(
             "computer-symbolic", Gtk.IconSize.BUTTON), False, False, 0)
         titulo.pack_start(etiqueta("<b>Información del sistema</b>", markup=True), False, False, 0)
+        self.btn_diagnostico = Gtk.Button(label=traducir("Diagnosticar"))
+        self.btn_diagnostico.set_tooltip_text(traducir(
+            "Comprobar el sistema sin realizar modificaciones"))
+        self.btn_diagnostico.connect("clicked", self._abrir_diagnostico)
+        titulo.pack_end(self.btn_diagnostico, False, False, 0)
         caja.pack_start(titulo, False, False, 0)
 
         filas, version = informacion_sistema()
@@ -1689,6 +1703,104 @@ class VentanaPrincipal(Gtk.Window):
             self.nvidia_info_label = etiqueta("Buscando GPU NVIDIA…", dim=True)
             caja.pack_start(self.nvidia_info_label, False, False, 3)
         return marco
+
+    def _abrir_diagnostico(self, _boton=None):
+        if self.diagnostico_en_curso:
+            if self.ventana_diagnostico is not None:
+                self.ventana_diagnostico.present()
+            return
+        if self.ventana_diagnostico is not None:
+            self.ventana_diagnostico.present()
+            return
+
+        dialogo = Gtk.Dialog(
+            title=traducir("Diagnóstico preventivo del sistema"),
+            transient_for=self, modal=False,
+        )
+        dialogo.set_default_size(730, 540)
+        dialogo.add_button(traducir("Cerrar"), Gtk.ResponseType.CLOSE)
+        dialogo.connect("response", lambda d, _response: d.destroy())
+        dialogo.connect("destroy", self._diagnostico_cerrado)
+        self.ventana_diagnostico = dialogo
+        contenedor = dialogo.get_content_area()
+        contenedor.set_spacing(10)
+        contenedor.set_border_width(12)
+        aviso = etiqueta(traducir(
+            "Análisis de solo lectura. No instala, elimina ni repara paquetes. "
+            "Las comprobaciones dependen del estado de los índices APT."), dim=True)
+        contenedor.pack_start(aviso, False, False, 0)
+        self.etiqueta_diagnostico = etiqueta(traducir("Analizando el sistema…"))
+        contenedor.pack_start(self.etiqueta_diagnostico, False, False, 0)
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        contenedor.pack_start(scroll, True, True, 0)
+        self.lista_diagnostico = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        scroll.add(self.lista_diagnostico)
+        dialogo.show_all()
+        self.diagnostico_en_curso = True
+        self.btn_diagnostico.set_sensitive(False)
+        def analizar():
+            try:
+                resultados = core_diagnostics.run_diagnostics()
+                error = None
+            except Exception as exc:
+                resultados = []
+                error = str(exc)
+            GLib.idle_add(self._diagnostico_terminado, dialogo, resultados, error)
+        threading.Thread(target=analizar, daemon=True).start()
+
+    def _diagnostico_cerrado(self, dialogo):
+        if self.ventana_diagnostico is dialogo:
+            self.ventana_diagnostico = None
+
+    def _diagnostico_terminado(self, dialogo, resultados, error):
+        self.diagnostico_en_curso = False
+        self.btn_diagnostico.set_sensitive(not self.en_curso)
+        if self.ventana_diagnostico is not dialogo:
+            return GLib.SOURCE_REMOVE
+        if error is not None:
+            self.etiqueta_diagnostico.set_text(
+                traducir("No se pudo completar el diagnóstico: ") + error)
+            return GLib.SOURCE_REMOVE
+        recuento = {
+            estado: sum(f["status"] == estado for f in resultados)
+            for estado in ("critical", "warning", "unknown", "ok")
+        }
+        self.etiqueta_diagnostico.set_text(
+            "%s: %s · %s: %s · %s: %s · %s: %s"
+            % (traducir("Críticos"), recuento["critical"],
+               traducir("Avisos"), recuento["warning"],
+               traducir("No comprobados"), recuento["unknown"],
+               traducir("Correctos"), recuento["ok"]))
+        estados = {
+            "critical": ("dialog-error-symbolic", "Requiere atención"),
+            "warning": ("dialog-warning-symbolic", "Revisar"),
+            "unknown": ("dialog-question-symbolic", "Sin comprobar"),
+            "ok": ("emblem-ok-symbolic", "Correcto"),
+        }
+        for resultado in resultados:
+            icono, estado = estados.get(resultado["status"], estados["unknown"])
+            fila = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            fila.set_margin_top(6)
+            fila.set_margin_bottom(6)
+            fila.pack_start(
+                Gtk.Image.new_from_icon_name(icono, Gtk.IconSize.BUTTON),
+                False, False, 0)
+            bloque = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            titulo = etiqueta("<b>%s</b> · %s" % (
+                GLib.markup_escape_text(resultado["name"]),
+                GLib.markup_escape_text(traducir(estado))), markup=True)
+            bloque.pack_start(titulo, False, False, 0)
+            detalle = etiqueta(resultado["detail"], dim=True)
+            detalle.set_selectable(True)
+            bloque.pack_start(detalle, False, False, 0)
+            if resultado["advice"]:
+                bloque.pack_start(etiqueta(resultado["advice"]), False, False, 0)
+            fila.pack_start(bloque, True, True, 0)
+            self.lista_diagnostico.pack_start(fila, False, False, 0)
+            self.lista_diagnostico.pack_start(Gtk.Separator(), False, False, 0)
+        self.lista_diagnostico.show_all()
+        return GLib.SOURCE_REMOVE
 
     def _tarjeta_opciones(self):
         externa = Gtk.Frame()
@@ -1907,6 +2019,7 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_menu.set_sensitive(disponible)
         self.btn_preferencias_menu.set_sensitive(disponible)
         self.btn_borrar.set_sensitive(not self.en_curso)
+        self.btn_diagnostico.set_sensitive(not self.en_curso and not self.diagnostico_en_curso)
         for boton in self.botones_preset:
             boton.set_sensitive(disponible)
         for pid, fila in self.filas.items():
