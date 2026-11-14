@@ -25,22 +25,22 @@ def apt_simulated(args, **kw):
     return process()
 
 
-with patch.object(mod.subprocess, "run", side_effect=apt_simulated):
+with patch("subprocess.run", side_effect=apt_simulated):
     r = mod.estado_actualizacion_app("deb", "2.0.6", APPID)
     assert r["status"] == "available" and r["version"] == "2.0.7"
 
-with patch.object(mod.subprocess, "run", return_value=process(
+with patch("subprocess.run", return_value=process(
         out="  Installed: 2.0.6\n  Candidate: (none)\n")):
     assert mod.estado_actualizacion_app("deb", "2.0.6", APPID)["status"] == "unknown"
 
-with patch.object(mod.subprocess, "run", return_value=process(
+with patch("subprocess.run", return_value=process(
         out=f"{APPID}\n")):
     assert mod.estado_actualizacion_app("flatpak", "2.0.6", APPID)["status"] == "available"
 
-with patch.object(mod.subprocess, "run", return_value=process(out="other.app\n")):
+with patch("subprocess.run", return_value=process(out="other.app\n")):
     assert mod.estado_actualizacion_app("flatpak", "2.0.6", APPID)["status"] == "current"
 
-with patch.object(mod.subprocess, "run", return_value=process(1, err="Sin red")):
+with patch("subprocess.run", return_value=process(1, err="Sin red")):
     assert mod.estado_actualizacion_app("flatpak", "2.0.6", APPID)["status"] == "unknown"
 
 with patch.object(mod, "obtener_release_actualizacion",
