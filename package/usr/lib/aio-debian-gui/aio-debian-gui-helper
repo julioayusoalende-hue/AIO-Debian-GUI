@@ -31,7 +31,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 
 LISTAS_ACTUALIZADAS=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=2.4.0
+HELPER_VERSION=2.5.0
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 POLKIT_RULES_DIR=/etc/polkit-1/rules.d
@@ -1156,6 +1156,15 @@ mostrar_estados() {
     done
 }
 
+crear_instantanea_previa() {
+    command -v snapper >/dev/null 2>&1 || { err "Snapper no está instalado."; return 1; }
+    command -v findmnt >/dev/null 2>&1 || { err "findmnt no está disponible."; return 1; }
+    [ "$(findmnt -n -o FSTYPE --target /)" = btrfs ] || { err "La raíz no utiliza Btrfs."; return 1; }
+    snapper -c root get-config >/dev/null 2>&1 || { err "Snapper root no configurado."; return 1; }
+    snapper -c root create --type single --description "AiO Debian GUI: antes de mantenimiento" || { err "Instantánea fallida."; return 1; }
+    ok "Instantánea creada; la restauración no es automática."
+}
+
 main() {
     if [ "${1:-}" = "--version" ] && [ "$#" -eq 1 ]; then
         printf '%s\n' "$HELPER_VERSION"
@@ -1252,6 +1261,11 @@ main() {
             ;;
     esac
 
+    local snapshot_before=0
+    if [ "${1:-}" = "--snapshot-before" ]; then
+        snapshot_before=1
+        shift
+    fi
     local pasos=() s
     for s in "$@"; do
         if [ -z "${TITULOS[$s]+x}" ]; then
@@ -1271,6 +1285,9 @@ main() {
         esac
     done
 
+    if [ "$snapshot_before" -eq 1 ]; then
+        crear_instantanea_previa || { echo "##DONE:1"; return 1; }
+    fi
     local total=${#pasos[@]} i=0 fallos=0
     for s in "${pasos[@]}"; do
         i=$((i + 1))

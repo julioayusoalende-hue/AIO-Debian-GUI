@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.5.0": "Panel de salud, Snapper opcional y traducciones mejoradas.",
     "2.4.0": "Protección contra ejecuciones simultáneas y verificaciones APT/dpkg más estrictas.",
     "2.3.0": "Comprobaciones asíncronas, bloqueos APT y vista previa ampliada.",
     "2.2.0": "Modo de mantenimiento seguro: comprobaciones previas de APT, dpkg, espacio, DKMS y simulaciones conservadoras.",
@@ -119,6 +120,11 @@ TEMAS = {"sistema", "claro", "oscuro"}
 
 TRADUCCIONES = {
     "en": {
+        "Estado de mantenimiento": "Maintenance status",
+        "¿Crear instantánea Snapper antes del mantenimiento?": "Create a Snapper snapshot before maintenance?",
+        "Sin instantánea": "Without snapshot",
+        "Crear instantánea": "Create snapshot",
+        "No se pudo completar el resumen de salud.": "Could not complete the health summary.",
         "Comprobando seguridad del mantenimiento…": "Checking maintenance safety…",
         "Comprobaciones de seguridad": "Safety checks",
         "No se pudieron completar las comprobaciones de seguridad.": "Safety checks could not be completed.",
@@ -248,6 +254,11 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Authorization wait cancelled.",
     },
     "fr": {
+        "Estado de mantenimiento": "État de maintenance",
+        "¿Crear instantánea Snapper antes del mantenimiento?": "Créer un instantané Snapper avant la maintenance ?",
+        "Sin instantánea": "Sans instantané",
+        "Crear instantánea": "Créer un instantané",
+        "No se pudo completar el resumen de salud.": "Impossible de terminer le résumé de santé.",
         "Comprobando seguridad del mantenimiento…": "Vérification de la sécurité de la maintenance…",
         "Comprobaciones de seguridad": "Contrôles de sécurité",
         "No se pudieron completar las comprobaciones de seguridad.": "Impossible de terminer les contrôles de sécurité.",
@@ -376,6 +387,11 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Attente d’autorisation annulée.",
     },
     "zh": {
+        "Estado de mantenimiento": "维护状态",
+        "¿Crear instantánea Snapper antes del mantenimiento?": "维护前创建 Snapper 快照？",
+        "Sin instantánea": "不创建快照",
+        "Crear instantánea": "创建快照",
+        "No se pudo completar el resumen de salud.": "无法完成健康摘要。",
         "Comprobando seguridad del mantenimiento…": "正在检查维护安全性…",
         "Comprobaciones de seguridad": "安全检查",
         "No se pudieron completar las comprobaciones de seguridad.": "无法完成安全检查。",
@@ -2044,6 +2060,9 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_diagnostico.set_tooltip_text(traducir(
             "Comprobar el sistema sin realizar modificaciones"))
         self.btn_diagnostico.connect("clicked", self._abrir_diagnostico)
+        self.btn_salud = Gtk.Button(label=traducir("Estado de mantenimiento"))
+        self.btn_salud.connect("clicked", self._abrir_salud)
+        titulo.pack_end(self.btn_salud, False, False, 0)
         titulo.pack_end(self.btn_diagnostico, False, False, 0)
         caja.pack_start(titulo, False, False, 0)
 
@@ -2086,6 +2105,21 @@ class VentanaPrincipal(Gtk.Window):
             self.nvidia_info_label = etiqueta("Buscando GPU NVIDIA…", dim=True)
             caja.pack_start(self.nvidia_info_label, False, False, 3)
         return marco
+
+    def _abrir_salud(self, _boton=None):
+        dialogo = Gtk.MessageDialog(transient_for=self, modal=True,
+            message_type=Gtk.MessageType.INFO, buttons=Gtk.ButtonsType.CLOSE,
+            text=traducir("Estado de mantenimiento"))
+        try:
+            import shutil as _shutil
+            libre = _shutil.disk_usage("/").free / (1024 ** 3)
+            informe = "Espacio libre: %.1f GiB" % libre
+            informe += "\nReinicio solicitado: " + ("Sí" if os.path.exists("/run/reboot-required") else "No")
+        except OSError:
+            informe = traducir("No se pudo completar el resumen de salud.")
+        dialogo.format_secondary_text(informe)
+        dialogo.run()
+        dialogo.destroy()
 
     def _abrir_diagnostico(self, _boton=None):
         if self.diagnostico_en_curso:
@@ -2772,13 +2806,25 @@ class VentanaPrincipal(Gtk.Window):
                 self.estado.set_text(traducir("Instalación desde Backports cancelada."))
                 return
 
+        snapshot_before = False
+        if pasos != ["flatpak-update"]:
+            dialogo_snap = Gtk.MessageDialog(transient_for=self, modal=True,
+                message_type=Gtk.MessageType.QUESTION, buttons=Gtk.ButtonsType.NONE,
+                text=traducir("¿Crear instantánea Snapper antes del mantenimiento?"))
+            dialogo_snap.format_secondary_text("Solo Btrfs con Snapper root configurado. Si falla, no se ejecuta mantenimiento. La restauración no es automática.")
+            dialogo_snap.add_button(traducir("Sin instantánea"), Gtk.ResponseType.NO)
+            dialogo_snap.add_button(traducir("Crear instantánea"), Gtk.ResponseType.YES)
+            dialogo_snap.set_default_response(Gtk.ResponseType.NO)
+            snapshot_before = dialogo_snap.run() == Gtk.ResponseType.YES
+            dialogo_snap.destroy()
+
         lang = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or "C"
         # Si solo se actualiza Flatpak del usuario no se invoca pkexec.
         solo_flatpak_usuario = pasos == ["flatpak-update"]
         if solo_flatpak_usuario:
             cmd = comando_host(helper, "--flatpak-user-update")
         else:
-            cmd = comando_pkexec(helper, lang, *pasos)
+            cmd = comando_pkexec(helper, lang, *(["--snapshot-before"] if snapshot_before else []), *pasos)
 
         self.buf.set_text("")
         self.necesita_reinicio = False

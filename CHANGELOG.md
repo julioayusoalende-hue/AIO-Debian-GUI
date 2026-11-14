@@ -1,5 +1,12 @@
 # Cambios
 
+## 2.5.0
+
+- Panel de salud con espacio libre y reinicio solicitado.
+- Instantáneas opcionales Snapper en Btrfs antes del mantenimiento.
+- Traducciones nuevas en inglés, francés y chino.
+- Protección de fallo seguro de instantáneas.
+
 ## 2.4.0
 
 - Prevención de ejecuciones simultáneas desde la interfaz.
