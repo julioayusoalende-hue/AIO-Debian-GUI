@@ -1,6 +1,6 @@
 # Cambios
 
-## Próxima versión
+## 2.5.4
 
 - Enter inicia las tareas seleccionadas cuando la ventana principal está activa, sin interferir con botones, campos editables ni diálogos.
 - Eliminado el botón redundante «Estado de mantenimiento»; «Diagnosticar» sigue disponible.

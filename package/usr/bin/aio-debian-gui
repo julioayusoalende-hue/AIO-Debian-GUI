@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.5.4": "Enter inicia tareas; Diagnosticar sustituye al estado redundante.",
     "2.5.3": "Mantenimiento simplificado sin integración de instantáneas y mejoras del registro.",
     "2.5.2": "Detección de Timeshift y Snapper, instantáneas opcionales.",
     "2.5.1": "Vista previa detallada APT, salud asíncrona y accesibilidad.",
