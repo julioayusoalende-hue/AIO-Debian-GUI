@@ -18,7 +18,7 @@ class Disk:
 def fake_run(args, timeout=12):
     if args[0] == "dpkg":
         return 0, "package-x is not fully installed\n", ""
-    if args[:2] == ["apt-get", "check"]:
+    if args == ["apt-get", "-o", "Debug::NoLocking=1", "check"]:
         return 100, "", "Unmet dependencies"
     if args[:3] == ["apt-get", "-s", "upgrade"]:
         return 0, "Inst foo [1] (2 repo)\nInst bar [1] (2 repo)\n", ""
@@ -44,6 +44,20 @@ with mock.patch.object(diag, "_run", side_effect=fake_run), \
     assert statuses["Servicios systemd"] == "warning"
     assert statuses["Índices de APT"] == "unknown"
     assert diag.overall_status(items) == "critical"
+
+# Un rechazo de permisos no indica dependencias rotas.
+def permission_denied(args, timeout=12):
+    if args == ["apt-get", "-o", "Debug::NoLocking=1", "check"]:
+        return 100, "", "E: Could not open lock file /var/lib/dpkg/lock-frontend - open (13: Permission denied)"
+    return None, "", "command unavailable"
+
+with mock.patch.object(diag, "_run", side_effect=permission_denied), \
+     mock.patch.object(diag.shutil, "disk_usage", return_value=Disk()), \
+     mock.patch.object(diag.shutil, "which", return_value=None), \
+     mock.patch.object(diag.Path, "exists", return_value=False), \
+     mock.patch.object(diag.Path, "glob", return_value=[]):
+    items = diag.run_diagnostics()
+    assert next(i for i in items if i["name"] == "Dependencias APT")["status"] == "unknown"
 
 # Un comando imposible de ejecutar no debe aparecer como diagnóstico correcto.
 with mock.patch.object(diag, "_run", return_value=(None, "", "command unavailable")), \

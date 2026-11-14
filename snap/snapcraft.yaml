@@ -1,6 +1,6 @@
 name: aio-debian-gui
 title: AiO Debian GUI
-version: '2.0.5'
+version: '2.0.6'
 summary: Herramientas de mantenimiento para Debian y Ubuntu LTS
 description: |
   Interfaz GTK para mantenimiento de Debian y Ubuntu LTS.

@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.0.6": "Diagnóstico APT sin privilegios: evita falsos avisos críticos por bloqueo de dpkg.",
     "2.0.5": "Diagnóstico preventivo de APT, paquetes, espacio, DKMS y servicios antes del mantenimiento.",
     "2.0.4": "La salida de consola puede abrirse en una ventana independiente, ampliable y sincronizada en tiempo real.",
     "2.0.3": "Menú unificado: Preferencias, Historial, Buscar actualizaciones y Acerca de en ese orden.",

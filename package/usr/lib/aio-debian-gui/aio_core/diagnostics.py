@@ -66,14 +66,26 @@ def run_diagnostics():
     else:
         findings.append(_check("Estado de dpkg", "ok", "No se detectaron paquetes parcialmente instalados."))
 
-    # apt-get check lee dependencias; nunca resuelve ni modifica paquetes.
-    rc, output, error = _run(["apt-get", "check"], timeout=20)
+    # apt-get check intenta bloquear dpkg incluso en consultas de solo lectura.
+    # Debug::NoLocking permite inspeccionar sin root ni modificar el sistema.
+    rc, output, error = _run(
+        ["apt-get", "-o", "Debug::NoLocking=1", "check"], timeout=20
+    )
     if rc is None:
         findings.append(_check("Dependencias APT", "unknown", error[:350]))
     elif rc != 0:
-        findings.append(_check("Dependencias APT", "critical",
-            (error or output or "APT informa de errores.").strip()[-500:],
-            "Examina las dependencias antes de actualizar."))
+        detail = (error or output or "APT informa de errores.").strip()[-500:]
+        # Problemas de permisos o acceso no equivalen a paquetes rotos.
+        access_error = any(token in detail.lower() for token in (
+            "permission denied", "are you root", "lock-frontend",
+            "could not open lock", "unable to acquire the dpkg",
+        ))
+        findings.append(_check(
+            "Dependencias APT", "unknown" if access_error else "critical",
+            detail,
+            ("No se pudieron verificar las dependencias por permisos."
+             if access_error else "Examina las dependencias antes de actualizar.")
+        ))
     else:
         findings.append(_check("Dependencias APT", "ok", "APT no comunica errores de dependencias."))
 
