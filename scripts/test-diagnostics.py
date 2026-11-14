@@ -32,7 +32,7 @@ def fake_run(args, timeout=12):
 with mock.patch.object(diag, "_run", side_effect=fake_run), \
      mock.patch.object(diag.shutil, "disk_usage", return_value=Disk()), \
      mock.patch.object(diag.shutil, "which", return_value="/usr/bin/exe"), \
-     mock.patch.object(diag.Path, "exists", return_value=True), \
+     mock.patch.object(diag.Path, "exists", autospec=True, side_effect=lambda self: str(self) != "/.flatpak-info"), \
      mock.patch.object(diag.Path, "glob", return_value=[]):
     items = diag.run_diagnostics()
     statuses = {item["name"]: item["status"] for item in items}
