@@ -106,6 +106,8 @@ TEMAS = {"sistema", "claro", "oscuro"}
 
 TRADUCCIONES = {
     "en": {
+        "Detectar e instalar controlador NVIDIA": "Detect and install NVIDIA driver",
+        "En Debian analiza la GPU, el kernel, DKMS y Secure Boot. En portátiles híbridos mantiene PRIME bajo demanda; requiere confirmación.": "On Debian, check the GPU, kernel, DKMS and Secure Boot. On hybrid laptops, preserve PRIME on-demand; confirmation required.",
         "Mantenimiento y configuración del sistema": "System maintenance and configuration",
         "Iniciar tareas": "Start tasks",
         "Trabajando…": "Working…",
@@ -220,6 +222,8 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Authorization wait cancelled.",
     },
     "fr": {
+        "Detectar e instalar controlador NVIDIA": "Détecter et installer le pilote NVIDIA",
+        "En Debian analiza la GPU, el kernel, DKMS y Secure Boot. En portátiles híbridos mantiene PRIME bajo demanda; requiere confirmación.": "Sous Debian, vérifie le GPU, le noyau, DKMS et Secure Boot. Sur les portables hybrides, conserve PRIME à la demande ; confirmation requise.",
         "Mantenimiento y configuración del sistema": "Maintenance et configuration du système",
         "Iniciar tareas": "Lancer les tâches",
         "Trabajando…": "En cours…",
@@ -333,6 +337,8 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Attente d’autorisation annulée.",
     },
     "zh": {
+        "Detectar e instalar controlador NVIDIA": "检测并安装 NVIDIA 驱动",
+        "En Debian analiza la GPU, el kernel, DKMS y Secure Boot. En portátiles híbridos mantiene PRIME bajo demanda; requiere confirmación.": "在 Debian 上检查 GPU、内核、DKMS 和安全启动。混合显卡笔记本保留按需 PRIME；安装须确认。",
         "Mantenimiento y configuración del sistema": "系统维护与配置",
         "Iniciar tareas": "开始任务",
         "Trabajando…": "正在处理…",
