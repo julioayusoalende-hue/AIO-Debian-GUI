@@ -2490,6 +2490,7 @@ class VentanaPrincipal(Gtk.Window):
         finally:
             self.actualizando_preset = False
         self._marcar_preset_seleccionado(self.botones_preset[0])
+        self._actualizar_sensibilidad()
 
     def _preset_flatpak(self, _b):
         self.actualizando_preset = True
@@ -2502,6 +2503,7 @@ class VentanaPrincipal(Gtk.Window):
         finally:
             self.actualizando_preset = False
         self._marcar_preset_seleccionado(self.botones_preset[1])
+        self._actualizar_sensibilidad()
 
     def _alternar_reversion_stable(self, switch, _propiedad):
         # La reversión de kernel/Mesa nunca se mezcla con tareas ordinarias.
