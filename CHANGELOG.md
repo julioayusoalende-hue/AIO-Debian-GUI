@@ -1,6 +1,6 @@
 # Cambios
 
-## 1.2.5
+## 2.0.0
 
 - Nueva opción NVIDIA exclusiva de Debian, visible tras detectar una GPU NVIDIA PCI.
 - Detección de equipos híbridos Intel/AMD + NVIDIA, manteniendo la integrada y utilizando PRIME Render Offload bajo demanda.
