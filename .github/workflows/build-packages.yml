@@ -31,18 +31,6 @@ jobs:
       - name: Recolor original icon in Debian red
         run: python3 scripts/recolor-icon.py 350
 
-      - name: Save recolored original icons to repository
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package/usr/share/icons/hicolor/*/apps/aio-debian-gui.png
-          if ! git diff --cached --quiet; then
-            git commit -m "assets: aplicar rojo Debian al icono original [skip ci]"
-            git push origin HEAD:main
-          fi
-
       - name: Run project checks
         run: ./scripts/check.sh
 
@@ -136,7 +124,7 @@ jobs:
             exit 0
           fi
           gh release create "$TAG" \
-            dist/*.deb dist/*.AppImage dist/SHA256SUMS \
+            dist/*.deb dist/*.AppImage dist/*.flatpak dist/SHA256SUMS \
             --target "$GITHUB_SHA" \
             --title "AiO Debian GUI $VERSION" \
             --notes-file CHANGELOG.md \
