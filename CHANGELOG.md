@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.2.4
+
+- Icono original de AiO recoloreado en tonos rojos Debian, manteniendo su forma y herramientas.
+- El diálogo «Acerca de» carga el PNG incluido en el paquete y busca tamaños alternativos para DEB, AppImage, Flatpak y Snap.
+- Verificación de los recursos gráficos en los paquetes AppImage y Flatpak.
+- Generación del icono durante la compilación y publicación de paquetes actualizados.
+
 ## 1.2.3
 
 - Cuando la única tarea seleccionada es actualizar Flatpak, se usa `flatpak --user` sin `pkexec`, también desde la interfaz Flatpak, sin depender del asistente privilegiado del anfitrión.
