@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.0.9": "2.0.9 — Traducciones completas para los paneles y el diagnóstico preventivo.",
     "2.0.8": "La comprobación de actualizaciones de AiO funciona también con APT en español.",
     "2.0.7": "Diagnosticar comprueba la versión de AiO, ofrece actualizar y permite reiniciar automáticamente al terminar.",
     "2.0.6": "Diagnóstico APT sin privilegios: evita falsos avisos críticos por bloqueo de dpkg.",
@@ -589,8 +590,254 @@ TRADUCCIONES["en"]["No solicitar contraseña de administrador en AiO (opcional)"
 TRADUCCIONES["fr"]["No solicitar contraseña de administrador en AiO (opcional)"] = "Ne pas demander le mot de passe administrateur dans AiO (optionnel)"
 TRADUCCIONES["zh"]["No solicitar contraseña de administrador en AiO (opcional)"] = "AiO 中不要求管理员密码（可选）"
 
+# Traducciones de interfaz, versiones recientes y diagnóstico preventivo.
+# Se mantienen aquí para que los textos dinámicos usen el mismo catálogo.
+TRADUCCIONES["en"].update({
+    "La comprobación de actualizaciones de AiO funciona también con APT en español.": "AiO update checks now work with APT in Spanish.",
+    "Diagnosticar comprueba la versión de AiO, ofrece actualizar y permite reiniciar automáticamente al terminar.": "Diagnose checks the AiO version, offers updates and allows automatic restart afterwards.",
+    "Diagnóstico APT sin privilegios: evita falsos avisos críticos por bloqueo de dpkg.": "Unprivileged APT diagnostics: prevents false critical alerts from dpkg locks.",
+    "Diagnóstico preventivo de APT, paquetes, espacio, DKMS y servicios antes del mantenimiento.": "Preventive checks of APT, packages, disk space, DKMS and services before maintenance.",
+    "La salida de consola puede abrirse en una ventana independiente, ampliable y sincronizada en tiempo real.": "Console output can open in a separate, resizable window with live updates.",
+    "Menú unificado: Preferencias, Historial, Buscar actualizaciones y Acerca de en ese orden.": "Unified menu: Preferences, History, Check for updates and About, in that order.",
+    "Dos paneles lado a lado: sistema y tareas, sin duplicar Preferencias y con desplazamiento independiente.": "Side-by-side system and task panels, one Preferences entry and independent scrolling.",
+    "Interfaz más clara con secciones horizontales, tareas a todo el ancho y controles de ejecución mejor distribuidos.": "Clearer interface with horizontal sections, full-width tasks and improved action controls.",
+    "Detección NVIDIA en Debian, instalación supervisada del controlador compatible y soporte PRIME para equipos híbridos.": "NVIDIA detection on Debian, supervised driver installation and PRIME support for hybrid systems.",
+    "No se detectó una GPU NVIDIA PCI.": "No NVIDIA PCI GPU detected.",
+    "Buscando GPU NVIDIA…": "Detecting NVIDIA GPU…",
+    "Híbrida (integrada + NVIDIA)": "Hybrid (integrated + NVIDIA)",
+    "NVIDIA dedicada": "Dedicated NVIDIA",
+    "instalado": "installed",
+    "no instalado": "not installed",
+    "GPU: %s · driver %s · candidato APT: %s · Secure Boot: %s": "GPU: %s · driver %s · APT candidate: %s · Secure Boot: %s",
+    "Por defecto Polkit solicita contraseña. Esta excepción es voluntaria y aumenta los riesgos de seguridad.": "By default, Polkit asks for a password. This optional exception increases security risks.",
+    "<b>Salida de la consola</b>": "<b>Console output</b>",
+    "Comprobar el sistema sin realizar modificaciones": "Check the system without making changes",
+    "Análisis de solo lectura. No instala, elimina ni repara paquetes. Las comprobaciones dependen del estado de los índices APT.": "Read-only analysis. No packages are installed, removed or repaired. Results depend on the state of the APT indexes.",
+    "Analizando el sistema…": "Analyzing system…",
+    "No se pudo completar el diagnóstico: ": "Could not complete diagnostics: ",
+    "Críticos": "Critical",
+    "Avisos": "Warnings",
+    "No comprobados": "Not checked",
+    "Correctos": "OK",
+    "Requiere atención": "Needs attention",
+    "Revisar": "Review",
+    "Sin comprobar": "Not checked",
+    "Correcto": "OK",
+    "Instalar la versión disponible con el actualizador de AiO": "Install the available version using AiO's updater",
+    "Espacio en /": "Root disk space (/)",
+    "Estado de dpkg": "dpkg status",
+    "Dependencias APT": "APT dependencies",
+    "Actualizaciones pendientes": "Pending updates",
+    "Índices de APT": "APT indexes",
+    "Módulos DKMS": "DKMS modules",
+    "Reinicio pendiente": "Restart pending",
+    "Servicios systemd": "systemd services",
+    "Sistema anfitrión": "Host system",
+    "Versión de AiO Debian GUI": "AiO Debian GUI version",
+    "No se detectaron paquetes parcialmente instalados.": "No partially installed packages detected.",
+    "APT no comunica errores de dependencias.": "APT reports no dependency errors.",
+    "No se pudieron fechar los índices disponibles.": "Could not determine the age of the available indexes.",
+    "DKMS no está instalado; es normal si no utilizas módulos externos.": "DKMS is not installed; this is normal if no external modules are used.",
+    "Sin unidades fallidas.": "No failed units.",
+    "No hay una solicitud explícita de reinicio registrada.": "No explicit restart request is recorded.",
+    "El sistema solicita reiniciar.": "The system requests a restart.",
+    "No hay módulos DKMS registrados.": "No DKMS modules registered.",
+    "Módulos registrados sin incidencias detectadas.": "Registered modules have no detected issues.",
+    "systemd no está disponible en esta sesión.": "systemd is unavailable in this session.",
+    "No se pudieron verificar las dependencias por permisos.": "Could not check dependencies due to permissions.",
+    "Libera espacio antes de grandes actualizaciones.": "Free disk space before large updates.",
+    "Revisa los paquetes incompletos antes de iniciar otras operaciones APT.": "Review incomplete packages before other APT operations.",
+    "Examina las dependencias antes de actualizar.": "Review dependencies before updating.",
+    "Revisa y aplica las actualizaciones del sistema cuando corresponda.": "Review and install system updates when appropriate.",
+    "Ejecuta «Actualizar paquetes del sistema» para refrescar los índices.": "Run “Upgrade system packages” to refresh package indexes.",
+    "Comprueba la compilación de módulos para el kernel actual.": "Check module builds for the current kernel.",
+    "Guarda tu trabajo y reinicia cuando sea oportuno.": "Save your work and restart when convenient.",
+    "Revisa los servicios fallidos con systemctl --failed.": "Review failed services with systemctl --failed.",
+    "El diagnóstico local está limitado dentro de Flatpak; no se han comprobado APT, dpkg ni systemd del anfitrión.": "Local diagnostics are limited inside Flatpak; host APT, dpkg and systemd were not checked.",
+    "Para revisar Debian/Ubuntu usa la edición DEB o AppImage fuera del sandbox.": "To check Debian/Ubuntu, use the DEB or AppImage edition outside the sandbox.",
+    "%.1f GiB libres (%s del volumen)": "%.1f GiB free (%s of volume)",
+    "%d actualizaciones estimadas por APT%s.": "%d updates estimated by APT%s.",
+    "; %d retenidos": "; %d held back",
+    "Último índice de paquetes: hace %d días.": "Latest package index: %d days ago.",
+    "Instalada: %s. Disponible en APT: %s.": "Installed: %s. Available in APT: %s.",
+    "Instalada: %s. Al día según los índices APT locales.": "Installed: %s. Up to date according to local APT indexes.",
+    "No hay versión candidata en los índices APT.": "No candidate version in APT indexes.",
+    "2.0.9 — Traducciones completas para los paneles y el diagnóstico preventivo.": "2.0.9 — Completed translations for the panels and preventive diagnostics.",
+})
+TRADUCCIONES["fr"].update({
+    "La comprobación de actualizaciones de AiO funciona también con APT en español.": "La vérification des mises à jour AiO fonctionne aussi avec APT en espagnol.",
+    "Diagnosticar comprueba la versión de AiO, ofrece actualizar y permite reiniciar automáticamente al terminar.": "Diagnostiquer vérifie la version d’AiO, propose la mise à jour et permet le redémarrage automatique.",
+    "Diagnóstico APT sin privilegios: evita falsos avisos críticos por bloqueo de dpkg.": "Diagnostic APT sans privilèges : évite les fausses alertes critiques liées aux verrous dpkg.",
+    "Diagnóstico preventivo de APT, paquetes, espacio, DKMS y servicios antes del mantenimiento.": "Vérification préventive d’APT, des paquets, de l’espace disque, de DKMS et des services.",
+    "La salida de consola puede abrirse en una ventana independiente, ampliable y sincronizada en tiempo real.": "La console peut s’ouvrir dans une fenêtre séparée et redimensionnable, actualisée en temps réel.",
+    "Menú unificado: Preferencias, Historial, Buscar actualizaciones y Acerca de en ese orden.": "Menu unique : Préférences, Historique, Rechercher des mises à jour et À propos, dans cet ordre.",
+    "Dos paneles lado a lado: sistema y tareas, sin duplicar Preferencias y con desplazamiento independiente.": "Panneaux système et tâches côte à côte, sans doublon de Préférences, avec défilement indépendant.",
+    "Interfaz más clara con secciones horizontales, tareas a todo el ancho y controles de ejecución mejor distribuidos.": "Interface plus claire avec sections horizontales, tâches pleine largeur et commandes réorganisées.",
+    "Detección NVIDIA en Debian, instalación supervisada del controlador compatible y soporte PRIME para equipos híbridos.": "Détection NVIDIA sous Debian, installation contrôlée des pilotes et prise en charge de PRIME hybride.",
+    "No se detectó una GPU NVIDIA PCI.": "Aucun GPU NVIDIA PCI détecté.",
+    "Buscando GPU NVIDIA…": "Recherche du GPU NVIDIA…",
+    "Híbrida (integrada + NVIDIA)": "Hybride (intégrée + NVIDIA)",
+    "NVIDIA dedicada": "NVIDIA dédiée",
+    "instalado": "installé",
+    "no instalado": "non installé",
+    "GPU: %s · driver %s · candidato APT: %s · Secure Boot: %s": "GPU : %s · pilote %s · candidat APT : %s · Secure Boot : %s",
+    "Por defecto Polkit solicita contraseña. Esta excepción es voluntaria y aumenta los riesgos de seguridad.": "Par défaut, Polkit demande un mot de passe. Cette exception facultative augmente les risques de sécurité.",
+    "<b>Salida de la consola</b>": "<b>Sortie de la console</b>",
+    "Comprobar el sistema sin realizar modificaciones": "Vérifier le système sans aucune modification",
+    "Análisis de solo lectura. No instala, elimina ni repara paquetes. Las comprobaciones dependen del estado de los índices APT.": "Analyse en lecture seule. Aucun paquet n’est installé, supprimé ou réparé. Les résultats dépendent des index APT.",
+    "Analizando el sistema…": "Analyse du système…",
+    "No se pudo completar el diagnóstico: ": "Impossible de terminer le diagnostic : ",
+    "Críticos": "Critiques",
+    "Avisos": "Avertissements",
+    "No comprobados": "Non vérifiés",
+    "Correctos": "Corrects",
+    "Requiere atención": "Attention requise",
+    "Revisar": "À vérifier",
+    "Sin comprobar": "Non vérifié",
+    "Correcto": "Correct",
+    "Instalar la versión disponible con el actualizador de AiO": "Installer la version disponible avec le système de mise à jour d’AiO",
+    "Espacio en /": "Espace disque racine (/)",
+    "Estado de dpkg": "État de dpkg",
+    "Dependencias APT": "Dépendances APT",
+    "Actualizaciones pendientes": "Mises à jour en attente",
+    "Índices de APT": "Index APT",
+    "Módulos DKMS": "Modules DKMS",
+    "Reinicio pendiente": "Redémarrage en attente",
+    "Servicios systemd": "Services systemd",
+    "Sistema anfitrión": "Système hôte",
+    "Versión de AiO Debian GUI": "Version d’AiO Debian GUI",
+    "No se detectaron paquetes parcialmente instalados.": "Aucun paquet partiellement installé détecté.",
+    "APT no comunica errores de dependencias.": "APT ne signale aucune erreur de dépendance.",
+    "No se pudieron fechar los índices disponibles.": "Impossible de dater les index disponibles.",
+    "DKMS no está instalado; es normal si no utilizas módulos externos.": "DKMS n’est pas installé ; c’est normal sans modules externes.",
+    "Sin unidades fallidas.": "Aucune unité en échec.",
+    "No hay una solicitud explícita de reinicio registrada.": "Aucune demande explicite de redémarrage enregistrée.",
+    "El sistema solicita reiniciar.": "Le système demande un redémarrage.",
+    "No hay módulos DKMS registrados.": "Aucun module DKMS enregistré.",
+    "Módulos registrados sin incidencias detectadas.": "Aucun problème détecté pour les modules enregistrés.",
+    "systemd no está disponible en esta sesión.": "systemd n’est pas disponible dans cette session.",
+    "No se pudieron verificar las dependencias por permisos.": "Impossible de vérifier les dépendances à cause des autorisations.",
+    "Libera espacio antes de grandes actualizaciones.": "Libérez de l’espace avant une mise à jour importante.",
+    "Revisa los paquetes incompletos antes de iniciar otras operaciones APT.": "Vérifiez les paquets incomplets avant d’autres opérations APT.",
+    "Examina las dependencias antes de actualizar.": "Vérifiez les dépendances avant la mise à jour.",
+    "Revisa y aplica las actualizaciones del sistema cuando corresponda.": "Vérifiez et installez les mises à jour système si nécessaire.",
+    "Ejecuta «Actualizar paquetes del sistema» para refrescar los índices.": "Exécutez « Mettre à jour les paquets système » pour actualiser les index.",
+    "Comprueba la compilación de módulos para el kernel actual.": "Vérifiez la compilation des modules pour le noyau actuel.",
+    "Guarda tu trabajo y reinicia cuando sea oportuno.": "Enregistrez votre travail et redémarrez lorsque cela vous convient.",
+    "Revisa los servicios fallidos con systemctl --failed.": "Vérifiez les services en échec avec systemctl --failed.",
+    "El diagnóstico local está limitado dentro de Flatpak; no se han comprobado APT, dpkg ni systemd del anfitrión.": "Le diagnostic local est limité dans Flatpak ; APT, dpkg et systemd de l’hôte n’ont pas été vérifiés.",
+    "Para revisar Debian/Ubuntu usa la edición DEB o AppImage fuera del sandbox.": "Pour vérifier Debian/Ubuntu, utilisez l’édition DEB ou AppImage hors du bac à sable.",
+    "%.1f GiB libres (%s del volumen)": "%.1f Gio libres (%s du volume)",
+    "%d actualizaciones estimadas por APT%s.": "%d mises à jour estimées par APT%s.",
+    "; %d retenidos": " ; %d retenues",
+    "Último índice de paquetes: hace %d días.": "Dernier index de paquets : il y a %d jours.",
+    "Instalada: %s. Disponible en APT: %s.": "Installée : %s. Disponible dans APT : %s.",
+    "Instalada: %s. Al día según los índices APT locales.": "Installée : %s. À jour selon les index APT locaux.",
+    "No hay versión candidata en los índices APT.": "Aucune version candidate dans les index APT.",
+    "2.0.9 — Traducciones completas para los paneles y el diagnóstico preventivo.": "2.0.9 — Traductions complétées pour les panneaux et le diagnostic préventif.",
+})
+TRADUCCIONES["zh"].update({
+    "La comprobación de actualizaciones de AiO funciona también con APT en español.": "AiO 更新检查现支持西班牙语 APT。",
+    "Diagnosticar comprueba la versión de AiO, ofrece actualizar y permite reiniciar automáticamente al terminar.": "诊断功能检查 AiO 版本、提供更新并允许完成后自动重启。",
+    "Diagnóstico APT sin privilegios: evita falsos avisos críticos por bloqueo de dpkg.": "无需管理员权限的 APT 诊断：避免因 dpkg 锁误报严重问题。",
+    "Diagnóstico preventivo de APT, paquetes, espacio, DKMS y servicios antes del mantenimiento.": "维护前检查 APT、软件包、磁盘空间、DKMS 和服务。",
+    "La salida de consola puede abrirse en una ventana independiente, ampliable y sincronizada en tiempo real.": "控制台输出可在独立的可调整大小窗口中实时显示。",
+    "Menú unificado: Preferencias, Historial, Buscar actualizaciones y Acerca de en ese orden.": "统一菜单依次包含偏好设置、历史记录、检查更新和关于。",
+    "Dos paneles lado a lado: sistema y tareas, sin duplicar Preferencias y con desplazamiento independiente.": "系统信息和任务并排显示，偏好设置不重复且分别滚动。",
+    "Interfaz más clara con secciones horizontales, tareas a todo el ancho y controles de ejecución mejor distribuidos.": "界面采用水平分区、全宽任务区和更合理的操作按钮布局。",
+    "Detección NVIDIA en Debian, instalación supervisada del controlador compatible y soporte PRIME para equipos híbridos.": "Debian NVIDIA 检测、受控驱动安装及混合显卡 PRIME 支持。",
+    "No se detectó una GPU NVIDIA PCI.": "未检测到 NVIDIA PCI 显卡。",
+    "Buscando GPU NVIDIA…": "正在检测 NVIDIA 显卡…",
+    "Híbrida (integrada + NVIDIA)": "混合显卡（集成 + NVIDIA）",
+    "NVIDIA dedicada": "独立 NVIDIA 显卡",
+    "instalado": "已安装",
+    "no instalado": "未安装",
+    "GPU: %s · driver %s · candidato APT: %s · Secure Boot: %s": "显卡：%s · 驱动 %s · APT 候选版本：%s · 安全启动：%s",
+    "Por defecto Polkit solicita contraseña. Esta excepción es voluntaria y aumenta los riesgos de seguridad.": "默认情况下 Polkit 要求输入密码。此可选例外会增加安全风险。",
+    "<b>Salida de la consola</b>": "<b>控制台输出</b>",
+    "Comprobar el sistema sin realizar modificaciones": "检查系统而不做任何更改",
+    "Análisis de solo lectura. No instala, elimina ni repara paquetes. Las comprobaciones dependen del estado de los índices APT.": "只读分析。不安装、删除或修复软件包。检查结果取决于 APT 索引状态。",
+    "Analizando el sistema…": "正在分析系统…",
+    "No se pudo completar el diagnóstico: ": "无法完成诊断：",
+    "Críticos": "严重",
+    "Avisos": "警告",
+    "No comprobados": "未检查",
+    "Correctos": "正常",
+    "Requiere atención": "需要处理",
+    "Revisar": "需要检查",
+    "Sin comprobar": "未检查",
+    "Correcto": "正常",
+    "Instalar la versión disponible con el actualizador de AiO": "使用 AiO 更新程序安装可用版本",
+    "Espacio en /": "根分区空间（/）",
+    "Estado de dpkg": "dpkg 状态",
+    "Dependencias APT": "APT 依赖",
+    "Actualizaciones pendientes": "待处理更新",
+    "Índices de APT": "APT 索引",
+    "Módulos DKMS": "DKMS 模块",
+    "Reinicio pendiente": "等待重启",
+    "Servicios systemd": "systemd 服务",
+    "Sistema anfitrión": "宿主系统",
+    "Versión de AiO Debian GUI": "AiO Debian GUI 版本",
+    "No se detectaron paquetes parcialmente instalados.": "未发现部分安装的软件包。",
+    "APT no comunica errores de dependencias.": "APT 未报告依赖错误。",
+    "No se pudieron fechar los índices disponibles.": "无法确定现有索引的时间。",
+    "DKMS no está instalado; es normal si no utilizas módulos externos.": "未安装 DKMS；不使用外部模块时属正常情况。",
+    "Sin unidades fallidas.": "没有失败的单元。",
+    "No hay una solicitud explícita de reinicio registrada.": "没有明确的重启请求。",
+    "El sistema solicita reiniciar.": "系统要求重启。",
+    "No hay módulos DKMS registrados.": "没有已注册的 DKMS 模块。",
+    "Módulos registrados sin incidencias detectadas.": "已注册模块未发现问题。",
+    "systemd no está disponible en esta sesión.": "当前会话中 systemd 不可用。",
+    "No se pudieron verificar las dependencias por permisos.": "由于权限限制，无法检查依赖。",
+    "Libera espacio antes de grandes actualizaciones.": "大型更新前请释放磁盘空间。",
+    "Revisa los paquetes incompletos antes de iniciar otras operaciones APT.": "其他 APT 操作前请检查未完成安装的软件包。",
+    "Examina las dependencias antes de actualizar.": "更新前请检查依赖。",
+    "Revisa y aplica las actualizaciones del sistema cuando corresponda.": "适时检查并安装系统更新。",
+    "Ejecuta «Actualizar paquetes del sistema» para refrescar los índices.": "执行“更新系统软件包”以刷新索引。",
+    "Comprueba la compilación de módulos para el kernel actual.": "检查当前内核的模块编译状态。",
+    "Guarda tu trabajo y reinicia cuando sea oportuno.": "保存工作并在适当时候重启。",
+    "Revisa los servicios fallidos con systemctl --failed.": "使用 systemctl --failed 检查失败服务。",
+    "El diagnóstico local está limitado dentro de Flatpak; no se han comprobado APT, dpkg ni systemd del anfitrión.": "Flatpak 内的本地诊断受限；未检查宿主机的 APT、dpkg 和 systemd。",
+    "Para revisar Debian/Ubuntu usa la edición DEB o AppImage fuera del sandbox.": "要检查 Debian/Ubuntu，请在沙箱外使用 DEB 或 AppImage 版本。",
+    "%.1f GiB libres (%s del volumen)": "剩余 %.1f GiB（占磁盘 %s）",
+    "%d actualizaciones estimadas por APT%s.": "APT 预计有 %d 项更新%s。",
+    "; %d retenidos": "；%d 项已保留",
+    "Último índice de paquetes: hace %d días.": "最新软件包索引：%d 天前。",
+    "Instalada: %s. Disponible en APT: %s.": "已安装：%s。APT 可用：%s。",
+    "Instalada: %s. Al día según los índices APT locales.": "已安装：%s。根据本地 APT 索引已是最新。",
+    "No hay versión candidata en los índices APT.": "APT 索引中没有候选版本。",
+    "2.0.9 — Traducciones completas para los paneles y el diagnóstico preventivo.": "2.0.9 — 完善面板和预防性诊断的翻译。",
+})
+
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)
+
+def traducir_detalle_diagnostico(texto):
+    """Traduce resultados variables; conserva mensajes técnicos no reconocidos."""
+    texto_traducido = traducir(texto)
+    if texto_traducido != texto:
+        return texto_traducido
+    disco = re.fullmatch(r"(\d+(?:\.\d+)?) GiB libres \((\d+)% del volumen\)", texto)
+    if disco:
+        return traducir("%.1f GiB libres (%s del volumen)") % (
+            float(disco.group(1)), disco.group(2) + "%")
+    pendientes = re.fullmatch(r"(\d+) actualizaciones estimadas por APT(; (\d+) retenidos)?\.", texto)
+    if pendientes:
+        sufijo = (traducir("; %d retenidos") % int(pendientes.group(3))
+                  if pendientes.group(3) else "")
+        return traducir("%d actualizaciones estimadas por APT%s.") % (
+            int(pendientes.group(1)), sufijo)
+    indices = re.fullmatch(r"Último índice de paquetes: hace (\d+) días\.", texto)
+    if indices:
+        return traducir("Último índice de paquetes: hace %d días.") % int(indices.group(1))
+    disponible = re.fullmatch(r"Instalada: ([\w.+:~-]+)\. Disponible en APT: ([\w.+:~-]+)\.", texto)
+    if disponible:
+        return traducir("Instalada: %s. Disponible en APT: %s.") % disponible.groups()
+    actualizado = re.fullmatch(r"Instalada: ([\w.+:~-]+)\. Al día según los índices APT locales\.", texto)
+    if actualizado:
+        return traducir("Instalada: %s. Al día según los índices APT locales.") % actualizado.group(1)
+    return texto
+
 
 
 
@@ -1889,14 +2136,14 @@ class VentanaPrincipal(Gtk.Window):
                 False, False, 0)
             bloque = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
             titulo = etiqueta("<b>%s</b> · %s" % (
-                GLib.markup_escape_text(resultado["name"]),
+                GLib.markup_escape_text(traducir(resultado["name"])),
                 GLib.markup_escape_text(traducir(estado))), markup=True)
             bloque.pack_start(titulo, False, False, 0)
-            detalle = etiqueta(resultado["detail"], dim=True)
+            detalle = etiqueta(traducir_detalle_diagnostico(resultado["detail"]), dim=True)
             detalle.set_selectable(True)
             bloque.pack_start(detalle, False, False, 0)
             if resultado["advice"]:
-                bloque.pack_start(etiqueta(resultado["advice"]), False, False, 0)
+                bloque.pack_start(etiqueta(traducir(resultado["advice"])), False, False, 0)
             fila.pack_start(bloque, True, True, 0)
             if resultado.get("action") == "update":
                 boton = Gtk.Button(label=traducir("Actualizar AiO"))
@@ -2049,14 +2296,14 @@ class VentanaPrincipal(Gtk.Window):
             if fila_nvidia is not None:
                 fila_nvidia.set_visible(self.nvidia_presente)
             if self.nvidia_presente:
-                modo = "Híbrida (integrada + NVIDIA)" if self.nvidia_hibrida else "NVIDIA dedicada"
-                estado = "instalado" if self.nvidia_instalada else "no instalado"
+                modo = traducir("Híbrida (integrada + NVIDIA)") if self.nvidia_hibrida else traducir("NVIDIA dedicada")
+                estado = traducir("instalado") if self.nvidia_instalada else traducir("no instalado")
                 self.nvidia_info_label.set_text(
-                    "GPU: %s · driver %s · candidato APT: %s · Secure Boot: %s"
+                    traducir("GPU: %s · driver %s · candidato APT: %s · Secure Boot: %s")
                     % (modo, estado, self.nvidia_candidata, self.nvidia_secureboot)
                 )
             else:
-                self.nvidia_info_label.set_text("No se detectó una GPU NVIDIA PCI.")
+                self.nvidia_info_label.set_text(traducir("No se detectó una GPU NVIDIA PCI."))
         if self.nvidia_presente:
             estados["nvidia-driver"] = self.nvidia_instalada
         self.estados_tareas = {pid for pid, completada in estados.items() if completada}

@@ -1,5 +1,13 @@
 # Cambios
 
+## 2.0.9
+
+- Traducciones revisadas para inglés, francés y chino: novedades de la versión, mensajes de NVIDIA, aviso de Polkit y encabezado de la consola.
+- Traducción de resultados y recomendaciones del diagnóstico preventivo, incluyendo medidas y contadores variables de espacio, actualizaciones e índices APT.
+- Las cadenas técnicas desconocidas se conservan, sin traducir arbitrariamente la salida de comandos del sistema.
+- Prueba automatizada que exige las traducciones críticas y verifica los textos dinámicos en los tres idiomas.
+
+
 ## 2.0.8
 
 - Corregida la comprobación de la versión de AiO desde «Diagnosticar» en Debian con idioma español u otros idiomas distintos del inglés.
