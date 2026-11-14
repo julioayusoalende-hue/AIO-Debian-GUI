@@ -21,7 +21,7 @@
     <value key="flathub::verification::website">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</value>
   </custom>
   <releases>
-    <release version="1.2.4" date="2026-11-14"><description><p>Icono original recoloreado a rojo Debian y visible en Acerca de.</p></description></release>
+    <release version="1.2.4" date="2026-11-14"><description><p>Icono original recoloreado a rojo Debian, incluido en el lanzador y visible en Acerca de.</p></description></release>
     <release version="1.2.3" date="2026-11-14"><description><p>Actualizaciones Flatpak de usuario sin autenticación de administrador y opción reversible de Polkit para mantenimiento sin contraseña.</p></description></release>
     <release version="1.2.2" date="2026-11-13"><description><p>Sincronización automática del tema claro/oscuro con el sistema y selección manual.</p></description></release>
     <release version="1.2.1" date="2026-11-13"><description><p>Muestra automáticamente el logotipo de Ubuntu o Debian según el sistema detectado.</p></description></release>
