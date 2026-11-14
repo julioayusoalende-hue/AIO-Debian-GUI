@@ -14,4 +14,4 @@ Description: Interfaz gráfica de mantenimiento y configuración para Debian y U
  añade soporte Flatpak con Flathub y FUSE para AppImage, ofrece complementos
  para GNOME y comprueba si hace falta reiniciar.
  Este paquete configura su propio repositorio APT para recibir actualizaciones.
- Incluye el icono original en colores rojos de Debian.
+ Incluye el icono original en tonos rojos de Debian.
