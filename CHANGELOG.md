@@ -1,5 +1,14 @@
 # Cambios
 
+## 2.0.4
+
+- Nueva opción «Abrir en otra ventana» en la cabecera de la consola.
+- Ventana de salida independiente y redimensionable que comparte el mismo Gtk.TextBuffer y refleja nuevos mensajes en tiempo real.
+- «Volver a integrar» o cerrar la ventana independiente restaura la consola integrada sin perder contenido.
+- Cierre de la ventana de salida junto a la aplicación y compatibilidad con el modo simple.
+- Pruebas automáticas de la separación y reintegración de la consola.
+
+
 ## 2.0.3
 
 - Menú unificado en este orden: Preferencias, Historial de mantenimiento, Buscar actualizaciones y Acerca de.

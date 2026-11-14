@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.0.4": "La salida de consola puede abrirse en una ventana independiente, ampliable y sincronizada en tiempo real.",
     "2.0.3": "Menú unificado: Preferencias, Historial, Buscar actualizaciones y Acerca de en ese orden.",
     "2.0.2": "Dos paneles lado a lado: sistema y tareas, sin duplicar Preferencias y con desplazamiento independiente.",
     "2.0.1": "Interfaz más clara con secciones horizontales, tareas a todo el ancho y controles de ejecución mejor distribuidos.",
@@ -109,6 +110,8 @@ TEMAS = {"sistema", "claro", "oscuro"}
 
 TRADUCCIONES = {
     "en": {
+        "Abrir en otra ventana": "Open in separate window",
+        "Volver a integrar": "Return to main window",
         "Salida de la consola": "Console output",
         "Borrar": "Clear",
         "Detectar e instalar controlador NVIDIA": "Detect and install NVIDIA driver",
@@ -227,6 +230,8 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Authorization wait cancelled.",
     },
     "fr": {
+        "Abrir en otra ventana": "Ouvrir dans une autre fenêtre",
+        "Volver a integrar": "Réintégrer à la fenêtre",
         "Salida de la consola": "Sortie de la console",
         "Borrar": "Effacer",
         "Detectar e instalar controlador NVIDIA": "Détecter et installer le pilote NVIDIA",
@@ -344,6 +349,8 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Attente d’autorisation annulée.",
     },
     "zh": {
+        "Abrir en otra ventana": "在独立窗口打开",
+        "Volver a integrar": "返回主窗口",
         "Salida de la consola": "控制台输出",
         "Borrar": "清除",
         "Detectar e instalar controlador NVIDIA": "检测并安装 NVIDIA 驱动",
@@ -1098,6 +1105,8 @@ class VentanaPrincipal(Gtk.Window):
         self.switches = {}
         self.filas = {}
         self.indicadores = {}
+        self.ventana_consola = None
+        self.log_separado = None
 
         self.distribucion = distribucion_anfitrion()
         self.flatpak_presente = es_flatpak() or shutil.which("flatpak") is not None
@@ -1439,6 +1448,8 @@ class VentanaPrincipal(Gtk.Window):
             self._reiniciar_interfaz()
             return
         if modo_simple_activado:
+            if self.ventana_consola is not None:
+                self.ventana_consola.destroy()
             self.buf.set_text("")
         self.marco_consola.set_no_show_all(nuevas["modo_simple"])
         self.cabecera_consola.set_no_show_all(nuevas["modo_simple"])
@@ -1446,7 +1457,8 @@ class VentanaPrincipal(Gtk.Window):
             self.marco_consola.set_visible(False)
             self.cabecera_consola.set_visible(False)
         else:
-            self.marco_consola.show_all()
+            if self.ventana_consola is None:
+                self.marco_consola.show_all()
             self.cabecera_consola.show_all()
 
     def _reiniciar_interfaz(self):
@@ -1536,6 +1548,13 @@ class VentanaPrincipal(Gtk.Window):
         cabecera_log.pack_start(icono_log, False, False, 0)
         cabecera_log.pack_start(
             etiqueta("<b>Salida de la consola</b>", markup=True), True, True, 0)
+        self.btn_separar_consola = Gtk.Button(label=traducir("Abrir en otra ventana"))
+        self.btn_separar_consola.set_image(Gtk.Image.new_from_icon_name(
+            "window-new-symbolic", Gtk.IconSize.BUTTON))
+        self.btn_separar_consola.set_always_show_image(True)
+        self.btn_separar_consola.connect("clicked", self._alternar_ventana_consola)
+        cabecera_log.pack_end(self.btn_separar_consola, False, False, 0)
+
         btn_borrar = Gtk.Button(label=traducir("Borrar"))
         btn_borrar.set_image(Gtk.Image.new_from_icon_name(
             "edit-clear-symbolic", Gtk.IconSize.BUTTON))
@@ -1569,6 +1588,50 @@ class VentanaPrincipal(Gtk.Window):
         if self.preferencias["modo_simple"]:
             marco.hide()
             cabecera_log.hide()
+
+    def _alternar_ventana_consola(self, _boton=None):
+        # Se reutiliza el mismo Gtk.TextBuffer en las dos vistas: no se
+        # duplica la salida ni se pierde el formato o el historial.
+        if self.ventana_consola is not None:
+            self.ventana_consola.destroy()
+            return
+        ventana = Gtk.Window(title=traducir("Salida de la consola"))
+        ventana.set_transient_for(self)
+        ventana.set_destroy_with_parent(True)
+        ventana.set_default_size(900, 480)
+        ventana.set_icon_name("aio-debian-gui")
+        marco = Gtk.ScrolledWindow()
+        marco.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        marco.set_shadow_type(Gtk.ShadowType.IN)
+        vista = Gtk.TextView.new_with_buffer(self.buf)
+        vista.set_editable(False)
+        vista.set_cursor_visible(False)
+        vista.set_monospace(True)
+        vista.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        vista.set_left_margin(10)
+        vista.set_right_margin(10)
+        marco.add(vista)
+        ventana.add(marco)
+        self.ventana_consola = ventana
+        self.log_separado = vista
+        ventana.connect("destroy", self._consola_separada_cerrada)
+        self.marco_consola.hide()
+        self.btn_separar_consola.set_label(traducir("Volver a integrar"))
+        ventana.show_all()
+        self._desplazar_consola(vista)
+        ventana.present()
+
+    def _consola_separada_cerrada(self, _ventana):
+        self.ventana_consola = None
+        self.log_separado = None
+        self.btn_separar_consola.set_label(traducir("Abrir en otra ventana"))
+        if not self.preferencias["modo_simple"]:
+            self.marco_consola.show_all()
+
+    def _desplazar_consola(self, vista):
+        marca = self.buf.create_mark(None, self.buf.get_end_iter(), False)
+        vista.scroll_to_mark(marca, 0.0, False, 0, 0)
+        self.buf.delete_mark(marca)
 
     def _borrar_consola(self, _boton):
         if not self.en_curso:
@@ -2339,9 +2402,9 @@ class VentanaPrincipal(Gtk.Window):
             self.buf.insert_with_tags_by_name(fin, texto, tag)
         else:
             self.buf.insert(fin, texto)
-        marca = self.buf.create_mark(None, self.buf.get_end_iter(), False)
-        self.log.scroll_to_mark(marca, 0.0, False, 0, 0)
-        self.buf.delete_mark(marca)
+        self._desplazar_consola(self.log)
+        if self.log_separado is not None:
+            self._desplazar_consola(self.log_separado)
 
     def _proceso_terminado(self, proc, res):
         if self.terminado_gestionado:
