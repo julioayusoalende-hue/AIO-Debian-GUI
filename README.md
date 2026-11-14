@@ -22,6 +22,10 @@ Principios que deben guiar la implementación: clasificar por ID PCI y rama comp
 
 La versión 2.0.0 permanece en **pruebas** hasta contrastar una matriz de IDs PCI y ramas NVIDIA, kernels Debian estable/Backports, Secure Boot y dispositivos híbridos. El instalador debe fallar de forma conservadora ante compatibilidad no comprobada y nunca cambiar el servidor gráfico de manera implícita.
 
+## Corrección del diagnóstico APT (v2.0.6)
+
+La comprobación de dependencias APT se hace sin adquirir el bloqueo de dpkg, mediante `Debug::NoLocking=1`. Un fallo por permisos de acceso se presenta como «No comprobado» y no implica que el sistema tenga paquetes dañados. La comprobación es de solo lectura.
+
 ## Diagnóstico preventivo (v2.0.5)
 
 Pulsa **Diagnosticar** en «Información del sistema» para abrir un informe de comprobación de solo lectura: uso de espacio de la partición raíz, paquetes sin configurar (dpkg), dependencias APT, recuento estimado de actualizaciones según los índices locales, antigüedad de índices APT, módulos DKMS, solicitud de reinicio y servicios systemd fallidos. Cada resultado se clasifica como **correcto**, **aviso**, **crítico** o **no comprobado**, con una recomendación cuando corresponda. Se ejecuta en segundo plano y no requiere root, no ejecuta reparaciones ni actualiza índices. Los resultados de APT pueden quedar desactualizados hasta ejecutar `apt update`, y algunas comprobaciones pueden no estar disponibles en Flatpak.

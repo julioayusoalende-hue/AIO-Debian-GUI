@@ -1,5 +1,12 @@
 # Cambios
 
+## 2.0.6
+
+- El diagnóstico comprueba dependencias con `apt-get -o Debug::NoLocking=1 check`, evitando el bloqueo de dpkg reservado a root.
+- Un error de acceso o permisos pasa a «No comprobado», no a «Crítico».
+- Nuevas pruebas para impedir que un fallo de permisos se confunda con dependencias rotas.
+
+
 ## 2.0.5
 
 - Nuevo diagnóstico preventivo de solo lectura desde «Información del sistema», con ventana independiente y resultados diferenciados.
