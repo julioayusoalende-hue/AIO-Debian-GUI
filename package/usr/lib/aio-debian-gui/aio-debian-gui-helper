@@ -31,7 +31,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 
 LISTAS_ACTUALIZADAS=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=2.5.2
+HELPER_VERSION=2.5.3
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 POLKIT_RULES_DIR=/etc/polkit-1/rules.d
@@ -1179,7 +1179,7 @@ crear_instantanea_previa() {
         timeshift)
             command -v timeshift >/dev/null 2>&1 || { err "Timeshift no está instalado."; return 1; }
             [ -f /etc/timeshift/timeshift.json ] || { err "Timeshift no está configurado."; return 1; }
-            timeshift --create --comments "AiO Debian GUI: antes de mantenimiento" --tags O --scripted ||
+            timeshift --create --comments "AiO Debian GUI: antes de mantenimiento" --scripted ||
                 { err "Timeshift no pudo crear la instantánea; mantenimiento cancelado."; return 1; }
             ok "Instantánea Timeshift creada; la restauración no es automática."
             return 0

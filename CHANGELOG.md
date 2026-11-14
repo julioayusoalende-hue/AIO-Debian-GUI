@@ -1,5 +1,11 @@
 # Cambios
 
+## 2.5.3
+
+- Corregida la creación de instantáneas Timeshift: se elimina el argumento `--tags O` rechazado por algunas versiones.
+- Se conserva la cancelación segura del mantenimiento si falla la instantánea.
+- Prueba de regresión para impedir reintroducir el argumento incompatible.
+
 ## 2.5.2
 
 - Detección de Timeshift y Snapper instalados y configurados.

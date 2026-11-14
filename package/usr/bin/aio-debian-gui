@@ -65,6 +65,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.5.3": "Corrección de creación de instantáneas Timeshift.",
     "2.5.2": "Detección de Timeshift y Snapper, instantáneas opcionales.",
     "2.5.1": "Vista previa detallada APT, salud asíncrona y accesibilidad.",
     "2.5.0": "Panel de salud, Snapper opcional y traducciones mejoradas.",

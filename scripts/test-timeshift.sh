@@ -16,3 +16,14 @@ if crear_instantanea_previa desconocido; then
     exit 1
 fi
 echo "Timeshift: rechazo de proveedor inválido OK"
+
+# Regresión: algunas versiones de Timeshift rechazan '--tags O'.
+helper=package/usr/lib/aio-debian-gui/aio-debian-gui-helper
+if grep -Fq -- 'timeshift --create --comments "AiO Debian GUI: antes de mantenimiento" --tags O' "$helper"; then
+    echo "ERROR: opción --tags O incompatible reintroducida" >&2
+    exit 1
+fi
+if ! grep -Fq -- 'timeshift --create --comments "AiO Debian GUI: antes de mantenimiento" --scripted' "$helper"; then
+    echo "ERROR: falta la llamada Timeshift sin etiquetas forzadas" >&2
+    exit 1
+fi
