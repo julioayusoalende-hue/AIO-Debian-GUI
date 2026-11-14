@@ -14,6 +14,10 @@ Interfaz gráfica de mantenimiento y configuración todo en uno para Debian.
 Es un proyecto independiente: no necesita el script de consola
 [aio-debian](https://github.com/julioayusoalende-hue/aio-debian) (puedes tener ambos).
 
+## Icono (v1.2.4)
+
+Se conserva el diseño original del icono de AiO Debian GUI, con los tonos azules sustituidos por rojo Debian. Los PNG se incluyen directamente en los paquetes DEB, AppImage, Flatpak y Snap. La ventana «Acerca de» carga el icono instalado, sin depender del tema de iconos del sistema.
+
 ## Autorización y Flatpak (v1.2.3)
 
 Al seleccionar **únicamente** «Actualizar aplicaciones Flatpak», la interfaz ejecuta
