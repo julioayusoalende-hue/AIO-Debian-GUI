@@ -2138,8 +2138,13 @@ class VentanaPrincipal(Gtk.Window):
                 resultado = "\n".join(health.summary())
             except Exception:
                 resultado = traducir("No se pudo completar el resumen de salud.")
-            GLib.idle_add(lambda: texto.set_text(resultado) or False if dialogo.get_visible() else False)
+            def mostrar():
+                if dialogo.get_visible():
+                    texto.set_text(resultado)
+                return False
+            GLib.idle_add(mostrar)
         threading.Thread(target=worker, daemon=True).start()
+
     def _abrir_diagnostico(self, _boton=None):
         if self.diagnostico_en_curso:
             if self.ventana_diagnostico is not None:
@@ -2491,6 +2496,7 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_preferencias_menu.set_sensitive(disponible)
         self.btn_borrar.set_sensitive(not self.en_curso)
         self.btn_diagnostico.set_sensitive(not self.en_curso and not self.diagnostico_en_curso)
+        self.btn_salud.set_sensitive(not self.en_curso)
         if self.btn_actualizar_diagnostico is not None:
             self.btn_actualizar_diagnostico.set_sensitive(
                 not self.en_curso and not self.comprobando_actualizacion)

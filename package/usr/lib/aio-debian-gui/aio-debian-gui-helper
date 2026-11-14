@@ -1160,6 +1160,7 @@ crear_instantanea_previa() {
     command -v snapper >/dev/null 2>&1 || { err "Snapper no está instalado."; return 1; }
     command -v findmnt >/dev/null 2>&1 || { err "findmnt no está disponible."; return 1; }
     [ "$(findmnt -n -o FSTYPE --target /)" = btrfs ] || { err "La raíz no utiliza Btrfs."; return 1; }
+    [ "$(findmnt -n -o TARGET --target /)" = "/" ] || { err "No se pudo verificar el punto de montaje raíz."; return 1; }
     snapper -c root get-config >/dev/null 2>&1 || { err "Snapper root no configurado."; return 1; }
     snapper -c root create --type single --description "AiO Debian GUI: antes de mantenimiento" || { err "Instantánea fallida."; return 1; }
     ok "Instantánea creada; la restauración no es automática."
