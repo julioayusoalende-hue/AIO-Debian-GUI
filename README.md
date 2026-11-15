@@ -8,12 +8,13 @@
 
 AiO Debian GUI reúne tareas habituales de administración en una aplicación GTK, con **confirmaciones explícitas y comprobaciones preventivas** para las operaciones delicadas. Es un proyecto independiente del script de consola [aio-debian](https://github.com/julioayusoalende-hue/aio-debian).
 
-> **Versión actual: 2.6.0.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
+> **Versión actual: 2.7.0.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
 
 ## Funciones principales
 
 | Área | Funciones |
 | --- | --- |
+| Programación | Mantenimiento automático diario, semanal o mensual con selección de tareas, pausa y resultados. |
 | Mantenimiento APT | Actualizar índices y paquetes, eliminar dependencias innecesarias y limpiar caché. |
 | Repositorios | Habilitar componentes `contrib` y `non-free` cuando proceda. |
 | Hardware y gráficos | Instalar opcionalmente kernel y Mesa de Backports; detectar NVIDIA y ofrecer instalación conservadora del controlador en Debian. |
@@ -62,6 +63,18 @@ También hay instrucciones más abajo para **repositorio APT, AppImage y Flatpak
 Las secciones siguientes amplían las funciones, limitaciones y métodos de instalación. Para incidencias y propuestas utiliza [Issues](../../issues).
 
 ---
+
+## Mantenimiento automático (v2.7.0)
+
+Abre el menú principal y selecciona **Programar mantenimiento**. Elige las tareas, la frecuencia (**diaria**, **semanal** o **mensual el día 1**) y la hora local del sistema. Marca **Activar mantenimiento automático** y pulsa **Guardar programación**. Guardar, pausar o eliminar la programación requiere autorización de administrador. Hay una programación por usuario.
+
+Tareas disponibles: **actualizar paquetes del sistema**, **actualizar Flatpak**, **limpiar la caché de paquetes** y **comprobar si hace falta reiniciar**. Las tareas de eliminación de paquetes y cambios de kernel, controladores y repositorios se mantienen en el flujo manual. No se reinicia el equipo automáticamente.
+
+La programación requiere **systemd activo y el paquete DEB de AiO de la misma versión en el anfitrión**. Desde AppImage o Flatpak, instala también ese DEB; copiar únicamente el asistente Polkit no instala el programador. Los temporizadores funcionan con la aplicación cerrada y sin iniciar sesión. Si el equipo estaba apagado, recuperan una ejecución pendiente al encenderlo; no encienden ni despiertan el equipo.
+
+La ventana muestra si la programación está activa, la próxima ejecución y el último resultado de cada tarea. **Actualizar estado** refresca el informe. **Pausar** impide nuevas ejecuciones, y **Eliminar programación** elimina el temporizador; ninguna de estas acciones interrumpe un mantenimiento que ya esté ejecutándose. Instalar o actualizar AiO nunca activa un horario por sí solo. Al desinstalar el DEB se desactivan los temporizadores, conservando configuración y resultados.
+
+Si APT/dpkg u otro mantenimiento de AiO está ocupado, se omite esa ejecución y se vuelve a intentar en el siguiente horario. Los errores de dependencias, la falta de espacio o una simulación que proponga eliminar paquetes bloquean el mantenimiento. Los Flatpak del sistema se actualizan; los del usuario solo se actualizan si existe su sesión activa. Los registros técnicos permanecen en el journal del servicio.
 
 ## Modo de mantenimiento seguro (desarrollo de v2.2.0)
 
@@ -119,7 +132,7 @@ En la cabecera de «Salida de la consola», pulsa **Abrir en otra ventana** para
 
 ## Menú principal (v2.0.3)
 
-Un único menú en la cabecera agrupa, en este orden: **Preferencias**, **Historial de mantenimiento**, **Buscar actualizaciones** y **Acerca de**. No hay botones duplicados en la cabecera. Las actualizaciones solo se habilitan para instalaciones DEB, AppImage o Flatpak.
+Un único menú en la cabecera agrupa, en este orden: **Preferencias**, **Historial de mantenimiento**, **Programar mantenimiento**, **Buscar actualizaciones** y **Acerca de**. No hay botones duplicados en la cabecera. Las actualizaciones solo se habilitan para instalaciones DEB, AppImage o Flatpak.
 
 ## Diseño de interfaz (v2.6.0)
 

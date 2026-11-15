@@ -33,9 +33,11 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 LISTAS_ACTUALIZADAS=0
 UPGRADE_PLAN=""
 REINICIO_REQUERIDO=0
-HELPER_VERSION=2.6.0
+HELPER_VERSION=2.7.0
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
+SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
+MAINTENANCE_LOCK=/run/aio-debian-gui/maintenance.lock
 POLKIT_RULES_DIR=/etc/polkit-1/rules.d
 
 # ------------------------------------------------------------------------------
@@ -1217,6 +1219,12 @@ main() {
         return 0
     fi
 
+    if [ "${1:-}" = "--schedule-status" ] && [ "$#" -eq 1 ]; then
+        [ -r "$SCHEDULER_MODULE" ] || { err "Instala el paquete DEB para programar mantenimientos."; return 1; }
+        /usr/bin/python3 -I "$SCHEDULER_MODULE" --status "$(id -u)"
+        return $?
+    fi
+
     # Negar las operaciones administrativas en distribuciones no probadas.
     distribucion_soportada >/dev/null || exit 1
 
@@ -1233,6 +1241,18 @@ main() {
         shift; [ $# -gt 0 ] && shift
     fi
 
+    local inherited_lock=""
+    if [ "${1:-}" = "--lock-fd" ]; then
+        inherited_lock="${2:-}"
+        [[ "$inherited_lock" =~ ^[1-9][0-9]{0,5}$ ]] && [ "$inherited_lock" -ge 3 ] || {
+            err "Descriptor de bloqueo no válido."; exit 2;
+        }
+        [ "$(readlink "/proc/self/fd/$inherited_lock")" = "$MAINTENANCE_LOCK" ] || {
+            err "El bloqueo heredado no corresponde a AiO."; exit 2;
+        }
+        shift 2
+    fi
+
     # Huella del plan mostrado por la GUI antes de solicitar autorización.
     if [ "${1:-}" = "--upgrade-plan" ]; then
         [[ "${2:-}" =~ ^[0-9a-f]{64}$ ]] || { err "Plan APT no válido."; exit 2; }
@@ -1241,6 +1261,24 @@ main() {
     fi
 
     case "${1:-}" in
+        --schedule-save)
+            [ "$#" -eq 2 ] || { err "Configuración de programación no válida."; exit 2; }
+            [ -r "$SCHEDULER_MODULE" ] || { err "Instala el paquete DEB para programar mantenimientos."; exit 1; }
+            local schedule_uid
+            schedule_uid=$(pkexec_uid) || exit 1
+            echo "##SCHEDULE:authorized"
+            /usr/bin/python3 -I "$SCHEDULER_MODULE" --configure "$schedule_uid" "$2"
+            exit $?
+            ;;
+        --schedule-remove)
+            [ "$#" -eq 1 ] || { err "Argumentos de programación no válidos."; exit 2; }
+            [ -r "$SCHEDULER_MODULE" ] || { err "Instala el paquete DEB para programar mantenimientos."; exit 1; }
+            local schedule_uid
+            schedule_uid=$(pkexec_uid) || exit 1
+            echo "##SCHEDULE:authorized"
+            /usr/bin/python3 -I "$SCHEDULER_MODULE" --remove "$schedule_uid"
+            exit $?
+            ;;
         --check-update-self)
             [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --check-update-self"; exit 2; }
             paquete_instalado aio-debian-gui || { err "AiO Debian GUI no está instalado como DEB."; exit 1; }
@@ -1304,6 +1342,20 @@ main() {
                 exit 2 ;;
         esac
     done
+
+    # Un bloqueo común impide solapar tareas manuales y programadas de AiO.
+    if [ -z "$inherited_lock" ]; then
+        install -d -o root -g root -m 0755 /run/aio-debian-gui || exit 1
+        umask 077
+        exec 9>"$MAINTENANCE_LOCK" || exit 1
+        umask 022
+        chmod 0600 "$MAINTENANCE_LOCK" || exit 1
+        inherited_lock=9
+    fi
+    if ! flock -n "$inherited_lock"; then
+        err "Ya hay otro mantenimiento de AiO en curso."
+        exit 1
+    fi
 
     local total=${#pasos[@]} i=0 fallos=0
     for s in "${pasos[@]}"; do

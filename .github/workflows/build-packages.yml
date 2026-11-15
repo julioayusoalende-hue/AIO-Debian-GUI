@@ -41,6 +41,11 @@ jobs:
       - name: Build DEB
         run: ./scripts/build-deb.sh
 
+      - name: Test scheduled maintenance with systemd
+        env:
+          AIO_SYSTEMD_INTEGRATION: '1'
+        run: bash scripts/test-scheduler-systemd.sh
+
       - name: Build AppImage
         run: ./scripts/build-appimage.sh
 
@@ -73,6 +78,8 @@ jobs:
           dpkg-deb --info "$DEB"
           dpkg-deb --contents "$DEB" >/dev/null
           dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/updates.py' >/dev/null
+          dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/scheduler.py' >/dev/null
+          dpkg-deb --contents "$DEB" | grep -F 'usr/lib/systemd/system/aio-debian-gui-maintenance@.service' >/dev/null
           file "$APPIMAGE"
           chmod +x "$APPIMAGE"
           "$APPIMAGE" --appimage-extract >/dev/null

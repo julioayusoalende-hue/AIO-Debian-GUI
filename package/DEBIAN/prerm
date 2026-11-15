@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+# No interrumpir un mantenimiento que ya esté ejecutándose. Solo detener timers.
+case "${1:-}" in
+    remove|deconfigure)
+        if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
+            for unit in /etc/systemd/system/aio-debian-gui-maintenance-[0-9]*.timer; do
+                [ -f "$unit" ] || continue
+                systemctl disable --now "${unit##*/}" || true
+            done
+        fi
+        ;;
+esac
+exit 0

@@ -1,5 +1,15 @@
 # Cambios
 
+## 2.7.0
+
+- Nueva ventana «Programar mantenimiento» con selección de tareas, frecuencia diaria, semanal o mensual y hora local.
+- Ejecución automática con la aplicación cerrada mediante temporizadores de systemd; recuperación de ejecuciones pendientes al encender el equipo.
+- Permite programar actualizaciones del sistema y Flatpak, limpieza de caché y comprobación de reinicio. Las eliminaciones y cambios de kernel, controladores y repositorios siguen siendo manuales.
+- Activación, pausa y eliminación con autorización de administrador; instalar o actualizar la aplicación no activa ninguna programación.
+- Consulta de próxima ejecución, último resultado, tareas completadas o no ejecutadas y recomendación de reinicio, sin reinicios automáticos.
+- Configuración validada y guardada por root, bloqueo compartido entre mantenimiento manual y programado y comprobaciones previas de APT.
+- Traducciones y pruebas de programación e interfaz en cuatro idiomas, más prueba de integración systemd en CI con una tarea de solo comprobación.
+
 ## 2.6.0
 
 - Cabecera compacta con distribución y versión; información técnica en una sección desplegable.

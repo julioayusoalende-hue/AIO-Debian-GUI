@@ -31,6 +31,7 @@ bash scripts/test-passwordless.sh && bien "reglas Polkit de AiO y Flatpak de usu
 bash scripts/test-distro.sh && bien "detección Debian/Ubuntu LTS y HWE" || fallo "pruebas de distribución"
 python3 scripts/test-updater.py && bien "actualizador AppImage: versiones y SHA-256" || fallo "pruebas de actualizador"
 python3 scripts/test-history.py && bien "historial de mantenimiento y persistencia" || fallo "pruebas del historial"
+python3 scripts/test-scheduler.py && bien "programación automática de mantenimiento" || fallo "pruebas de programación"
 python3 scripts/test-preflight.py && bien "modo de mantenimiento seguro" || fallo "pruebas de mantenimiento seguro"
 bash scripts/test-upgrade-safety.sh && bien "actualización APT protegida" || fallo "pruebas de actualización APT segura"
 python3 scripts/test-diagnostics.py && bien "diagnóstico preventivo de solo lectura" || fallo "pruebas del diagnóstico"
@@ -46,6 +47,7 @@ if python3 -c 'import gi; gi.require_version("Gtk", "3.0")' >/dev/null 2>&1; the
         bien "preferencias, traducciones, Acerca de y modo simple" ||
         fallo "pruebas de preferencias"
     python3 scripts/test-ui-flow.py && bien "flujos de interfaz y adaptación" || fallo "pruebas de interfaz"
+    python3 scripts/test-scheduler-ui.py && bien "interfaz de programación" || fallo "pruebas GTK de programación"
 else
     echo "- PyGObject no instalado: se omiten las pruebas de preferencias"
 fi
@@ -72,10 +74,14 @@ if grep -Fq '<allow_any>no</allow_any>' package/usr/share/polkit-1/actions/es.ai
 else
     fallo "revisión de seguridad de la política Polkit"
 fi
+sh -n package/DEBIAN/prerm && bien "sintaxis prerm" || fallo "sintaxis prerm"
 sh -n package/DEBIAN/postinst && bien "sintaxis postinst" || fallo "sintaxis postinst"
 
 # La versión del control debe tener su entrada de novedades en la GUI y en el CHANGELOG
 V=$(sed -n 's/^Version: //p' package/DEBIAN/control)
+SCHEDULER_VERSION=$(python3 -c 'import sys; sys.path.insert(0,"package/usr/lib/aio-debian-gui"); from aio_core.scheduler import VERSION; print(VERSION)')
+[ "$SCHEDULER_VERSION" = "$V" ] && bien "versión del programador coincide con el paquete" || fallo "versión del programador incompatible"
+[ -f package/usr/lib/systemd/system/aio-debian-gui-maintenance@.service ] && bien "servicio de mantenimiento incluido" || fallo "falta servicio systemd"
 grep -Fxq "  - --env=AIO_DEBIAN_GUI_VERSION=$V" flatpak/io.github.julioayusoalende_hue.aio_debian_gui.yml &&
     bien "versión Flatpak coincide con el paquete" || fallo "versión Flatpak incompatible con el paquete"
 [ "$(bash "$HELPER" --version)" = "$V" ] &&

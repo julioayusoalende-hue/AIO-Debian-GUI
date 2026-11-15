@@ -1,5 +1,7 @@
 #!/bin/sh
 set -eu
-# Las reglas opcionales de Polkit de AiO se administran desde Preferencias.
-# No eliminar una excepción activada voluntariamente durante la actualización.
+# Actualiza las definiciones; instalar o actualizar nunca activa una programación.
+if [ "${1:-}" = configure ] && command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
+    systemctl daemon-reload || true
+fi
 exit 0

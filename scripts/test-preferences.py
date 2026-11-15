@@ -89,16 +89,18 @@ if Gtk.init_check([])[0]:
         menu = ventana.menu_popover.get_child()
         assert menu.get_visible()
         botones_menu = menu.get_children()
-        assert len(botones_menu) == 4
+        assert len(botones_menu) == 5
         assert all(boton.get_visible() for boton in botones_menu)
         assert [boton.get_label() for boton in botones_menu] == [
             app.traducir("Preferencias"),
             app.traducir("Historial de mantenimiento"),
+            app.traducir("Programar mantenimiento"),
             app.traducir("Buscar actualizaciones"),
             app.traducir("Acerca de AiO Debian"),
         ]
         assert ventana.btn_preferencias_menu is botones_menu[0]
-        assert ventana.btn_actualizar is botones_menu[2]
+        assert ventana.btn_programar is botones_menu[2]
+        assert ventana.btn_actualizar is botones_menu[3]
         assert ventana.paneles_principales.get_orientation() == Gtk.Orientation.HORIZONTAL
         ventana.btn_menu.set_active(True)
         while Gtk.events_pending():

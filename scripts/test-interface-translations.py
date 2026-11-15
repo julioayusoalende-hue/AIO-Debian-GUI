@@ -29,6 +29,9 @@ for node in tree.body:
         exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), "exec"), namespace)
 
 essential = (
+    "Programar mantenimiento", "Activar mantenimiento automático", "Guardar programación",
+    "Eliminar programación", "Pausar", "Frecuencia", "Hora local", "Programación activa",
+    "Próxima ejecución: %s", "Última ejecución: %s · %s",
     "Detalles técnicos", "No comprobado", "Sin incidencias",
     "Mantenimiento habitual", "Aplicaciones y repositorios",
     "Kernel y controladores · Avanzado", "Ejecutar 1 tarea", "Ejecutar %d tareas",
