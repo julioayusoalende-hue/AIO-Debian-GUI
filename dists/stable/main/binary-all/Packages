@@ -6,10 +6,10 @@ Depends: bash, apt, coreutils, diffutils, grep, sed, util-linux, python3, python
 Conflicts: aio-debian (= 1.1.0), aio-debian (= 1.1.1)
 Replaces: aio-debian (= 1.1.0), aio-debian (= 1.1.1)
 Filename: pool/main/a/aio-debian-gui/aio-debian-gui_2.5.5_all.deb
-Size: 443064
-MD5sum: 64a85d07e4dd81f9e30d8b035cb418c1
-SHA1: bc1ba1a034a19c7007e182678f579c73744a7096
-SHA256: 62de2eba92ae74866094666c8ced2394fc644e142659104e3af65e41db838c4b
+Size: 443812
+MD5sum: ee7fc5cece61dd3ce561d7105c6552ea
+SHA1: 7f862cd947ad57c35d5da3a3c47d9111c22a3293
+SHA256: 3d795ce9b2de8ee413e897f00fdaf4beeacf3aacd9462a173a8c4624de9e592b
 Section: admin
 Priority: optional
 Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
