@@ -152,7 +152,7 @@ def _configure(uid, config):
     pwd.getpwuid(int(uid))
     config = validate_config(config)
     if not available():
-        raise RuntimeError('La programación requiere systemd y el paquete DEB de AiO en el anfitrión.')
+        raise RuntimeError('La programación requiere systemd y la integración del programador de AiO en el anfitrión.')
     if config['enabled'] and 'flatpak-update' in config['tasks'] and not shutil.which('flatpak'):
         raise RuntimeError('Flatpak no está instalado en el anfitrión.')
     path, unit = CONFIG_DIR / (uid + '.json'), UNIT_DIR / timer_name(uid)

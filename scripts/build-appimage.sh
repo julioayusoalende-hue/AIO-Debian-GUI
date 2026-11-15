@@ -46,6 +46,8 @@ install -m 755 package/usr/bin/aio-debian-gui "$APPDIR/usr/bin/aio-debian-gui"
 cp -a package/usr/lib/aio-debian-gui/aio_core "$APPDIR/usr/lib/aio-debian-gui/aio_core"
 install -m 755 package/usr/lib/aio-debian-gui/aio-debian-gui-helper \
     "$APPDIR/usr/lib/aio-debian-gui/aio-debian-gui-helper"
+install -m 644 package/usr/lib/systemd/system/aio-debian-gui-maintenance@.service \
+    "$APPDIR/usr/lib/aio-debian-gui/aio-debian-gui-maintenance@.service"
 install -m 644 package/usr/share/aio-debian-gui/debian-openlogo.png \
     "$APPDIR/usr/share/aio-debian-gui/debian-openlogo.png"
 install -m 644 package/usr/share/aio-debian-gui/ubuntu-logo.svg \

@@ -37,6 +37,7 @@ HELPER_VERSION=2.7.0
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
+SCHEDULER_SERVICE=/usr/lib/systemd/system/aio-debian-gui-maintenance@.service
 MAINTENANCE_LOCK=/run/aio-debian-gui/maintenance.lock
 POLKIT_RULES_DIR=/etc/polkit-1/rules.d
 
@@ -179,6 +180,7 @@ instalar_componentes_polkit() {
     local source_helper="${BASH_SOURCE[0]}" source_dir source_policy
     source_dir=$(cd -- "$(dirname -- "$source_helper")" && pwd) || return 1
     source_policy="$source_dir/../../share/polkit-1/actions/es.aiodebian.gui.policy"
+    [ -f "$source_policy" ] || source_policy="$source_dir/es.aiodebian.gui.policy"
     [ -f "$source_policy" ] || source_policy=$SYSTEM_POLICY
     [ -f "$source_policy" ] || {
         err "No se encontró la política polkit de AiO Debian GUI."
@@ -213,6 +215,34 @@ instalar_componentes_polkit() {
             return 1
         fi
     fi
+}
+
+# Copias persistentes: systemd nunca ejecuta archivos desde un montaje AppImage.
+instalar_programador() {
+    local source_dir module service target_service
+    source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd) || return 1
+    module="$source_dir/aio_core/scheduler.py"
+    service="$source_dir/aio-debian-gui-maintenance@.service"
+    [ -f "$service" ] || service="$source_dir/../systemd/system/aio-debian-gui-maintenance@.service"
+    target_service=$SCHEDULER_SERVICE
+    [ -f "$module" ] && [ -f "$service" ] || {
+        err "No se encontraron los componentes del programador."; return 1;
+    }
+    # No sobrescribir componentes gestionados por un DEB de otra versión.
+    if paquete_instalado aio-debian-gui; then
+        cmp -s "$module" "$SCHEDULER_MODULE" && cmp -s "$service" "$target_service" || {
+            err "Actualiza el DEB y la aplicación a la misma versión."; return 1;
+        }
+    fi
+    instalar_componentes_polkit || return 1
+    install -d -o root -g root -m 0755 "$(dirname "$SCHEDULER_MODULE")" || return 1
+    if ! cmp -s "$module" "$SCHEDULER_MODULE"; then
+        install -o root -g root -m 0644 "$module" "$SCHEDULER_MODULE" || return 1
+    fi
+    if ! cmp -s "$service" "$target_service"; then
+        install -D -o root -g root -m 0644 "$service" "$target_service" || return 1
+    fi
+    systemctl daemon-reload
 }
 
 habilitar_sin_contrasena() {
@@ -1220,7 +1250,7 @@ main() {
     fi
 
     if [ "${1:-}" = "--schedule-status" ] && [ "$#" -eq 1 ]; then
-        [ -r "$SCHEDULER_MODULE" ] || { err "Instala el paquete DEB para programar mantenimientos."; return 1; }
+        [ -r "$SCHEDULER_MODULE" ] || { err "Instala la integración del programador en el anfitrión."; return 1; }
         /usr/bin/python3 -I "$SCHEDULER_MODULE" --status "$(id -u)"
         return $?
     fi
@@ -1261,9 +1291,14 @@ main() {
     fi
 
     case "${1:-}" in
+        --install-scheduler)
+            [ "$#" -eq 1 ] || exit 2
+            instalar_programador
+            exit $?
+            ;;
         --schedule-save)
             [ "$#" -eq 2 ] || { err "Configuración de programación no válida."; exit 2; }
-            [ -r "$SCHEDULER_MODULE" ] || { err "Instala el paquete DEB para programar mantenimientos."; exit 1; }
+            [ -r "$SCHEDULER_MODULE" ] || { err "Instala la integración del programador en el anfitrión."; exit 1; }
             local schedule_uid
             schedule_uid=$(pkexec_uid) || exit 1
             echo "##SCHEDULE:authorized"
@@ -1272,7 +1307,7 @@ main() {
             ;;
         --schedule-remove)
             [ "$#" -eq 1 ] || { err "Argumentos de programación no válidos."; exit 2; }
-            [ -r "$SCHEDULER_MODULE" ] || { err "Instala el paquete DEB para programar mantenimientos."; exit 1; }
+            [ -r "$SCHEDULER_MODULE" ] || { err "Instala la integración del programador en el anfitrión."; exit 1; }
             local schedule_uid
             schedule_uid=$(pkexec_uid) || exit 1
             echo "##SCHEDULE:authorized"
