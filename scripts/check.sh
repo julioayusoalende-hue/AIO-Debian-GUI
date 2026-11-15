@@ -24,6 +24,7 @@ PY
 python3 -c 'import ast, pathlib; [ast.parse(p.read_text(encoding="utf-8"), filename=str(p)) for p in pathlib.Path("package/usr/lib/aio-debian-gui/aio_core").glob("*.py")]' &&
     bien "módulos core Python válidos" || fallo "sintaxis módulos core"
 python3 scripts/test-core-preferences.py && bien "preferencias modulares" || fallo "pruebas de preferencias core"
+python3 scripts/test-gtk-versions.py && bien "compatibilidad GTK/GDK 3" || fallo "compatibilidad GTK/GDK 3"
 python3 scripts/test-appearance.py && bien "tema automático y preferencia manual" || fallo "pruebas de apariencia"
 bash scripts/test-polkit-escaping.sh && bien "validación de usuario Polkit" || fallo "validación de usuario Polkit"
 bash scripts/test-passwordless.sh && bien "reglas Polkit de AiO y Flatpak de usuario" || fallo "pruebas de autorización"

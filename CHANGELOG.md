@@ -1,5 +1,10 @@
 # Cambios
 
+## 2.5.5
+
+- Corregido el fallo de arranque por cargar GDK 4 junto a GTK 3 en Debian 13.
+- Añadida comprobación automática de versiones de introspección GDK/GTK antes de publicar.
+
 ## 2.5.4
 
 - Enter inicia las tareas seleccionadas cuando la ventana principal está activa, sin interferir con botones, campos editables ni diálogos.
