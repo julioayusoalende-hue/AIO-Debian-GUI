@@ -73,6 +73,12 @@ for language in ('es', 'en', 'fr', 'zh'):
         assert not widgets['activo'].get_active()
         assert set(widgets['tareas']) == set(app.core_scheduler.TASKS)
         assert 'backports-kernel-mesa' not in widgets['tareas']
+        with patch.object(app, 'formato_actualizacion', return_value='deb'):
+            assert w._lanzador_programacion() == {'format': 'deb', 'path': ''}
+        with patch.object(app, 'formato_actualizacion', return_value='appimage'), \
+             patch.dict(app.os.environ, {'APPIMAGE': '/home/test/AiO.AppImage'}):
+            assert w._lanzador_programacion() == {
+                'format': 'appimage', 'path': '/home/test/AiO.AppImage'}
         widgets['frecuencia'].set_active_id('daily')
         assert not widgets['dia'].get_sensitive()
         widgets['frecuencia'].set_active_id('weekly')
@@ -85,7 +91,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         w._cambiar_programacion(dialog)
         assert w.programando and not w.btn_iniciar.get_sensitive()
         wait_for(lambda: not w.programando and widgets['guardar'].get_sensitive())
-        assert backend['config'] == {'enabled':True,'frequency':'weekly','weekday':2,'hour':3,'minute':25,'tasks':['upgrade','autoclean']}
+        assert backend['config'] == {'enabled':True,'frequency':'weekly','weekday':2,'hour':3,'minute':25,'tasks':['upgrade','autoclean'],'launcher':None}
         assert widgets['pausar'].get_sensitive()
         w._cambiar_programacion(dialog, pausar=True)
         wait_for(lambda: not w.programando and widgets['guardar'].get_sensitive())
