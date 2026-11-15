@@ -1,5 +1,14 @@
 # Cambios
 
+## 2.5.6
+
+- Corregida la detección de eliminaciones en simulaciones APT mediante los marcadores reales `Remv` y `Purg`.
+- El asistente vuelve a simular la actualización tras refrescar los índices y cancela si el plan difiere del aprobado en la interfaz.
+- Las actualizaciones se ejecutan con `--no-remove` para impedir eliminaciones durante la operación.
+- Flatpak realiza las comprobaciones previas sin privilegios en el anfitrión y bloquea el mantenimiento si no puede verificarlas.
+- Sincronizadas las versiones de los formatos de distribución con el asistente e incorporada una comprobación automática para Flatpak.
+- Añadidas pruebas de regresión para eliminaciones, cambios de plan y errores de comunicación con el anfitrión.
+
 ## 2.5.5
 
 - Corregido el fallo de arranque por cargar GDK 4 junto a GTK 3 en Debian 13.
