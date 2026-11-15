@@ -8,7 +8,7 @@
 
 AiO Debian GUI reúne tareas habituales de administración en una aplicación GTK, con **confirmaciones explícitas y comprobaciones preventivas** para las operaciones delicadas. Es un proyecto independiente del script de consola [aio-debian](https://github.com/julioayusoalende-hue/aio-debian).
 
-> **Versión actual: 2.7.0.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
+> **Versión actual: 2.7.1.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
 
 ## Funciones principales
 
@@ -70,11 +70,84 @@ Abre el menú principal y selecciona **Programar mantenimiento**. Elige las tare
 
 Tareas disponibles: **actualizar paquetes del sistema**, **actualizar Flatpak**, **limpiar la caché de paquetes** y **comprobar si hace falta reiniciar**. Las tareas de eliminación de paquetes y cambios de kernel, controladores y repositorios se mantienen en el flujo manual. No se reinicia el equipo automáticamente.
 
-La programación requiere **systemd activo y el paquete DEB de AiO de la misma versión en el anfitrión**. Desde AppImage o Flatpak, instala también ese DEB; copiar únicamente el asistente Polkit no instala el programador. Los temporizadores funcionan con la aplicación cerrada y sin iniciar sesión. Si el equipo estaba apagado, recuperan una ejecución pendiente al encenderlo; no encienden ni despiertan el equipo.
+La programación requiere **systemd activo y la integración de AiO de la misma versión en el anfitrión**. El DEB la instala automáticamente; AppImage y Flatpak pueden instalarla sin el DEB siguiendo [estas instrucciones](#integración-del-programador-para-appimage-y-flatpak). Los temporizadores funcionan con la aplicación cerrada y sin iniciar sesión. Si el equipo estaba apagado, recuperan una ejecución pendiente al encenderlo; no encienden ni despiertan el equipo.
 
 La ventana muestra si la programación está activa, la próxima ejecución y el último resultado de cada tarea. **Actualizar estado** refresca el informe. **Pausar** impide nuevas ejecuciones, y **Eliminar programación** elimina el temporizador; ninguna de estas acciones interrumpe un mantenimiento que ya esté ejecutándose. Instalar o actualizar AiO nunca activa un horario por sí solo. Al desinstalar el DEB se desactivan los temporizadores, conservando configuración y resultados.
 
 Si APT/dpkg u otro mantenimiento de AiO está ocupado, se omite esa ejecución y se vuelve a intentar en el siguiente horario. Los errores de dependencias, la falta de espacio o una simulación que proponga eliminar paquetes bloquean el mantenimiento. Los Flatpak del sistema se actualizan; los del usuario solo se actualizan si existe su sesión activa. Los registros técnicos permanecen en el journal del servicio.
+
+### Integración del programador para AppImage y Flatpak
+
+Sin instalar el DEB, hay que instalar una vez el asistente, los módulos del programador y el servicio en el anfitrión. Estos archivos persistentes permiten ejecutar las tareas con la aplicación cerrada, incluso si se mueve o desinstala el AppImage o el Flatpak. Requiere autorización de administrador.
+
+**No sobrescribas archivos gestionados por el DEB.** Si está instalado, actualízalo mediante APT y omite estos pasos. Si actualizas la aplicación instalada sin DEB, repite la integración con los archivos de la misma versión. Antes de actualizarla, pausa las programaciones de todos los usuarios y espera a que terminen los mantenimientos en curso.
+
+Prepara un directorio privado y extrae los archivos de la aplicación que utilizas:
+
+```bash
+INTEGRACION=$(mktemp -d "$HOME/aio-debian-gui-integracion.XXXXXXXX")
+cd "$INTEGRACION"
+```
+
+Para **Flatpak**:
+
+```bash
+APP=io.github.julioayusoalende_hue.aio_debian_gui
+(
+  set -e
+  for f in aio-debian-gui-helper es.aiodebian.gui.policy aio-debian-gui-maintenance@.service; do
+    flatpak run --command=cat "$APP" "/app/share/aio-debian-gui/host-integration/$f" > "$f"
+  done
+  for f in __init__.py scheduler.py preflight.py; do
+    flatpak run --command=cat "$APP" "/app/lib/aio-debian-gui/aio_core/$f" > "$f"
+  done
+)
+```
+
+Para **AppImage**, sustituye la ruta por la del archivo descargado y verificado:
+
+```bash
+APPIMAGE="$HOME/Descargas/aio-debian-gui_X.Y.Z_x86_64.AppImage"
+"$APPIMAGE" --appimage-extract
+cp squashfs-root/usr/lib/aio-debian-gui/aio-debian-gui-helper .
+cp squashfs-root/usr/lib/aio-debian-gui/aio_core/{__init__,scheduler,preflight}.py .
+cp squashfs-root/usr/lib/systemd/system/aio-debian-gui-maintenance@.service .
+cp squashfs-root/usr/share/polkit-1/actions/es.aiodebian.gui.policy .
+```
+
+Revisa los seis archivos extraídos antes de instalarlos como root. No continúes si falló la extracción. Después instala la integración:
+
+```bash
+(
+  set -e
+  for f in aio-debian-gui-helper es.aiodebian.gui.policy aio-debian-gui-maintenance@.service __init__.py scheduler.py preflight.py; do
+    test -s "$f"
+  done
+  sudo install -D -o root -g root -m 0755 aio-debian-gui-helper /usr/lib/aio-debian-gui/aio-debian-gui-helper
+  for f in __init__.py scheduler.py preflight.py; do
+    sudo install -D -o root -g root -m 0644 "$f" "/usr/lib/aio-debian-gui/aio_core/$f"
+  done
+  sudo install -D -o root -g root -m 0644 es.aiodebian.gui.policy /usr/share/polkit-1/actions/es.aiodebian.gui.policy
+  sudo install -D -o root -g root -m 0644 aio-debian-gui-maintenance@.service /usr/lib/systemd/system/aio-debian-gui-maintenance@.service
+  sudo systemctl daemon-reload
+)
+```
+
+Abre de nuevo la aplicación y configura o reanuda el horario; instalar la integración no activa ningún temporizador.
+
+Para retirar la integración manual, elimina primero las programaciones desde cada cuenta y espera a que no haya mantenimientos en curso. Solo si los archivos no pertenecen al DEB, elimínalos y recarga systemd:
+
+```bash
+sudo rm /usr/lib/aio-debian-gui/aio-debian-gui-helper \
+  /usr/lib/aio-debian-gui/aio_core/__init__.py \
+  /usr/lib/aio-debian-gui/aio_core/scheduler.py \
+  /usr/lib/aio-debian-gui/aio_core/preflight.py \
+  /usr/lib/systemd/system/aio-debian-gui-maintenance@.service \
+  /usr/share/polkit-1/actions/es.aiodebian.gui.policy
+sudo systemctl daemon-reload
+```
+
+Si activaste la excepción de Polkit sin contraseña, desactívala también desde la aplicación antes de retirar el asistente. Los resultados históricos no se eliminan automáticamente.
 
 ## Modo de mantenimiento seguro (desarrollo de v2.2.0)
 
@@ -326,6 +399,8 @@ sudo install -D -o root -g root -m 0644 \
   /usr/share/polkit-1/actions/es.aiodebian.gui.policy
 ```
 
+Para programar mantenimientos instala también los módulos y el servicio descritos en
+[Integración del programador para AppImage y Flatpak](#integración-del-programador-para-appimage-y-flatpak).
 Reinicia AiO Debian GUI para que compruebe el asistente del anfitrión. Desde la
 versión 1.2.3, la actualización exclusiva de Flatpak del usuario no requiere
 `pkexec` ni integración privilegiada. Las tareas administrativas del anfitrión
@@ -338,12 +413,7 @@ requiere una autorización inicial y conlleva los riesgos indicados en
 Si ya hay un asistente instalado por un paquete `.deb`, no lo sobrescribas sin
 comprobar la versión y el origen.
 
-Para eliminar la integración manual, **solo si no la gestiona el paquete .deb**:
-
-```bash
-sudo rm /usr/lib/aio-debian-gui/aio-debian-gui-helper
-sudo rm /usr/share/polkit-1/actions/es.aiodebian.gui.policy
-```
+Para eliminar la integración manual consulta las instrucciones de eliminación más abajo.
 
 #### Permisos opcionales con Flatseal
 

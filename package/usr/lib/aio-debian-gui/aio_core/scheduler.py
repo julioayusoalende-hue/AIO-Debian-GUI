@@ -13,7 +13,7 @@ import subprocess
 import sys
 import tempfile
 
-VERSION = '2.7.0'
+VERSION = '2.7.1'
 CONFIG_DIR = Path('/etc/aio-debian-gui/schedules')
 STATE_DIR = Path('/var/lib/aio-debian-gui/schedules')
 UNIT_DIR = Path('/etc/systemd/system')
@@ -116,8 +116,10 @@ def host_supported():
 
 
 def available():
+    modules = Path(HELPER).parent / 'aio_core'
     return bool(host_supported() and shutil.which('systemctl') and Path('/run/systemd/system').is_dir()
-                and SERVICE.is_file() and Path(HELPER).is_file())
+                and SERVICE.is_file() and Path(HELPER).is_file()
+                and all((modules / name).is_file() for name in ('__init__.py', 'scheduler.py', 'preflight.py')))
 
 
 def _require_root():
@@ -152,7 +154,7 @@ def _configure(uid, config):
     pwd.getpwuid(int(uid))
     config = validate_config(config)
     if not available():
-        raise RuntimeError('La programación requiere systemd y el paquete DEB de AiO en el anfitrión.')
+        raise RuntimeError('La programación requiere systemd y la integración de AiO en el anfitrión.')
     if config['enabled'] and 'flatpak-update' in config['tasks'] and not shutil.which('flatpak'):
         raise RuntimeError('Flatpak no está instalado en el anfitrión.')
     path, unit = CONFIG_DIR / (uid + '.json'), UNIT_DIR / timer_name(uid)

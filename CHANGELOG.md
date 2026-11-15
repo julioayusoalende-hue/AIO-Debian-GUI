@@ -1,5 +1,10 @@
 # Cambios
 
+## 2.7.1
+
+- Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB, con integración administrativa persistente en el anfitrión.
+- El programador verifica que estén disponibles sus módulos y el servicio systemd; se documentan instalación, actualización y retirada de la integración.
+
 ## 2.7.0
 
 - Nueva ventana «Programar mantenimiento» con selección de tareas, frecuencia diaria, semanal o mensual y hora local.

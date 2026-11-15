@@ -40,7 +40,8 @@ ACTUAL_SHA256=$(sha256sum "$RUNTIME_FILE" | awk '{print $1}')
 APPDIR="$STAGE/AppDir"
 mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/lib/aio-debian-gui" \
          "$APPDIR/usr/share/applications" "$APPDIR/usr/share/aio-debian-gui" \
-         "$APPDIR/usr/share/doc/aio-debian-gui" "$APPDIR/usr/share/polkit-1/actions"
+         "$APPDIR/usr/share/doc/aio-debian-gui" "$APPDIR/usr/share/polkit-1/actions" \
+         "$APPDIR/usr/lib/systemd/system"
 
 install -m 755 package/usr/bin/aio-debian-gui "$APPDIR/usr/bin/aio-debian-gui"
 cp -a package/usr/lib/aio-debian-gui/aio_core "$APPDIR/usr/lib/aio-debian-gui/aio_core"
@@ -56,6 +57,8 @@ install -m 644 package/usr/share/doc/aio-debian-gui/copyright \
     "$APPDIR/usr/share/doc/aio-debian-gui/copyright"
 install -m 644 package/usr/share/polkit-1/actions/es.aiodebian.gui.policy \
     "$APPDIR/usr/share/polkit-1/actions/es.aiodebian.gui.policy"
+install -m 644 package/usr/lib/systemd/system/aio-debian-gui-maintenance@.service \
+    "$APPDIR/usr/lib/systemd/system/aio-debian-gui-maintenance@.service"
 cp -a package/usr/share/icons/hicolor "$APPDIR/usr/share/icons"
 install -m 644 package/usr/share/icons/hicolor/512x512/apps/aio-debian-gui.png \
     "$APPDIR/aio-debian-gui.png"

@@ -5,6 +5,7 @@ import fcntl
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -53,6 +54,31 @@ with patch.object(s.os, 'geteuid', return_value=1000):
         pass
     else:
         raise AssertionError('Configuración sin privilegios aceptada')
+
+with tempfile.TemporaryDirectory() as directory:
+    root = Path(directory)
+    helper = root/'usr/lib/aio-debian-gui/aio-debian-gui-helper'
+    modules = helper.parent/'aio_core'
+    service = root/'usr/lib/systemd/system/aio-debian-gui-maintenance@.service'
+    modules.mkdir(parents=True)
+    service.parent.mkdir(parents=True)
+    shutil.copy('package/usr/lib/aio-debian-gui/aio-debian-gui-helper', helper)
+    shutil.copy('package/usr/lib/systemd/system/aio-debian-gui-maintenance@.service', service)
+    for name in ('__init__.py', 'scheduler.py', 'preflight.py'):
+        shutil.copy(Path('package/usr/lib/aio-debian-gui/aio_core')/name, modules/name)
+    with patch.multiple(s, HELPER=str(helper), SERVICE=service), \
+         patch.object(s, 'host_supported', return_value=True), \
+         patch.object(s.shutil, 'which', return_value='/usr/bin/systemctl'), \
+         patch.object(Path, 'is_dir', return_value=True):
+        assert s.available()
+        (modules/'preflight.py').unlink()
+        assert not s.available()
+    shutil.copy('package/usr/lib/aio-debian-gui/aio_core/preflight.py', modules/'preflight.py')
+    isolated = subprocess.run(
+        [sys.executable, '-I', str(modules/'scheduler.py'), '--status', '1000'],
+        cwd=root, capture_output=True, text=True, check=True)
+    assert json.loads(isolated.stdout)['version'] == s.VERSION
+    assert '/usr/lib/aio-debian-gui/aio_core/scheduler.py --run %i' in service.read_text()
 
 with tempfile.TemporaryDirectory() as directory:
     root = Path(directory)

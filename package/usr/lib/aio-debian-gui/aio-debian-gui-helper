@@ -33,7 +33,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 LISTAS_ACTUALIZADAS=0
 UPGRADE_PLAN=""
 REINICIO_REQUERIDO=0
-HELPER_VERSION=2.7.0
+HELPER_VERSION=2.7.1
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -1220,7 +1220,7 @@ main() {
     fi
 
     if [ "${1:-}" = "--schedule-status" ] && [ "$#" -eq 1 ]; then
-        [ -r "$SCHEDULER_MODULE" ] || { err "Instala el paquete DEB para programar mantenimientos."; return 1; }
+        [ -r "$SCHEDULER_MODULE" ] || { err "Instala la integración de programación de AiO en el anfitrión."; return 1; }
         /usr/bin/python3 -I "$SCHEDULER_MODULE" --status "$(id -u)"
         return $?
     fi
@@ -1263,7 +1263,7 @@ main() {
     case "${1:-}" in
         --schedule-save)
             [ "$#" -eq 2 ] || { err "Configuración de programación no válida."; exit 2; }
-            [ -r "$SCHEDULER_MODULE" ] || { err "Instala el paquete DEB para programar mantenimientos."; exit 1; }
+            [ -r "$SCHEDULER_MODULE" ] || { err "Instala la integración de programación de AiO en el anfitrión."; exit 1; }
             local schedule_uid
             schedule_uid=$(pkexec_uid) || exit 1
             echo "##SCHEDULE:authorized"
@@ -1272,7 +1272,7 @@ main() {
             ;;
         --schedule-remove)
             [ "$#" -eq 1 ] || { err "Argumentos de programación no válidos."; exit 2; }
-            [ -r "$SCHEDULER_MODULE" ] || { err "Instala el paquete DEB para programar mantenimientos."; exit 1; }
+            [ -r "$SCHEDULER_MODULE" ] || { err "Instala la integración de programación de AiO en el anfitrión."; exit 1; }
             local schedule_uid
             schedule_uid=$(pkexec_uid) || exit 1
             echo "##SCHEDULE:authorized"
