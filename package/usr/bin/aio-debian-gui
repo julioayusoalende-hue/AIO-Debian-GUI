@@ -66,6 +66,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.7.3": "Abre AiO y muestra el aviso habitual cuando el mantenimiento programado recomienda reiniciar.",
     "2.7.2": "Notificación de escritorio al completar correctamente el mantenimiento programado.",
     "2.7.1": "Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB.",
     "2.7.0": "Mantenimientos automáticos programables con selección de tareas, horario, pausa y resultados.",

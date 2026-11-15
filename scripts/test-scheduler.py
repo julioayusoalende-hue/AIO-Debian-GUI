@@ -32,7 +32,10 @@ invalid = [None, {}, {**base, 'extra': 'bad'}, {**base, 'hour': True},
            {**base, 'tasks': []}, {**base, 'tasks': ['upgrade', 'upgrade']},
            {**base, 'tasks': ['backports-kernel-mesa']}, {**base, 'tasks': ['reboot']},
            {**base, 'tasks': ['upgrade; reboot']}, {**base, 'tasks': ['repos']},
-           {**base, 'tasks': ['autoremove']}, {**base, 'tasks': ['clock']}]
+           {**base, 'tasks': ['autoremove']}, {**base, 'tasks': ['clock']},
+           {**base, 'launcher': {'format': 'shell', 'path': '/tmp/run'}},
+           {**base, 'launcher': {'format': 'appimage', 'path': 'relative.AppImage'}},
+           {**base, 'launcher': {'format': 'deb', 'path': '/tmp/custom'}}]
 for config in invalid:
     try:
         s.validate_config(config)
@@ -40,6 +43,8 @@ for config in invalid:
         pass
     else:
         raise AssertionError(config)
+legacy = {key: value for key, value in base.items() if key != 'launcher'}
+assert s.validate_config(legacy)['launcher'] is None
 unit = s.timer_text('1000', base)
 assert 'Persistent=true' in unit and 'WakeSystem=false' in unit
 assert 'Unit=aio-debian-gui-maintenance@1000.service' in unit
@@ -97,6 +102,21 @@ with patch.object(Path, 'is_dir', return_value=False), \
      patch.object(s.subprocess, 'run') as notify:
     s._notify_success('1000')
     notify.assert_not_called()
+
+with patch.object(Path, 'is_dir', return_value=True), \
+     patch.object(Path, 'is_socket', return_value=True), \
+     patch.object(s.shutil, 'which', side_effect=lambda name: f'/usr/bin/{name}'), \
+     patch.object(s.os, 'access', return_value=True), \
+     patch.object(s.subprocess, 'run', return_value=SimpleNamespace(
+         returncode=0, stdout='DISPLAY=:0\nWAYLAND_DISPLAY=wayland-0\n', stderr='')) as session_env, \
+     patch.object(s.subprocess, 'Popen') as launch:
+    s._launch_for_reboot('1000', {'format': 'deb', 'path': ''})
+    session_env.assert_called_once()
+    command = launch.call_args.args[0]
+    assert command[:4] == ['/usr/bin/runuser', '-u', '1000', '--']
+    assert '/usr/bin/aio-debian-gui' in command
+    assert command[-1] == '--scheduled-reboot-required'
+    assert 'DISPLAY=:0' in command and 'WAYLAND_DISPLAY=wayland-0' in command
 
 with tempfile.TemporaryDirectory() as directory:
     root = Path(directory)
@@ -169,9 +189,11 @@ with tempfile.TemporaryDirectory() as directory:
              patch.object(s.shutil, 'disk_usage', return_value=SimpleNamespace(free=4*1024**3)), \
              patch.object(s.subprocess, 'run', return_value=SimpleNamespace(returncode=0)) as run, \
              patch.object(s.subprocess, 'Popen', side_effect=Process) as popen, \
-             patch.object(s, '_notify_success') as notify:
+             patch.object(s, '_notify_success') as notify, \
+             patch.object(s, '_launch_for_reboot') as launch:
             assert s.run_schedule('1000') == 0
             notify.assert_called_once_with('1000')
+            launch.assert_called_once_with('1000', config['launcher'])
             result = s._read(s.STATE_DIR/'1000.json')
             assert result['status'] == 'success' and result['finished'] and result['reboot_required']
             assert all(v == 'success' for v in result['tasks'].values())
@@ -179,9 +201,11 @@ with tempfile.TemporaryDirectory() as directory:
             with patch.object(preflight, '_check_local', return_value=preflight.Report(True, ['blocked'])):
                 popen.reset_mock()
                 notify.reset_mock()
+                launch.reset_mock()
                 assert s.run_schedule('1000') == 1
                 popen.assert_not_called()
                 notify.assert_not_called()
+                launch.assert_not_called()
                 assert s._read(s.STATE_DIR/'1000.json')['status'] == 'blocked'
             with patch.object(preflight, '_apt_locks', return_value=['/var/lib/dpkg/lock']):
                 run.reset_mock()

@@ -1,5 +1,10 @@
 # Cambios
 
+## 2.7.3
+
+- Si el mantenimiento programado recomienda reiniciar, abre AiO en la sesión gráfica del usuario y muestra el aviso habitual, sin reiniciar automáticamente.
+- Conserva el lanzador elegido al configurar la programación y registra el resultado en el journal si no hay sesión gráfica disponible.
+
 ## 2.7.2
 
 - Notificación de escritorio al usuario cuando el mantenimiento programado finaliza correctamente, incluso con AiO cerrado; si no hay sesión gráfica disponible, el resultado sigue guardado y se informa en el journal.
