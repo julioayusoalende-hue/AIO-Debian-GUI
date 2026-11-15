@@ -66,6 +66,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.7.6": "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.",
     "2.7.5": "Comprobación de reinicio más fiable con needrestart.",
     "2.7.4": "Corregido el envío de notificaciones y avisos programados a sesiones de usuario.",
     "2.7.3": "Abre AiO y muestra el aviso habitual cuando el mantenimiento programado recomienda reiniciar.",
@@ -548,6 +549,7 @@ TRADUCCIONES = {
 
 # Textos del actualizador integrados con las traducciones existentes.
 TRADUCCIONES["en"].update({
+    "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.": "More complete APT update diagnostics and a warning about local indexes.",
     "Buscar actualizaciones": "Check for updates",
     "Confirmar actualización": "Confirm update",
     "Actualización DEB completada": "DEB update completed",
@@ -558,6 +560,7 @@ TRADUCCIONES["en"].update({
     "No se pudo actualizar": "Unable to update",
 })
 TRADUCCIONES["fr"].update({
+    "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.": "Diagnostic des mises à jour APT plus complet et avertissement sur les index locaux.",
     "Buscar actualizaciones": "Rechercher des mises à jour",
     "Confirmar actualización": "Confirmer la mise à jour",
     "Actualización DEB completada": "Mise à jour DEB terminée",
@@ -568,6 +571,7 @@ TRADUCCIONES["fr"].update({
     "No se pudo actualizar": "Mise à jour impossible",
 })
 TRADUCCIONES["zh"].update({
+    "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.": "更全面地诊断 APT 更新并提示本地索引问题。",
     "Buscar actualizaciones": "检查更新",
     "Confirmar actualización": "确认更新",
     "Actualización DEB completada": "DEB 更新完成",
@@ -1255,6 +1259,22 @@ TRADUCCIONES["en"].update({"Comprobación de reinicio más fiable con needrestar
 TRADUCCIONES["fr"].update({"Comprobación de reinicio más fiable con needrestart.": "Vérification plus fiable du redémarrage avec needrestart."})
 TRADUCCIONES["zh"].update({"Comprobación de reinicio más fiable con needrestart.": "使用 needrestart 更可靠地检查是否需要重启。"})
 
+TRADUCCIONES["en"].update({
+    "%d actualizaciones disponibles según los índices APT locales.": "%d updates available according to local APT indexes.",
+    "No se pudo interpretar la lista de actualizaciones APT.": "Could not interpret the APT update list.",
+    "Los índices APT pueden estar desactualizados y ocultar actualizaciones del sistema o de AiO. Para renovarlos sin instalar paquetes, ejecuta «sudo apt update» y vuelve a diagnosticar.": "APT indexes may be outdated and hide system or AiO updates. To refresh them without installing packages, run “sudo apt update” and diagnose again.",
+})
+TRADUCCIONES["fr"].update({
+    "%d actualizaciones disponibles según los índices APT locales.": "%d mises à jour disponibles selon les index APT locaux.",
+    "No se pudo interpretar la lista de actualizaciones APT.": "Impossible d’interpréter la liste des mises à jour APT.",
+    "Los índices APT pueden estar desactualizados y ocultar actualizaciones del sistema o de AiO. Para renovarlos sin instalar paquetes, ejecuta «sudo apt update» y vuelve a diagnosticar.": "Les index APT peuvent être obsolètes et masquer des mises à jour du système ou d’AiO. Pour les actualiser sans installer de paquets, exécutez « sudo apt update » puis relancez le diagnostic.",
+})
+TRADUCCIONES["zh"].update({
+    "%d actualizaciones disponibles según los índices APT locales.": "根据本地 APT 索引，有 %d 项更新可用。",
+    "No se pudo interpretar la lista de actualizaciones APT.": "无法解析 APT 更新列表。",
+    "Los índices APT pueden estar desactualizados y ocultar actualizaciones del sistema o de AiO. Para renovarlos sin instalar paquetes, ejecuta «sudo apt update» y vuelve a diagnosticar.": "APT 索引可能已过期，导致系统或 AiO 更新不可见。要在不安装软件包的情况下刷新索引，请运行“sudo apt update”并重新诊断。",
+})
+
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)
 
@@ -1273,6 +1293,9 @@ def traducir_detalle_diagnostico(texto):
                   if pendientes.group(3) else "")
         return traducir("%d actualizaciones estimadas por APT%s.") % (
             int(pendientes.group(1)), sufijo)
+    pendientes_locales = re.fullmatch(r"(\d+) actualizaciones disponibles según los índices APT locales\.", texto)
+    if pendientes_locales:
+        return traducir("%d actualizaciones disponibles según los índices APT locales.") % int(pendientes_locales.group(1))
     indices = re.fullmatch(r"Último índice de paquetes: hace (\d+) días\.", texto)
     if indices:
         return traducir("Último índice de paquetes: hace %d días.") % int(indices.group(1))
@@ -2868,6 +2891,11 @@ class VentanaPrincipal(Gtk.Window):
             "Análisis de solo lectura. No instala, elimina ni repara paquetes. "
             "Las comprobaciones dependen del estado de los índices APT."), dim=True)
         contenedor.pack_start(aviso, False, False, 0)
+        if not es_flatpak():
+            contenedor.pack_start(etiqueta(traducir(
+                "Los índices APT pueden estar desactualizados y ocultar actualizaciones del sistema o de AiO. "
+                "Para renovarlos sin instalar paquetes, ejecuta «sudo apt update» y vuelve a diagnosticar."
+            ), dim=True), False, False, 0)
         self.etiqueta_diagnostico = etiqueta(traducir("Analizando el sistema…"))
         contenedor.pack_start(self.etiqueta_diagnostico, False, False, 0)
         scroll = Gtk.ScrolledWindow()

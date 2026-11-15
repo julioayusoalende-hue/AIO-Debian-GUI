@@ -1,5 +1,11 @@
 # Cambios
 
+## 2.7.6
+
+- Diagnosticar cuenta los paquetes actualizables según los índices APT, incluidos los que una simulación de `upgrade` puede dejar pendientes.
+- El diagnóstico indica cómo renovar los índices APT sin instalar paquetes cuando puedan ocultar actualizaciones del sistema o de AiO.
+- README actualizado para reflejar los formatos disponibles en la release estable.
+
 ## 2.7.5
 
 - `needrestart` se instala como dependencia del DEB; si falta o falla, la comprobación de reinicio informa del error en lugar de afirmar que no hace falta reiniciar.

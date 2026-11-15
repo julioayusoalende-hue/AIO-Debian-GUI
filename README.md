@@ -2,117 +2,115 @@
 
 **Mantenimiento, diagnóstico y configuración de Debian desde una interfaz gráfica.**
 
-[![Última versión](https://img.shields.io/github/v/release/julioayusoalende-hue/AIO-Debian-GUI?label=versi%C3%B3n)](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)
+[![Última versión](https://img.shields.io/github/v/release/julioayusoalende-hue/AIO-Debian-GUI?label=versi%C3%B3n)](../../releases/latest)
 [![Licencia GPL-3.0](https://img.shields.io/badge/licencia-GPL--3.0-blue)](LICENSE)
-[![Descargas](https://img.shields.io/badge/descargas-Releases-red)](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)
+[![Descargas](https://img.shields.io/badge/descargas-Releases-red)](../../releases/latest)
 
-AiO Debian GUI reúne tareas habituales de administración en una aplicación GTK, con **confirmaciones explícitas y comprobaciones preventivas** para las operaciones delicadas. Es un proyecto independiente del script de consola [aio-debian](https://github.com/julioayusoalende-hue/aio-debian).
+AiO Debian GUI reúne tareas habituales de administración en una aplicación GTK. Antes de las operaciones delicadas presenta comprobaciones y pide confirmación; el diagnóstico es de solo lectura. Es un proyecto independiente del script de consola [aio-debian](https://github.com/julioayusoalende-hue/aio-debian).
 
-> **Versión actual: 2.7.5.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
+**Descarga la última versión estable desde [Releases](../../releases/latest).** Allí encontrarás los paquetes disponibles y el archivo `SHA256SUMS`. Las versiones anteriores se conservan en el [historial de releases](../../releases).
 
-La versión **2.7.5** es el punto de partida estable del proyecto; las versiones anteriores se conservan como historial de desarrollo. Se mantiene la numeración para no interrumpir las actualizaciones existentes.
+## Funciones
 
-## Funciones principales
+- **Mantenimiento APT:** actualizar índices y paquetes, limpiar caché y retirar dependencias innecesarias, con comprobaciones preventivas y confirmación.
+- **Programación:** mantenimiento diario, semanal o mensual; consulta de próximas ejecuciones y resultados. No se programan eliminaciones ni cambios de kernel, controladores o repositorios.
+- **Diagnóstico:** informa sobre espacio, APT/dpkg, actualizaciones, DKMS, reinicios y servicios sin reparar ni modificar el sistema.
+- **Sistema y hardware:** gestión de repositorios, kernel y Mesa de Backports; detección NVIDIA con instalación conservadora en Debian. Algunas operaciones tienen requisitos y bloqueos adicionales.
+- **Escritorio:** integración con Flatpak, AppImage y complementos de GNOME; interfaz en español, inglés, francés y chino, con temas claro y oscuro.
 
-| Área | Funciones |
-| --- | --- |
-| Programación | Mantenimiento automático diario, semanal o mensual con selección de tareas, pausa y resultados. |
-| Mantenimiento APT | Actualizar índices y paquetes, eliminar dependencias innecesarias y limpiar caché. |
-| Repositorios | Habilitar componentes `contrib` y `non-free` cuando proceda. |
-| Hardware y gráficos | Instalar opcionalmente kernel y Mesa de Backports; detectar NVIDIA y ofrecer instalación conservadora del controlador en Debian. |
-| Retorno a Stable | Preparar el retorno de kernel y Mesa desde Backports con vista previa y simulación APT (2.1.0). |
-| Diagnóstico | Revisar espacio, dpkg/APT, actualizaciones, índices, DKMS, reinicios, servicios y versión de AiO, sin modificar el sistema. |
-| Aplicaciones | Herramientas auxiliares, soporte AppImage, Flatpak/Flathub y complementos GNOME. |
-| Interfaz | Paneles adaptables, selección de tareas, diagnóstico resumido, consola plegable y separable, historial, preferencias, temas claro/oscuro y traducciones. |
-| Actualizaciones de AiO | Comprobación desde Diagnosticar y opción de reiniciar la aplicación tras actualizar, según el formato instalado. |
+La aplicación es compatible con Debian 12 o superior y Ubuntu 24.04/26.04 LTS. Algunas tareas dependen de la distribución y se bloquean cuando no son compatibles.
 
-## Novedades destacadas de la rama 2.x
+El diagnóstico consulta los índices APT locales, que pueden no incluir las actualizaciones más recientes del sistema o de AiO. Para renovarlos sin instalar paquetes, ejecuta `sudo apt update` y vuelve a diagnosticar.
 
-- **2.1.0:** tarea para volver a kernel y Mesa de Debian Stable desde Backports, con simulación y bloqueos de seguridad. **No cambia por sí sola el kernel de arranque**.
-- **2.0.9:** mejoras de traducción al inglés, francés y chino en la interfaz y el diagnóstico.
-- **2.0.7:** comprobación de actualizaciones de la propia aplicación desde Diagnosticar y reinicio opcional tras actualizar.
-- **2.0.5:** diagnóstico preventivo de solo lectura.
-- **2.0.4:** consola de ejecución en una ventana independiente.
-- **2.0.3:** menú único con Preferencias, Historial de mantenimiento, Buscar actualizaciones y Acerca de.
-- **2.0.2:** distribución horizontal de dos paneles.
-- **2.0.0:** detección de NVIDIA y asistencia conservadora de instalación en Debian.
+## Novedades recientes
 
-Consulta el [historial de versiones](../../releases) para conocer los cambios completos.
+- **2.7.6:** diagnóstico más completo de paquetes actualizables y aviso sobre los índices APT locales que pueden ocultar actualizaciones.
+- **2.7.5:** el paquete DEB instala `needrestart`; si la comprobación de reinicio no está disponible o falla, AiO informa del error en lugar de indicar que no hace falta reiniciar. Para AppImage y Flatpak, instala `needrestart` en el anfitrión si quieres usar esa comprobación.
+- **2.7.4:** correcciones para las notificaciones de escritorio y el aviso de reinicio del mantenimiento programado.
+- **2.7.3:** si el mantenimiento recomienda reiniciar, AiO abre el aviso en la sesión gráfica; nunca reinicia el equipo automáticamente.
+- **2.7.1–2.7.0:** programación de tareas con temporizadores de systemd, recuperación de ejecuciones pendientes al encender el equipo y resultados visibles aunque AiO esté cerrado. En AppImage y Flatpak se requiere instalar una integración administrativa en el anfitrión.
 
-## Instalación rápida
+Consulta las notas completas en [Releases](../../releases).
 
-La vía recomendada para una instalación integrada con las actualizaciones del sistema es el **paquete DEB**:
+## Instalación
 
-1. Descarga `aio-debian-gui_X.Y.Z_all.deb` desde [Releases](../../releases/latest).
-2. Instálalo desde el directorio donde se haya descargado:
+En cada release, descarga el archivo correspondiente y sustituye `X.Y.Z` por su versión.
+
+### DEB (recomendado)
+
+Descarga `aio-debian-gui_X.Y.Z_all.deb` e instálalo:
 
 ```bash
-sudo apt install ./aio-debian-gui_*_all.deb
+sudo apt install ./aio-debian-gui_X.Y.Z_all.deb
 ```
 
-También hay instrucciones más abajo para **repositorio APT, AppImage y Flatpak**. La compatibilidad declarada incluye Debian 12 o superior y Ubuntu 24.04/26.04 LTS, aunque algunas funciones son exclusivas de Debian.
+El paquete configura el repositorio APT del proyecto para recibir futuras actualizaciones con APT.
 
-## Antes de modificar el sistema
+### AppImage
 
-- Haz una **copia de seguridad** antes de cambiar kernel, Mesa, repositorios o controladores.
-- La tarea **Volver a kernel y Mesa Stable** debe ejecutarse por separado; puede bloquearse si detecta NVIDIA propietario o módulos DKMS. Después hay que seleccionar y verificar manualmente el kernel Stable en GRUB.
-- El instalador NVIDIA es deliberadamente conservador y puede rechazar hardware o configuraciones sin compatibilidad comprobada; no desactiva Secure Boot ni modifica automáticamente Xorg, Wayland o GRUB.
-- La excepción opcional de Polkit sin contraseña reduce la protección de la cuenta: mantenla desactivada salvo que comprendas sus implicaciones.
-- El diagnóstico **no repara ni actualiza automáticamente**: informa del estado observado.
+Descarga `aio-debian-gui_X.Y.Z_x86_64.AppImage` y ejecútalo:
 
-## Documentación detallada
+```bash
+chmod +x aio-debian-gui_X.Y.Z_x86_64.AppImage
+./aio-debian-gui_X.Y.Z_x86_64.AppImage
+```
 
-Las secciones siguientes amplían las funciones, limitaciones y métodos de instalación. Para incidencias y propuestas utiliza [Issues](../../issues).
+Requiere arquitectura `x86_64`, Python 3, GTK 3, Polkit y FUSE 2 (`libfuse2` en Debian 12 o `libfuse2t64` en Debian 13). La aplicación no necesita que instales el paquete DEB.
 
----
+### Flatpak
 
-## Mantenimiento automático (v2.7.0)
+Para las actualizaciones desde el repositorio firmado del proyecto, instala Flatpak y la referencia oficial:
 
-Abre el menú principal y selecciona **Programar mantenimiento**. Elige las tareas, la frecuencia (**diaria**, **semanal** o **mensual el día 1**) y la hora local del sistema. Marca **Activar mantenimiento automático** y pulsa **Guardar programación**. Guardar, pausar o eliminar la programación requiere autorización de administrador. Hay una programación por usuario.
+```bash
+sudo apt install flatpak
+flatpak install --user https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.flatpakref
+```
 
-Tareas disponibles: **actualizar paquetes del sistema**, **actualizar Flatpak**, **limpiar la caché de paquetes** y **comprobar si hace falta reiniciar**. Las tareas de eliminación de paquetes y cambios de kernel, controladores y repositorios se mantienen en el flujo manual. No se reinicia el equipo automáticamente.
+La release estable vigente también incluye `aio-debian-gui_X.Y.Z_x86_64.flatpak`, que se puede instalar con `flatpak install --user ./aio-debian-gui_X.Y.Z_x86_64.flatpak`. Este bundle por sí solo no configura el repositorio de actualizaciones; para recibirlas, usa el `.flatpakref`. Consulta la [guía de actualizaciones Flatpak](docs/flatpak-actualizaciones.md).
 
-La programación requiere **systemd activo y la integración de AiO de la misma versión en el anfitrión**. El DEB la instala automáticamente; AppImage y Flatpak pueden instalarla sin el DEB siguiendo [estas instrucciones](#integración-del-programador-para-appimage-y-flatpak). Los temporizadores funcionan con la aplicación cerrada y sin iniciar sesión. Si el equipo estaba apagado, recuperan una ejecución pendiente al encenderlo; no encienden ni despiertan el equipo.
+### Verificar las descargas
 
-La ventana muestra si la programación está activa, la próxima ejecución y el último resultado de cada tarea. Tras una ejecución completada correctamente, el escritorio muestra una notificación aunque la aplicación esté cerrada, siempre que la sesión del usuario siga iniciada y tenga disponible el servicio de notificaciones. Si se recomienda reiniciar, AiO se abre en esa sesión y muestra el aviso habitual para reiniciar ahora o más tarde; **el equipo nunca se reinicia automáticamente**. Si no hay sesión gráfica disponible, el resultado sigue guardado y se informa en el journal. Tras actualizar a la versión 2.7.3, vuelve a guardar una programación existente desde AppImage para registrar su lanzador; repite el paso si mueves el archivo. **Actualizar estado** refresca el informe. **Pausar** impide nuevas ejecuciones, y **Eliminar programación** elimina el temporizador; ninguna de estas acciones interrumpe un mantenimiento que ya esté ejecutándose. Instalar o actualizar AiO nunca activa un horario por sí solo. Al desinstalar el DEB se desactivan los temporizadores, conservando configuración y resultados.
+Descarga `SHA256SUMS` junto con los paquetes que quieras comprobar y ejecuta:
 
-Si APT/dpkg u otro mantenimiento de AiO está ocupado, se omite esa ejecución y se vuelve a intentar en el siguiente horario. Los errores de dependencias, la falta de espacio o una simulación que proponga eliminar paquetes bloquean el mantenimiento. Los Flatpak del sistema se actualizan; los del usuario solo se actualizan si existe su sesión activa. Los registros técnicos permanecen en el journal del servicio.
+```bash
+sha256sum -c --ignore-missing SHA256SUMS
+```
+
+## Programación y permisos
+
+En la instalación DEB, la integración del programador se instala automáticamente. AppImage y Flatpak necesitan una integración persistente en el sistema anfitrión para programar tareas con AiO cerrado; sigue los pasos de la sección [Integración del programador](#integración-del-programador-para-appimage-y-flatpak).
+
+Programar, pausar o eliminar un horario requiere autorización de administrador. Instalar o actualizar AiO no activa horarios por sí solo. Los temporizadores usan systemd y no encienden un equipo apagado. Para AppImage y Flatpak también se necesita `libnotify-bin` en el anfitrión para las notificaciones y `needrestart` para comprobar si hace falta reiniciar.
+
+Antes de cambiar kernel, Mesa, repositorios o controladores, haz una copia de seguridad y revisa las advertencias de la tarea. La vuelta de kernel y Mesa desde Backports no cambia por sí sola el kernel de arranque; NVIDIA puede quedar bloqueado cuando la compatibilidad no se pueda verificar. La opción de Polkit sin contraseña es opcional, está desactivada inicialmente y reduce la protección de la cuenta.
 
 ### Integración del programador para AppImage y Flatpak
 
-Sin instalar el DEB, hay que instalar una vez el asistente, los módulos del programador y el servicio en el anfitrión. Estos archivos persistentes permiten ejecutar las tareas con la aplicación cerrada, incluso si se mueve o desinstala el AppImage o el Flatpak. Requiere autorización de administrador.
+Estos pasos instalan en el anfitrión el asistente, los módulos de programación, la política Polkit y el servicio systemd incluidos en la misma versión de AiO. No los ejecutes si el paquete DEB ya gestiona esos archivos. Requiere autorización de administrador.
 
-Para recibir notificaciones de escritorio al completarse el mantenimiento, también se necesita `libnotify-bin` en el anfitrión (`sudo apt install libnotify-bin`). El DEB lo instala como dependencia.
-
-Para comprobar si el mantenimiento requiere reiniciar, instala también `needrestart` en el anfitrión (`sudo apt install needrestart`). El DEB lo instala como dependencia; si falta o falla, AiO indica que la comprobación no se pudo completar en lugar de afirmar que no es necesario reiniciar.
-
-**No sobrescribas archivos gestionados por el DEB.** Si está instalado, actualízalo mediante APT y omite estos pasos. Si actualizas la aplicación instalada sin DEB, repite la integración con los archivos de la misma versión. Antes de actualizarla, pausa las programaciones de todos los usuarios y espera a que terminen los mantenimientos en curso.
-
-Prepara un directorio privado y extrae los archivos de la aplicación que utilizas:
-
-```bash
-INTEGRACION=$(mktemp -d "$HOME/aio-debian-gui-integracion.XXXXXXXX")
-cd "$INTEGRACION"
-```
+Prepara un directorio temporal privado y extrae los archivos desde el formato que utilizas.
 
 Para **Flatpak**:
 
 ```bash
+set -e
+INTEGRACION=$(mktemp -d "$HOME/aio-debian-gui-integracion.XXXXXXXX")
+cd "$INTEGRACION"
 APP=io.github.julioayusoalende_hue.aio_debian_gui
-(
-  set -e
-  for f in aio-debian-gui-helper es.aiodebian.gui.policy aio-debian-gui-maintenance@.service; do
-    flatpak run --command=cat "$APP" "/app/share/aio-debian-gui/host-integration/$f" > "$f"
-  done
-  for f in __init__.py scheduler.py preflight.py; do
-    flatpak run --command=cat "$APP" "/app/lib/aio-debian-gui/aio_core/$f" > "$f"
-  done
-)
+for f in aio-debian-gui-helper es.aiodebian.gui.policy aio-debian-gui-maintenance@.service; do
+  flatpak run --command=cat "$APP" "/app/share/aio-debian-gui/host-integration/$f" > "$f"
+done
+for f in __init__.py scheduler.py preflight.py; do
+  flatpak run --command=cat "$APP" "/app/lib/aio-debian-gui/aio_core/$f" > "$f"
+done
 ```
 
-Para **AppImage**, sustituye la ruta por la del archivo descargado y verificado:
+Para **AppImage**, define `APPIMAGE` con la ruta del archivo descargado:
 
 ```bash
+set -e
+INTEGRACION=$(mktemp -d "$HOME/aio-debian-gui-integracion.XXXXXXXX")
+cd "$INTEGRACION"
 APPIMAGE="$HOME/Descargas/aio-debian-gui_X.Y.Z_x86_64.AppImage"
 "$APPIMAGE" --appimage-extract
 cp squashfs-root/usr/lib/aio-debian-gui/aio-debian-gui-helper .
@@ -121,493 +119,30 @@ cp squashfs-root/usr/lib/systemd/system/aio-debian-gui-maintenance@.service .
 cp squashfs-root/usr/share/polkit-1/actions/es.aiodebian.gui.policy .
 ```
 
-Revisa los seis archivos extraídos antes de instalarlos como root. No continúes si falló la extracción. Después instala la integración:
+Comprueba que se extrajeron los seis archivos antes de instalarlos como administrador:
 
 ```bash
-(
-  set -e
-  for f in aio-debian-gui-helper es.aiodebian.gui.policy aio-debian-gui-maintenance@.service __init__.py scheduler.py preflight.py; do
-    test -s "$f"
-  done
-  sudo install -D -o root -g root -m 0755 aio-debian-gui-helper /usr/lib/aio-debian-gui/aio-debian-gui-helper
-  for f in __init__.py scheduler.py preflight.py; do
-    sudo install -D -o root -g root -m 0644 "$f" "/usr/lib/aio-debian-gui/aio_core/$f"
-  done
-  sudo install -D -o root -g root -m 0644 es.aiodebian.gui.policy /usr/share/polkit-1/actions/es.aiodebian.gui.policy
-  sudo install -D -o root -g root -m 0644 aio-debian-gui-maintenance@.service /usr/lib/systemd/system/aio-debian-gui-maintenance@.service
-  sudo systemctl daemon-reload
-)
-```
-
-Abre de nuevo la aplicación y configura o reanuda el horario; instalar la integración no activa ningún temporizador.
-
-Para retirar la integración manual, elimina primero las programaciones desde cada cuenta y espera a que no haya mantenimientos en curso. Solo si los archivos no pertenecen al DEB, elimínalos y recarga systemd:
-
-```bash
-sudo rm /usr/lib/aio-debian-gui/aio-debian-gui-helper \
-  /usr/lib/aio-debian-gui/aio_core/__init__.py \
-  /usr/lib/aio-debian-gui/aio_core/scheduler.py \
-  /usr/lib/aio-debian-gui/aio_core/preflight.py \
-  /usr/lib/systemd/system/aio-debian-gui-maintenance@.service \
-  /usr/share/polkit-1/actions/es.aiodebian.gui.policy
+set -e
+for f in aio-debian-gui-helper es.aiodebian.gui.policy aio-debian-gui-maintenance@.service __init__.py scheduler.py preflight.py; do
+  test -s "$f" || { echo "Falta $f; no se instalará la integración." >&2; exit 1; }
+done
+sudo install -D -o root -g root -m 0755 aio-debian-gui-helper /usr/lib/aio-debian-gui/aio-debian-gui-helper
+for f in __init__.py scheduler.py preflight.py; do
+  sudo install -D -o root -g root -m 0644 "$f" "/usr/lib/aio-debian-gui/aio_core/$f"
+done
+sudo install -D -o root -g root -m 0644 es.aiodebian.gui.policy /usr/share/polkit-1/actions/es.aiodebian.gui.policy
+sudo install -D -o root -g root -m 0644 aio-debian-gui-maintenance@.service /usr/lib/systemd/system/aio-debian-gui-maintenance@.service
 sudo systemctl daemon-reload
 ```
 
-Si activaste la excepción de Polkit sin contraseña, desactívala también desde la aplicación antes de retirar el asistente. Los resultados históricos no se eliminan automáticamente.
+## Desarrollo
 
-## Modo de mantenimiento seguro (desarrollo de v2.2.0)
-
-Antes de autorizar el mantenimiento, AiO ejecuta comprobaciones de solo lectura:
-espacio libre en la partición raíz, paquetes pendientes de configurar, consistencia
-de dependencias APT y estado de DKMS. Para las tareas compatibles se simula APT;
-si la simulación falla o propone eliminar paquetes, la operación se bloquea.
-Los avisos se muestran antes de la confirmación final. Las simulaciones usan
-los índices locales y **no garantizan** que el resultado real sea idéntico.
-Las operaciones especiales mantienen sus comprobaciones adicionales.
-
-Esta funcionalidad se incorpora a la versión 2.2.0.
-
-## Referencia técnica: MX Linux ddm-mx
-
-El diseño de detección NVIDIA de AiO 2.0.0 toma como **referencia técnica** el instalador libre de MX Linux: [ddm-mx](https://github.com/MX-Linux/ddm-mx/blob/master/ddm-mx) y [nvidia-detect-mx](https://github.com/MX-Linux/ddm-mx/blob/master/nvidia-detect-mx), publicados bajo GPL-3.0.
-
-Principios que deben guiar la implementación: clasificar por ID PCI y rama compatible (incluidos modelos legacy), distinguir Optimus/híbrida, elegir entre paquetes Debian y Backports sin mezclar suites, simular APT antes de instalar, preparar DKMS/headers, y ofrecer diagnóstico, rollback y recuperación. Los repositorios y utilidades específicos de MX no se incorporan a Debian directamente.
-
-La versión 2.0.0 permanece en **pruebas** hasta contrastar una matriz de IDs PCI y ramas NVIDIA, kernels Debian estable/Backports, Secure Boot y dispositivos híbridos. El instalador debe fallar de forma conservadora ante compatibilidad no comprobada y nunca cambiar el servidor gráfico de manera implícita.
-
-## Retorno conservador a kernel y Mesa Debian Stable (v2.1.0)
-
-En Debian, en **Sistema (APT)**, la tarea **Volver a kernel y Mesa Stable** prepara la transición desde Backports. Es independiente y **debe ser la única tarea seleccionada**. La interfaz pide una vista previa de las versiones de Stable y una confirmación adicional. No habilita ni deshabilita repositorios y no introduce paquetes de otras ramas: instala versiones explícitas de Stable, Stable Security o Stable Updates de los metapaquetes del kernel y cabeceras y de los paquetes Mesa instalados.
-
-El asistente ejecuta una **simulación de APT** antes de cualquier cambio y aborta si propone eliminar paquetes, faltan versiones Stable, se detecta NVIDIA propietario o hay módulos DKMS registrados. Después instala las versiones seleccionadas, **mantiene los kernels antiguos como respaldo y no modifica GRUB**.
-
-**Importante:** esto prepara el retorno, pero **no cambia automáticamente el kernel que arrancará**. Tras el reinicio selecciona el kernel Stable en *Opciones avanzadas para Debian* de GRUB y comprueba `uname -r`, la red y los gráficos. No borres el kernel Backports antes de confirmar que Stable arranca correctamente. Debian advierte que los downgrades no están soportados de forma general y pueden requerir recuperación manual. Haz una copia de seguridad antes de ejecutar la operación.
-
-## Traducciones de la interfaz y del diagnóstico (v2.0.9)
-
-Se completan las traducciones al inglés, francés y chino de los mensajes de la pantalla principal y del diagnóstico preventivo. Incluye los avisos de Polkit, NVIDIA, novedades de versión, consola y resultados con valores variables. La salida técnica de herramientas externas no se traduce para no alterar su significado. La integración continua incluye pruebas de regresión de las traducciones críticas en los tres idiomas.
-
-## Compatibilidad de idioma de APT en el diagnóstico (v2.0.8)
-
-En versiones anteriores, el diagnóstico podía mostrar «No hay versión candidata en los índices APT» incluso cuando sí existía, porque buscaba el campo inglés Candidate y la salida de APT estaba traducida. A partir de la 2.0.8 las consultas internas utilizan LC_ALL=C sin cambiar el idioma de la aplicación. El mismo ajuste se aplica al actualizador DEB.
-
-## Comprobación y actualización de AiO desde Diagnosticar (v2.0.7)
-
-El panel de diagnóstico incluye el estado de la propia aplicación. En DEB compara la versión instalada con la candidata de APT; en Flatpak consulta las actualizaciones del repositorio configurado; en AppImage compara con la última publicación de GitHub. Estas comprobaciones son de **solo lectura** y los índices APT y metadatos Flatpak pueden no estar actualizados. Si hay una versión disponible aparece **Actualizar AiO**, que abre el actualizador ya existente con su confirmación y sin instalar automáticamente al diagnosticar.
-
-Durante la confirmación se ofrece **Reiniciar AiO automáticamente tras actualizar** (desactivado inicialmente). Si se activa, la app relanza el nuevo ejecutable solo cuando la operación termina correctamente. Si no se activa, se ofrece **Reiniciar aplicación** o **Más tarde** al terminar. En DEB se reejecuta el programa instalado, Flatpak se abre desde el host y, para AppImage, se abre el archivo nuevo descargado y verificado por SHA-256 (sin reemplazar la versión anterior). La función no está habilitada en la edición Snap experimental ni desde código fuente.
-
-## Corrección del diagnóstico APT (v2.0.6)
-
-La comprobación de dependencias APT se hace sin adquirir el bloqueo de dpkg, mediante `Debug::NoLocking=1`. Un fallo por permisos de acceso se presenta como «No comprobado» y no implica que el sistema tenga paquetes dañados. La comprobación es de solo lectura.
-
-## Diagnóstico preventivo (v2.0.5)
-
-Pulsa **Diagnosticar** en «Información del sistema» para abrir un informe de comprobación de solo lectura: uso de espacio de la partición raíz, paquetes sin configurar (dpkg), dependencias APT, recuento estimado de actualizaciones según los índices locales, antigüedad de índices APT, módulos DKMS, solicitud de reinicio y servicios systemd fallidos. Cada resultado se clasifica como **correcto**, **aviso**, **crítico** o **no comprobado**, con una recomendación cuando corresponda. Se ejecuta en segundo plano y no requiere root, no ejecuta reparaciones ni actualiza índices. Los resultados de APT pueden quedar desactualizados hasta ejecutar `apt update`, y algunas comprobaciones pueden no estar disponibles en Flatpak.
-
-## Consola en una ventana separada (v2.0.4)
-
-En la cabecera de «Salida de la consola», pulsa **Abrir en otra ventana** para mostrar los mensajes de ejecución en una ventana independiente, ampliable y redimensionable. La consola de la ventana principal se oculta mientras está separada. Ambas vistas utilizan el **mismo buffer GTK**, por lo que el texto, los colores, las nuevas líneas y el historial son idénticos. Para volver a colocarla en la aplicación, pulsa **Volver a integrar** o cierra la ventana de consola. Cerrar esta ventana **no interrumpe** las tareas que se estén ejecutando. En modo simple la consola permanece oculta hasta que ocurre un error.
-
-## Menú principal (v2.0.3)
-
-Un único menú en la cabecera agrupa, en este orden: **Preferencias**, **Historial de mantenimiento**, **Programar mantenimiento**, **Buscar actualizaciones** y **Acerca de**. No hay botones duplicados en la cabecera. Las actualizaciones solo se habilitan para instalaciones DEB, AppImage o Flatpak.
-
-## Diseño de interfaz (v2.6.0)
-
-En escritorio, los dos paneles tienen el mismo ancho y el separador vertical permanece centrado. Por debajo de 900 píxeles se apilan. Cada panel se desplaza independientemente.
-
-La cabecera muestra la distribución y la versión. La tarjeta del sistema presenta el estado del diagnóstico y una recomendación; **Detalles técnicos** despliega la información adicional. El diagnóstico diferencia **Sin incidencias**, **Requiere atención** y **No comprobado**.
-
-Las tareas se seleccionan con casillas y se agrupan en **Mantenimiento habitual**, **Aplicaciones y repositorios** y **Kernel y controladores · Avanzado**. El grupo avanzado comienza plegado y sus tareas no se activan por defecto. La autorización sin contraseña sigue siendo opcional y se configura con un interruptor separado.
-
-**Tu selección** y el botón **Ejecutar N tareas** reflejan lo que se ejecutará. Antes de comenzar se revisa la selección en una confirmación. Durante el mantenimiento se muestra el resultado de cada tarea.
-
-La consola comienza plegada; puede abrirse bajo demanda y se despliega automáticamente ante errores. En modo simple permanece oculta hasta que ocurre un error, pero se conserva el registro técnico.
-
-## Diseño de interfaz anterior (v2.0.1)
-
-La ventana GTK utiliza una distribución **verticalmente apilada** (secciones separadas horizontalmente): información del sistema y novedades arriba, tareas de mantenimiento a todo el ancho, y zona fija de progreso, botón principal «Iniciar tareas» y consola abajo. En pantallas pequeñas, la información y las tareas pueden desplazarse sin perder el control de ejecución. «Preferencias» tiene acceso directo en la cabecera y el menú conserva Historial; la consola dispone de «Borrar» y se oculta en modo simple.
-
-## NVIDIA en Debian (v2.0.0)
-
-La aplicación consulta los dispositivos PCI del anfitrión. Si detecta una tarjeta NVIDIA y se utiliza Debian, ofrece la tarea optativa **Detectar e instalar controlador NVIDIA**. Reconoce si existe una GPU integrada Intel o AMD junto a NVIDIA (portátil híbrido), informa del driver instalado, la versión candidata en APT y el estado de Secure Boot. No configura NVIDIA automáticamente al arrancar la interfaz.
-
-Al activar la tarea aparece una advertencia explícita. El asistente comprueba que exista una GPU NVIDIA, que los repositorios APT tengan `nvidia-driver`, que estén disponibles las cabeceras correspondientes al kernel actual, que la simulación de APT no elimine otros paquetes y que `nvidia-detect` recomiende específicamente `nvidia-driver`. Si alguna condición falla, **no instala el controlador**. Una instalación previa de `nvidia-detect` puede permanecer aunque se cancele posteriormente por incompatibilidad.
-
-**Importante:** el `nvidia-detect` de Debian 13 puede estar desactualizado y algunas generaciones recientes (como Blackwell) o tarjetas antiguas no están cubiertas por el controlador de Debian estable. La comprobación no sustituye una verificación exhaustiva de soporte del ID PCI. Por eso, ante una incompatibilidad detectada o un resultado ambiguo, AiO se detiene y requiere revisión manual. No instala controladores externos con archivos `.run`, no mezcla repositorios de distintas versiones de Debian y nunca desactiva Secure Boot automáticamente.
-
-Para equipos híbridos, el entorno gráfico sigue ejecutándose sobre Intel/AMD y NVIDIA se reserva para aplicaciones exigentes mediante PRIME Render Offload. Por ejemplo:
-
-```bash
-__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia glxinfo -B
-```
-
-En Steam, se puede usar `__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia %command%`. Se recomienda reiniciar tras la instalación y validar `nvidia-smi` y `dkms status`. Las salidas externas conectadas físicamente a la GPU NVIDIA pueden requerir ajustes manuales específicos (Reverse PRIME/MUX); esta opción **no modifica** Xorg, GRUB, Wayland ni el modo MUX. La compatibilidad real depende de la GPU, el kernel y la versión del controlador.
-
-Documentación: https://wiki.debian.org/NvidiaGraphicsDrivers y https://wiki.debian.org/NVIDIA%20Optimus
-
-## Icono (v1.2.4)
-
-Se conserva el diseño original del icono de AiO Debian GUI, con los tonos azules sustituidos por rojo Debian. Los PNG se incluyen directamente en los paquetes DEB, AppImage, Flatpak y Snap. La ventana «Acerca de» carga el icono instalado, sin depender del tema de iconos del sistema.
-
-## Autorización y Flatpak (v1.2.3)
-
-Al seleccionar **únicamente** «Actualizar aplicaciones Flatpak», la interfaz ejecuta
-`flatpak --user update -y` seguido de `flatpak --user uninstall --unused -y`,
-sin contraseña de administrador, sin `pkexec` y sin instalar un asistente privilegiado.
-Esto solo afecta a las aplicaciones Flatpak **del usuario**. Para actualizar las
-instalaciones Flatpak **del sistema**, instalar Flatpak con APT o ejecutar tareas
-mixtas que requieran root, seguirá siendo necesario Polkit.
-
-La casilla **«No solicitar contraseña de administrador en AiO (opcional)»**
-permite activar voluntariamente una excepción persistente de Polkit, solo para
-la acción de mantenimiento de AiO y el usuario local activo. Se solicita la
-contraseña una vez al activarla. La casilla puede desmarcarse para revocarla.
-Por defecto está desactivada y Polkit seguirá solicitando autenticación.
-**Riesgo:** cualquier otro proceso con acceso a la misma cuenta de usuario
-podría invocar el asistente privilegiado de AiO sin contraseña y ejecutar
-sus tareas administrativas (APT, repositorios, kernel, etc.). No utilices
-esta opción en equipos compartidos o donde la seguridad sea prioritaria.
-No se habilita ningún permiso sin contraseña para el resto de aplicaciones.
-
-## Apariencia
-
-En Preferencias → Apariencia se puede elegir **Seguir el sistema**, **Claro** u **Oscuro**.
-En instalaciones nuevas se sigue el tema del escritorio automáticamente, incluidos cambios
-mientras la aplicación esté abierta. Las elecciones manuales guardadas siguen teniendo prioridad.
-La detección consulta el portal de apariencia freedesktop, GNOME y, en último término,
-el nombre del tema GTK; algunos temas y escritorios pueden no expresar su preferencia
-mediante estos mecanismos.
-
-## Instalación
-
-Compatible con Debian 12 (bookworm) o superior y, desde la v1.2.0, con Ubuntu 24.04/26.04 LTS (modo nativo por distribución). En otros sistemas la interfaz es informativa y el mantenimiento privilegiado queda bloqueado.
-
-**Actualizaciones:** la instalación mediante `.deb` usa el repositorio APT del proyecto; la instalación mediante `.flatpakref` usa nuestro **repositorio Flatpak firmado**, alojado en GitHub Pages, sin depender de que la aplicación esté publicada en Flathub. **No se ofrece un `.flatpak` independiente**. La edición AppImage se actualiza descargando una nueva versión.
-
-### Opción 1: descargar el .deb
-
-Descarga el último `aio-debian-gui_X.Y.Z_all.deb` desde [Releases](../../releases/latest) y:
-
-```bash
-sudo apt install ./aio-debian-gui_*_all.deb
-```
-
-Al instalarlo se configura automáticamente el repositorio APT, así que las
-actualizaciones llegarán con `sudo apt update && sudo apt upgrade`.
-
-### Opción 2: instalar el repositorio y la aplicación con un comando
-
-Este comando configura la clave y el repositorio APT, actualiza el índice e instala
-AiO Debian GUI:
-
-```bash
-sudo bash -c 'set -euo pipefail; key=$(mktemp); trap "rm -f $key" EXIT; python3 -c "import sys, urllib.request; urllib.request.urlretrieve(sys.argv[1], sys.argv[2])" https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.gpg "$key"; install -D -m 0644 "$key" /usr/share/keyrings/aio-debian-gui.gpg; printf "%s\n" "Types: deb" "URIs: https://julioayusoalende-hue.github.io/AIO-Debian-GUI" "Suites: stable" "Components: main" "Architectures: all" "Signed-By: /usr/share/keyrings/aio-debian-gui.gpg" > /etc/apt/sources.list.d/aio-debian-gui.sources; apt-get update; apt-get install aio-debian-gui'
-```
-
-### Opción 3: AppImage
-
-Descarga el archivo `aio-debian-gui_X.Y.Z_x86_64.AppImage` desde [Releases](../../releases/latest),
-dale permiso de ejecución y ábrelo. El AppImage incluye la interfaz y el asistente; requiere
-en el sistema `python3-gi`, GTK 3, `pkexec`, APT y FUSE 2 (`libfuse2` en Debian 12,
-`libfuse2t64` en Debian 13). No hace falta instalar el `.deb`. Si hay un asistente instalado
-por el paquete `.deb`, el AppImage reutiliza ese asistente para respetar la ruta fija de Polkit,
-aunque sea de otra versión. Las tareas normales dependen de las funciones disponibles en ese
-asistente. La tarea de kernel y Mesa desde Backports requiere que incluya esa función (v1.0.7 o
-superior). Si no hay `.deb` instalado,
-el AppImage prepara su asistente en un directorio temporal accesible para Polkit y lo ejecuta
-mediante Bash del sistema; la política y el asistente se instalan al activar la autorización sin
-contraseña.
-
-```bash
-chmod +x aio-debian-gui_*_x86_64.AppImage
-./aio-debian-gui_*_x86_64.AppImage
-```
-
-### Opción 4: Flatpak con actualizaciones desde nuestro repositorio
-
-La instalación se hace con el archivo `.flatpakref` publicado en GitHub Pages; este
-archivo registra automáticamente el repositorio firmado de AiO Debian GUI. **No hace falta
-descargar cada nueva versión desde Releases.** Instala antes Flatpak en Debian si aún no
-lo tienes (`sudo apt install flatpak`).
-
-```bash
-flatpak install --user https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.flatpakref
-```
-
-Después, las nuevas versiones se reciben desde ese origen con:
-
-```bash
-flatpak update --user
-```
-
-GNOME Software o Discover también pueden ofrecer actualizaciones en segundo plano si el
-sistema tiene configurada la integración Flatpak y la actualización automática. No se garantiza
-que todas las instalaciones de Debian actualicen aplicaciones sin intervención del usuario.
-Puedes comprobar el origen instalado con:
-
-```bash
-flatpak info --user --show-origin io.github.julioayusoalende_hue.aio_debian_gui
-```
-
-**¿Ya instalaste un archivo `.flatpak` antiguo?** Comprueba su origen con el comando
-anterior. Si no tiene un origen de actualización asociado, instala desde el enlace
-`.flatpakref` anterior; si Flatpak no permite asociar ese origen a la instalación
-existente, guarda primero tus preferencias/datos y reinstala la aplicación desde el
-`.flatpakref`. No borres datos de la aplicación sin una copia. También puedes añadir
-manualmente el repositorio de confianza firmado:
-
-```bash
-flatpak remote-add --user --if-not-exists aio-debian-gui \
-  https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.flatpakrepo
-```
-
-**Distribución oficial Flatpak:** solo mediante el repositorio firmado y el enlace `.flatpakref`. Ya no distribuimos archivos `.flatpak` independientes en Releases. El manifiesto de `flatpak/` se conserva porque es necesario para compilar la aplicación y publicar las actualizaciones.
-
-**Importante sobre las tareas administrativas:** actualizar la interfaz Flatpak **no
-actualiza** el asistente privilegiado instalado manualmente en Debian. Si este asistente
-necesita una versión nueva, debes actualizarlo explícitamente o mediante el paquete
-`.deb`, según cómo lo instalaras. El repositorio de actualizaciones tampoco concede
-privilegios automáticamente.
-
-La instalación Flatpak **incluye la interfaz, el asistente de mantenimiento y la política Polkit** en el paquete obtenido del repositorio firmado. No es necesario descargar ni instalar el `.deb` para obtener estos archivos.
-Para administrar APT y el Debian anfitrión, **sí es necesaria una integración
-privilegiada explícita**: Flatpak y Flatseal no pueden instalar automáticamente
-un servicio de sistema ni conceder privilegios de administrador.
-
-1. Instala la aplicación con el comando `.flatpakref` anterior (requiere el runtime GNOME 51 disponible en Flathub, que Flatpak descargará si fuera necesario).
-
-2. Si quieres utilizar las funciones de mantenimiento, extrae **del Flatpak
-instalado** el asistente y la política Polkit en una carpeta temporal. Revísalos
-antes de instalarlos con privilegios de administrador:
-
-```bash
-APP=io.github.julioayusoalende_hue.aio_debian_gui
-mkdir -p "$HOME/aio-debian-gui-integracion"
-flatpak run --command=cat "$APP" /app/share/aio-debian-gui/host-integration/aio-debian-gui-helper \
-  > "$HOME/aio-debian-gui-integracion/aio-debian-gui-helper"
-flatpak run --command=cat "$APP" /app/share/aio-debian-gui/host-integration/es.aiodebian.gui.policy \
-  > "$HOME/aio-debian-gui-integracion/es.aiodebian.gui.policy"
-less "$HOME/aio-debian-gui-integracion/aio-debian-gui-helper"
-less "$HOME/aio-debian-gui-integracion/es.aiodebian.gui.policy"
-```
-
-3. Si aceptas otorgar permisos administrativos a este asistente, instala los
-archivos en el anfitrión (se solicitará la contraseña de administrador):
-
-```bash
-sudo install -D -o root -g root -m 0755 \
-  "$HOME/aio-debian-gui-integracion/aio-debian-gui-helper" \
-  /usr/lib/aio-debian-gui/aio-debian-gui-helper
-sudo install -D -o root -g root -m 0644 \
-  "$HOME/aio-debian-gui-integracion/es.aiodebian.gui.policy" \
-  /usr/share/polkit-1/actions/es.aiodebian.gui.policy
-```
-
-Para programar mantenimientos instala también los módulos y el servicio descritos en
-[Integración del programador para AppImage y Flatpak](#integración-del-programador-para-appimage-y-flatpak).
-Reinicia AiO Debian GUI para que compruebe el asistente del anfitrión. Desde la
-versión 1.2.3, la actualización exclusiva de Flatpak del usuario no requiere
-`pkexec` ni integración privilegiada. Las tareas administrativas del anfitrión
-requieren autorización Polkit por defecto. Si lo deseas, puedes activar desde
-la interfaz la opción **«No solicitar contraseña de administrador en AiO
-(opcional)»**, que crea una excepción persistente y reversible para tu usuario
-local activo y solo para la acción de mantenimiento de AiO. La activación
-requiere una autorización inicial y conlleva los riesgos indicados en
-[Autorización y Flatpak](#autorización-y-flatpak-v123).
-Si ya hay un asistente instalado por un paquete `.deb`, no lo sobrescribas sin
-comprobar la versión y el origen.
-
-Para eliminar la integración manual consulta las instrucciones de eliminación más abajo.
-
-#### Permisos opcionales con Flatseal
-
-Puedes instalar Flatseal desde Flathub y modificar los permisos de AiO Debian GUI.
-Los permisos predeterminados permiten la interfaz gráfica y la comunicación con
-`flatpak-spawn --host`. **Flatseal no sustituye el asistente Polkit**.
-No concedas `filesystem=host`, `--device=all`, acceso indiscriminado al bus
-D-Bus ni permisos equivalentes: no son necesarios para este flujo y amplían el
-riesgo. Si revocas el permiso de comunicación con `org.freedesktop.Flatpak`,
-la integración con el anfitrión dejará de funcionar.
-
-**Aviso de seguridad:** el asistente se ejecuta como administrador cuando
-Polkit lo autoriza y puede modificar paquetes, repositorios y kernel. Comprueba
-siempre que el archivo procede de una versión confiable. La instalación manual
-del asistente no se actualiza automáticamente al actualizar el Flatpak: repite
-la extracción e instalación tras cada actualización que cambie el asistente.
-
-### Opción 5: compilar desde el código
+Para clonar el proyecto, ejecutar las comprobaciones y consultar la estructura de paquetes:
 
 ```bash
 git clone https://github.com/julioayusoalende-hue/AIO-Debian-GUI.git
 cd AIO-Debian-GUI
-./scripts/build-deb.sh
-APPIMAGETOOL=/ruta/a/appimagetool ./scripts/build-appimage.sh
-flatpak-builder --user --force-clean --install-deps-from=flathub --repo=flatpak-repo \
-  flatpak-build flatpak/io.github.julioayusoalende_hue.aio_debian_gui.yml
-flatpak remote-add --user --if-not-exists aio-debian-gui \
-  https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.flatpakrepo
-sudo apt install ./dist/aio-debian-gui_*_all.deb
-```
-
-El AppImage se construye para `x86_64` y usa el runtime de Debian; instala
-`appimagetool` para generarlo.
-
-## Actualizar desde la interfaz (v1.0.19 y posteriores)
-
-La cabecera indica si estás utilizando **DEB**, **AppImage** o **Flatpak**. En los tres formatos aparece el botón **«Buscar actualizaciones»**, que consulta las versiones disponibles y solicita confirmación antes de aplicar cambios.
-
-- **AppImage:** consulta la última versión estable en GitHub Releases. Si existe una versión nueva, descarga el AppImage en **Descargas**, comprueba su integridad con el archivo `SHA256SUMS` oficial y lo deja preparado para ejecutarlo. No sobrescribe ni elimina el AppImage actualmente abierto: cierra la versión anterior y ejecuta el archivo recién descargado.
-- **Flatpak:** ejecuta `flatpak update --user --noninteractive -y io.github.julioayusoalende_hue.aio_debian_gui` en el anfitrión mediante `flatpak-spawn --host`. Requiere instalar desde nuestro `.flatpakref` y conservar el repositorio firmado. Reinicia la aplicación para cargar la nueva versión si se ha actualizado.
-- **Paquete .deb:** utiliza el asistente Polkit existente para comprobar el repositorio APT e instalar solamente una actualización del paquete `aio-debian-gui`, si existe. Se solicita autorización de administrador; no se realiza una actualización general del sistema.
-
-**Aviso:** actualizar el Flatpak **no modifica el asistente privilegiado ni la política Polkit instalados manualmente en Debian**. Desde la v1.0.19, el Flatpak comprueba que la versión del asistente anfitrión coincide con la aplicación antes de ejecutar tareas administrativas; si no coincide, actualiza la integración manual siguiendo estas instrucciones.
-
-## Historial y vista previa (desde v1.0.20)
-
-Antes de iniciar el mantenimiento se muestra una lista de las tareas seleccionadas y
-se solicita confirmación. **Esta vista previa no calcula la resolución de dependencias
-de APT**, que puede instalar, actualizar o eliminar paquetes adicionales. El usuario
-debe prestar atención especial a las operaciones de Backports y eliminación.
-
-Desde el menú superior puedes abrir **Historial de mantenimiento** y exportar los
-resultados a JSON. Se registran hasta 100 ejecuciones por usuario, con fecha, versión,
-tareas y resultado, en el directorio de estado de usuario (`$XDG_STATE_HOME/aio-debian-gui/history.json`,
-o `~/.local/state/aio-debian-gui/history.json`). No se guardan credenciales ni salidas
-completas de la consola. El historial no registra operaciones que aún no hayan comenzado.
-
-## Debian y Ubuntu LTS (desde v1.2.0)
-
-La aplicación lee `/etc/os-release` del sistema anfitrión para identificar Debian o Ubuntu. La tarjeta de información inicial muestra automáticamente el logotipo correspondiente (desde v1.2.1), también al usar AppImage o Flatpak.
-En **Debian** muestra contrib/non-free y Backports; en **Ubuntu 24.04/26.04 LTS**
-muestra la activación de los componentes oficiales `universe`, `restricted` y
-`multiverse` mediante `add-apt-repository`, y una tarea opcional para instalar el
-metapaquete de kernel **HWE** oficial, **solo si existe** en los repositorios configurados.
-No añade repositorios Debian a Ubuntu ni PPAs. La actualización general sigue
-utilizando APT; el soporte Flatpak se mantiene. Las tareas incompatibles se bloquean
-también en el asistente privilegiado, incluso si se invoca directamente.
-
-**Aviso:** el soporte requiere pruebas de integración y validación en instalaciones reales
-para confirmar el funcionamiento completo de cada combinación de Ubuntu, escritorio y formato.
-Se recomienda una copia de seguridad antes de habilitar nuevos repositorios o instalar HWE.
-
-## Uso
-
-Busca *AiO Debian GUI* en el menú de aplicaciones, o ejecuta `aio-debian-gui` como usuario
-normal. Por defecto, las tareas administrativas requieren autorización de
-administrador mediante Polkit en una sesión local activa. La actualización
-exclusiva de Flatpak del usuario no solicita contraseña desde la versión 1.2.3.
-
-La casilla **«No solicitar contraseña de administrador en AiO (opcional)»**
-permite ejecutar sin contraseña las tareas administrativas admitidas por AiO
-(APT, repositorios, kernel y Flatpak del sistema), bajo responsabilidad del
-usuario. Requiere autenticarse una vez para activarla y se puede desmarcar para
-revocar la excepción. No desactiva Polkit globalmente ni autoriza a otras
-aplicaciones, pero **otros procesos de tu cuenta también podrían invocar el
-asistente privilegiado de AiO sin contraseña**. La opción está desactivada por
-defecto. Consulta los [riesgos y límites](#autorización-y-flatpak-v123).
-
-La instalación del kernel y Mesa desde Backports
-también está desactivada por defecto; al activarla, puede añadirse la fuente oficial
-`<codename>-backports` y puede ser necesario reiniciar después.
-Las tareas de repositorios, herramientas, Backports y complementos de GNOME se marcan cuando ya
-están completas y su selector queda desactivado; el estado se vuelve a comprobar al abrir la
-aplicación. Si la espera de autorización de Polkit no responde, puede cancelarse desde la interfaz
-y se cancela automáticamente tras 90 segundos.
-La comprobación inicial de las tareas se ejecuta en segundo plano; el botón de inicio
-se habilita cuando termina la consulta, también si esta falla o agota su tiempo de espera.
-El menú superior permite elegir el idioma de la interfaz (español, inglés, francés o chino),
-el tema claro u oscuro y el modo simple, que oculta la salida detallada de las tareas. Las
-preferencias se guardan para el usuario actual; el español, el tema claro y la interfaz completa
-son los valores iniciales.
-La ventana «Acerca de» muestra el crédito del autor y permite abrir una dedicatoria con una foto
-proporcionada por el usuario.
-
-## Arquitectura modular (v1.1.0)
-
-La interfaz GTK continúa en `package/usr/bin/aio-debian-gui`, pero la lógica de
-actualizaciones AppImage, historial y preferencias está separada en
-`package/usr/lib/aio-debian-gui/aio_core/`, sin dependencias GTK.
-La interfaz utiliza funciones adaptadoras para mantener la compatibilidad y los tres
-formatos incluyen los mismos módulos. Las pruebas offline comprueban cada módulo
-sin ejecutar tareas de mantenimiento privilegiadas.
-
-## Estructura
-
-```
-package/                                  árbol que se instala tal cual en el sistema
-  DEBIAN/control                          metadatos y versión
-  usr/bin/aio-debian-gui                  interfaz gráfica (GTK 3, se ejecuta como usuario)
-  usr/lib/aio-debian-gui/aio-debian-gui-helper   tareas privilegiadas (vía pkexec)
-  usr/share/aio-debian-gui/              logotipo de Debian y foto de la dedicatoria
-  usr/share/polkit-1/actions/             política de autenticación
-scripts/
-  build-deb.sh                            construye dist/aio-debian-gui_X.Y.Z_all.deb
-  build-appimage.sh                       construye dist/aio-debian-gui_X.Y.Z_x86_64.AppImage
-  appimage/AppRun                         lanzador del AppImage
-  check.sh                                comprobaciones previas a publicar
-  publish-apt-repo.sh                     añade el .deb al repositorio APT y lo firma
-  publish-flatpak-repo.sh                 construye y publica el repositorio Flatpak firmado
-  recolor-icon.py                         regenera los iconos con otro color de fondo
-assets/icon-original-512.png              icono original (fondo azul), base de recolor-icon.py
-.github/workflows/                        CI y publicación automática
-```
-
-## Cambiar el color del icono
-
-El icono usa fondo verde para distinguirse del de `aio-debian`. Para otro color
-(necesita `python3-pil` y `python3-numpy`):
-
-```bash
-./scripts/recolor-icon.py 28      # naranja · 275 violeta · 350 rojo · 145 verde (actual)
-```
-
-## Publicar una versión nueva
-
-1. Sube `Version` en `package/DEBIAN/control`.
-2. Añade la novedad en `NOVEDADES` (`package/usr/bin/aio-debian-gui`) y una sección
-   `## X.Y.Z` en `CHANGELOG.md`.
-3. Comprueba: `./scripts/check.sh`
-4. Construye los paquetes:
-
-   ```bash
-   ./scripts/build-deb.sh
-   APPIMAGETOOL=/ruta/a/appimagetool ./scripts/build-appimage.sh
-   ```
-
-5. Publica los paquetes `.deb` y AppImage en la *Release* de GitHub y actualiza el repositorio APT con
-   `scripts/publish-apt-repo.sh` sobre la rama `gh-pages`.
-6. El workflow [Publish signed Flatpak update repository](.github/workflows/publish-flatpak.yml)
-   actualiza exclusivamente el repositorio Flatpak firmado de GitHub Pages
-   al publicar cambios relevantes en `main`. También se puede ejecutar manualmente desde Actions.
-   Consulta [actualizaciones Flatpak](docs/flatpak-actualizaciones.md).
-   Si la publicación automática de una Release queda pendiente, ejecuta **Build Debian packages**
-   manualmente desde Actions con la rama `main`; ese flujo también crea la Release estable.
-
-## Configuración inicial en GitHub (una sola vez)
-
-1. **Secretos** (*Settings → Secrets and variables → Actions*):
-   - `GPG_PRIVATE_KEY`: la clave privada con la que se firma el repositorio.
-   - `GPG_PASSPHRASE`: su contraseña (si la tiene).
-
-   La publicación comprueba que la clave coincide con la clave pública incluida en
-   `package/usr/share/keyrings/aio-debian-gui.gpg`; si no, se aborta para no romper las
-   actualizaciones de los equipos ya instalados.
-2. **Pages** (*Settings → Pages*): *Deploy from a branch* → `gh-pages` / `/ (root)`.
-   La rama se crea sola con la primera publicación.
-
-### Sobre la clave de firma
-
-El paquete incluye la clave pública `04A5 2381 A203 5D5B 9524 CA6A E0E6 4B8E E0F9 000C`
-(la misma del repositorio de `aio-debian`), de modo que puedes usar la clave privada que
-ya tienes. Si prefieres una clave propia para este proyecto, **antes de la primera
-publicación**:
-
-```bash
-gpg --quick-gen-key "AIO-Debian-GUI repositorio <tu@correo>" rsa4096 sign 5y
-gpg --export <HUELLA> > package/usr/share/keyrings/aio-debian-gui.gpg
-gpg --armor --export-secret-keys <HUELLA>     # contenido para el secreto GPG_PRIVATE_KEY
+./scripts/check.sh
 ```
 
 ## Licencia

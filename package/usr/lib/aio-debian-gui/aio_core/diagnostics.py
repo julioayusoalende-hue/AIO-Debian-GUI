@@ -89,19 +89,24 @@ def run_diagnostics():
     else:
         findings.append(_check("Dependencias APT", "ok", "APT no comunica errores de dependencias."))
 
-    # Contar solo las líneas Inst de la simulación, sin aplicar actualizaciones.
-    rc, output, error = _run(["apt-get", "-s", "upgrade"], timeout=25)
+    # La simulación de upgrade omite paquetes retenidos o que necesitan
+    # dependencias nuevas; apt list muestra los candidatos actualizables.
+    rc, output, error = _run(["apt", "list", "--upgradable"], timeout=25)
     if rc is None or rc != 0:
         findings.append(_check("Actualizaciones pendientes", "unknown",
-            (error or output or "No se pudo simular APT.").strip()[-350:]))
+            (error or output or "No se pudieron consultar las actualizaciones APT.").strip()[-350:]))
     else:
-        pending = sum(1 for line in output.splitlines() if line.startswith("Inst "))
-        held = re.search(r"(\d+) not upgraded", output)
-        suffix = f"; {held.group(1)} retenidos" if held and int(held.group(1)) else ""
-        findings.append(_check("Actualizaciones pendientes",
-            "warning" if pending else "ok",
-            f"{pending} actualizaciones estimadas por APT{suffix}.",
-            "Revisa y aplica las actualizaciones del sistema cuando corresponda." if pending else ""))
+        lines = [line.strip() for line in output.splitlines() if line.strip()]
+        if not lines or lines[0] != "Listing..." or any(
+                not re.search(r"\[upgradable from: .+\]$", line) for line in lines[1:]):
+            findings.append(_check("Actualizaciones pendientes", "unknown",
+                "No se pudo interpretar la lista de actualizaciones APT."))
+        else:
+            pending = len(lines) - 1
+            findings.append(_check("Actualizaciones pendientes",
+                "warning" if pending else "ok",
+                f"{pending} actualizaciones disponibles según los índices APT locales.",
+                "Revisa y aplica las actualizaciones del sistema cuando corresponda." if pending else ""))
     
     # Una caché antigua NO significa cero actualizaciones. Esta comprobación
     # informa de la frescura de los índices existentes, sin actualizar APT.

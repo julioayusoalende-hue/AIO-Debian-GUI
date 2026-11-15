@@ -49,6 +49,9 @@ essential = (
     "No hay versión candidata en los índices APT.",
     "%.1f GiB libres (%s del volumen)",
     "%d actualizaciones estimadas por APT%s.",
+    "%d actualizaciones disponibles según los índices APT locales.",
+    "No se pudo interpretar la lista de actualizaciones APT.",
+    "Los índices APT pueden estar desactualizados y ocultar actualizaciones del sistema o de AiO. Para renovarlos sin instalar paquetes, ejecuta «sudo apt update» y vuelve a diagnosticar.",
     "Último índice de paquetes: hace %d días.",
 )
 for lang in ("en", "fr", "zh"):
@@ -62,6 +65,7 @@ for lang in ("en", "fr", "zh"):
     assert det("753.0 GiB libres (84% del volumen)") != "753.0 GiB libres (84% del volumen)"
     assert det("0 actualizaciones estimadas por APT.") != "0 actualizaciones estimadas por APT."
     assert det("5 actualizaciones estimadas por APT; 2 retenidos.") != "5 actualizaciones estimadas por APT; 2 retenidos."
+    assert det("2 actualizaciones disponibles según los índices APT locales.") != "2 actualizaciones disponibles según los índices APT locales."
     assert det("Último índice de paquetes: hace 0 días.") != "Último índice de paquetes: hace 0 días."
     assert det("Instalada: 2.0.8. Al día según los índices APT locales.") != "Instalada: 2.0.8. Al día según los índices APT locales."
     assert det("Instalada: 2.0.8. Disponible en APT: 2.0.9.") != "Instalada: 2.0.8. Disponible en APT: 2.0.9."

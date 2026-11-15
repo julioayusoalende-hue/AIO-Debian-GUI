@@ -20,8 +20,9 @@ def fake_run(args, timeout=12):
         return 0, "package-x is not fully installed\n", ""
     if args == ["apt-get", "-o", "Debug::NoLocking=1", "check"]:
         return 100, "", "Unmet dependencies"
-    if args[:3] == ["apt-get", "-s", "upgrade"]:
-        return 0, "Inst foo [1] (2 repo)\nInst bar [1] (2 repo)\n", ""
+    if args == ["apt", "list", "--upgradable"]:
+        return 0, ("Listing...\nfoo/stable 2 amd64 [upgradable from: 1]\n"
+                   "bar/stable 2 amd64 [upgradable from: 1]\n"), ""
     if args[0] == "dkms":
         return 0, "nvidia/550, 6.12: added\n", ""
     if args[0] == "systemctl":
@@ -39,11 +40,32 @@ with mock.patch.object(diag, "_run", side_effect=fake_run), \
     assert statuses["Estado de dpkg"] == "critical"
     assert statuses["Dependencias APT"] == "critical"
     assert statuses["Actualizaciones pendientes"] == "warning"
+    assert next(item for item in items if item["name"] == "Actualizaciones pendientes")["detail"].startswith("2 ")
     assert statuses["Módulos DKMS"] == "warning"
     assert statuses["Reinicio pendiente"] == "warning"
     assert statuses["Servicios systemd"] == "warning"
     assert statuses["Índices de APT"] == "unknown"
     assert diag.overall_status(items) == "critical"
+
+# Los candidatos retenidos o que necesitan nuevas dependencias también deben
+# contarse, aunque una simulación de upgrade no los incluya.
+def pending_updates(output, rc=0):
+    def run(args, timeout=12):
+        if args == ["apt", "list", "--upgradable"]:
+            return rc, output, "" if rc == 0 else "APT failed"
+        return 0, "", ""
+    with mock.patch.object(diag, "_run", side_effect=run), \
+         mock.patch.object(diag.shutil, "disk_usage", return_value=Disk()), \
+         mock.patch.object(diag.shutil, "which", return_value=None), \
+         mock.patch.object(diag.Path, "exists", return_value=False), \
+         mock.patch.object(diag.Path, "glob", return_value=[]):
+        return next(i for i in diag.run_diagnostics() if i["name"] == "Actualizaciones pendientes")
+
+assert pending_updates("Listing...\n")["status"] == "ok"
+assert pending_updates("Listing...\nfoo/stable 2 amd64 [upgradable from: 1]\n")["status"] == "warning"
+assert pending_updates("Listing...\nunexpected output\n")["status"] == "unknown"
+assert pending_updates("")["status"] == "unknown"
+assert pending_updates("", rc=100)["status"] == "unknown"
 
 # Un rechazo de permisos no indica dependencias rotas.
 def permission_denied(args, timeout=12):
