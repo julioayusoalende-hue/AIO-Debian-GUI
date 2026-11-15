@@ -86,6 +86,9 @@ jobs:
           test -x squashfs-root/AppRun
           test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/history.py
           test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/updates.py
+          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/scheduler.py
+          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/preflight.py
+          test -f squashfs-root/usr/lib/systemd/system/aio-debian-gui-maintenance@.service
           rm -rf squashfs-root
           file "$FLATPAK"
           appstreamcli validate --no-net flatpak/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml
@@ -96,6 +99,9 @@ jobs:
           flatpak run --user --command=python3 io.github.julioayusoalende_hue.aio_debian_gui -c 'import gi; gi.require_version("Gtk", "3.0"); from gi.repository import Gtk'
           flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -x /app/share/aio-debian-gui/host-integration/aio-debian-gui-helper
           flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/share/aio-debian-gui/host-integration/es.aiodebian.gui.policy
+          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/scheduler.py
+          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/preflight.py
+          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/share/aio-debian-gui/host-integration/aio-debian-gui-maintenance@.service
           (cd dist && sha256sum *.deb *.AppImage *.flatpak > SHA256SUMS)
           cat dist/SHA256SUMS
 

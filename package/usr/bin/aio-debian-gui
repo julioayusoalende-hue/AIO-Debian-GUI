@@ -66,6 +66,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.7.1": "Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB.",
     "2.7.0": "Mantenimientos automáticos programables con selección de tareas, horario, pausa y resultados.",
     "2.6.0": "Paneles adaptables, selección clara de tareas, diagnóstico resumido y consola plegable con resultados por tarea.",
     "2.5.7": "Paneles principales del mismo ancho con el separador vertical centrado al redimensionar la ventana.",
@@ -1233,6 +1234,10 @@ TRADUCCIONES["zh"].update({"Se recomienda reiniciar para aplicar los cambios cr�
 TRADUCCIONES["en"].update({"Programación no activa": "Schedule inactive", "Flatpak no está instalado en el anfitrión.": "Flatpak is not installed on the host."})
 TRADUCCIONES["fr"].update({"Programación no activa": "Programmation inactive", "Flatpak no está instalado en el anfitrión.": "Flatpak n’est pas installé sur l’hôte."})
 TRADUCCIONES["zh"].update({"Programación no activa": "计划未启用", "Flatpak no está instalado en el anfitrión.": "主机未安装 Flatpak。"})
+
+TRADUCCIONES["en"].update({"Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB.": "Schedule maintenance in Flatpak and AppImage without installing the DEB."})
+TRADUCCIONES["fr"].update({"Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB.": "Programmez la maintenance dans Flatpak et AppImage sans installer le paquet DEB."})
+TRADUCCIONES["zh"].update({"Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB.": "无需安装 DEB 即可在 Flatpak 和 AppImage 中计划维护。"})
 
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)
