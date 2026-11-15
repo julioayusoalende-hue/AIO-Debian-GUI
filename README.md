@@ -578,6 +578,8 @@ El icono usa fondo verde para distinguirse del de `aio-debian`. Para otro color
    actualiza exclusivamente el repositorio Flatpak firmado de GitHub Pages
    al publicar cambios relevantes en `main`. También se puede ejecutar manualmente desde Actions.
    Consulta [actualizaciones Flatpak](docs/flatpak-actualizaciones.md).
+   Si la publicación automática de una Release queda pendiente, ejecuta **Build Debian packages**
+   manualmente desde Actions con la rama `main`; ese flujo también crea la Release estable.
 
 ## Configuración inicial en GitHub (una sola vez)
 
