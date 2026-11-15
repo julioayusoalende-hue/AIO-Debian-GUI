@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.7.2
+
+- Notificación de escritorio al usuario cuando el mantenimiento programado finaliza correctamente, incluso con AiO cerrado; si no hay sesión gráfica disponible, el resultado sigue guardado y se informa en el journal.
+
 ## 2.7.1
 
 - Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB, con integración administrativa persistente en el anfitrión.

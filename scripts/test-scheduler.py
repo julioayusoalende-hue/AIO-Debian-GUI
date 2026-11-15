@@ -80,6 +80,24 @@ with tempfile.TemporaryDirectory() as directory:
     assert json.loads(isolated.stdout)['version'] == s.VERSION
     assert '/usr/lib/aio-debian-gui/aio_core/scheduler.py --run %i' in service.read_text()
 
+with patch.object(Path, 'is_dir', return_value=True), \
+     patch.object(Path, 'is_socket', return_value=True), \
+     patch.object(s.shutil, 'which', side_effect=lambda name: f'/usr/bin/{name}'), \
+     patch.object(s.subprocess, 'run', return_value=SimpleNamespace(returncode=0, stdout='', stderr='')) as notify:
+    s._notify_success('1000')
+    command = notify.call_args.args[0]
+    assert command[:4] == ['/usr/bin/runuser', '-u', '1000', '--']
+    assert 'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus' in command
+    assert command[-5:] == [
+        '--app-name=AiO Debian GUI', '--urgency=normal', '--expire-time=10000',
+        'Mantenimiento programado completado',
+        'El mantenimiento programado se ha realizado correctamente.',
+    ]
+with patch.object(Path, 'is_dir', return_value=False), \
+     patch.object(s.subprocess, 'run') as notify:
+    s._notify_success('1000')
+    notify.assert_not_called()
+
 with tempfile.TemporaryDirectory() as directory:
     root = Path(directory)
     with patch.multiple(s, CONFIG_DIR=root/'config', STATE_DIR=root/'state', UNIT_DIR=root/'units', LOCK=str(root/'run/maintenance.lock')), \
@@ -150,16 +168,20 @@ with tempfile.TemporaryDirectory() as directory:
              patch.object(preflight, '_check_local', return_value=report) as check, \
              patch.object(s.shutil, 'disk_usage', return_value=SimpleNamespace(free=4*1024**3)), \
              patch.object(s.subprocess, 'run', return_value=SimpleNamespace(returncode=0)) as run, \
-             patch.object(s.subprocess, 'Popen', side_effect=Process) as popen:
+             patch.object(s.subprocess, 'Popen', side_effect=Process) as popen, \
+             patch.object(s, '_notify_success') as notify:
             assert s.run_schedule('1000') == 0
+            notify.assert_called_once_with('1000')
             result = s._read(s.STATE_DIR/'1000.json')
             assert result['status'] == 'success' and result['finished'] and result['reboot_required']
             assert all(v == 'success' for v in result['tasks'].values())
             assert run.call_args.args[0] == ['apt-get', '-o', 'APT::Update::Error-Mode=any', 'update']
             with patch.object(preflight, '_check_local', return_value=preflight.Report(True, ['blocked'])):
                 popen.reset_mock()
+                notify.reset_mock()
                 assert s.run_schedule('1000') == 1
                 popen.assert_not_called()
+                notify.assert_not_called()
                 assert s._read(s.STATE_DIR/'1000.json')['status'] == 'blocked'
             with patch.object(preflight, '_apt_locks', return_value=['/var/lib/dpkg/lock']):
                 run.reset_mock()

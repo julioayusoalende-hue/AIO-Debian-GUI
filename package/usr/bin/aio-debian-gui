@@ -66,6 +66,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.7.2": "Notificación de escritorio al completar correctamente el mantenimiento programado.",
     "2.7.1": "Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB.",
     "2.7.0": "Mantenimientos automáticos programables con selección de tareas, horario, pausa y resultados.",
     "2.6.0": "Paneles adaptables, selección clara de tareas, diagnóstico resumido y consola plegable con resultados por tarea.",
@@ -1238,6 +1239,10 @@ TRADUCCIONES["zh"].update({"Programación no activa": "计划未启用", "Flatpa
 TRADUCCIONES["en"].update({"Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB.": "Schedule maintenance in Flatpak and AppImage without installing the DEB."})
 TRADUCCIONES["fr"].update({"Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB.": "Programmez la maintenance dans Flatpak et AppImage sans installer le paquet DEB."})
 TRADUCCIONES["zh"].update({"Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB.": "无需安装 DEB 即可在 Flatpak 和 AppImage 中计划维护。"})
+
+TRADUCCIONES["en"].update({"Notificación de escritorio al completar correctamente el mantenimiento programado.": "Desktop notification when scheduled maintenance completes successfully."})
+TRADUCCIONES["fr"].update({"Notificación de escritorio al completar correctamente el mantenimiento programado.": "Notification sur le bureau lorsque la maintenance programmée se termine correctement."})
+TRADUCCIONES["zh"].update({"Notificación de escritorio al completar correctamente el mantenimiento programado.": "计划维护成功完成时显示桌面通知。"})
 
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)
