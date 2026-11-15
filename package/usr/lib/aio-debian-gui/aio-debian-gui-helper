@@ -30,6 +30,7 @@ export NEEDRESTART_MODE=l
 APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confold -o Dpkg::Use-Pty=0)
 
 LISTAS_ACTUALIZADAS=0
+UPGRADE_PLAN=""
 REINICIO_REQUERIDO=0
 HELPER_VERSION=2.5.5
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
@@ -891,8 +892,25 @@ estado_ext_manager() {
 
 paso_upgrade() {
     asegurar_listas || return 1
+    local simulation plan
+    if ! simulation=$(LC_ALL=C apt-get -s -o Debug::NoLocking=1 dist-upgrade 2>&1); then
+        err "No se pudo simular la actualización con los índices actuales."
+        printf '%s\n' "$simulation"
+        return 1
+    fi
+    if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
+        err "La actualización propone eliminar paquetes. Operación bloqueada."
+        printf '%s\n' "$simulation"
+        return 1
+    fi
+    plan=$(printf '%s\n' "$simulation" | LC_ALL=C awk '/^(Inst|Remv|Purg) /' | sha256sum)
+    plan=${plan%% *}
+    if [ -n "$UPGRADE_PLAN" ] && [ "$plan" != "$UPGRADE_PLAN" ]; then
+        err "El plan APT ha cambiado. Repite las comprobaciones y revisa la nueva vista previa antes de actualizar."
+        return 1
+    fi
     info "Actualizando los paquetes del sistema (apt-get dist-upgrade)..."
-    if ! apt-get "${APT_OPTS[@]}" dist-upgrade; then
+    if ! apt-get "${APT_OPTS[@]}" --no-remove dist-upgrade; then
         err "Error durante la actualización de paquetes."
         return 1
     fi
@@ -1210,6 +1228,13 @@ main() {
             export LANG="$2"
         fi
         shift; [ $# -gt 0 ] && shift
+    fi
+
+    # Huella del plan mostrado por la GUI antes de solicitar autorización.
+    if [ "${1:-}" = "--upgrade-plan" ]; then
+        [[ "${2:-}" =~ ^[0-9a-f]{64}$ ]] || { err "Plan APT no válido."; exit 2; }
+        UPGRADE_PLAN="$2"
+        shift 2
     fi
 
     case "${1:-}" in
