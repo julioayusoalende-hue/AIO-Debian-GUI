@@ -13,7 +13,7 @@ import subprocess
 import sys
 import tempfile
 
-VERSION = '2.7.1'
+VERSION = '2.7.2'
 CONFIG_DIR = Path('/etc/aio-debian-gui/schedules')
 STATE_DIR = Path('/var/lib/aio-debian-gui/schedules')
 UNIT_DIR = Path('/etc/systemd/system')
@@ -230,6 +230,35 @@ def status(uid):
     return result
 
 
+def _notify_success(uid):
+    runtime = Path('/run/user') / uid
+    bus = runtime / 'bus'
+    notify_send = shutil.which('notify-send')
+    runuser = shutil.which('runuser')
+    if not runtime.is_dir() or not bus.is_socket():
+        print('No hay una sesión de usuario activa para notificar el mantenimiento.', file=sys.stderr)
+        return
+    if not notify_send or not runuser:
+        print('No se pudo notificar el mantenimiento: faltan notify-send o runuser.', file=sys.stderr)
+        return
+    command = [
+        runuser, '-u', uid, '--', '/usr/bin/env',
+        f'XDG_RUNTIME_DIR={runtime}',
+        f'DBUS_SESSION_BUS_ADDRESS=unix:path={bus}',
+        notify_send, '--app-name=AiO Debian GUI', '--urgency=normal',
+        '--expire-time=10000', 'Mantenimiento programado completado',
+        'El mantenimiento programado se ha realizado correctamente.',
+    ]
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=15, check=False)
+    except (OSError, subprocess.SubprocessError) as exc:
+        print(f'No se pudo notificar el mantenimiento: {str(exc)[:300]}', file=sys.stderr)
+        return
+    if result.returncode:
+        detail = (result.stderr or result.stdout or 'notify-send falló.').strip()[-300:]
+        print(f'No se pudo notificar el mantenimiento: {detail}', file=sys.stderr)
+
+
 def run_schedule(uid):
     _require_root()
     uid = validate_uid(uid)
@@ -245,6 +274,8 @@ def run_schedule(uid):
     def finish(state, detail):
         result.update(status=state, detail=detail, finished=datetime.now(timezone.utc).isoformat())
         _atomic(path, json.dumps(result) + '\n')
+        if state == 'success':
+            _notify_success(uid)
         return 0 if state in ('success', 'skipped') else 1
 
     if not host_supported():
