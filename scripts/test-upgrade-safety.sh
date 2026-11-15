@@ -59,4 +59,29 @@ SIMULATION='Remv old-package [1]'
 reset_calls
 if paso_upgrade; then echo 'ERROR: eliminación sin GUI aceptada'; exit 1; fi
 assert_no_install
+
+# La comprobación no debe anunciar éxito cuando falta o falla needrestart.
+(
+    command() {
+        if [ "$1" = -v ] && [ "$2" = needrestart ]; then return 1; fi
+        builtin command "$@"
+    }
+    if output=$(paso_rebootcheck); then echo 'ERROR: needrestart ausente aceptado'; exit 1; fi
+    [[ "$output" == *'instala needrestart'* && "$output" != *'##REBOOT:0'* ]]
+)
+(
+    needrestart() { :; }
+    timeout() { return 1; }
+    if output=$(paso_rebootcheck); then echo 'ERROR: fallo de needrestart ignorado'; exit 1; fi
+    [[ "$output" == *'No se pudo completar'* && "$output" != *'##REBOOT:0'* ]]
+    REINICIO_REQUERIDO=1
+    if output=$(paso_rebootcheck); then exit 1; fi
+    [[ "$output" == *'##REBOOT:1'* ]]
+)
+(
+    needrestart() { :; }
+    timeout() { echo 'NEEDRESTART-KSTA: 3'; }
+    output=$(paso_rebootcheck)
+    [[ "$output" == *'##REBOOT:1'* ]]
+)
 echo 'Actualización segura: índices, simulación, plan aprobado y --no-remove OK'

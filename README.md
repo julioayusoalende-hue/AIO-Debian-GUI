@@ -8,7 +8,7 @@
 
 AiO Debian GUI reúne tareas habituales de administración en una aplicación GTK, con **confirmaciones explícitas y comprobaciones preventivas** para las operaciones delicadas. Es un proyecto independiente del script de consola [aio-debian](https://github.com/julioayusoalende-hue/aio-debian).
 
-> **Versión actual: 2.7.4.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
+> **Versión actual: 2.7.5.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
 
 ## Funciones principales
 
@@ -81,6 +81,8 @@ Si APT/dpkg u otro mantenimiento de AiO está ocupado, se omite esa ejecución y
 Sin instalar el DEB, hay que instalar una vez el asistente, los módulos del programador y el servicio en el anfitrión. Estos archivos persistentes permiten ejecutar las tareas con la aplicación cerrada, incluso si se mueve o desinstala el AppImage o el Flatpak. Requiere autorización de administrador.
 
 Para recibir notificaciones de escritorio al completarse el mantenimiento, también se necesita `libnotify-bin` en el anfitrión (`sudo apt install libnotify-bin`). El DEB lo instala como dependencia.
+
+Para comprobar si el mantenimiento requiere reiniciar, instala también `needrestart` en el anfitrión (`sudo apt install needrestart`). El DEB lo instala como dependencia; si falta o falla, AiO indica que la comprobación no se pudo completar en lugar de afirmar que no es necesario reiniciar.
 
 **No sobrescribas archivos gestionados por el DEB.** Si está instalado, actualízalo mediante APT y omite estos pasos. Si actualizas la aplicación instalada sin DEB, repite la integración con los archivos de la misma versión. Antes de actualizarla, pausa las programaciones de todos los usuarios y espera a que terminen los mantenimientos en curso.
 

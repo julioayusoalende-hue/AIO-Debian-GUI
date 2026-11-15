@@ -33,7 +33,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 LISTAS_ACTUALIZADAS=0
 UPGRADE_PLAN=""
 REINICIO_REQUERIDO=0
-HELPER_VERSION=2.7.4
+HELPER_VERSION=2.7.5
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -594,7 +594,7 @@ estado_repos() {
 paso_tools() {
     asegurar_listas || return 1
     local r=0
-    instalar_paquete_si_falta needrestart "No se pudo instalar 'needrestart'. Se usará el método manual." || r=1
+    instalar_paquete_si_falta needrestart "No se pudo instalar 'needrestart'; no se podrá comprobar completamente si hace falta reiniciar." || r=1
     instalar_paquete_si_falta fastfetch   "No se pudo instalar 'fastfetch'. Puede que no esté disponible en tus repositorios." || r=1
     instalar_paquete_si_falta kitty       "No se pudo instalar 'kitty'. Puede que no esté disponible en tus repositorios." || r=1
     instalar_paquete_si_falta synaptic    "No se pudo instalar 'synaptic'. Puede que no esté disponible en tus repositorios." || r=1
@@ -987,20 +987,30 @@ paso_rebootcheck() {
 
     [ -f /var/run/reboot-required ] && necesita=1
 
-    if command -v needrestart &> /dev/null; then
-        info "Comprobación final de servicios y kernel con needrestart..."
-        info "(puede tardar un poco)"
-        salida=$(timeout 180 needrestart -b </dev/null 2>/dev/null)
-        [ -n "$salida" ] && echo "$salida"
-
-        if echo "$salida" | grep -qE "^NEEDRESTART-KSTA: [23]"; then
-            necesita=1
-        fi
-
-        local criticos="dbus|dbus-broker|gdm|gdm3|lightdm|sddm|systemd-logind|systemd-udevd"
-        if echo "$salida" | grep -qE "^NEEDRESTART-SVC: (${criticos})\.service$"; then
-            necesita=1
-        fi
+    if ! command -v needrestart >/dev/null 2>&1; then
+        err "No se pudo comprobar si hace falta reiniciar: instala needrestart en el anfitrión."
+        [ "$necesita" -eq 1 ] && echo "##REBOOT:1"
+        return 1
+    fi
+    info "Comprobación final de servicios y kernel con needrestart..."
+    info "(puede tardar un poco)"
+    if ! salida=$(timeout 180 needrestart -b </dev/null); then
+        err "No se pudo completar la comprobación de reinicio con needrestart."
+        [ "$necesita" -eq 1 ] && echo "##REBOOT:1"
+        return 1
+    fi
+    if [ -z "$salida" ]; then
+        err "needrestart no devolvió resultados; no se pudo comprobar si hace falta reiniciar."
+        [ "$necesita" -eq 1 ] && echo "##REBOOT:1"
+        return 1
+    fi
+    echo "$salida"
+    if echo "$salida" | grep -qE "^NEEDRESTART-KSTA: [23]"; then
+        necesita=1
+    fi
+    local criticos="dbus|dbus-broker|gdm|gdm3|lightdm|sddm|systemd-logind|systemd-udevd"
+    if echo "$salida" | grep -qE "^NEEDRESTART-SVC: (${criticos})\.service$"; then
+        necesita=1
     fi
 
     if [ "$necesita" -eq 1 ]; then

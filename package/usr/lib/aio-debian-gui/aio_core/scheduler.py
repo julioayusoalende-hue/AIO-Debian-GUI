@@ -13,7 +13,7 @@ import subprocess
 import sys
 import tempfile
 
-VERSION = '2.7.4'
+VERSION = '2.7.5'
 CONFIG_DIR = Path('/etc/aio-debian-gui/schedules')
 STATE_DIR = Path('/var/lib/aio-debian-gui/schedules')
 UNIT_DIR = Path('/etc/systemd/system')
@@ -372,8 +372,8 @@ def run_schedule(uid):
         _atomic(path, json.dumps(result) + '\n')
         if state == 'success':
             _notify_success(uid)
-            if result['reboot_required']:
-                _launch_for_reboot(uid, config.get('launcher'))
+        if result['reboot_required']:
+            _launch_for_reboot(uid, config.get('launcher'))
         return 0 if state in ('success', 'skipped') else 1
 
     if not host_supported():
@@ -419,6 +419,8 @@ def run_schedule(uid):
             code = process.wait()
         if code == 0 and all(v == 'success' for v in result['tasks'].values()):
             return finish('success', 'Mantenimiento completado.')
+        if result['tasks'].get('rebootcheck') == 'error':
+            return finish('error', 'No se pudo comprobar si hace falta reiniciar; revisa needrestart y el journal.')
         return finish('error', 'El mantenimiento terminó con errores; revisa los resultados de las tareas.')
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
         return finish('error', str(exc)[:600])

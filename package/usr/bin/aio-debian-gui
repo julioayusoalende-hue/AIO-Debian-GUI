@@ -66,6 +66,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.7.5": "Comprobación de reinicio más fiable con needrestart.",
     "2.7.4": "Corregido el envío de notificaciones y avisos programados a sesiones de usuario.",
     "2.7.3": "Abre AiO y muestra el aviso habitual cuando el mantenimiento programado recomienda reiniciar.",
     "2.7.2": "Notificación de escritorio al completar correctamente el mantenimiento programado.",
@@ -1245,6 +1246,14 @@ TRADUCCIONES["zh"].update({"Programación de mantenimiento en Flatpak y AppImage
 TRADUCCIONES["en"].update({"Notificación de escritorio al completar correctamente el mantenimiento programado.": "Desktop notification when scheduled maintenance completes successfully."})
 TRADUCCIONES["fr"].update({"Notificación de escritorio al completar correctamente el mantenimiento programado.": "Notification sur le bureau lorsque la maintenance programmée se termine correctement."})
 TRADUCCIONES["zh"].update({"Notificación de escritorio al completar correctamente el mantenimiento programado.": "计划维护成功完成时显示桌面通知。"})
+
+TRADUCCIONES["en"].update({"No se pudo comprobar si hace falta reiniciar; revisa needrestart y el journal.": "Could not check whether a restart is needed; check needrestart and the journal."})
+TRADUCCIONES["fr"].update({"No se pudo comprobar si hace falta reiniciar; revisa needrestart y el journal.": "Impossible de vérifier si un redémarrage est nécessaire ; consultez needrestart et le journal."})
+TRADUCCIONES["zh"].update({"No se pudo comprobar si hace falta reiniciar; revisa needrestart y el journal.": "无法检查是否需要重启；请检查 needrestart 和系统日志。"})
+
+TRADUCCIONES["en"].update({"Comprobación de reinicio más fiable con needrestart.": "More reliable restart checks with needrestart."})
+TRADUCCIONES["fr"].update({"Comprobación de reinicio más fiable con needrestart.": "Vérification plus fiable du redémarrage avec needrestart."})
+TRADUCCIONES["zh"].update({"Comprobación de reinicio más fiable con needrestart.": "使用 needrestart 更可靠地检查是否需要重启。"})
 
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)

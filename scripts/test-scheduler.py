@@ -242,6 +242,21 @@ with tempfile.TemporaryDirectory() as directory:
             assert result['status'] == 'success' and result['finished'] and result['reboot_required']
             assert all(v == 'success' for v in result['tasks'].values())
             assert run.call_args.args[0] == ['apt-get', '-o', 'APT::Update::Error-Mode=any', 'update']
+            class FailedRebootProcess(Process):
+                def __init__(self, command, **kwargs):
+                    super().__init__(command, **kwargs)
+                    self.stdout = iter(['##REBOOT:1\n', '##RESULT:upgrade:0\n',
+                                        '##RESULT:autoclean:0\n', '##RESULT:rebootcheck:1\n'])
+                def wait(self): return 1
+            with patch.object(s.subprocess, 'Popen', side_effect=FailedRebootProcess):
+                notify.reset_mock()
+                launch.reset_mock()
+                assert s.run_schedule('1000') == 1
+                result = s._read(s.STATE_DIR/'1000.json')
+                assert result['status'] == 'error' and 'needrestart' in result['detail']
+                assert result['reboot_required'] and result['tasks']['rebootcheck'] == 'error'
+                notify.assert_not_called()
+                launch.assert_called_once_with('1000', config['launcher'])
             with patch.object(preflight, '_check_local', return_value=preflight.Report(True, ['blocked'])):
                 popen.reset_mock()
                 notify.reset_mock()
