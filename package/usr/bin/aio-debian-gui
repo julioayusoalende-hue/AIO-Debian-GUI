@@ -1246,6 +1246,10 @@ TRADUCCIONES["en"].update({"Notificación de escritorio al completar correctamen
 TRADUCCIONES["fr"].update({"Notificación de escritorio al completar correctamente el mantenimiento programado.": "Notification sur le bureau lorsque la maintenance programmée se termine correctement."})
 TRADUCCIONES["zh"].update({"Notificación de escritorio al completar correctamente el mantenimiento programado.": "计划维护成功完成时显示桌面通知。"})
 
+TRADUCCIONES["en"].update({"No se pudo comprobar si hace falta reiniciar; revisa needrestart y el journal.": "Could not check whether a restart is needed; check needrestart and the journal."})
+TRADUCCIONES["fr"].update({"No se pudo comprobar si hace falta reiniciar; revisa needrestart y el journal.": "Impossible de vérifier si un redémarrage est nécessaire ; consultez needrestart et le journal."})
+TRADUCCIONES["zh"].update({"No se pudo comprobar si hace falta reiniciar; revisa needrestart y el journal.": "无法检查是否需要重启；请检查 needrestart 和系统日志。"})
+
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)
 

@@ -82,6 +82,8 @@ Sin instalar el DEB, hay que instalar una vez el asistente, los módulos del pro
 
 Para recibir notificaciones de escritorio al completarse el mantenimiento, también se necesita `libnotify-bin` en el anfitrión (`sudo apt install libnotify-bin`). El DEB lo instala como dependencia.
 
+Para comprobar si el mantenimiento requiere reiniciar, instala también `needrestart` en el anfitrión (`sudo apt install needrestart`). El DEB lo instala como dependencia; si falta o falla, AiO indica que la comprobación no se pudo completar en lugar de afirmar que no es necesario reiniciar.
+
 **No sobrescribas archivos gestionados por el DEB.** Si está instalado, actualízalo mediante APT y omite estos pasos. Si actualizas la aplicación instalada sin DEB, repite la integración con los archivos de la misma versión. Antes de actualizarla, pausa las programaciones de todos los usuarios y espera a que terminen los mantenimientos en curso.
 
 Prepara un directorio privado y extrae los archivos de la aplicación que utilizas:

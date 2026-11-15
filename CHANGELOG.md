@@ -1,5 +1,10 @@
 # Cambios
 
+## Sin publicar
+
+- `needrestart` se instala como dependencia del DEB; si falta o falla, la comprobación de reinicio informa del error en lugar de afirmar que no hace falta reiniciar.
+- Documentada la instalación de `needrestart` en el anfitrión para AppImage y Flatpak.
+
 ## 2.7.4
 
 - Corregido el envío de notificaciones de escritorio y el aviso de reinicio al resolver el UID del usuario al nombre que requiere `runuser`.
