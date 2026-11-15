@@ -21,6 +21,7 @@
     <value key="flathub::verification::website">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</value>
   </custom>
   <releases>
+    <release version="2.7.4" date="2026-11-15"><description><p>Corrige el envío de notificaciones de mantenimiento a la sesión de escritorio del usuario.</p></description></release>
     <release version="2.7.3" date="2026-11-15"><description><p>Abre AiO y muestra el aviso habitual cuando el mantenimiento programado recomienda reiniciar.</p></description></release>
     <release version="2.7.2" date="2026-11-15"><description><p>Notificación de escritorio cuando finaliza correctamente el mantenimiento programado.</p></description></release>
     <release version="2.7.1" date="2026-11-15"><description><p>Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB, mediante integración en el anfitrión.</p></description></release>

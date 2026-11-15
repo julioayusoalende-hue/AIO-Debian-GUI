@@ -1,8 +1,8 @@
 # Cambios
 
-## Sin publicar
+## 2.7.4
 
-- Corregido el envío de notificaciones y el aviso de reinicio del mantenimiento programado al ejecutar acciones en la sesión del usuario.
+- Corregido el envío de notificaciones de escritorio y el aviso de reinicio al resolver el UID del usuario al nombre que requiere `runuser`.
 
 ## 2.7.3
 
