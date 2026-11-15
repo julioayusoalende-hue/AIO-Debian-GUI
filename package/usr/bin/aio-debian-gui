@@ -66,6 +66,9 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.7.4": "Corrige el aviso de reinicio tras el mantenimiento programado.",
+    "2.7.3": "Abre AiO y muestra el aviso habitual cuando el mantenimiento programado recomienda reiniciar.",
+    "2.7.2": "Notificación de escritorio al completar correctamente el mantenimiento programado.",
     "2.7.1": "Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB.",
     "2.7.0": "Mantenimientos automáticos programables con selección de tareas, horario, pausa y resultados.",
     "2.6.0": "Paneles adaptables, selección clara de tareas, diagnóstico resumido y consola plegable con resultados por tarea.",
@@ -1239,6 +1242,14 @@ TRADUCCIONES["en"].update({"Programación de mantenimiento en Flatpak y AppImage
 TRADUCCIONES["fr"].update({"Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB.": "Programmez la maintenance dans Flatpak et AppImage sans installer le paquet DEB."})
 TRADUCCIONES["zh"].update({"Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB.": "无需安装 DEB 即可在 Flatpak 和 AppImage 中计划维护。"})
 
+TRADUCCIONES["en"].update({"Notificación de escritorio al completar correctamente el mantenimiento programado.": "Desktop notification when scheduled maintenance completes successfully."})
+TRADUCCIONES["fr"].update({"Notificación de escritorio al completar correctamente el mantenimiento programado.": "Notification sur le bureau lorsque la maintenance programmée se termine correctement."})
+TRADUCCIONES["zh"].update({"Notificación de escritorio al completar correctamente el mantenimiento programado.": "计划维护成功完成时显示桌面通知。"})
+
+TRADUCCIONES["en"].update({"Corrige el aviso de reinicio tras el mantenimiento programado.": "Fixes the restart prompt after scheduled maintenance."})
+TRADUCCIONES["fr"].update({"Corrige el aviso de reinicio tras el mantenimiento programado.": "Corrige l'invite de redémarrage après la maintenance programmée."})
+TRADUCCIONES["zh"].update({"Corrige el aviso de reinicio tras el mantenimiento programado.": "修复计划维护后的重启提示。"})
+
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)
 
@@ -2070,6 +2081,8 @@ class VentanaPrincipal(Gtk.Window):
                     'weekday': int(w['dia'].get_active_id()), 'hour': w['hora'].get_value_as_int(),
                     'minute': w['minuto'].get_value_as_int(),
                     'tasks': [t for t, c in w['tareas'].items() if c.get_active()]})
+                if not pausar:
+                    config['launcher'] = self._lanzador_programacion()
                 config = core_scheduler.validate_config(config)
                 argumentos = ['--schedule-save', json.dumps(config)]
         except (ValueError, TypeError):
@@ -2111,6 +2124,16 @@ class VentanaPrincipal(Gtk.Window):
                 error = str(exc)
             GLib.idle_add(self._programacion_guardada, dialogo, error)
         threading.Thread(target=aplicar, daemon=True).start()
+
+    @staticmethod
+    def _lanzador_programacion():
+        formato = formato_actualizacion()
+        if formato in ("deb", "flatpak"):
+            return {"format": formato, "path": ""}
+        appimage = os.environ.get("APPIMAGE")
+        if formato == "appimage" and appimage and os.path.isabs(appimage):
+            return {"format": formato, "path": appimage}
+        return None
 
     def _programacion_guardada(self, dialogo, error):
         self.programando = False
@@ -4073,6 +4096,7 @@ class VentanaPrincipal(Gtk.Window):
 
 
 def main():
+    aviso_reinicio_programado = "--scheduled-reboot-required" in sys.argv[1:]
     GLib.set_prgname(PRGNAME)
     GLib.set_application_name("AiO Debian")
     if os.geteuid() == 0:
@@ -4090,6 +4114,8 @@ def main():
     win.handler_cierre = win.connect("destroy", Gtk.main_quit)
     win.show_all()
     win._consultar_estados_tareas(inicial=True)
+    if aviso_reinicio_programado:
+        GLib.idle_add(win._preguntar_reinicio)
     if error_preferencias:
         win.estado.set_text(
             traducir("No se pudieron leer las preferencias") + ": " + error_preferencias

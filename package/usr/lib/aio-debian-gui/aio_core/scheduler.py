@@ -13,7 +13,7 @@ import subprocess
 import sys
 import tempfile
 
-VERSION = '2.7.1'
+VERSION = '2.7.4'
 CONFIG_DIR = Path('/etc/aio-debian-gui/schedules')
 STATE_DIR = Path('/var/lib/aio-debian-gui/schedules')
 UNIT_DIR = Path('/etc/systemd/system')
@@ -23,7 +23,8 @@ LOCK = '/run/aio-debian-gui/maintenance.lock'
 TASKS = ('upgrade', 'autoclean', 'flatpak-update', 'rebootcheck')
 DAYS = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 DEFAULT = {'enabled': False, 'frequency': 'weekly', 'weekday': 6,
-           'hour': 10, 'minute': 0, 'tasks': ['upgrade', 'autoclean', 'rebootcheck']}
+           'hour': 10, 'minute': 0, 'tasks': ['upgrade', 'autoclean', 'rebootcheck'],
+           'launcher': None}
 
 
 def validate_uid(uid):
@@ -34,7 +35,11 @@ def validate_uid(uid):
 
 
 def validate_config(config):
-    if not isinstance(config, dict) or set(config) != set(DEFAULT):
+    if not isinstance(config, dict):
+        raise ValueError('Configuración de programación no válida.')
+    if set(config) == set(DEFAULT) - {'launcher'}:
+        config = {**config, 'launcher': None}
+    if set(config) != set(DEFAULT):
         raise ValueError('Configuración de programación no válida.')
     if type(config['enabled']) is not bool or config['frequency'] not in ('daily', 'weekly', 'monthly'):
         raise ValueError('Frecuencia o activación no válida.')
@@ -46,6 +51,17 @@ def validate_config(config):
             or any(not isinstance(t, str) or t not in TASKS for t in tasks)
             or len(set(tasks)) != len(tasks)):
         raise ValueError('Selecciona al menos una tarea programable, sin duplicados.')
+    launcher = config['launcher']
+    if launcher is not None:
+        if (not isinstance(launcher, dict) or set(launcher) != {'format', 'path'}
+                or launcher['format'] not in ('deb', 'flatpak', 'appimage')
+                or not isinstance(launcher['path'], str)):
+            raise ValueError('Aplicación de aviso no válida.')
+        if launcher['format'] == 'appimage':
+            if not launcher['path'].startswith('/') or '\0' in launcher['path']:
+                raise ValueError('Ruta de AppImage no válida.')
+        elif launcher['path'] != '':
+            raise ValueError('Ruta de aplicación no válida.')
     return {**config, 'tasks': [t for t in TASKS if t in tasks]}
 
 
@@ -230,6 +246,104 @@ def status(uid):
     return result
 
 
+def _notify_success(uid):
+    runtime = Path('/run/user') / uid
+    bus = runtime / 'bus'
+    notify_send = shutil.which('notify-send')
+    runuser = shutil.which('runuser')
+    if not runtime.is_dir() or not bus.is_socket():
+        print('No hay una sesión de usuario activa para notificar el mantenimiento.', file=sys.stderr)
+        return
+    if not notify_send or not runuser:
+        print('No se pudo notificar el mantenimiento: faltan notify-send o runuser.', file=sys.stderr)
+        return
+    try:
+        username = pwd.getpwuid(int(uid)).pw_name
+        command = [
+            runuser, '-u', username, '--', '/usr/bin/env',
+            f'XDG_RUNTIME_DIR={runtime}',
+            f'DBUS_SESSION_BUS_ADDRESS=unix:path={bus}',
+            notify_send, '--app-name=AiO Debian GUI', '--urgency=normal',
+            '--expire-time=10000', 'Mantenimiento programado completado',
+            'El mantenimiento programado se ha realizado correctamente.',
+        ]
+        result = subprocess.run(command, capture_output=True, text=True, timeout=15, check=False)
+    except (KeyError, OSError, subprocess.SubprocessError) as exc:
+        print(f'No se pudo notificar el mantenimiento: {str(exc)[:300]}', file=sys.stderr)
+        return
+    if result.returncode:
+        detail = (result.stderr or result.stdout or 'notify-send falló.').strip()[-300:]
+        print(f'No se pudo notificar el mantenimiento: {detail}', file=sys.stderr)
+
+
+def _launch_for_reboot(uid, launcher):
+    runtime = Path('/run/user') / uid
+    bus = runtime / 'bus'
+    runuser = shutil.which('runuser')
+    if launcher is None:
+        if os.access('/usr/bin/aio-debian-gui', os.X_OK):
+            launcher = {'format': 'deb', 'path': ''}
+        elif shutil.which('flatpak'):
+            launcher = {'format': 'flatpak', 'path': ''}
+    if not runtime.is_dir() or not bus.is_socket():
+        print('No hay una sesión de usuario activa para abrir AiO.', file=sys.stderr)
+        return
+    if not runuser or launcher is None:
+        print('No se pudo abrir AiO: falta runuser o la configuración del lanzador.', file=sys.stderr)
+        return
+    if launcher['format'] == 'deb':
+        application = '/usr/bin/aio-debian-gui'
+        if not os.access(application, os.X_OK):
+            print('No se pudo abrir AiO: no está disponible el ejecutable DEB.', file=sys.stderr)
+            return
+        command = [application]
+    elif launcher['format'] == 'flatpak':
+        flatpak = shutil.which('flatpak')
+        if not flatpak:
+            print('No se pudo abrir AiO: Flatpak no está instalado.', file=sys.stderr)
+            return
+        command = [flatpak, 'run', 'io.github.julioayusoalende_hue.aio_debian_gui']
+    else:
+        application = launcher['path']
+        if not os.access(application, os.X_OK):
+            print('No se pudo abrir AiO: el AppImage configurado ya no está disponible.', file=sys.stderr)
+            return
+        command = [application]
+    env = [f'XDG_RUNTIME_DIR={runtime}',
+           f'DBUS_SESSION_BUS_ADDRESS=unix:path={bus}']
+    try:
+        username = pwd.getpwuid(int(uid)).pw_name
+        session_env = subprocess.run(
+            [runuser, '-u', username, '--', '/usr/bin/env',
+             f'XDG_RUNTIME_DIR={runtime}', f'DBUS_SESSION_BUS_ADDRESS=unix:path={bus}',
+             'systemctl', '--user', 'show-environment'],
+            capture_output=True, text=True, timeout=10, check=False)
+        if session_env.returncode == 0:
+            for line in session_env.stdout.splitlines():
+                key, separator, value = line.partition('=')
+                if separator and key in ('DISPLAY', 'WAYLAND_DISPLAY', 'XAUTHORITY',
+                                         'XDG_CURRENT_DESKTOP', 'XDG_SESSION_TYPE',
+                                         'XDG_DATA_DIRS'):
+                    env.append(f'{key}={value}')
+        if not any(value.startswith(('DISPLAY=', 'WAYLAND_DISPLAY=')) for value in env):
+            print('No hay una sesión gráfica disponible para abrir AiO.', file=sys.stderr)
+            return
+        systemd_run = shutil.which('systemd-run')
+        if not systemd_run:
+            print('No se pudo abrir AiO: falta systemd-run.', file=sys.stderr)
+            return
+        launch = [runuser, '-u', username, '--', '/usr/bin/env', *env,
+                  systemd_run, '--user', '--no-block', '--collect']
+        launch.extend('--setenv=' + value for value in env[2:])
+        launch.extend(['--', *command, '--scheduled-reboot-required'])
+        result = subprocess.run(launch, capture_output=True, text=True, timeout=15, check=False)
+        if result.returncode:
+            detail = (result.stderr or result.stdout or 'systemd-run falló.').strip()[-300:]
+            print(f'No se pudo abrir AiO para avisar del reinicio: {detail}', file=sys.stderr)
+    except (KeyError, OSError, subprocess.SubprocessError) as exc:
+        print(f'No se pudo abrir AiO para avisar del reinicio: {str(exc)[:300]}', file=sys.stderr)
+
+
 def run_schedule(uid):
     _require_root()
     uid = validate_uid(uid)
@@ -245,6 +359,10 @@ def run_schedule(uid):
     def finish(state, detail):
         result.update(status=state, detail=detail, finished=datetime.now(timezone.utc).isoformat())
         _atomic(path, json.dumps(result) + '\n')
+        if result['reboot_required']:
+            _launch_for_reboot(uid, config.get('launcher'))
+        if state == 'success':
+            _notify_success(uid)
         return 0 if state in ('success', 'skipped') else 1
 
     if not host_supported():

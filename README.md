@@ -8,7 +8,7 @@
 
 AiO Debian GUI reúne tareas habituales de administración en una aplicación GTK, con **confirmaciones explícitas y comprobaciones preventivas** para las operaciones delicadas. Es un proyecto independiente del script de consola [aio-debian](https://github.com/julioayusoalende-hue/aio-debian).
 
-> **Versión actual: 2.7.1.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
+> **Versión actual: 2.7.4.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
 
 ## Funciones principales
 
@@ -72,13 +72,15 @@ Tareas disponibles: **actualizar paquetes del sistema**, **actualizar Flatpak**,
 
 La programación requiere **systemd activo y la integración de AiO de la misma versión en el anfitrión**. El DEB la instala automáticamente; AppImage y Flatpak pueden instalarla sin el DEB siguiendo [estas instrucciones](#integración-del-programador-para-appimage-y-flatpak). Los temporizadores funcionan con la aplicación cerrada y sin iniciar sesión. Si el equipo estaba apagado, recuperan una ejecución pendiente al encenderlo; no encienden ni despiertan el equipo.
 
-La ventana muestra si la programación está activa, la próxima ejecución y el último resultado de cada tarea. **Actualizar estado** refresca el informe. **Pausar** impide nuevas ejecuciones, y **Eliminar programación** elimina el temporizador; ninguna de estas acciones interrumpe un mantenimiento que ya esté ejecutándose. Instalar o actualizar AiO nunca activa un horario por sí solo. Al desinstalar el DEB se desactivan los temporizadores, conservando configuración y resultados.
+La ventana muestra si la programación está activa, la próxima ejecución y el último resultado de cada tarea. Tras una ejecución completada correctamente, el escritorio muestra una notificación aunque la aplicación esté cerrada, siempre que la sesión del usuario siga iniciada y tenga disponible el servicio de notificaciones. Si la comprobación de reinicio programada detecta que se recomienda reiniciar, AiO se abre al finalizar en esa sesión y muestra el aviso habitual para reiniciar ahora o más tarde, incluso si alguna tarea falló; **el equipo nunca se reinicia automáticamente**. Si no hay sesión gráfica disponible, el resultado sigue guardado y se informa en el journal. Tras actualizar a la versión 2.7.3, vuelve a guardar una programación existente desde AppImage para registrar su lanzador; repite el paso si mueves el archivo. **Actualizar estado** refresca el informe. **Pausar** impide nuevas ejecuciones, y **Eliminar programación** elimina el temporizador; ninguna de estas acciones interrumpe un mantenimiento que ya esté ejecutándose. Instalar o actualizar AiO nunca activa un horario por sí solo. Al desinstalar el DEB se desactivan los temporizadores, conservando configuración y resultados.
 
 Si APT/dpkg u otro mantenimiento de AiO está ocupado, se omite esa ejecución y se vuelve a intentar en el siguiente horario. Los errores de dependencias, la falta de espacio o una simulación que proponga eliminar paquetes bloquean el mantenimiento. Los Flatpak del sistema se actualizan; los del usuario solo se actualizan si existe su sesión activa. Los registros técnicos permanecen en el journal del servicio.
 
 ### Integración del programador para AppImage y Flatpak
 
 Sin instalar el DEB, hay que instalar una vez el asistente, los módulos del programador y el servicio en el anfitrión. Estos archivos persistentes permiten ejecutar las tareas con la aplicación cerrada, incluso si se mueve o desinstala el AppImage o el Flatpak. Requiere autorización de administrador.
+
+Para recibir notificaciones de escritorio al completarse el mantenimiento, también se necesita `libnotify-bin` en el anfitrión (`sudo apt install libnotify-bin`). El DEB lo instala como dependencia.
 
 **No sobrescribas archivos gestionados por el DEB.** Si está instalado, actualízalo mediante APT y omite estos pasos. Si actualizas la aplicación instalada sin DEB, repite la integración con los archivos de la misma versión. Antes de actualizarla, pausa las programaciones de todos los usuarios y espera a que terminen los mantenimientos en curso.
 
@@ -576,6 +578,8 @@ El icono usa fondo verde para distinguirse del de `aio-debian`. Para otro color
    actualiza exclusivamente el repositorio Flatpak firmado de GitHub Pages
    al publicar cambios relevantes en `main`. También se puede ejecutar manualmente desde Actions.
    Consulta [actualizaciones Flatpak](docs/flatpak-actualizaciones.md).
+   Si la publicación automática de una Release queda pendiente, ejecuta **Build Debian packages**
+   manualmente desde Actions con la rama `main`; ese flujo también crea la Release estable.
 
 ## Configuración inicial en GitHub (una sola vez)
 

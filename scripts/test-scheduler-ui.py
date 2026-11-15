@@ -73,6 +73,12 @@ for language in ('es', 'en', 'fr', 'zh'):
         assert not widgets['activo'].get_active()
         assert set(widgets['tareas']) == set(app.core_scheduler.TASKS)
         assert 'backports-kernel-mesa' not in widgets['tareas']
+        with patch.object(app, 'formato_actualizacion', return_value='deb'):
+            assert w._lanzador_programacion() == {'format': 'deb', 'path': ''}
+        with patch.object(app, 'formato_actualizacion', return_value='appimage'), \
+             patch.dict(app.os.environ, {'APPIMAGE': '/home/test/AiO.AppImage'}):
+            assert w._lanzador_programacion() == {
+                'format': 'appimage', 'path': '/home/test/AiO.AppImage'}
         widgets['frecuencia'].set_active_id('daily')
         assert not widgets['dia'].get_sensitive()
         widgets['frecuencia'].set_active_id('weekly')
@@ -85,7 +91,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         w._cambiar_programacion(dialog)
         assert w.programando and not w.btn_iniciar.get_sensitive()
         wait_for(lambda: not w.programando and widgets['guardar'].get_sensitive())
-        assert backend['config'] == {'enabled':True,'frequency':'weekly','weekday':2,'hour':3,'minute':25,'tasks':['upgrade','autoclean']}
+        assert backend['config'] == {'enabled':True,'frequency':'weekly','weekday':2,'hour':3,'minute':25,'tasks':['upgrade','autoclean'],'launcher':None}
         assert widgets['pausar'].get_sensitive()
         w._cambiar_programacion(dialog, pausar=True)
         wait_for(lambda: not w.programando and widgets['guardar'].get_sensitive())
@@ -117,4 +123,19 @@ for language in ('es', 'en', 'fr', 'zh'):
         assert not w.programacion_widgets['formulario'].get_sensitive()
         w.ventana_programacion.destroy()
     w.destroy()
+
+for args, expected in ((['aio-debian-gui'], False),
+                       (['aio-debian-gui', '--scheduled-reboot-required'], True)):
+    with patch.object(app.sys, 'argv', args), \
+         patch.object(app.os, 'geteuid', return_value=1000), \
+         patch.object(app, 'cargar_preferencias', return_value=app.PREFERENCIAS_DEFECTO.copy()), \
+         patch.object(app, 'VentanaPrincipal') as window, \
+         patch.object(app, 'aplicar_tema'), \
+         patch.object(app.GLib, 'idle_add') as idle, \
+         patch.object(app.Gtk, 'main'):
+        app.main()
+        if expected:
+            idle.assert_called_once_with(window.return_value._preguntar_reinicio)
+        else:
+            idle.assert_not_called()
 print('GTK programación: carga, selección, hora, guardar, pausar, eliminar, validación, resultados e integración ausente en cuatro idiomas OK')
