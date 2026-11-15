@@ -70,7 +70,14 @@ Abre el menú principal y selecciona **Programar mantenimiento**. Elige las tare
 
 Tareas disponibles: **actualizar paquetes del sistema**, **actualizar Flatpak**, **limpiar la caché de paquetes** y **comprobar si hace falta reiniciar**. Las tareas de eliminación de paquetes y cambios de kernel, controladores y repositorios se mantienen en el flujo manual. No se reinicia el equipo automáticamente.
 
-La programación requiere **systemd activo y el paquete DEB de AiO de la misma versión en el anfitrión**. Desde AppImage o Flatpak, instala también ese DEB; copiar únicamente el asistente Polkit no instala el programador. Los temporizadores funcionan con la aplicación cerrada y sin iniciar sesión. Si el equipo estaba apagado, recuperan una ejecución pendiente al encenderlo; no encienden ni despiertan el equipo.
+La programación requiere **systemd activo y la integración del programador en el anfitrión**. No hace falta instalar el DEB. Flatpak incluye los componentes en `host-integration`; sigue las instrucciones de integración de abajo. Para AppImage, extrae la aplicación y ejecuta una vez:
+
+```bash
+./aio-debian-gui_VERSION_x86_64.AppImage --appimage-extract
+sudo bash squashfs-root/usr/lib/aio-debian-gui/aio-debian-gui-helper --install-scheduler
+```
+
+La instalación copia el asistente, la política Polkit, el módulo del programador y el servicio systemd a rutas persistentes propiedad de root. Después puedes borrar `squashfs-root`. Repite la integración al actualizar AppImage o Flatpak. Si también tienes un DEB, debe coincidir con la versión de la aplicación. No se activa ningún horario al instalar la integración. Los temporizadores funcionan con la aplicación cerrada y sin iniciar sesión. Si el equipo estaba apagado, recuperan una ejecución pendiente al encenderlo; no encienden ni despiertan el equipo.
 
 La ventana muestra si la programación está activa, la próxima ejecución y el último resultado de cada tarea. **Actualizar estado** refresca el informe. **Pausar** impide nuevas ejecuciones, y **Eliminar programación** elimina el temporizador; ninguna de estas acciones interrumpe un mantenimiento que ya esté ejecutándose. Instalar o actualizar AiO nunca activa un horario por sí solo. Al desinstalar el DEB se desactivan los temporizadores, conservando configuración y resultados.
 
@@ -305,11 +312,22 @@ antes de instalarlos con privilegios de administrador:
 
 ```bash
 APP=io.github.julioayusoalende_hue.aio_debian_gui
-mkdir -p "$HOME/aio-debian-gui-integracion"
+mkdir -p "$HOME/aio-debian-gui-integracion/aio_core"
 flatpak run --command=cat "$APP" /app/share/aio-debian-gui/host-integration/aio-debian-gui-helper \
   > "$HOME/aio-debian-gui-integracion/aio-debian-gui-helper"
 flatpak run --command=cat "$APP" /app/share/aio-debian-gui/host-integration/es.aiodebian.gui.policy \
   > "$HOME/aio-debian-gui-integracion/es.aiodebian.gui.policy"
+flatpak run --command=cat "$APP" /app/share/aio-debian-gui/host-integration/aio_core/__init__.py \
+  > "$HOME/aio-debian-gui-integracion/aio_core/__init__.py"
+flatpak run --command=cat "$APP" /app/share/aio-debian-gui/host-integration/aio_core/preflight.py \
+  > "$HOME/aio-debian-gui-integracion/aio_core/preflight.py"
+flatpak run --command=cat "$APP" /app/share/aio-debian-gui/host-integration/aio_core/scheduler.py \
+  > "$HOME/aio-debian-gui-integracion/aio_core/scheduler.py"
+flatpak run --command=cat "$APP" /app/share/aio-debian-gui/host-integration/aio-debian-gui-maintenance@.service \
+  > "$HOME/aio-debian-gui-integracion/aio-debian-gui-maintenance@.service"
+less "$HOME/aio-debian-gui-integracion/aio_core/scheduler.py"
+less "$HOME/aio-debian-gui-integracion/aio_core/preflight.py"
+less "$HOME/aio-debian-gui-integracion/aio-debian-gui-maintenance@.service"
 less "$HOME/aio-debian-gui-integracion/aio-debian-gui-helper"
 less "$HOME/aio-debian-gui-integracion/es.aiodebian.gui.policy"
 ```
@@ -318,12 +336,7 @@ less "$HOME/aio-debian-gui-integracion/es.aiodebian.gui.policy"
 archivos en el anfitrión (se solicitará la contraseña de administrador):
 
 ```bash
-sudo install -D -o root -g root -m 0755 \
-  "$HOME/aio-debian-gui-integracion/aio-debian-gui-helper" \
-  /usr/lib/aio-debian-gui/aio-debian-gui-helper
-sudo install -D -o root -g root -m 0644 \
-  "$HOME/aio-debian-gui-integracion/es.aiodebian.gui.policy" \
-  /usr/share/polkit-1/actions/es.aiodebian.gui.policy
+sudo bash "$HOME/aio-debian-gui-integracion/aio-debian-gui-helper" --install-scheduler
 ```
 
 Reinicia AiO Debian GUI para que compruebe el asistente del anfitrión. Desde la

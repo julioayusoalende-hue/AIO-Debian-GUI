@@ -41,11 +41,6 @@ jobs:
       - name: Build DEB
         run: ./scripts/build-deb.sh
 
-      - name: Test scheduled maintenance with systemd
-        env:
-          AIO_SYSTEMD_INTEGRATION: '1'
-        run: bash scripts/test-scheduler-systemd.sh
-
       - name: Build AppImage
         run: ./scripts/build-appimage.sh
 
@@ -86,6 +81,8 @@ jobs:
           test -x squashfs-root/AppRun
           test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/history.py
           test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/updates.py
+          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/scheduler.py
+          test -f squashfs-root/usr/lib/aio-debian-gui/aio-debian-gui-maintenance@.service
           rm -rf squashfs-root
           file "$FLATPAK"
           appstreamcli validate --no-net flatpak/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml
@@ -96,8 +93,27 @@ jobs:
           flatpak run --user --command=python3 io.github.julioayusoalende_hue.aio_debian_gui -c 'import gi; gi.require_version("Gtk", "3.0"); from gi.repository import Gtk'
           flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -x /app/share/aio-debian-gui/host-integration/aio-debian-gui-helper
           flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/share/aio-debian-gui/host-integration/es.aiodebian.gui.policy
+          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/share/aio-debian-gui/host-integration/aio_core/scheduler.py
+          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/share/aio-debian-gui/host-integration/aio-debian-gui-maintenance@.service
           (cd dist && sha256sum *.deb *.AppImage *.flatpak > SHA256SUMS)
           cat dist/SHA256SUMS
+
+      - name: Test AppImage scheduling without DEB
+        env:
+          AIO_SYSTEMD_INTEGRATION: '1'
+          AIO_SCHEDULER_FORMAT: appimage
+        run: bash scripts/test-scheduler-systemd.sh
+
+      - name: Test Flatpak scheduling without DEB
+        env:
+          AIO_SYSTEMD_INTEGRATION: '1'
+          AIO_SCHEDULER_FORMAT: flatpak
+        run: bash scripts/test-scheduler-systemd.sh
+
+      - name: Test scheduled maintenance with systemd
+        env:
+          AIO_SYSTEMD_INTEGRATION: '1'
+        run: bash scripts/test-scheduler-systemd.sh
 
       - name: Upload release candidates
         uses: actions/upload-artifact@v4

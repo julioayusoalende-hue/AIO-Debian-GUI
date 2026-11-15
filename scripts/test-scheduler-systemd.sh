@@ -1,5 +1,5 @@
 #!/bin/bash
-# Integración en una VM de CI: instala el DEB y ejecuta solo la comprobación de reinicio.
+# Integración en una VM de CI: DEB o integración portable, solo comprobación de reinicio.
 # Nunca programa actualizaciones, eliminaciones de paquetes ni reinicios reales.
 set -euo pipefail
 if [ "${AIO_SYSTEMD_INTEGRATION:-}" != 1 ]; then
@@ -11,9 +11,47 @@ if [ "$(cat /proc/1/comm)" != systemd ]; then
     exit 1
 fi
 cd "$(dirname "$0")/.."
-DEB_FILE=$(find dist -maxdepth 1 -name '*.deb' -print -quit)
-[ -n "$DEB_FILE" ]
-sudo apt-get install -y "./$DEB_FILE"
+FORMAT=${AIO_SCHEDULER_FORMAT:-deb}
+case "$FORMAT" in
+    deb)
+        DEB_FILE=$(find dist -maxdepth 1 -name '*.deb' -print -quit)
+        [ -n "$DEB_FILE" ]
+        sudo apt-get install -y "./$DEB_FILE"
+        ;;
+    appimage|flatpak)
+        # These tests must start without a DEB, never uninstall a user's package.
+        if dpkg-query -W -f='${db:Status-Status}' aio-debian-gui 2>/dev/null | grep -qx installed; then
+            echo 'La prueba portable requiere una VM sin el DEB instalado.' >&2
+            exit 1
+        fi
+        STAGE=$(mktemp -d)
+        trap 'rm -rf "$STAGE"' EXIT
+        if [ "$FORMAT" = appimage ]; then
+            APPIMAGE=$(find "$PWD/dist" -maxdepth 1 -name '*.AppImage' -print -quit)
+            [ -n "$APPIMAGE" ]
+            (cd "$STAGE" && "$APPIMAGE" --appimage-extract >/dev/null)
+            SOURCE_HELPER="$STAGE/squashfs-root/usr/lib/aio-debian-gui/aio-debian-gui-helper"
+        else
+            APP=io.github.julioayusoalende_hue.aio_debian_gui
+            mkdir -p "$STAGE/aio_core"
+            for component in aio-debian-gui-helper es.aiodebian.gui.policy aio_core/__init__.py aio_core/preflight.py aio_core/scheduler.py aio-debian-gui-maintenance@.service; do
+                flatpak run --user --command=cat "$APP" \
+                    "/app/share/aio-debian-gui/host-integration/$component" > "$STAGE/$component"
+            done
+            SOURCE_HELPER="$STAGE/aio-debian-gui-helper"
+        fi
+        sudo bash "$SOURCE_HELPER" --install-scheduler
+        # Prove the service no longer needs the extracted bundle or image mount.
+        rm -rf "$STAGE"
+        trap - EXIT
+        for component in /usr/lib/aio-debian-gui/aio-debian-gui-helper \
+            /usr/lib/aio-debian-gui/aio_core/scheduler.py \
+            /usr/lib/systemd/system/aio-debian-gui-maintenance@.service; do
+            [ "$(stat -c %u "$component")" = 0 ]
+        done
+        ;;
+    *) echo "Formato de prueba desconocido: $FORMAT" >&2; exit 2;;
+esac
 SCHEDULE_UID=$(id -u)
 HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 TIMER="aio-debian-gui-maintenance-${SCHEDULE_UID}.timer"
@@ -59,4 +97,5 @@ fi
 cleanup
 trap - EXIT
 [ ! -e "/etc/systemd/system/$TIMER" ]
+echo "Formato validado: $FORMAT"
 echo 'Systemd real: activar, próxima ejecución, servicio de solo comprobación, resultados, pausa y eliminación OK'
