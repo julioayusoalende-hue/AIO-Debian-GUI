@@ -7,7 +7,7 @@ TEMP=$(mktemp -d)
 trap 'rm -rf "$TEMP"' EXIT
 mkdir -p "$TEMP/bundle/aio_core" "$TEMP/host"
 cp package/usr/lib/aio-debian-gui/aio-debian-gui-helper "$TEMP/bundle/"
-cp package/usr/lib/aio-debian-gui/aio_core/scheduler.py "$TEMP/bundle/aio_core/"
+cp package/usr/lib/aio-debian-gui/aio_core/{__init__,scheduler,preflight}.py "$TEMP/bundle/aio_core/"
 cp package/usr/lib/systemd/system/*.service "$TEMP/bundle/"
 cp package/usr/share/polkit-1/actions/es.aiodebian.gui.policy "$TEMP/bundle/"
 source "$TEMP/bundle/aio-debian-gui-helper"
@@ -30,6 +30,17 @@ instalar_programador # Idempotente.
 cmp "$SYSTEM_HELPER" "$TEMP/bundle/aio-debian-gui-helper"
 cmp "$SCHEDULER_MODULE" "$TEMP/bundle/aio_core/scheduler.py"
 cmp "$SCHEDULER_SERVICE" "$TEMP/bundle/aio-debian-gui-maintenance@.service"
+# Load from the installed directory only; the repository cannot supply dependencies.
+python3 -I - "$TEMP/host" <<'PYTEST'
+import sys
+sys.path.insert(0, sys.argv[1])
+from aio_core import scheduler, preflight
+assert scheduler.VERSION
+assert callable(preflight._check_local)
+PYTEST
+rm "$TEMP/bundle/aio_core/preflight.py"
+if instalar_programador; then exit 1; fi
+cp "$ROOT/package/usr/lib/aio-debian-gui/aio_core/preflight.py" "$TEMP/bundle/aio_core/"
 paquete_instalado() { return 0; }
 printf '\n# Different DEB\n' >> "$SCHEDULER_MODULE"
 if instalar_programador; then exit 1; fi

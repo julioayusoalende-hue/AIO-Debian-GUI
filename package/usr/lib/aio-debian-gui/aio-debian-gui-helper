@@ -219,7 +219,8 @@ instalar_componentes_polkit() {
 
 # Copias persistentes: systemd nunca ejecuta archivos desde un montaje AppImage.
 instalar_programador() {
-    local source_dir module service target_service
+    local source_dir module service target_service component
+    local modules=(__init__.py scheduler.py preflight.py)
     source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd) || return 1
     module="$source_dir/aio_core/scheduler.py"
     service="$source_dir/aio-debian-gui-maintenance@.service"
@@ -228,17 +229,30 @@ instalar_programador() {
     [ -f "$module" ] && [ -f "$service" ] || {
         err "No se encontraron los componentes del programador."; return 1;
     }
+    for component in "${modules[@]}"; do
+        [ -f "$source_dir/aio_core/$component" ] || {
+            err "Falta un módulo del programador: $component"; return 1;
+        }
+    done
     # No sobrescribir componentes gestionados por un DEB de otra versión.
     if paquete_instalado aio-debian-gui; then
-        cmp -s "$module" "$SCHEDULER_MODULE" && cmp -s "$service" "$target_service" || {
+        for component in "${modules[@]}"; do
+            cmp -s "$source_dir/aio_core/$component" "$(dirname "$SCHEDULER_MODULE")/$component" || {
+                err "Actualiza el DEB y la aplicación a la misma versión."; return 1;
+            }
+        done
+        cmp -s "$service" "$target_service" || {
             err "Actualiza el DEB y la aplicación a la misma versión."; return 1;
         }
     fi
     instalar_componentes_polkit || return 1
     install -d -o root -g root -m 0755 "$(dirname "$SCHEDULER_MODULE")" || return 1
-    if ! cmp -s "$module" "$SCHEDULER_MODULE"; then
-        install -o root -g root -m 0644 "$module" "$SCHEDULER_MODULE" || return 1
-    fi
+    for component in "${modules[@]}"; do
+        if ! cmp -s "$source_dir/aio_core/$component" "$(dirname "$SCHEDULER_MODULE")/$component"; then
+            install -o root -g root -m 0644 "$source_dir/aio_core/$component" \
+                "$(dirname "$SCHEDULER_MODULE")/$component" || return 1
+        fi
+    done
     if ! cmp -s "$service" "$target_service"; then
         install -D -o root -g root -m 0644 "$service" "$target_service" || return 1
     fi

@@ -317,11 +317,16 @@ flatpak run --command=cat "$APP" /app/share/aio-debian-gui/host-integration/aio-
   > "$HOME/aio-debian-gui-integracion/aio-debian-gui-helper"
 flatpak run --command=cat "$APP" /app/share/aio-debian-gui/host-integration/es.aiodebian.gui.policy \
   > "$HOME/aio-debian-gui-integracion/es.aiodebian.gui.policy"
+flatpak run --command=cat "$APP" /app/share/aio-debian-gui/host-integration/aio_core/__init__.py \
+  > "$HOME/aio-debian-gui-integracion/aio_core/__init__.py"
+flatpak run --command=cat "$APP" /app/share/aio-debian-gui/host-integration/aio_core/preflight.py \
+  > "$HOME/aio-debian-gui-integracion/aio_core/preflight.py"
 flatpak run --command=cat "$APP" /app/share/aio-debian-gui/host-integration/aio_core/scheduler.py \
   > "$HOME/aio-debian-gui-integracion/aio_core/scheduler.py"
 flatpak run --command=cat "$APP" /app/share/aio-debian-gui/host-integration/aio-debian-gui-maintenance@.service \
   > "$HOME/aio-debian-gui-integracion/aio-debian-gui-maintenance@.service"
 less "$HOME/aio-debian-gui-integracion/aio_core/scheduler.py"
+less "$HOME/aio-debian-gui-integracion/aio_core/preflight.py"
 less "$HOME/aio-debian-gui-integracion/aio-debian-gui-maintenance@.service"
 less "$HOME/aio-debian-gui-integracion/aio-debian-gui-helper"
 less "$HOME/aio-debian-gui-integracion/es.aiodebian.gui.policy"

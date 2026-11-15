@@ -34,7 +34,7 @@ case "$FORMAT" in
         else
             APP=io.github.julioayusoalende_hue.aio_debian_gui
             mkdir -p "$STAGE/aio_core"
-            for component in aio-debian-gui-helper es.aiodebian.gui.policy aio_core/scheduler.py aio-debian-gui-maintenance@.service; do
+            for component in aio-debian-gui-helper es.aiodebian.gui.policy aio_core/__init__.py aio_core/preflight.py aio_core/scheduler.py aio-debian-gui-maintenance@.service; do
                 flatpak run --user --command=cat "$APP" \
                     "/app/share/aio-debian-gui/host-integration/$component" > "$STAGE/$component"
             done
