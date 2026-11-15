@@ -231,7 +231,10 @@ def _parent(root, relative):
             os.chown(current, 0, 0)
             st = current.lstat()
         if not stat.S_ISDIR(st.st_mode) or not _trusted(st):
-            raise PermissionError('Un directorio de integración no está protegido por root.')
+            raise PermissionError('Un directorio de integración no está protegido por root: '
+                                  + str(current) + ' (uid=' + str(st.st_uid)
+                                  + ', modo=' + oct(stat.S_IMODE(st.st_mode))
+                                  + ', tipo=' + ('directorio' if stat.S_ISDIR(st.st_mode) else 'otro') + ').')
     return root / relative
 
 
