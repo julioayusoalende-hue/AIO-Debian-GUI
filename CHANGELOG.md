@@ -1,5 +1,9 @@
 # Cambios
 
+## Sin publicar
+
+- Corregido el envío de notificaciones y el aviso de reinicio del mantenimiento programado al ejecutar acciones en la sesión del usuario.
+
 ## 2.7.3
 
 - Si el mantenimiento programado recomienda reiniciar, abre AiO en la sesión gráfica del usuario y muestra el aviso habitual, sin reiniciar automáticamente.

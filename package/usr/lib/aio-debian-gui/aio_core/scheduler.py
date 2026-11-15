@@ -20,6 +20,7 @@ UNIT_DIR = Path('/etc/systemd/system')
 SERVICE = Path('/usr/lib/systemd/system/aio-debian-gui-maintenance@.service')
 HELPER = '/usr/lib/aio-debian-gui/aio-debian-gui-helper'
 LOCK = '/run/aio-debian-gui/maintenance.lock'
+USER_RUNTIME_DIR = Path('/run/user')
 TASKS = ('upgrade', 'autoclean', 'flatpak-update', 'rebootcheck')
 DAYS = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 DEFAULT = {'enabled': False, 'frequency': 'weekly', 'weekday': 6,
@@ -247,7 +248,8 @@ def status(uid):
 
 
 def _notify_success(uid):
-    runtime = Path('/run/user') / uid
+    uid = validate_uid(uid)
+    runtime = USER_RUNTIME_DIR / uid
     bus = runtime / 'bus'
     notify_send = shutil.which('notify-send')
     runuser = shutil.which('runuser')
@@ -257,8 +259,13 @@ def _notify_success(uid):
     if not notify_send or not runuser:
         print('No se pudo notificar el mantenimiento: faltan notify-send o runuser.', file=sys.stderr)
         return
+    try:
+        username = pwd.getpwuid(int(uid)).pw_name
+    except KeyError:
+        print(f'No se pudo notificar el mantenimiento: no existe el usuario con UID {uid}.', file=sys.stderr)
+        return
     command = [
-        runuser, '-u', uid, '--', '/usr/bin/env',
+        runuser, '-u', username, '--', '/usr/bin/env',
         f'XDG_RUNTIME_DIR={runtime}',
         f'DBUS_SESSION_BUS_ADDRESS=unix:path={bus}',
         notify_send, '--app-name=AiO Debian GUI', '--urgency=normal',
@@ -276,7 +283,8 @@ def _notify_success(uid):
 
 
 def _launch_for_reboot(uid, launcher):
-    runtime = Path('/run/user') / uid
+    uid = validate_uid(uid)
+    runtime = USER_RUNTIME_DIR / uid
     bus = runtime / 'bus'
     runuser = shutil.which('runuser')
     if launcher is None:
@@ -289,6 +297,11 @@ def _launch_for_reboot(uid, launcher):
         return
     if not runuser or launcher is None:
         print('No se pudo abrir AiO: falta runuser o la configuración del lanzador.', file=sys.stderr)
+        return
+    try:
+        username = pwd.getpwuid(int(uid)).pw_name
+    except KeyError:
+        print(f'No se pudo abrir AiO: no existe el usuario con UID {uid}.', file=sys.stderr)
         return
     if launcher['format'] == 'deb':
         application = '/usr/bin/aio-debian-gui'
@@ -312,7 +325,7 @@ def _launch_for_reboot(uid, launcher):
            f'DBUS_SESSION_BUS_ADDRESS=unix:path={bus}']
     try:
         session_env = subprocess.run(
-            [runuser, '-u', uid, '--', '/usr/bin/env',
+            [runuser, '-u', username, '--', '/usr/bin/env',
              f'XDG_RUNTIME_DIR={runtime}', f'DBUS_SESSION_BUS_ADDRESS=unix:path={bus}',
              'systemctl', '--user', 'show-environment'],
             capture_output=True, text=True, timeout=10, check=False)
@@ -330,7 +343,7 @@ def _launch_for_reboot(uid, launcher):
         if not systemd_run:
             print('No se pudo abrir AiO: falta systemd-run.', file=sys.stderr)
             return
-        launch = [runuser, '-u', uid, '--', '/usr/bin/env', *env,
+        launch = [runuser, '-u', username, '--', '/usr/bin/env', *env,
                   systemd_run, '--user', '--no-block', '--collect']
         launch.extend('--setenv=' + value for value in env[2:])
         launch.extend(['--', *command, '--scheduled-reboot-required'])

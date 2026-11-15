@@ -2,10 +2,12 @@
 """Planificación aislada: temporales y comandos simulados; nunca activa timers reales."""
 import copy
 import fcntl
+import io
 import json
 import os
 from pathlib import Path
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
@@ -87,11 +89,12 @@ with tempfile.TemporaryDirectory() as directory:
 
 with patch.object(Path, 'is_dir', return_value=True), \
      patch.object(Path, 'is_socket', return_value=True), \
+     patch.object(s.pwd, 'getpwuid', return_value=SimpleNamespace(pw_name='julio')), \
      patch.object(s.shutil, 'which', side_effect=lambda name: f'/usr/bin/{name}'), \
      patch.object(s.subprocess, 'run', return_value=SimpleNamespace(returncode=0, stdout='', stderr='')) as notify:
     s._notify_success('1000')
     command = notify.call_args.args[0]
-    assert command[:4] == ['/usr/bin/runuser', '-u', '1000', '--']
+    assert command[:4] == ['/usr/bin/runuser', '-u', 'julio', '--']
     assert 'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus' in command
     assert command[-5:] == [
         '--app-name=AiO Debian GUI', '--urgency=normal', '--expire-time=10000',
@@ -105,6 +108,44 @@ with patch.object(Path, 'is_dir', return_value=False), \
 
 with patch.object(Path, 'is_dir', return_value=True), \
      patch.object(Path, 'is_socket', return_value=True), \
+     patch.object(s.shutil, 'which', return_value='/usr/bin/tool'), \
+     patch.object(s.pwd, 'getpwuid', side_effect=KeyError), \
+     patch.object(s.subprocess, 'run') as notify, \
+     patch.object(s.sys, 'stderr', new_callable=io.StringIO) as errors:
+    s._notify_success('1000')
+    notify.assert_not_called()
+    assert 'UID 1000' in errors.getvalue()
+
+if os.geteuid() == 0 and shutil.which('runuser'):
+    account = s.pwd.getpwnam('nobody')
+    runuser_path = shutil.which('runuser')
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        root.chmod(0o755)
+        runtime = root / str(account.pw_uid)
+        runtime.mkdir(mode=0o755)
+        sender = root / 'notify-send'
+        sender.write_text('#!/bin/sh\nid -u\nprintf "%s\\n" "$DBUS_SESSION_BUS_ADDRESS"\n')
+        sender.chmod(0o755)
+        results = []
+        real_run = s.subprocess.run
+        def capture(*args, **kwargs):
+            result = real_run(*args, **kwargs)
+            results.append(result)
+            return result
+        with socket.socket(socket.AF_UNIX) as bus:
+            bus.bind(str(runtime / 'bus'))
+            with patch.object(s, 'USER_RUNTIME_DIR', root), \
+                 patch.object(s.shutil, 'which', side_effect=lambda name: str(sender) if name == 'notify-send' else runuser_path), \
+                 patch.object(s.subprocess, 'run', side_effect=capture):
+                s._notify_success(str(account.pw_uid))
+        assert len(results) == 1 and results[0].returncode == 0
+        assert results[0].stdout.splitlines() == [
+            str(account.pw_uid), f'unix:path={runtime}/bus']
+
+with patch.object(Path, 'is_dir', return_value=True), \
+     patch.object(Path, 'is_socket', return_value=True), \
+     patch.object(s.pwd, 'getpwuid', return_value=SimpleNamespace(pw_name='julio')), \
      patch.object(s.shutil, 'which', side_effect=lambda name: f'/usr/bin/{name}'), \
      patch.object(s.os, 'access', return_value=True), \
      patch.object(s.subprocess, 'run', return_value=SimpleNamespace(
@@ -113,7 +154,8 @@ with patch.object(Path, 'is_dir', return_value=True), \
     s._launch_for_reboot('1000', {'format': 'deb', 'path': ''})
     assert session_env.call_count == 2
     command = session_env.call_args.args[0]
-    assert command[:4] == ['/usr/bin/runuser', '-u', '1000', '--']
+    assert session_env.call_args_list[0].args[0][:4] == ['/usr/bin/runuser', '-u', 'julio', '--']
+    assert command[:4] == ['/usr/bin/runuser', '-u', 'julio', '--']
     assert '/usr/bin/aio-debian-gui' in command
     assert command[-1] == '--scheduled-reboot-required'
     assert '/usr/bin/systemd-run' in command
