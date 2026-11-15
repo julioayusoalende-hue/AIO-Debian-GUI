@@ -1,6 +1,6 @@
 # Cambios
 
-## Sin publicar
+## 2.7.5
 
 - `needrestart` se instala como dependencia del DEB; si falta o falla, la comprobación de reinicio informa del error en lugar de afirmar que no hace falta reiniciar.
 - Documentada la instalación de `needrestart` en el anfitrión para AppImage y Flatpak.
