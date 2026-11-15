@@ -44,7 +44,9 @@ jobs:
       - name: Test scheduled maintenance with systemd
         env:
           AIO_SYSTEMD_INTEGRATION: '1'
-        run: bash scripts/test-scheduler-systemd.sh
+        run: |
+          sudo env PYTHONDONTWRITEBYTECODE=1 python3 scripts/test-scheduler.py
+          bash scripts/test-scheduler-systemd.sh
 
       - name: Build AppImage
         run: ./scripts/build-appimage.sh

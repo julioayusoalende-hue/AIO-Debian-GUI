@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.7.4
+
+- Corregido el envío de notificaciones de escritorio y el aviso de reinicio al resolver el UID del usuario al nombre que requiere `runuser`.
+
 ## 2.7.3
 
 - Si el mantenimiento programado recomienda reiniciar, abre AiO en la sesión gráfica del usuario y muestra el aviso habitual, sin reiniciar automáticamente.
