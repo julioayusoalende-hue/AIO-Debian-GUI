@@ -32,6 +32,7 @@ bash scripts/test-distro.sh && bien "detección Debian/Ubuntu LTS y HWE" || fall
 python3 scripts/test-updater.py && bien "actualizador AppImage: versiones y SHA-256" || fallo "pruebas de actualizador"
 python3 scripts/test-history.py && bien "historial de mantenimiento y persistencia" || fallo "pruebas del historial"
 python3 scripts/test-preflight.py && bien "modo de mantenimiento seguro" || fallo "pruebas de mantenimiento seguro"
+bash scripts/test-upgrade-safety.sh && bien "actualización APT protegida" || fallo "pruebas de actualización APT segura"
 python3 scripts/test-diagnostics.py && bien "diagnóstico preventivo de solo lectura" || fallo "pruebas del diagnóstico"
 python3 scripts/test-interface-translations.py && bien "traducciones de interfaz y diagnóstico" || fallo "traducciones incompletas"
 python3 scripts/test-app-update-diagnostic.py && bien "versiones y actualización desde diagnóstico" || fallo "pruebas de actualización desde diagnóstico"
@@ -74,6 +75,8 @@ sh -n package/DEBIAN/postinst && bien "sintaxis postinst" || fallo "sintaxis pos
 
 # La versión del control debe tener su entrada de novedades en la GUI y en el CHANGELOG
 V=$(sed -n 's/^Version: //p' package/DEBIAN/control)
+grep -Fxq "  - --env=AIO_DEBIAN_GUI_VERSION=$V" flatpak/io.github.julioayusoalende_hue.aio_debian_gui.yml &&
+    bien "versión Flatpak coincide con el paquete" || fallo "versión Flatpak incompatible con el paquete"
 [ "$(bash "$HELPER" --version)" = "$V" ] &&
     bien "versión del asistente coincide con el paquete" ||
     fallo "versión del asistente incompatible con el paquete"

@@ -3,7 +3,10 @@
 La simulación no sustituye la validación final del asistente privilegiado.
 """
 from dataclasses import dataclass
+import hashlib
+import json
 import os
+from pathlib import Path
 import re
 import shutil
 import subprocess
@@ -14,6 +17,7 @@ class Report:
     blocked: bool
     messages: list
     preview: list = None
+    upgrade_plan: str = None
 
 
 def _run(command, timeout=25):
@@ -52,11 +56,52 @@ def _apt_locks():
 
 
 def check(tasks):
+    if tasks == ["flatpak-update"]:
+        return Report(False, [])
+    if os.environ.get("FLATPAK_ID") or Path("/.flatpak-info").exists():
+        return _check_host(tasks)
+    return _check_local(tasks)
+
+
+def _check_host(tasks):
+    """Ejecutar el mismo diagnóstico sin privilegios en el anfitrión.
+
+    No depende de instalar módulos Python adicionales junto al helper del host.
+    El código viaja como argumento, nunca se interpola en un shell.
+    """
+    try:
+        source = Path(__file__).read_text(encoding="utf-8")
+        source += ("\nimport sys\nfrom dataclasses import asdict\n"
+                   "print(json.dumps(asdict(_check_local(json.loads(sys.argv[1])))))\n")
+        result = subprocess.run(
+            ["flatpak-spawn", "--host", "env", "LC_ALL=C", "python3", "-c",
+             source, json.dumps(tasks)],
+            capture_output=True, text=True, timeout=180, check=False,
+        )
+        if result.returncode != 0:
+            raise ValueError("host preflight failed")
+        data = json.loads(result.stdout)
+        if (type(data.get("blocked")) is not bool
+                or not isinstance(data.get("messages"), list)
+                or not all(isinstance(item, str) for item in data["messages"])
+                or (data.get("preview") is not None and (
+                    not isinstance(data["preview"], list)
+                    or not all(isinstance(item, str) for item in data["preview"])))
+                or (data.get("upgrade_plan") is not None and not re.fullmatch(
+                    r"[0-9a-f]{64}", str(data["upgrade_plan"])))):
+            raise ValueError("invalid host report")
+        return Report(**data)
+    except (OSError, subprocess.SubprocessError, ValueError, TypeError, AttributeError):
+        return Report(True, ["No se pudieron completar las comprobaciones de seguridad en el anfitrión."])
+
+
+def _check_local(tasks):
     """Bloquear errores conocidos; avisar de comprobaciones no concluyentes."""
     if tasks == ["flatpak-update"]:
         return Report(False, [])
     messages = []
     preview = []
+    upgrade_plan = None
     blocked = False
     locks = _apt_locks()
     if locks:
@@ -111,9 +156,9 @@ def check(tasks):
                 continue
             for line in result.stdout.splitlines():
                 parts = line.split()
-                if len(parts) < 2 or parts[0] not in ("Inst", "Rem"):
+                if len(parts) < 2 or parts[0] not in ("Inst", "Remv", "Purg"):
                     continue
-                if parts[0] == "Rem":
+                if parts[0] in ("Remv", "Purg"):
                     preview.append("ELIMINAR: " + parts[1])
                 elif "[" in line and "]" in line:
                     previous = line.split("[", 1)[1].split("]", 1)[0]
@@ -124,7 +169,11 @@ def check(tasks):
                     preview.append("INSTALAR: " + parts[1] + " " + new)
             installs = [line.split()[1] for line in result.stdout.splitlines() if line.startswith("Inst ") and len(line.split()) > 1]
             removed = [line for line in result.stdout.splitlines()
-                       if line.startswith("Rem ")]
+                       if line.startswith(("Remv ", "Purg "))]
+            if cmd[-1] == "dist-upgrade":
+                plan = "".join(line + "\n" for line in result.stdout.splitlines()
+                               if line.startswith(("Inst ", "Remv ", "Purg ")))
+                upgrade_plan = hashlib.sha256(plan.encode("utf-8")).hexdigest()
             if installs:
                 messages.append("Paquetes previstos para instalar/actualizar (" + str(len(installs)) + "): " + ", ".join(installs[:15]))
             if removed:
@@ -146,4 +195,4 @@ def check(tasks):
             messages.append("Hay módulos DKMS registrados; comprueba su compatibilidad.")
     if any(any(marker in item.lower() for marker in ("linux-image", "linux-headers", "mesa", "nvidia")) for item in preview):
         messages.append("ATENCIÓN: la simulación afecta a kernel, Mesa o NVIDIA; revisa las versiones y la compatibilidad.")
-    return Report(blocked, messages, preview)
+    return Report(blocked, messages, preview, upgrade_plan)

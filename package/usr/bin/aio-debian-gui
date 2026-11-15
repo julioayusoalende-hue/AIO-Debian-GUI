@@ -2652,12 +2652,12 @@ class VentanaPrincipal(Gtk.Window):
             if not aceptado:
                 self._poner_ocupado(False)
                 return False
-        self._continuar_mantenimiento(pasos)
+        self._continuar_mantenimiento(pasos, upgrade_plan=informe.upgrade_plan)
         if self.proceso is None:
             self._poner_ocupado(False)
         return False
 
-    def _continuar_mantenimiento(self, pasos):
+    def _continuar_mantenimiento(self, pasos, upgrade_plan=None):
         if not self._confirmar_tareas(pasos):
             self.estado.set_text(traducir("Mantenimiento cancelado antes de comenzar."))
             return
@@ -2832,7 +2832,8 @@ class VentanaPrincipal(Gtk.Window):
         if solo_flatpak_usuario:
             cmd = comando_host(helper, "--flatpak-user-update")
         else:
-            cmd = comando_pkexec(helper, lang, *pasos)
+            argumentos = (["--upgrade-plan", upgrade_plan] if upgrade_plan else []) + pasos
+            cmd = comando_pkexec(helper, lang, *argumentos)
 
         self.buf.set_text("")
         self.necesita_reinicio = False
