@@ -21,6 +21,7 @@
     <value key="flathub::verification::website">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</value>
   </custom>
   <releases>
+    <release version="2.7.7" date="2026-11-15"><description><p>Actualiza los índices APT con autorización antes del diagnóstico e informa si la operación falla.</p></description></release>
     <release version="2.7.6" date="2026-11-15"><description><p>Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales desactualizados.</p></description></release>
     <release version="2.7.5" date="2026-11-15"><description><p>Comprobación de reinicio más fiable con needrestart y aviso explícito si no está disponible.</p></description></release>
     <release version="2.7.4" date="2026-11-15"><description><p>Corrige el envío de notificaciones de mantenimiento a la sesión de escritorio del usuario.</p></description></release>

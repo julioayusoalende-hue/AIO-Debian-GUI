@@ -3,11 +3,37 @@
 import importlib.util
 from pathlib import Path
 from unittest import mock
+import subprocess
+from types import SimpleNamespace
 
 module = Path(__file__).resolve().parents[1] / "package/usr/lib/aio-debian-gui/aio_core/diagnostics.py"
 spec = importlib.util.spec_from_file_location("diagnostics", module)
 diag = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(diag)
+
+# La actualización requiere confirmación explícita del asistente.
+command = ["pkexec", "helper", "--refresh-diagnostic-apt"]
+with mock.patch.object(diag.subprocess, "run", return_value=SimpleNamespace(
+        returncode=0, stdout="##DIAGNOSTIC_APT:updated\n", stderr="")) as run:
+    assert diag.refresh_apt_indices(command) is None
+    assert run.call_args.args[0] == command
+with mock.patch.object(diag.subprocess, "run", return_value=SimpleNamespace(
+        returncode=1, stdout="", stderr="Permiso denegado")):
+    assert "Permiso denegado" in diag.refresh_apt_indices(command)
+with mock.patch.object(diag.subprocess, "run", return_value=SimpleNamespace(
+        returncode=0, stdout="", stderr="")):
+    assert diag.refresh_apt_indices(command)
+with mock.patch.object(diag.subprocess, "run", side_effect=subprocess.TimeoutExpired(command, 280)):
+    assert diag.refresh_apt_indices(command)
+
+# Flatpak consulta en el anfitrión y falla de forma explícita ante respuestas inválidas.
+with mock.patch.object(diag.subprocess, "run", return_value=SimpleNamespace(
+        returncode=0, stdout='[{"name":"APT","status":"ok","detail":"ok","advice":""}]', stderr="")) as run:
+    assert diag.run_host_diagnostics()[0]["status"] == "ok"
+    assert run.call_args.args[0][:3] == ["flatpak-spawn", "--host", "env"]
+with mock.patch.object(diag.subprocess, "run", return_value=SimpleNamespace(
+        returncode=0, stdout='[{"status":"ok"}]', stderr="")):
+    assert diag.run_host_diagnostics()[0]["status"] == "unknown"
 
 
 class Disk:

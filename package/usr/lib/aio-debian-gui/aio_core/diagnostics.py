@@ -1,11 +1,13 @@
-"""Diagnóstico preventivo, local y de solo lectura para AiO Debian GUI.
+"""Comprobaciones preventivas de solo lectura para AiO Debian GUI.
 
-No ejecuta apt update/install, dpkg --configure, systemctl start ni sudo.
-Los fallos de lectura se muestran como «no disponible», nunca como sistema sano.
+Las comprobaciones no modifican el sistema. La actualización previa de índices
+se delega explícitamente al asistente autorizado. Los fallos no se presentan
+como un sistema sano.
 """
 from __future__ import annotations
 
 import os
+import json
 from pathlib import Path
 import re
 import shutil
@@ -26,6 +28,44 @@ def _run(args, timeout=12):
         return result.returncode, (result.stdout or ""), (result.stderr or "")
     except (OSError, subprocess.TimeoutExpired) as exc:
         return None, "", str(exc)
+
+
+def refresh_apt_indices(command):
+    """Solicita al asistente autorizado la actualización de los índices APT."""
+    try:
+        result = subprocess.run(command, capture_output=True, text=True,
+                                timeout=280, check=False)
+        if result.returncode != 0:
+            return (result.stderr or result.stdout or "No se obtuvo autorización de administrador.").strip()[-1500:]
+        if "##DIAGNOSTIC_APT:updated" not in result.stdout.splitlines():
+            return "El asistente no confirmó la actualización de los índices APT."
+        return None
+    except (OSError, subprocess.SubprocessError) as exc:
+        return str(exc)
+
+
+def run_host_diagnostics():
+    """Consulta el anfitrión desde Flatpak sin otorgar privilegios al diagnóstico."""
+    try:
+        source = Path(__file__).read_text(encoding="utf-8")
+        source += "\nprint(json.dumps(run_diagnostics()))\n"
+        result = subprocess.run(
+            ["flatpak-spawn", "--host", "env", "LC_ALL=C", "python3", "-c", source],
+            capture_output=True, text=True, timeout=180, check=False,
+        )
+        if result.returncode != 0:
+            raise RuntimeError((result.stderr or "No se pudo consultar el anfitrión.").strip()[-350:])
+        findings = json.loads(result.stdout)
+        if not isinstance(findings, list) or not all(
+            isinstance(item, dict)
+            and all(isinstance(item.get(key), str) for key in ("name", "status", "detail", "advice"))
+            and item["status"] in ("ok", "warning", "critical", "unknown")
+            for item in findings
+        ):
+            raise ValueError("Respuesta de diagnóstico del anfitrión no válida.")
+        return findings
+    except (OSError, subprocess.SubprocessError, ValueError, RuntimeError) as exc:
+        return [_check("Sistema anfitrión", "unknown", str(exc))]
 
 
 def run_diagnostics():

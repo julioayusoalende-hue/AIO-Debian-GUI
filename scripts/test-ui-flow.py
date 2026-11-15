@@ -138,4 +138,45 @@ assert w.log.get_mapped()
 inicio, fin = w.buf.get_bounds()
 assert 'error visible en modo simple' in w.buf.get_text(inicio, fin, True)
 w.destroy()
+
+# El refresco precede al diagnóstico y un fallo no se presenta como lectura actual.
+w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+w.show_all()
+settle()
+for refresh_error in (None, 'Autorización cancelada'):
+    calls = []
+    def refresh(command):
+        calls.append('refresh')
+        assert command == ['test-refresh']
+        return refresh_error
+    def diagnose():
+        calls.append('diagnose')
+        return [{'name': 'Actualizaciones pendientes', 'status': 'ok',
+                 'detail': '0 actualizaciones disponibles según los índices APT locales.', 'advice': ''}]
+    def app_update(*args):
+        calls.append('app')
+        return {'status': 'current', 'detail': 'Al día'}
+    with patch.object(app, 'formato_actualizacion', return_value='deb'), \
+         patch.object(app, 'version_app', return_value='2.7.7'), \
+         patch.object(app, 'es_flatpak', return_value=False), \
+         patch.object(app, 'helper_mantenimiento', return_value='helper'), \
+         patch.object(app, 'comando_pkexec', return_value=['test-refresh']), \
+         patch.object(app.core_diagnostics, 'refresh_apt_indices', side_effect=refresh), \
+         patch.object(app.core_diagnostics, 'run_diagnostics', side_effect=diagnose), \
+         patch.object(app.core_updates, 'estado_actualizacion_app', side_effect=app_update), \
+         patch.object(w, '_diagnostico_terminado', wraps=w._diagnostico_terminado) as finished:
+        w._abrir_diagnostico()
+        deadline = time.monotonic() + 5
+        while w.diagnostico_en_curso and time.monotonic() < deadline:
+            settle()
+        assert not w.diagnostico_en_curso
+        assert calls == ['refresh', 'diagnose', 'app']
+        results = finished.call_args.args[1]
+        pending = next(item for item in results if item['name'] == 'Actualizaciones pendientes')
+        version = next(item for item in results if item['name'] == 'Versión de AiO Debian GUI')
+        assert pending['status'] == ('unknown' if refresh_error else 'ok')
+        assert version['status'] == ('unknown' if refresh_error else 'ok')
+        w.ventana_diagnostico.destroy()
+        settle()
+w.destroy()
 print('GTK: selección, confirmación, exclusión Stable, diagnóstico, consola, resultados y adaptación en cuatro idiomas OK')

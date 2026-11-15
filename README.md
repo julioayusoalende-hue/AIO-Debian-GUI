@@ -6,7 +6,7 @@
 [![Licencia GPL-3.0](https://img.shields.io/badge/licencia-GPL--3.0-blue)](LICENSE)
 [![Descargas](https://img.shields.io/badge/descargas-Releases-red)](../../releases/latest)
 
-AiO Debian GUI reúne tareas habituales de administración en una aplicación GTK. Antes de las operaciones delicadas presenta comprobaciones y pide confirmación; el diagnóstico es de solo lectura. Es un proyecto independiente del script de consola [aio-debian](https://github.com/julioayusoalende-hue/aio-debian).
+AiO Debian GUI reúne tareas habituales de administración en una aplicación GTK. Antes de las operaciones delicadas presenta comprobaciones y pide confirmación. Es un proyecto independiente del script de consola [aio-debian](https://github.com/julioayusoalende-hue/aio-debian).
 
 **Descarga la última versión estable desde [Releases](../../releases/latest).** Allí encontrarás los paquetes disponibles y el archivo `SHA256SUMS`. Las versiones anteriores se conservan en el [historial de releases](../../releases).
 
@@ -14,16 +14,17 @@ AiO Debian GUI reúne tareas habituales de administración en una aplicación GT
 
 - **Mantenimiento APT:** actualizar índices y paquetes, limpiar caché y retirar dependencias innecesarias, con comprobaciones preventivas y confirmación.
 - **Programación:** mantenimiento diario, semanal o mensual; consulta de próximas ejecuciones y resultados. No se programan eliminaciones ni cambios de kernel, controladores o repositorios.
-- **Diagnóstico:** informa sobre espacio, APT/dpkg, actualizaciones, DKMS, reinicios y servicios sin reparar ni modificar el sistema.
+- **Diagnóstico:** actualiza los índices APT con autorización de administrador y después informa sobre espacio, APT/dpkg, actualizaciones, DKMS, reinicios y servicios. No instala ni elimina paquetes.
 - **Sistema y hardware:** gestión de repositorios, kernel y Mesa de Backports; detección NVIDIA con instalación conservadora en Debian. Algunas operaciones tienen requisitos y bloqueos adicionales.
 - **Escritorio:** integración con Flatpak, AppImage y complementos de GNOME; interfaz en español, inglés, francés y chino, con temas claro y oscuro.
 
 La aplicación es compatible con Debian 12 o superior y Ubuntu 24.04/26.04 LTS. Algunas tareas dependen de la distribución y se bloquean cuando no son compatibles.
 
-El diagnóstico consulta los índices APT locales, que pueden no incluir las actualizaciones más recientes del sistema o de AiO. Para renovarlos sin instalar paquetes, ejecuta `sudo apt update` y vuelve a diagnosticar.
+El diagnóstico solicita autorización para renovar los índices APT antes de comprobar las actualizaciones del sistema y de AiO. Si se rechaza la autorización o falla la actualización, informa del error y no presenta las lecturas APT como actualizadas. Flatpak necesita el asistente de la misma versión instalado en el anfitrión para renovar los índices.
 
 ## Novedades recientes
 
+- **2.7.7:** actualización autorizada de los índices APT antes del diagnóstico, con aviso si falla.
 - **2.7.6:** diagnóstico más completo de paquetes actualizables y aviso sobre los índices APT locales que pueden ocultar actualizaciones.
 - **2.7.5:** el paquete DEB instala `needrestart`; si la comprobación de reinicio no está disponible o falla, AiO informa del error en lugar de indicar que no hace falta reiniciar. Para AppImage y Flatpak, instala `needrestart` en el anfitrión si quieres usar esa comprobación.
 - **2.7.4:** correcciones para las notificaciones de escritorio y el aviso de reinicio del mantenimiento programado.

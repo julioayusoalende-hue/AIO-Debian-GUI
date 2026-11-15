@@ -33,7 +33,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 LISTAS_ACTUALIZADAS=0
 UPGRADE_PLAN=""
 REINICIO_REQUERIDO=0
-HELPER_VERSION=2.7.6
+HELPER_VERSION=2.7.7
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -286,6 +286,14 @@ asegurar_listas() {
     fi
     err "Error al actualizar las listas de paquetes. Comprueba tu conexión."
     return 1
+}
+
+refrescar_indices_diagnostico() {
+    if ! timeout --kill-after=10s 180s apt-get -o APT::Update::Error-Mode=any update; then
+        err "No se pudieron actualizar todos los índices APT."
+        return 1
+    fi
+    echo "##DIAGNOSTIC_APT:updated"
 }
 
 # Instala un paquete (nombre Debian) si falta. $1 = paquete, $2 = aviso si falla
@@ -1271,6 +1279,17 @@ main() {
     fi
 
     case "${1:-}" in
+        --refresh-diagnostic-apt)
+            [ "$#" -eq 1 ] || { err "Argumentos de diagnóstico no válidos."; exit 2; }
+            install -d -o root -g root -m 0755 /run/aio-debian-gui || exit 1
+            umask 077
+            exec 9>"$MAINTENANCE_LOCK" || exit 1
+            umask 022
+            chmod 0600 "$MAINTENANCE_LOCK" || exit 1
+            flock -n 9 || { err "Ya hay otro mantenimiento de AiO en curso."; exit 1; }
+            refrescar_indices_diagnostico
+            exit $?
+            ;;
         --schedule-save)
             [ "$#" -eq 2 ] || { err "Configuración de programación no válida."; exit 2; }
             [ -r "$SCHEDULER_MODULE" ] || { err "Instala la integración de programación de AiO en el anfitrión."; exit 1; }

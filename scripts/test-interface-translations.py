@@ -51,6 +51,10 @@ essential = (
     "%d actualizaciones estimadas por APT%s.",
     "%d actualizaciones disponibles según los índices APT locales.",
     "No se pudo interpretar la lista de actualizaciones APT.",
+    "Antes del diagnóstico se actualizarán los índices APT con autorización de administrador. No se instalarán ni eliminarán paquetes.",
+    "Actualizando índices APT y analizando el sistema…",
+    "No se pudieron actualizar los índices APT; los resultados pueden estar desactualizados.",
+    "No se pudieron verificar las actualizaciones con índices APT actualizados.",
     "Los índices APT pueden estar desactualizados y ocultar actualizaciones del sistema o de AiO. Para renovarlos sin instalar paquetes, ejecuta «sudo apt update» y vuelve a diagnosticar.",
     "Último índice de paquetes: hace %d días.",
 )

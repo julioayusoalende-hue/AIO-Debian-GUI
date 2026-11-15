@@ -1,5 +1,11 @@
 # Cambios
 
+## 2.7.7
+
+- Antes de diagnosticar, actualiza los índices APT mediante el asistente autorizado por Polkit, sin instalar ni eliminar paquetes.
+- Si se cancela la autorización o falla alguna fuente, el diagnóstico indica que las actualizaciones APT no se han podido comprobar con índices actualizados.
+- En Flatpak, las comprobaciones del sistema se ejecutan sin privilegios en el anfitrión; para renovar los índices se requiere el asistente actualizado.
+
 ## 2.7.6
 
 - Diagnosticar cuenta los paquetes actualizables según los índices APT, incluidos los que una simulación de `upgrade` puede dejar pendientes.

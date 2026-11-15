@@ -66,6 +66,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.7.7": "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.",
     "2.7.6": "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.",
     "2.7.5": "Comprobación de reinicio más fiable con needrestart.",
     "2.7.4": "Corregido el envío de notificaciones y avisos programados a sesiones de usuario.",
@@ -549,6 +550,7 @@ TRADUCCIONES = {
 
 # Textos del actualizador integrados con las traducciones existentes.
 TRADUCCIONES["en"].update({
+    "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.": "Diagnostics refresh APT indexes with authorization before checking the system.",
     "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.": "More complete APT update diagnostics and a warning about local indexes.",
     "Buscar actualizaciones": "Check for updates",
     "Confirmar actualización": "Confirm update",
@@ -560,6 +562,7 @@ TRADUCCIONES["en"].update({
     "No se pudo actualizar": "Unable to update",
 })
 TRADUCCIONES["fr"].update({
+    "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.": "Le diagnostic actualise les index APT avec autorisation avant de vérifier le système.",
     "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.": "Diagnostic des mises à jour APT plus complet et avertissement sur les index locaux.",
     "Buscar actualizaciones": "Rechercher des mises à jour",
     "Confirmar actualización": "Confirmer la mise à jour",
@@ -571,6 +574,7 @@ TRADUCCIONES["fr"].update({
     "No se pudo actualizar": "Mise à jour impossible",
 })
 TRADUCCIONES["zh"].update({
+    "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.": "诊断会在检查系统前经授权刷新 APT 索引。",
     "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.": "更全面地诊断 APT 更新并提示本地索引问题。",
     "Buscar actualizaciones": "检查更新",
     "Confirmar actualización": "确认更新",
@@ -1273,6 +1277,25 @@ TRADUCCIONES["zh"].update({
     "%d actualizaciones disponibles según los índices APT locales.": "根据本地 APT 索引，有 %d 项更新可用。",
     "No se pudo interpretar la lista de actualizaciones APT.": "无法解析 APT 更新列表。",
     "Los índices APT pueden estar desactualizados y ocultar actualizaciones del sistema o de AiO. Para renovarlos sin instalar paquetes, ejecuta «sudo apt update» y vuelve a diagnosticar.": "APT 索引可能已过期，导致系统或 AiO 更新不可见。要在不安装软件包的情况下刷新索引，请运行“sudo apt update”并重新诊断。",
+})
+
+TRADUCCIONES["en"].update({
+    "Antes del diagnóstico se actualizarán los índices APT con autorización de administrador. No se instalarán ni eliminarán paquetes.": "Before diagnostics, APT indexes will be refreshed with administrator authorization. No packages will be installed or removed.",
+    "Actualizando índices APT y analizando el sistema…": "Refreshing APT indexes and analyzing the system…",
+    "No se pudieron actualizar los índices APT; los resultados pueden estar desactualizados.": "Could not refresh APT indexes; results may be outdated.",
+    "No se pudieron verificar las actualizaciones con índices APT actualizados.": "Could not check for updates using refreshed APT indexes.",
+})
+TRADUCCIONES["fr"].update({
+    "Antes del diagnóstico se actualizarán los índices APT con autorización de administrador. No se instalarán ni eliminarán paquetes.": "Avant le diagnostic, les index APT seront actualisés avec une autorisation administrateur. Aucun paquet ne sera installé ni supprimé.",
+    "Actualizando índices APT y analizando el sistema…": "Actualisation des index APT et analyse du système…",
+    "No se pudieron actualizar los índices APT; los resultados pueden estar desactualizados.": "Impossible d’actualiser les index APT ; les résultats peuvent être obsolètes.",
+    "No se pudieron verificar las actualizaciones con índices APT actualizados.": "Impossible de vérifier les mises à jour avec des index APT actualisés.",
+})
+TRADUCCIONES["zh"].update({
+    "Antes del diagnóstico se actualizarán los índices APT con autorización de administrador. No se instalarán ni eliminarán paquetes.": "诊断前将使用管理员授权刷新 APT 索引。不会安装或删除软件包。",
+    "Actualizando índices APT y analizando el sistema…": "正在刷新 APT 索引并分析系统…",
+    "No se pudieron actualizar los índices APT; los resultados pueden estar desactualizados.": "无法刷新 APT 索引；结果可能已过期。",
+    "No se pudieron verificar las actualizaciones con índices APT actualizados.": "无法使用已刷新的 APT 索引检查更新。",
 })
 
 def traducir(texto):
@@ -2867,6 +2890,8 @@ class VentanaPrincipal(Gtk.Window):
         return marco
 
     def _abrir_diagnostico(self, _boton=None):
+        if self.en_curso or self.programando or self.comprobando_actualizacion:
+            return
         if self.diagnostico_en_curso:
             if self.ventana_diagnostico is not None:
                 self.ventana_diagnostico.present()
@@ -2888,15 +2913,10 @@ class VentanaPrincipal(Gtk.Window):
         contenedor.set_spacing(10)
         contenedor.set_border_width(12)
         aviso = etiqueta(traducir(
-            "Análisis de solo lectura. No instala, elimina ni repara paquetes. "
-            "Las comprobaciones dependen del estado de los índices APT."), dim=True)
+            "Antes del diagnóstico se actualizarán los índices APT con autorización de administrador. "
+            "No se instalarán ni eliminarán paquetes."), dim=True)
         contenedor.pack_start(aviso, False, False, 0)
-        if not es_flatpak():
-            contenedor.pack_start(etiqueta(traducir(
-                "Los índices APT pueden estar desactualizados y ocultar actualizaciones del sistema o de AiO. "
-                "Para renovarlos sin instalar paquetes, ejecuta «sudo apt update» y vuelve a diagnosticar."
-            ), dim=True), False, False, 0)
-        self.etiqueta_diagnostico = etiqueta(traducir("Analizando el sistema…"))
+        self.etiqueta_diagnostico = etiqueta(traducir("Actualizando índices APT y analizando el sistema…"))
         contenedor.pack_start(self.etiqueta_diagnostico, False, False, 0)
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
@@ -2905,16 +2925,34 @@ class VentanaPrincipal(Gtk.Window):
         scroll.add(self.lista_diagnostico)
         dialogo.show_all()
         self.diagnostico_en_curso = True
-        self.btn_diagnostico.set_sensitive(False)
+        self._actualizar_sensibilidad()
         self.btn_actualizar_diagnostico = None
         formato = formato_actualizacion()
         version_instalada = version_app()
 
         def analizar():
             try:
-                resultados = core_diagnostics.run_diagnostics()
+                helper = helper_mantenimiento()
+                error_apt = core_diagnostics.refresh_apt_indices(
+                    comando_pkexec(helper, "C.UTF-8", "--refresh-diagnostic-apt"))
+                resultados = (core_diagnostics.run_host_diagnostics() if es_flatpak()
+                              else core_diagnostics.run_diagnostics())
+                if error_apt:
+                    resultados.insert(0, {
+                        "name": "Índices de APT", "status": "unknown",
+                        "detail": "No se pudieron actualizar los índices APT; los resultados pueden estar desactualizados.",
+                        "advice": error_apt,
+                    })
+                    for resultado in resultados[1:]:
+                        if resultado["name"] in ("Actualizaciones pendientes", "Índices de APT"):
+                            resultado.update(status="unknown",
+                                detail="No se pudieron verificar las actualizaciones con índices APT actualizados.",
+                                advice="")
                 estado_app = core_updates.estado_actualizacion_app(
                     formato, version_instalada, APP_ID_FLATPAK)
+                if error_apt and formato == "deb":
+                    estado_app = {"status": "unknown",
+                                  "detail": "No se pudieron verificar las actualizaciones con índices APT actualizados."}
                 estado = {
                     "available": "warning", "current": "ok",
                     "unknown": "unknown", "unsupported": "unknown",
@@ -2948,7 +2986,7 @@ class VentanaPrincipal(Gtk.Window):
 
     def _diagnostico_terminado(self, dialogo, resultados, error):
         self.diagnostico_en_curso = False
-        self.btn_diagnostico.set_sensitive(not self.en_curso)
+        self._actualizar_sensibilidad()
         self._resumir_diagnostico(resultados, error)
         if self.ventana_diagnostico is not dialogo:
             return GLib.SOURCE_REMOVE
@@ -3226,7 +3264,7 @@ class VentanaPrincipal(Gtk.Window):
         self._escribir("[!] %s\n" % mensaje, "aviso")
 
     def _actualizar_sensibilidad(self):
-        disponible = not self.en_curso and not self.comprobando_actualizacion and not self.programando and self.distribucion != "no-soportada"
+        disponible = not self.en_curso and not self.comprobando_actualizacion and not self.programando and not self.diagnostico_en_curso and self.distribucion != "no-soportada"
         self._actualizar_seleccion()
         self.btn_iniciar.set_sensitive(disponible and not self.consultando_estados and bool(self._pasos_seleccionados()))
         if self.btn_actualizar is not None:
@@ -3237,7 +3275,8 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_preferencias_menu.set_sensitive(disponible)
         self.btn_programar.set_sensitive(disponible)
         self.btn_borrar.set_sensitive(not self.en_curso)
-        self.btn_diagnostico.set_sensitive(not self.en_curso and not self.diagnostico_en_curso)
+        self.btn_diagnostico.set_sensitive(not self.en_curso and not self.diagnostico_en_curso
+                                           and not self.comprobando_actualizacion and not self.programando)
         if self.btn_actualizar_diagnostico is not None:
             self.btn_actualizar_diagnostico.set_sensitive(
                 not self.en_curso and not self.comprobando_actualizacion)
