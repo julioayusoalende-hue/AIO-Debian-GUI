@@ -25,10 +25,10 @@ jobs:
             python3 python3-gi gir1.2-gtk-3.0 \
             shellcheck desktop-file-utils libfuse2t64 \
             curl ca-certificates file xz-utils \
-            flatpak flatpak-builder appstream
+            flatpak flatpak-builder appstream xvfb xauth
 
       - name: Run project checks
-        run: ./scripts/check.sh
+        run: xvfb-run -a ./scripts/check.sh
 
       - name: Install appimagetool
         run: |

@@ -10,6 +10,7 @@
 #
 # Protocolo de salida (una línea por mensaje):
 #   ##STEP:<n>:<total>:<título>   inicio de un paso
+#   ##RESULT:<tarea>:<0|1>       resultado de una tarea (1 = error)
 #   ##REBOOT:<0|1>                resultado de la comprobación de reinicio
 #   ##DONE:<0|1>                  fin (1 = hubo algún paso con errores)
 
@@ -32,7 +33,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 LISTAS_ACTUALIZADAS=0
 UPGRADE_PLAN=""
 REINICIO_REQUERIDO=0
-HELPER_VERSION=2.5.7
+HELPER_VERSION=2.6.0
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 POLKIT_RULES_DIR=/etc/polkit-1/rules.d
@@ -1193,10 +1194,12 @@ main() {
         echo "##STEP:1:1:Actualizar aplicaciones Flatpak del usuario"
         if flatpak --user update -y && flatpak --user uninstall --unused -y; then
             ok "Flatpak de usuario actualizado y dependencias sin uso eliminadas."
+            echo "##RESULT:flatpak-update:0"
             echo "##DONE:0"
             return 0
         fi
         err "No se pudieron actualizar los Flatpak de usuario."
+        echo "##RESULT:flatpak-update:1"
         echo "##DONE:1"
         return 1
     fi
@@ -1307,11 +1310,14 @@ main() {
         i=$((i + 1))
         echo "##STEP:${i}:${total}:${TITULOS[$s]}"
         if ! "paso_${s//-/_}"; then
+            echo "##RESULT:${s}:1"
             fallos=1
             if [[ "$CRITICOS" == *" $s "* ]]; then
                 echo "##DONE:1"
                 exit 1
             fi
+        else
+            echo "##RESULT:${s}:0"
         fi
     done
 

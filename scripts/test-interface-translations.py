@@ -29,6 +29,10 @@ for node in tree.body:
         exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), "exec"), namespace)
 
 essential = (
+    "Detalles técnicos", "No comprobado", "Sin incidencias",
+    "Mantenimiento habitual", "Aplicaciones y repositorios",
+    "Kernel y controladores · Avanzado", "Ejecutar 1 tarea", "Ejecutar %d tareas",
+    "No hay tareas seleccionadas.", "Pendiente", "En curso", "Completada", "No ejecutada",
     "La comprobación de actualizaciones de AiO funciona también con APT en español.",
     "2.0.9 — Traducciones completas para los paneles y el diagnóstico preventivo.",
     "Por defecto Polkit solicita contraseña. Esta excepción es voluntaria y aumenta los riesgos de seguridad.",

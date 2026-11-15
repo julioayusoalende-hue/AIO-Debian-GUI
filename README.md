@@ -8,7 +8,7 @@
 
 AiO Debian GUI reúne tareas habituales de administración en una aplicación GTK, con **confirmaciones explícitas y comprobaciones preventivas** para las operaciones delicadas. Es un proyecto independiente del script de consola [aio-debian](https://github.com/julioayusoalende-hue/aio-debian).
 
-> **Versión actual: 2.5.7.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
+> **Versión actual: 2.6.0.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
 
 ## Funciones principales
 
@@ -20,7 +20,7 @@ AiO Debian GUI reúne tareas habituales de administración en una aplicación GT
 | Retorno a Stable | Preparar el retorno de kernel y Mesa desde Backports con vista previa y simulación APT (2.1.0). |
 | Diagnóstico | Revisar espacio, dpkg/APT, actualizaciones, índices, DKMS, reinicios, servicios y versión de AiO, sin modificar el sistema. |
 | Aplicaciones | Herramientas auxiliares, soporte AppImage, Flatpak/Flathub y complementos GNOME. |
-| Interfaz | Dos paneles de igual ancho, consola separable, historial, preferencias, temas claro/oscuro y traducciones. |
+| Interfaz | Paneles adaptables, selección de tareas, diagnóstico resumido, consola plegable y separable, historial, preferencias, temas claro/oscuro y traducciones. |
 | Actualizaciones de AiO | Comprobación desde Diagnosticar y opción de reiniciar la aplicación tras actualizar, según el formato instalado. |
 
 ## Novedades destacadas de la rama 2.x
@@ -115,15 +115,23 @@ Pulsa **Diagnosticar** en «Información del sistema» para abrir un informe de 
 
 ## Consola en una ventana separada (v2.0.4)
 
-En la cabecera de «Salida de la consola», pulsa **Abrir en otra ventana** para mostrar los mensajes de ejecución en una ventana independiente, ampliable y redimensionable. La consola de la ventana principal se oculta mientras está separada. Ambas vistas utilizan el **mismo buffer GTK**, por lo que el texto, los colores, las nuevas líneas y el historial son idénticos. Para volver a colocarla en la aplicación, pulsa **Volver a integrar** o cierra la ventana de consola. Cerrar esta ventana **no interrumpe** las tareas que se estén ejecutando. El modo simple continúa ocultando la consola.
+En la cabecera de «Salida de la consola», pulsa **Abrir en otra ventana** para mostrar los mensajes de ejecución en una ventana independiente, ampliable y redimensionable. La consola de la ventana principal se oculta mientras está separada. Ambas vistas utilizan el **mismo buffer GTK**, por lo que el texto, los colores, las nuevas líneas y el historial son idénticos. Para volver a colocarla en la aplicación, pulsa **Volver a integrar** o cierra la ventana de consola. Cerrar esta ventana **no interrumpe** las tareas que se estén ejecutando. En modo simple la consola permanece oculta hasta que ocurre un error.
 
 ## Menú principal (v2.0.3)
 
 Un único menú en la cabecera agrupa, en este orden: **Preferencias**, **Historial de mantenimiento**, **Buscar actualizaciones** y **Acerca de**. No hay botones duplicados en la cabecera. Las actualizaciones solo se habilitan para instalaciones DEB, AppImage o Flatpak.
 
-## Diseño de interfaz (v2.0.2)
+## Diseño de interfaz (v2.6.0)
 
-La ventana muestra **dos paneles lado a lado**: información del sistema y novedades a la izquierda, tareas de mantenimiento a la derecha. El separador vertical permanece en el centro de la ventana y ambos paneles mantienen el mismo ancho al redimensionar. Cada panel se desplaza independientemente. En la cabecera hay un único acceso a Preferencias; el menú desplegable conserva el Historial. En la parte inferior siguen disponibles el progreso, el botón principal y la consola.
+En escritorio, los dos paneles tienen el mismo ancho y el separador vertical permanece centrado. Por debajo de 900 píxeles se apilan. Cada panel se desplaza independientemente.
+
+La cabecera muestra la distribución y la versión. La tarjeta del sistema presenta el estado del diagnóstico y una recomendación; **Detalles técnicos** despliega la información adicional. El diagnóstico diferencia **Sin incidencias**, **Requiere atención** y **No comprobado**.
+
+Las tareas se seleccionan con casillas y se agrupan en **Mantenimiento habitual**, **Aplicaciones y repositorios** y **Kernel y controladores · Avanzado**. El grupo avanzado comienza plegado y sus tareas no se activan por defecto. La autorización sin contraseña sigue siendo opcional y se configura con un interruptor separado.
+
+**Tu selección** y el botón **Ejecutar N tareas** reflejan lo que se ejecutará. Antes de comenzar se revisa la selección en una confirmación. Durante el mantenimiento se muestra el resultado de cada tarea.
+
+La consola comienza plegada; puede abrirse bajo demanda y se despliega automáticamente ante errores. En modo simple permanece oculta hasta que ocurre un error, pero se conserva el registro técnico.
 
 ## Diseño de interfaz anterior (v2.0.1)
 
@@ -419,7 +427,7 @@ están completas y su selector queda desactivado; el estado se vuelve a comproba
 aplicación. Si la espera de autorización de Polkit no responde, puede cancelarse desde la interfaz
 y se cancela automáticamente tras 90 segundos.
 La comprobación inicial de las tareas se ejecuta en segundo plano; el botón de inicio
-permanece disponible para las tareas seleccionadas aunque falle o se retrase la consulta de estados.
+se habilita cuando termina la consulta, también si esta falla o agota su tiempo de espera.
 El menú superior permite elegir el idioma de la interfaz (español, inglés, francés o chino),
 el tema claro u oscuro y el modo simple, que oculta la salida detallada de las tareas. Las
 preferencias se guardan para el usuario actual; el español, el tema claro y la interfaz completa

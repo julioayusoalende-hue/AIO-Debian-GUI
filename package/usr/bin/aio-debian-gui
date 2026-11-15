@@ -66,6 +66,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.6.0": "Paneles adaptables, selección clara de tareas, diagnóstico resumido y consola plegable con resultados por tarea.",
     "2.5.7": "Paneles principales del mismo ancho con el separador vertical centrado al redimensionar la ventana.",
     "2.5.6": "Protecciones APT corregidas, validación del plan de actualización y comprobaciones del anfitrión desde Flatpak.",
     "2.5.5": "Corregido el inicio en GTK 3 con GDK 3 explícito.",
@@ -900,6 +901,100 @@ TRADUCCIONES["zh"].update({
     "Nueva opción de preparación del retorno a kernel y Mesa Stable desde Backports, con simulación segura.": "新增从 Backports 安全准备恢复 Stable 内核和 Mesa 的选项。",
 })
 
+TRADUCCIONES["en"].update({'Desarrollo': 'Development',
+ 'Selecciona las tareas que quieres ejecutar.': 'Select the tasks you want to run.',
+ 'Detalles técnicos': 'Technical details',
+ 'No comprobado': 'Not checked',
+ 'Ejecuta el diagnóstico para revisar el estado del sistema.': 'Run diagnostics to check system '
+                                                               'health.',
+ '<b>Tu selección</b>': '<b>Your selection</b>',
+ 'Autorización de administrador': 'Administrator authorization',
+ 'Mantenimiento habitual': 'Routine maintenance',
+ 'Aplicaciones y repositorios': 'Applications and repositories',
+ 'Kernel y controladores · Avanzado': 'Kernel and drivers · Advanced',
+ 'Ejecutar 1 tarea': 'Run 1 task',
+ 'Ejecutar %d tareas': 'Run %d tasks',
+ 'No hay tareas seleccionadas.': 'No tasks selected.',
+ 'Sin incidencias': 'No issues found',
+ 'No se detectaron incidencias en las comprobaciones realizadas.': 'No issues found in the checks '
+                                                                   'performed.',
+ 'Pendiente': 'Pending',
+ 'En curso': 'Running',
+ 'Completada': 'Completed',
+ 'Error': 'Error',
+ 'No ejecutada': 'Not run',
+ 'Paneles adaptables, selección clara de tareas, diagnóstico resumido y consola plegable con resultados por tarea.': 'Responsive '
+                                                                                                                     'panels, '
+                                                                                                                     'clear '
+                                                                                                                     'task '
+                                                                                                                     'selection, '
+                                                                                                                     'diagnostic '
+                                                                                                                     'overview '
+                                                                                                                     'and '
+                                                                                                                     'collapsible '
+                                                                                                                     'console '
+                                                                                                                     'with '
+                                                                                                                     'per-task '
+                                                                                                                     'results.'})
+
+TRADUCCIONES["fr"].update({'Desarrollo': 'Développement',
+ 'Selecciona las tareas que quieres ejecutar.': 'Sélectionnez les tâches à exécuter.',
+ 'Detalles técnicos': 'Détails techniques',
+ 'No comprobado': 'Non vérifié',
+ 'Ejecuta el diagnóstico para revisar el estado del sistema.': 'Lancez le diagnostic pour vérifier '
+                                                               'le système.',
+ '<b>Tu selección</b>': '<b>Votre sélection</b>',
+ 'Autorización de administrador': 'Autorisation administrateur',
+ 'Mantenimiento habitual': 'Maintenance courante',
+ 'Aplicaciones y repositorios': 'Applications et dépôts',
+ 'Kernel y controladores · Avanzado': 'Noyau et pilotes · Avancé',
+ 'Ejecutar 1 tarea': 'Exécuter 1 tâche',
+ 'Ejecutar %d tareas': 'Exécuter %d tâches',
+ 'No hay tareas seleccionadas.': 'Aucune tâche sélectionnée.',
+ 'Sin incidencias': 'Aucun problème détecté',
+ 'No se detectaron incidencias en las comprobaciones realizadas.': 'Aucun problème détecté dans '
+                                                                   'les vérifications effectuées.',
+ 'Pendiente': 'En attente',
+ 'En curso': 'En cours',
+ 'Completada': 'Terminée',
+ 'Error': 'Erreur',
+ 'No ejecutada': 'Non exécutée',
+ 'Paneles adaptables, selección clara de tareas, diagnóstico resumido y consola plegable con resultados por tarea.': 'Panneaux '
+                                                                                                                     'adaptatifs, '
+                                                                                                                     'sélection '
+                                                                                                                     'claire, '
+                                                                                                                     'diagnostic '
+                                                                                                                     'synthétique '
+                                                                                                                     'et '
+                                                                                                                     'console '
+                                                                                                                     'repliable '
+                                                                                                                     'avec '
+                                                                                                                     'résultats '
+                                                                                                                     'par '
+                                                                                                                     'tâche.'})
+
+TRADUCCIONES["zh"].update({'Desarrollo': '开发版',
+ 'Selecciona las tareas que quieres ejecutar.': '请选择要执行的任务。',
+ 'Detalles técnicos': '技术详情',
+ 'No comprobado': '未检查',
+ 'Ejecuta el diagnóstico para revisar el estado del sistema.': '运行诊断以检查系统状态。',
+ '<b>Tu selección</b>': '<b>已选任务</b>',
+ 'Autorización de administrador': '管理员授权',
+ 'Mantenimiento habitual': '日常维护',
+ 'Aplicaciones y repositorios': '应用与软件源',
+ 'Kernel y controladores · Avanzado': '内核和驱动 · 高级',
+ 'Ejecutar 1 tarea': '执行 1 项任务',
+ 'Ejecutar %d tareas': '执行 %d 项任务',
+ 'No hay tareas seleccionadas.': '未选择任务。',
+ 'Sin incidencias': '未发现问题',
+ 'No se detectaron incidencias en las comprobaciones realizadas.': '已完成的检查未发现问题。',
+ 'Pendiente': '待执行',
+ 'En curso': '执行中',
+ 'Completada': '已完成',
+ 'Error': '错误',
+ 'No ejecutada': '未执行',
+ 'Paneles adaptables, selección clara de tareas, diagnóstico resumido y consola plegable con resultados por tarea.': '自适应面板、清晰的任务选择、诊断概览和含任务结果的可折叠控制台。'})
+
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)
 
@@ -1473,6 +1568,8 @@ class VentanaPrincipal(Gtk.Window):
         self.indicadores = {}
         self.ventana_consola = None
         self.log_separado = None
+        self.resultados_tareas = {}
+        self.estado_diagnostico = "No comprobado"
 
         self.distribucion = distribucion_anfitrion()
         self.flatpak_presente = es_flatpak() or shutil.which("flatpak") is not None
@@ -1480,6 +1577,7 @@ class VentanaPrincipal(Gtk.Window):
 
         self._construir_cabecera()
         self._construir_cuerpo()
+        self._actualizar_sensibilidad()
         self.connect("key-press-event", self._al_pulsar_tecla)
         self.connect("delete-event", self._al_cerrar)
 
@@ -1489,9 +1587,13 @@ class VentanaPrincipal(Gtk.Window):
         hb.set_show_close_button(True)
         formato = formato_actualizacion()
         hb.set_title(f"AiO Debian — {formato.upper()}" if formato else "AiO Debian")
-        hb.set_subtitle(traducir("Mantenimiento y configuración del sistema") +
-                        (" · Ubuntu LTS" if self.distribucion == "ubuntu" else
-                         " · Debian" if self.distribucion == "debian" else " · Sistema no compatible"))
+        version = version_app()
+        if not version_numerica(version):
+            version = traducir("Desarrollo")
+        hb.set_subtitle(("Ubuntu LTS" if self.distribucion == "ubuntu" else
+                         "Debian" if self.distribucion == "debian" else
+                         traducir("Sistema no compatible")) + " · " + version)
+
 
         self.btn_menu = Gtk.MenuButton()
         self.btn_menu.add(Gtk.Image.new_from_icon_name(
@@ -1742,7 +1844,8 @@ class VentanaPrincipal(Gtk.Window):
         dialogo.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
         dialogo.add_button(traducir("Continuar"), Gtk.ResponseType.OK)
         dialogo.set_default_response(Gtk.ResponseType.CANCEL)
-        detalle = "\n".join("• " + traducir(nombres[p]) for p in pasos)
+        detalle = (traducir("Ejecutar 1 tarea") if len(pasos) == 1 else traducir("Ejecutar %d tareas") % len(pasos))
+        detalle += "\n\n" + "\n".join("• " + traducir(nombres[p]) for p in pasos)
         detalle += ("\n\n" + traducir(
             "Esta es una vista previa de las tareas seleccionadas, no una simulación de APT. "
             "APT puede instalar, actualizar o eliminar dependencias. "
@@ -1873,19 +1976,11 @@ class VentanaPrincipal(Gtk.Window):
         if idioma_cambiado:
             self._reiniciar_interfaz()
             return
-        if modo_simple_activado:
-            if self.ventana_consola is not None:
-                self.ventana_consola.destroy()
-            self.buf.set_text("")
-        self.marco_consola.set_no_show_all(nuevas["modo_simple"])
-        self.cabecera_consola.set_no_show_all(nuevas["modo_simple"])
-        if nuevas["modo_simple"]:
-            self.marco_consola.set_visible(False)
-            self.cabecera_consola.set_visible(False)
-        else:
-            if self.ventana_consola is None:
-                self.marco_consola.show_all()
-            self.cabecera_consola.show_all()
+        if modo_simple_activado and self.ventana_consola is not None:
+            self.ventana_consola.destroy()
+        self.expansor_consola.set_expanded(False)
+        self.expansor_consola.set_no_show_all(nuevas["modo_simple"])
+        self.expansor_consola.set_visible(not nuevas["modo_simple"])
 
     def _reiniciar_interfaz(self):
         ancho, alto = self.get_size()
@@ -1904,38 +1999,39 @@ class VentanaPrincipal(Gtk.Window):
         # controles de ejecución ni la consola de la parte inferior.
         principal = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.add(principal)
-        paneles = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, homogeneous=True)
+        paneles = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         paneles.set_hexpand(True)
         paneles.set_vexpand(True)
         self.paneles_principales = paneles
-        contenedor_paneles = Gtk.Overlay()
-        contenedor_paneles.add(paneles)
-        separador = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
-        separador.set_halign(Gtk.Align.CENTER)
-        separador.set_valign(Gtk.Align.FILL)
-        contenedor_paneles.add_overlay(separador)
-        contenedor_paneles.set_overlay_pass_through(separador, True)
-        principal.pack_start(contenedor_paneles, True, True, 0)
+        self.grupo_ancho_paneles = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
+        principal.pack_start(paneles, True, True, 0)
 
         izquierda = Gtk.ScrolledWindow()
-        izquierda.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        izquierda.set_min_content_width(420)
+        izquierda.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        izquierda.set_min_content_width(260)
         izquierda.set_min_content_height(220)
         caja_izquierda = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         caja_izquierda.set_border_width(12)
         izquierda.add(caja_izquierda)
         caja_izquierda.pack_start(self._tarjeta_info(), False, False, 0)
+        self.grupo_ancho_paneles.add_widget(izquierda)
         paneles.pack_start(izquierda, True, True, 0)
+        separador = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
+        paneles.pack_start(separador, False, False, 0)
 
         derecha = Gtk.ScrolledWindow()
-        derecha.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        derecha.set_min_content_width(420)
+        derecha.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        derecha.set_min_content_width(260)
         caja_derecha = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         caja_derecha.set_border_width(12)
         derecha.add(caja_derecha)
         caja_derecha.pack_start(self._tarjeta_opciones(), False, False, 0)
+        self.grupo_ancho_paneles.add_widget(derecha)
         paneles.pack_start(derecha, True, True, 0)
-        # Las columnas homogéneas mantienen el divisor en el centro al redimensionar.
+        self.separador_paneles = separador
+        self.panel_izquierdo = izquierda
+        self.panel_derecho = derecha
+        self.connect("size-allocate", self._adaptar_paneles)
 
         inf = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         for margen in ("bottom", "start", "end"):
@@ -1950,7 +2046,8 @@ class VentanaPrincipal(Gtk.Window):
         texto_progreso = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7)
         fila = Gtk.Box(spacing=8)
         self.spinner = Gtk.Spinner()
-        self.estado = etiqueta(traducir("Listo. Elige las tareas y pulsa «Iniciar tareas»."))
+        self.estado = etiqueta("Selecciona las tareas que quieres ejecutar.")
+        self.estado.set_max_width_chars(40)
         self.estado.set_line_wrap(True)
         self.btn_cancelar = Gtk.Button(label=traducir("Cancelar espera"))
         self.btn_cancelar.set_no_show_all(True)
@@ -1972,6 +2069,21 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_iniciar.connect("clicked", self._iniciar)
         acciones_caja.pack_end(self.btn_iniciar, False, False, 0)
         inf.pack_start(acciones, False, False, 0)
+        self.resumen_ejecucion = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+        self.scroll_resultados = Gtk.ScrolledWindow()
+        self.scroll_resultados.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        self.scroll_resultados.set_min_content_height(45)
+        self.scroll_resultados.set_max_content_height(120)
+        self.scroll_resultados.set_propagate_natural_height(True)
+        self.scroll_resultados.add(self.resumen_ejecucion)
+        self.scroll_resultados.set_no_show_all(True)
+        inf.pack_start(self.scroll_resultados, False, False, 0)
+        self.expansor_consola = Gtk.Expander(label=traducir("Salida de la consola"))
+        self.expansor_consola.set_expanded(False)
+        self.expansor_consola.set_no_show_all(self.preferencias["modo_simple"])
+        contenido_consola = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        self.expansor_consola.add(contenido_consola)
+        inf.pack_start(self.expansor_consola, False, False, 0)
 
         cabecera_log = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         icono_log = Gtk.Image.new_from_icon_name("utilities-terminal-symbolic", Gtk.IconSize.BUTTON)
@@ -1993,14 +2105,12 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_borrar = btn_borrar
         cabecera_log.pack_end(btn_borrar, False, False, 0)
         self.cabecera_consola = cabecera_log
-        self.cabecera_consola.set_no_show_all(self.preferencias["modo_simple"])
-        inf.pack_start(cabecera_log, False, False, 0)
+        contenido_consola.pack_start(cabecera_log, False, False, 0)
 
         marco = Gtk.ScrolledWindow()
         marco.set_shadow_type(Gtk.ShadowType.IN)
         marco.set_size_request(-1, 132)
         marco.set_min_content_height(110)
-        marco.set_no_show_all(self.preferencias["modo_simple"])
         self.marco_consola = marco
         self.log = Gtk.TextView(editable=False, cursor_visible=False)
         self.log.set_monospace(True)
@@ -2014,10 +2124,76 @@ class VentanaPrincipal(Gtk.Window):
         self.buf.create_tag("info", foreground="#1c71d8")
         self.buf.create_tag("paso", weight=Pango.Weight.BOLD)
         marco.add(self.log)
-        inf.pack_start(marco, False, True, 0)
-        if self.preferencias["modo_simple"]:
-            marco.hide()
-            cabecera_log.hide()
+        contenido_consola.pack_start(marco, False, True, 0)
+        contenido_consola.show_all()
+
+    def _adaptar_paneles(self, _ventana, allocation):
+        estrecha = allocation.width < 900
+        orientacion = Gtk.Orientation.VERTICAL if estrecha else Gtk.Orientation.HORIZONTAL
+        if self.paneles_principales.get_orientation() != orientacion:
+            self.paneles_principales.set_orientation(orientacion)
+            self.seleccion_detalle.set_expanded(not estrecha)
+            self.paneles_principales.set_child_packing(self.panel_izquierdo, not estrecha, True, 0, Gtk.PackType.START)
+        self.separador_paneles.set_orientation(Gtk.Orientation.HORIZONTAL if estrecha else Gtk.Orientation.VERTICAL)
+
+    def _actualizar_seleccion(self):
+        pasos = self._pasos_seleccionados()
+        cantidad = len(pasos)
+        self.btn_iniciar.set_label(traducir("Trabajando…") if self.en_curso else
+            (traducir("Ejecutar 1 tarea") if cantidad == 1 else traducir("Ejecutar %d tareas") % cantidad))
+        nombres = {p[0]: traducir(p[1]) for p in PASOS}
+        detalle = "\n".join("• " + nombres[p] for p in pasos)
+        self.resumen_seleccion.set_text(detalle or traducir("No hay tareas seleccionadas."))
+
+    def _resumir_diagnostico(self, resultados, error=None):
+        estado = "No comprobado"
+        if not error and resultados:
+            estados = {r["status"] for r in resultados}
+            if estados & {"critical", "warning"}:
+                estado = "Requiere atención"
+            elif estados == {"ok"}:
+                estado = "Sin incidencias"
+        self.estado_diagnostico = estado
+        self.salud_sistema.set_text(traducir(estado))
+        incidencias = [r for r in resultados if r["status"] in ("critical", "warning", "unknown")]
+        incidencias.sort(key=lambda r: {"critical": 0, "warning": 1, "unknown": 2}[r["status"]])
+        if error:
+            consejo = traducir("No se pudo completar el diagnóstico: ") + error
+        elif incidencias:
+            primera = incidencias[0]
+            consejo = traducir(primera["name"]) + ": " + traducir(primera["advice"] or primera["detail"])
+        elif resultados:
+            consejo = traducir("No se detectaron incidencias en las comprobaciones realizadas.")
+        else:
+            consejo = traducir("Ejecuta el diagnóstico para revisar el estado del sistema.")
+        self.consejo_sistema.set_text(consejo)
+
+    def _preparar_resultados(self, pasos):
+        for widget in self.resumen_ejecucion.get_children():
+            widget.destroy()
+        self.resultados_tareas = {}
+        nombres = {p[0]: traducir(p[1]) for p in PASOS}
+        for tarea in pasos:
+            linea = etiqueta("")
+            linea.set_max_width_chars(80)
+            linea.set_tooltip_text(nombres[tarea])
+            self.resumen_ejecucion.pack_start(linea, False, False, 0)
+            self.resultados_tareas[tarea] = (linea, "Pendiente")
+            self._resultado_tarea(tarea, "Pendiente")
+        self.scroll_resultados.show()
+        self.resumen_ejecucion.show_all()
+
+    def _resultado_tarea(self, tarea, estado):
+        if tarea not in self.resultados_tareas:
+            return
+        nombres = {p[0]: traducir(p[1]) for p in PASOS}
+        linea, _anterior = self.resultados_tareas[tarea]
+        simbolos = {"Pendiente": "○", "En curso": "▶", "Completada": "✓", "Error": "!", "No ejecutada": "–"}
+        linea.set_text(simbolos[estado] + " " + nombres[tarea] + " · " + traducir(estado))
+        self.resultados_tareas[tarea] = (linea, estado)
+        if estado == "Error":
+            self.expansor_consola.show()
+            self.expansor_consola.set_expanded(True)
 
     def _alternar_ventana_consola(self, _boton=None):
         # Se reutiliza el mismo Gtk.TextBuffer en las dos vistas: no se
@@ -2055,8 +2231,7 @@ class VentanaPrincipal(Gtk.Window):
         self.ventana_consola = None
         self.log_separado = None
         self.btn_separar_consola.set_label(traducir("Abrir en otra ventana"))
-        if not self.preferencias["modo_simple"]:
-            self.marco_consola.show_all()
+        self.marco_consola.show_all()
 
     def _desplazar_consola(self, vista):
         marca = self.buf.create_mark(None, self.buf.get_end_iter(), False)
@@ -2097,7 +2272,17 @@ class VentanaPrincipal(Gtk.Window):
             dato.set_max_width_chars(25)
             dato.set_selectable(True)
             grid.attach(dato, 1, i, 1, 1)
-        caja.pack_start(grid, False, False, 0)
+        self.detalles_sistema = Gtk.Expander(label=traducir("Detalles técnicos"))
+        detalles = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        detalles.pack_start(grid, False, False, 0)
+        self.detalles_sistema.add(detalles)
+        self.salud_sistema = etiqueta("No comprobado")
+        self.salud_sistema.get_style_context().add_class("dim-label")
+        caja.pack_start(etiqueta(sistema_operativo()), False, False, 0)
+        caja.pack_start(self.salud_sistema, False, False, 0)
+        self.consejo_sistema = etiqueta("Ejecuta el diagnóstico para revisar el estado del sistema.", dim=True)
+        caja.pack_start(self.consejo_sistema, False, False, 0)
+        caja.pack_start(self.detalles_sistema, False, False, 0)
 
         ruta_logo, nombre_logo = logo_distribucion(self.distribucion)
         if ruta_logo and os.path.isfile(ruta_logo):
@@ -2108,7 +2293,7 @@ class VentanaPrincipal(Gtk.Window):
                 logo.set_tooltip_text(traducir(nombre_logo))
                 logo.set_halign(Gtk.Align.CENTER)
                 logo.get_accessible().set_name(traducir(nombre_logo))
-                caja.pack_start(logo, False, False, 6)
+                detalles.pack_start(logo, False, False, 6)
             except GLib.Error:
                 pass
 
@@ -2122,7 +2307,15 @@ class VentanaPrincipal(Gtk.Window):
             caja.pack_start(detalle, False, False, 0)
         if self.distribucion == "debian":
             self.nvidia_info_label = etiqueta("Buscando GPU NVIDIA…", dim=True)
-            caja.pack_start(self.nvidia_info_label, False, False, 3)
+            detalles.pack_start(self.nvidia_info_label, False, False, 3)
+        caja.pack_start(Gtk.Separator(), False, False, 8)
+        self.seleccion_detalle = Gtk.Expander(label=traducir("<b>Tu selección</b>"))
+        self.seleccion_detalle.set_use_markup(True)
+        self.seleccion_detalle.set_expanded(True)
+        self.resumen_seleccion = etiqueta("")
+        self.resumen_seleccion.set_max_width_chars(38)
+        self.seleccion_detalle.add(self.resumen_seleccion)
+        caja.pack_start(self.seleccion_detalle, False, False, 0)
         return marco
 
     def _abrir_diagnostico(self, _boton=None):
@@ -2203,6 +2396,7 @@ class VentanaPrincipal(Gtk.Window):
     def _diagnostico_terminado(self, dialogo, resultados, error):
         self.diagnostico_en_curso = False
         self.btn_diagnostico.set_sensitive(not self.en_curso)
+        self._resumir_diagnostico(resultados, error)
         if self.ventana_diagnostico is not dialogo:
             return GLib.SOURCE_REMOVE
         if error is not None:
@@ -2214,6 +2408,7 @@ class VentanaPrincipal(Gtk.Window):
             for estado in ("critical", "warning", "unknown", "ok")
         }
         self.etiqueta_diagnostico.set_text(
+            traducir(self.estado_diagnostico) + " · " +
             "%s: %s · %s: %s · %s: %s · %s: %s"
             % (traducir("Críticos"), recuento["critical"],
                traducir("Avisos"), recuento["warning"],
@@ -2283,11 +2478,14 @@ class VentanaPrincipal(Gtk.Window):
         cab.pack_end(presets, False, False, 0)
         tarjeta.pack_start(cab, False, False, 0)
 
-        self.chk_sin_contrasena = Gtk.CheckButton(
-            label=traducir(
-                "No solicitar contraseña de administrador en AiO (opcional)"
-            )
-        )
+        autorizacion = Gtk.Expander(label=traducir("Autorización de administrador"))
+        opciones_autorizacion = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        autorizacion.add(opciones_autorizacion)
+        fila_autorizacion = Gtk.Box(spacing=12)
+        fila_autorizacion.pack_start(etiqueta("No solicitar contraseña de administrador en AiO (opcional)"), True, True, 0)
+        self.chk_sin_contrasena = Gtk.Switch(valign=Gtk.Align.CENTER)
+        self.chk_sin_contrasena.get_accessible().set_name(traducir("No solicitar contraseña de administrador en AiO (opcional)"))
+        fila_autorizacion.pack_end(self.chk_sin_contrasena, False, False, 0)
         self.chk_sin_contrasena.set_tooltip_text(
             "Excepción persistente de Polkit solo para el asistente de AiO y este usuario local activo. "
             "Permite ejecutar todas las tareas de AiO como administrador sin contraseña; "
@@ -2295,24 +2493,33 @@ class VentanaPrincipal(Gtk.Window):
             "Desmarca para revocarla."
         )
         self.chk_sin_contrasena.set_active(autorizacion_sin_contrasena_activa())
-        self.chk_sin_contrasena.connect("toggled", self._cambiar_sin_contrasena)
-        tarjeta.pack_start(self.chk_sin_contrasena, False, False, 0)
-        tarjeta.pack_start(
+        self.chk_sin_contrasena.connect("notify::active", self._cambiar_sin_contrasena)
+        opciones_autorizacion.pack_start(fila_autorizacion, False, False, 0)
+        opciones_autorizacion.pack_start(
             etiqueta("Por defecto Polkit solicita contraseña. Esta excepción es voluntaria y aumenta los riesgos de seguridad.", dim=True),
             False, False, 0,
         )
 
-        for gid, gtitulo in GRUPOS:
-            visibles = [p for p in PASOS if p[4] == gid and self._visible(p[0])]
+        tarjeta.pack_start(autorizacion, False, False, 0)
+        grupos = (
+            ("Mantenimiento habitual", {"clock", "upgrade", "autoremove", "autoclean", "rebootcheck"}, True),
+            ("Aplicaciones y repositorios", {"repos", "tools", "flatpak-setup", "flatpak-update", "gnome-plugin", "ext-manager"}, True),
+            ("Kernel y controladores · Avanzado", {"backports-kernel-mesa", "revertir-backports", "nvidia-driver", "ubuntu-hwe"}, False),
+        )
+        self.grupos_tareas = []
+        for titulo, ids, abierto in grupos:
+            visibles = [p for p in PASOS if p[0] in ids and self._visible(p[0])]
             if not visibles:
                 continue
-            tarjeta.pack_start(etiqueta(gtitulo, dim=True), False, False, 2)
-            marco = Gtk.Frame()
+            grupo = Gtk.Expander(label=traducir(titulo))
+            grupo.set_expanded(abierto)
             lista = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
-            marco.add(lista)
-            for pid, titulo, desc, defecto, _ in visibles:
-                lista.add(self._fila(pid, titulo, desc, defecto))
-            tarjeta.pack_start(marco, False, False, 0)
+            lista.set_margin_top(6)
+            grupo.add(lista)
+            for pid, titulo_tarea, desc, defecto, _ in visibles:
+                lista.add(self._fila(pid, titulo_tarea, desc, defecto))
+            tarjeta.pack_start(grupo, False, False, 2)
+            self.grupos_tareas.append(grupo)
         return externa
 
     def _consultar_estados_tareas(self, inicial=False):
@@ -2453,7 +2660,7 @@ class VentanaPrincipal(Gtk.Window):
         if correcta:
             if inicial:
                 self.estado.set_text(
-                    traducir("Listo. Elige las tareas y pulsa «Iniciar tareas».")
+                    traducir("Selecciona las tareas que quieres ejecutar.")
                 )
             return
         mensaje = traducir(
@@ -2467,11 +2674,12 @@ class VentanaPrincipal(Gtk.Window):
 
     def _actualizar_sensibilidad(self):
         disponible = not self.en_curso and not self.comprobando_actualizacion and self.distribucion != "no-soportada"
-        self.btn_iniciar.set_sensitive(disponible)
+        self._actualizar_seleccion()
+        self.btn_iniciar.set_sensitive(disponible and not self.consultando_estados and bool(self._pasos_seleccionados()))
         if self.btn_actualizar is not None:
             self.btn_actualizar.set_sensitive(disponible and not self.comprobando_actualizacion
                                              and formato_actualizacion() in ("deb", "flatpak", "appimage"))
-        self.chk_sin_contrasena.set_sensitive(disponible)
+        self.chk_sin_contrasena.set_sensitive(disponible and not self.consultando_estados)
         self.btn_menu.set_sensitive(disponible)
         self.btn_preferencias_menu.set_sensitive(disponible)
         self.btn_borrar.set_sensitive(not self.en_curso)
@@ -2518,10 +2726,11 @@ class VentanaPrincipal(Gtk.Window):
         fila.set_tooltip_text(traducir(desc))
         indicador = Gtk.Label()
         indicador.set_no_show_all(True)
-        sw = Gtk.Switch(active=defecto, valign=Gtk.Align.CENTER)
+        sw = Gtk.CheckButton(active=defecto, valign=Gtk.Align.CENTER)
+        sw.get_accessible().set_name(traducir(titulo))
+        caja.pack_start(sw, False, False, 0)
         caja.pack_start(textos, True, True, 0)
         caja.pack_end(indicador, False, False, 0)
-        caja.pack_end(sw, False, False, 0)
         sw.connect("notify::active", self._cambio_switch_preset)
         if pid == "revertir-backports":
             sw.connect("notify::active", self._alternar_reversion_stable)
@@ -2546,10 +2755,7 @@ class VentanaPrincipal(Gtk.Window):
         self.actualizando_preset = True
         try:
             for pid, (sw, _d) in self.switches.items():
-                if pid in ("clock", "repos", "tools", "upgrade", "autoremove", "autoclean", "rebootcheck", "backports-kernel-mesa", "revertir-backports", "nvidia-driver"):
-                    sw.set_active(False)
-                elif pid == "flatpak-update" and pid not in self.estados_tareas:
-                    sw.set_active(True)
+                sw.set_active(pid == "flatpak-update" and pid not in self.estados_tareas)
         finally:
             self.actualizando_preset = False
         self._marcar_preset_seleccionado(self.botones_preset[1])
@@ -2572,6 +2778,7 @@ class VentanaPrincipal(Gtk.Window):
     def _cambio_switch_preset(self, _switch, _propiedad):
         if not self.actualizando_preset:
             self._marcar_preset_seleccionado(None)
+            self._actualizar_sensibilidad()
 
     def _marcar_preset_seleccionado(self, seleccionado):
         for boton in self.botones_preset:
@@ -2848,6 +3055,7 @@ class VentanaPrincipal(Gtk.Window):
         self.terminado_gestionado = False
         self.cancelacion_autorizacion = None
         self.tareas_en_ejecucion = list(pasos)
+        self._preparar_resultados(pasos)
         self.total_pasos = len(pasos)
         self._poner_ocupado(True)
         if solo_flatpak_usuario:
@@ -2885,7 +3093,8 @@ class VentanaPrincipal(Gtk.Window):
             'if ! command -v flatpak >/dev/null 2>&1; then '
             'echo "[-] Flatpak no está instalado."; echo "##DONE:1"; exit 1; fi; '
             'if flatpak --user update -y && flatpak --user uninstall --unused -y; then '
-            'echo "##DONE:0"; else echo "##DONE:1"; exit 1; fi'
+            'echo "##RESULT:flatpak-update:0"; echo "##DONE:0"; '
+            'else echo "##RESULT:flatpak-update:1"; echo "##DONE:1"; exit 1; fi'
         )
         self.buf.set_text("")
         self.necesita_reinicio = False
@@ -2894,6 +3103,7 @@ class VentanaPrincipal(Gtk.Window):
         self.terminado_gestionado = False
         self.cancelacion_autorizacion = None
         self.tareas_en_ejecucion = ["flatpak-update"]
+        self._preparar_resultados(self.tareas_en_ejecucion)
         self.total_pasos = 1
         self._poner_ocupado(True)
         self.estado.set_text("Actualizando Flatpak del usuario sin contraseña…")
@@ -2913,7 +3123,7 @@ class VentanaPrincipal(Gtk.Window):
         self.flujo = Gio.DataInputStream.new(self.proceso.get_stdout_pipe())
         self._leer_linea()
 
-    def _cambiar_sin_contrasena(self, boton):
+    def _cambiar_sin_contrasena(self, boton, _propiedad=None):
         if self.actualizando_sin_contrasena:
             return
 
@@ -3012,9 +3222,6 @@ class VentanaPrincipal(Gtk.Window):
 
     def _poner_ocupado(self, ocupado):
         self.en_curso = ocupado
-        self.btn_iniciar.set_label(
-            traducir("Trabajando…" if ocupado else "Iniciar tareas")
-        )
         self._actualizar_sensibilidad()
         if ocupado:
             self.spinner.start()
@@ -3082,7 +3289,13 @@ class VentanaPrincipal(Gtk.Window):
             self.barra.set_fraction((n - 1) / total)
             self.barra.set_text(traducir("Paso %d de %d") % (n, total))
             self.estado.set_text(traducir(titulo) + "…")
+            if 0 < n <= len(self.tareas_en_ejecucion):
+                self._resultado_tarea(self.tareas_en_ejecucion[n - 1], "En curso")
             self._escribir("\n▶ %s\n" % titulo, "paso")
+            return
+        if linea.startswith("##RESULT:"):
+            _, tarea, codigo = linea.split(":", 2)
+            self._resultado_tarea(tarea, "Completada" if codigo == "0" else "Error")
             return
         if linea.startswith("##REBOOT:"):
             self.necesita_reinicio = linea.endswith(":1")
@@ -3104,8 +3317,9 @@ class VentanaPrincipal(Gtk.Window):
         self._escribir(linea + "\n", tag)
 
     def _escribir(self, texto, tag=None):
-        if self.preferencias["modo_simple"]:
-            return
+        if tag == "error":
+            self.expansor_consola.show()
+            self.expansor_consola.set_expanded(True)
         fin = self.buf.get_end_iter()
         if tag:
             self.buf.insert_with_tags_by_name(fin, texto, tag)
@@ -3119,6 +3333,7 @@ class VentanaPrincipal(Gtk.Window):
         if self.terminado_gestionado:
             return
         self.terminado_gestionado = True
+        self.proceso = None
         self._finalizar_espera_autorizacion()
         cancelacion = self.cancelacion_autorizacion
         self.cancelacion_autorizacion = None
@@ -3168,6 +3383,9 @@ class VentanaPrincipal(Gtk.Window):
 
         self._poner_ocupado(False)
         self.barra.set_show_text(False)
+        for tarea, (_etiqueta, estado) in list(self.resultados_tareas.items()):
+            if estado in ("Pendiente", "En curso"):
+                self._resultado_tarea(tarea, "No ejecutada" if estado == "Pendiente" else "Error")
 
         if cancelacion:
             try:
@@ -3213,6 +3431,7 @@ class VentanaPrincipal(Gtk.Window):
         except OSError as error:
             self._escribir("[!] No se pudo guardar el historial: %s\n" % error, "aviso")
 
+        self._resumir_diagnostico([])
         if self.necesita_reinicio:
             self._preguntar_reinicio()
         self._consultar_estados_tareas()

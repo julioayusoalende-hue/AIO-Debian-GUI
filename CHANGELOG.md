@@ -1,5 +1,18 @@
 # Cambios
 
+## 2.6.0
+
+- Cabecera compacta con distribución y versión; información técnica en una sección desplegable.
+- Tareas agrupadas en mantenimiento habitual, aplicaciones y repositorios, y opciones avanzadas de kernel y controladores, plegadas inicialmente.
+- Casillas para seleccionar tareas e interruptor para la preferencia permanente de autorización.
+- Resumen de selección actualizado al instante, botón con el número de tareas y confirmación previa.
+- Diagnóstico con estado general, incidencias concretas y recomendaciones; las comprobaciones incompletas no se presentan como sistema sano.
+- Consola plegada por defecto, disponible bajo demanda y abierta automáticamente ante errores. Se conserva la ventana separada y el registro incluso en modo simple.
+- Resultados individuales por tarea: pendiente, en curso, completada, error o no ejecutada.
+- Dos paneles de igual ancho en escritorio; por debajo de 900 píxeles se apilan con desplazamiento independiente.
+- Corregida la liberación del estado ocupado tras finalizar un proceso y cancelar una ejecución posterior.
+- Traducciones y pruebas GTK en español, inglés, francés y chino, ejecutadas también en CI con pantalla virtual.
+
 ## 2.5.7
 
 - Los dos paneles principales ocupan partes iguales de la ventana.

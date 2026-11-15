@@ -45,6 +45,7 @@ if python3 -c 'import gi; gi.require_version("Gtk", "3.0")' >/dev/null 2>&1; the
     python3 scripts/test-preferences.py "$GUI" &&
         bien "preferencias, traducciones, Acerca de y modo simple" ||
         fallo "pruebas de preferencias"
+    python3 scripts/test-ui-flow.py && bien "flujos de interfaz y adaptación" || fallo "pruebas de interfaz"
 else
     echo "- PyGObject no instalado: se omiten las pruebas de preferencias"
 fi

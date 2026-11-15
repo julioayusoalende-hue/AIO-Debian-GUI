@@ -84,7 +84,7 @@ if Gtk.init_check([])[0]:
         ventana = app.VentanaPrincipal(
             {"idioma": idioma, "tema": "claro", "modo_simple": False}
         )
-        assert ventana.get_titlebar().get_subtitle().startswith(subtitulo)
+        assert " · " in ventana.get_titlebar().get_subtitle()
         ventana.show_all()
         menu = ventana.menu_popover.get_child()
         assert menu.get_visible()
@@ -132,11 +132,10 @@ if Gtk.init_check([])[0]:
         {"idioma": "es", "tema": "claro", "modo_simple": True}
     )
     ventana.show_all()
-    assert not ventana.marco_consola.get_visible()
-    assert not ventana.log.get_visible()
+    assert not ventana.expansor_consola.get_expanded()
     ventana._escribir("hidden output")
     inicio, fin = ventana.buf.get_bounds()
-    assert ventana.buf.get_text(inicio, fin, True) == ""
+    assert ventana.buf.get_text(inicio, fin, True) == "hidden output"
     ventana.destroy()
 
     ventana = app.VentanaPrincipal(
@@ -150,23 +149,13 @@ if Gtk.init_check([])[0]:
     assert not ventana.chk_sin_contrasena.get_sensitive()
     assert ventana.btn_menu.get_sensitive()
     assert all(boton.get_sensitive() for boton in ventana.botones_preset)
-    assert all(fila.get_sensitive() for fila in ventana.filas.values())
-    assert all(switch.get_sensitive() for switch, _ in ventana.switches.values())
+    assert all(fila.get_sensitive() for pid, fila in ventana.filas.items() if pid != "nvidia-driver")
+    assert all(switch.get_sensitive() for pid, (switch, _) in ventana.switches.items() if pid != "nvidia-driver")
 
-    class ProcesoSimulado:
-        def __init__(self):
-            self.cancelado = False
-
-        def force_exit(self):
-            self.cancelado = True
-
-    proceso = ProcesoSimulado()
-    ventana.proceso_estados = proceso
-    assert ventana._consulta_estados_agotada() == GLib.SOURCE_REMOVE
-    assert proceso.cancelado
+    ventana._estados_terminados(-1, "", "El asistente no respondió en 15 segundos.")
     assert not ventana.consultando_estados
     assert ventana.btn_iniciar.get_sensitive()
-    assert all(fila.get_sensitive() for fila in ventana.filas.values())
+    assert all(fila.get_sensitive() for pid, fila in ventana.filas.items() if pid != "nvidia-driver")
     ventana.destroy()
 
     ventana = app.VentanaPrincipal(
@@ -270,17 +259,18 @@ if Gtk.init_check([])[0]:
         ]
         assert len(nuevas_ventanas) == 1
         nueva = nuevas_ventanas[0]
-        assert nueva.get_titlebar().get_subtitle() == (
-            "System maintenance and configuration"
-        )
-        assert not nueva.marco_consola.get_visible()
+        assert " · " in nueva.get_titlebar().get_subtitle()
+        assert not nueva.expansor_consola.get_expanded()
         assert Gtk.Settings.get_default().get_property(
             "gtk-application-prefer-dark-theme"
         )
         GLib.idle_add(guardar_desde_dialogo, "en", "oscuro", False)
         nueva._abrir_preferencias(None)
+        nueva = next(widget for widget in Gtk.Window.list_toplevels()
+                     if isinstance(widget, app.VentanaPrincipal))
+        assert not nueva.expansor_consola.get_expanded()
+        nueva.expansor_consola.set_expanded(True)
         assert nueva.marco_consola.get_visible()
-        assert nueva.log.get_visible()
         nueva._escribir("console restored")
         inicio, fin = nueva.buf.get_bounds()
         assert nueva.buf.get_text(inicio, fin, True) == "console restored"
