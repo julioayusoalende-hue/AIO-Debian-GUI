@@ -8,7 +8,7 @@
 
 AiO Debian GUI reúne tareas habituales de administración en una aplicación GTK, con **confirmaciones explícitas y comprobaciones preventivas** para las operaciones delicadas. Es un proyecto independiente del script de consola [aio-debian](https://github.com/julioayusoalende-hue/aio-debian).
 
-> **Versión actual: 2.5.6.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
+> **Versión actual: 2.5.7.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
 
 ## Funciones principales
 
@@ -20,7 +20,7 @@ AiO Debian GUI reúne tareas habituales de administración en una aplicación GT
 | Retorno a Stable | Preparar el retorno de kernel y Mesa desde Backports con vista previa y simulación APT (2.1.0). |
 | Diagnóstico | Revisar espacio, dpkg/APT, actualizaciones, índices, DKMS, reinicios, servicios y versión de AiO, sin modificar el sistema. |
 | Aplicaciones | Herramientas auxiliares, soporte AppImage, Flatpak/Flathub y complementos GNOME. |
-| Interfaz | Dos paneles ajustables, consola separable, historial, preferencias, temas claro/oscuro y traducciones. |
+| Interfaz | Dos paneles de igual ancho, consola separable, historial, preferencias, temas claro/oscuro y traducciones. |
 | Actualizaciones de AiO | Comprobación desde Diagnosticar y opción de reiniciar la aplicación tras actualizar, según el formato instalado. |
 
 ## Novedades destacadas de la rama 2.x
@@ -123,7 +123,7 @@ Un único menú en la cabecera agrupa, en este orden: **Preferencias**, **Histor
 
 ## Diseño de interfaz (v2.0.2)
 
-La ventana muestra **dos paneles lado a lado**: información del sistema y novedades a la izquierda, tareas de mantenimiento a la derecha. La barra divisoria es ajustable y cada panel se desplaza independientemente. En la cabecera hay un único acceso a Preferencias; el menú desplegable conserva el Historial. En la parte inferior siguen disponibles el progreso, el botón principal y la consola.
+La ventana muestra **dos paneles lado a lado**: información del sistema y novedades a la izquierda, tareas de mantenimiento a la derecha. El separador vertical permanece en el centro de la ventana y ambos paneles mantienen el mismo ancho al redimensionar. Cada panel se desplaza independientemente. En la cabecera hay un único acceso a Preferencias; el menú desplegable conserva el Historial. En la parte inferior siguen disponibles el progreso, el botón principal y la consola.
 
 ## Diseño de interfaz anterior (v2.0.1)
 

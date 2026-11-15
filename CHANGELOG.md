@@ -1,5 +1,11 @@
 # Cambios
 
+## 2.5.7
+
+- Los dos paneles principales ocupan partes iguales de la ventana.
+- El separador vertical coincide con el centro y permanece centrado al redimensionar o maximizar la aplicación.
+- Se conserva el desplazamiento independiente de cada panel.
+
 ## 2.5.6
 
 - Corregida la detección de eliminaciones en simulaciones APT mediante los marcadores reales `Remv` y `Purg`.
