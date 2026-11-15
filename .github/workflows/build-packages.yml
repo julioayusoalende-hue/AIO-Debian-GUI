@@ -25,7 +25,7 @@ jobs:
             python3 python3-gi gir1.2-gtk-3.0 \
             shellcheck desktop-file-utils libfuse2t64 \
             curl ca-certificates file xz-utils \
-            flatpak flatpak-builder appstream xvfb xauth
+            flatpak flatpak-builder appstream xvfb xauth pkexec
 
       - name: Run project checks
         run: xvfb-run -a ./scripts/check.sh
@@ -40,6 +40,11 @@ jobs:
 
       - name: Build DEB
         run: ./scripts/build-deb.sh
+
+      - name: Test standalone scheduled maintenance without DEB
+        env:
+          AIO_SYSTEMD_INTEGRATION: '1'
+        run: bash scripts/test-standalone-systemd.sh
 
       - name: Test scheduled maintenance with systemd
         env:
@@ -86,6 +91,8 @@ jobs:
           test -x squashfs-root/AppRun
           test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/history.py
           test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/updates.py
+          test -f squashfs-root/usr/share/aio-debian-gui/host-integration/host_integration.py
+          test -f squashfs-root/usr/share/aio-debian-gui/host-integration/payload.json
           rm -rf squashfs-root
           file "$FLATPAK"
           appstreamcli validate --no-net flatpak/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml
@@ -96,6 +103,20 @@ jobs:
           flatpak run --user --command=python3 io.github.julioayusoalende_hue.aio_debian_gui -c 'import gi; gi.require_version("Gtk", "3.0"); from gi.repository import Gtk'
           flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -x /app/share/aio-debian-gui/host-integration/aio-debian-gui-helper
           flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/share/aio-debian-gui/host-integration/es.aiodebian.gui.policy
+          dbus-run-session -- flatpak run --user --command=python3 io.github.julioayusoalende_hue.aio_debian_gui -c '
+          import json, subprocess, sys
+          sys.path.insert(0, "/app/lib/aio-debian-gui")
+          from aio_core import host_integration as integration
+          host = lambda *args: ["flatpak-spawn", "--host", *args]
+          directory = integration.prepare(host)
+          try:
+              subprocess.run(host("/usr/bin/python3", "-I", "-c", "import json,pathlib,sys; p=pathlib.Path(sys.argv[1]); assert p.is_dir(); assert (p / \"host_integration.py\").is_file(); d=json.loads((p / \"payload.json\").read_text()); assert d[\"schema\"] == 1; assert len(d[\"files\"]) == 6", directory), check=True)
+          finally:
+              integration.cleanup(host, directory)
+          subprocess.run(host("test", "!", "-e", directory), check=True)
+          print("Flatpak real: exportación stdin al anfitrión y limpieza sin privilegios OK")
+          '
+          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/share/aio-debian-gui/host-integration/payload.json
           (cd dist && sha256sum *.deb *.AppImage *.flatpak > SHA256SUMS)
           cat dist/SHA256SUMS
 

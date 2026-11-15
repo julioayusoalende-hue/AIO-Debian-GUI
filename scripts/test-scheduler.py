@@ -165,3 +165,11 @@ with tempfile.TemporaryDirectory() as directory:
         with patch.object(s, '_systemctl', return_value='inactive'):
             assert s.status('1000')['last_result']['status'] == 'interrupted'
 print('Programación: validación, calendarios, permisos, persistencia, pausa, borrado, rollback, bloqueos, preflight y resultados OK')
+
+with patch.object(s, 'available', return_value=True), \
+     patch.object(s, '_read', side_effect=[None, None, {'owner_uid': '1000'}]), \
+     patch.object(s.subprocess, 'run', return_value=SimpleNamespace(returncode=1, stdout='', stderr='')):
+    report = s.status('1000')
+    assert report['available'] and report['standalone_integration']
+    assert report['integration_owner_uid'] == '1000' and not report['managed_by_deb']
+print('Estado del programador autónomo sin paquete DEB: OK')

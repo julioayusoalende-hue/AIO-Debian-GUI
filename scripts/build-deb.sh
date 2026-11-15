@@ -10,6 +10,7 @@ SALIDA="dist/aio-debian-gui_${VERSION}_all.deb"
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
 cp -a package/. "$STAGE/"
+python3 scripts/build-host-integration.py "$STAGE/usr/share/aio-debian-gui/host-integration"
 
 # Permisos normalizados (git/zip no los conservan siempre)
 find "$STAGE" -type d -exec chmod 755 {} +

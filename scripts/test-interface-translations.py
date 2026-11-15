@@ -29,6 +29,8 @@ for node in tree.body:
         exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), "exec"), namespace)
 
 essential = (
+    "Instalar o actualizar integración", "Retirar integración",
+    "Programación autónoma en AppImage y Flatpak sin instalar el paquete DEB.",
     "Programar mantenimiento", "Activar mantenimiento automático", "Guardar programación",
     "Eliminar programación", "Pausar", "Frecuencia", "Hora local", "Programación activa",
     "Próxima ejecución: %s", "Última ejecución: %s · %s",

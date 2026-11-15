@@ -8,7 +8,7 @@
 
 AiO Debian GUI reúne tareas habituales de administración en una aplicación GTK, con **confirmaciones explícitas y comprobaciones preventivas** para las operaciones delicadas. Es un proyecto independiente del script de consola [aio-debian](https://github.com/julioayusoalende-hue/aio-debian).
 
-> **Versión actual: 2.7.0.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
+> **Versión actual: 2.8.0.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
 
 ## Funciones principales
 
@@ -64,15 +64,17 @@ Las secciones siguientes amplían las funciones, limitaciones y métodos de inst
 
 ---
 
-## Mantenimiento automático (v2.7.0)
+## Mantenimiento automático (v2.8.0)
 
 Abre el menú principal y selecciona **Programar mantenimiento**. Elige las tareas, la frecuencia (**diaria**, **semanal** o **mensual el día 1**) y la hora local del sistema. Marca **Activar mantenimiento automático** y pulsa **Guardar programación**. Guardar, pausar o eliminar la programación requiere autorización de administrador. Hay una programación por usuario.
 
 Tareas disponibles: **actualizar paquetes del sistema**, **actualizar Flatpak**, **limpiar la caché de paquetes** y **comprobar si hace falta reiniciar**. Las tareas de eliminación de paquetes y cambios de kernel, controladores y repositorios se mantienen en el flujo manual. No se reinicia el equipo automáticamente.
 
-La programación requiere **systemd activo y el paquete DEB de AiO de la misma versión en el anfitrión**. Desde AppImage o Flatpak, instala también ese DEB; copiar únicamente el asistente Polkit no instala el programador. Los temporizadores funcionan con la aplicación cerrada y sin iniciar sesión. Si el equipo estaba apagado, recuperan una ejecución pendiente al encenderlo; no encienden ni despiertan el equipo.
+La programación requiere **systemd activo**, Python 3, Polkit y las herramientas habituales de mantenimiento del anfitrión. **AppImage y Flatpak ya no necesitan tener el DEB de AiO instalado.** En **Programar mantenimiento**, pulsa **Instalar o actualizar integración** y autoriza la instalación. Se copian únicamente el asistente, sus módulos, la política Polkit y el servicio en rutas persistentes del sistema; no se instala la interfaz DEB ni se añade su repositorio APT. Los temporizadores funcionan con la aplicación cerrada y sin iniciar sesión, incluso si después borras el AppImage o cierras Flatpak. Si el equipo estaba apagado, recuperan una ejecución pendiente al encenderlo; no encienden ni despiertan el equipo.
 
-La ventana muestra si la programación está activa, la próxima ejecución y el último resultado de cada tarea. **Actualizar estado** refresca el informe. **Pausar** impide nuevas ejecuciones, y **Eliminar programación** elimina el temporizador; ninguna de estas acciones interrumpe un mantenimiento que ya esté ejecutándose. Instalar o actualizar AiO nunca activa un horario por sí solo. Al desinstalar el DEB se desactivan los temporizadores, conservando configuración y resultados.
+La ventana muestra si la programación está activa, la próxima ejecución y el último resultado de cada tarea. **Actualizar estado** refresca el informe. **Pausar** impide nuevas ejecuciones, y **Eliminar programación** elimina el temporizador; ninguna de estas acciones interrumpe un mantenimiento que ya esté ejecutándose. Instalar o actualizar AiO nunca activa un horario por sí solo. Con una integración autónoma, **Retirar integración** solicita autorización y solo está disponible para la cuenta que la instaló. Primero deben eliminarse todas las programaciones (también las de otras cuentas), terminar los servicios en curso y desactivarse las excepciones Polkit de AiO. Se conservan los resultados; si existía una integración manual previa, se restaura. Borrar AppImage o desinstalar Flatpak no elimina automáticamente la integración del anfitrión: retírala antes desde esta ventana si ya no la necesitas.
+
+Al actualizar AppImage o Flatpak, utiliza **Instalar o actualizar integración** si la versión del anfitrión no coincide. Los horarios y resultados se conservan. Si un DEB instalado gestiona los mismos archivos, la integración autónoma no sobrescribe una versión diferente: actualiza ese paquete o desinstálalo antes de cambiar a la integración autónoma. Al desinstalar el DEB se desactivan sus temporizadores, conservando configuración y resultados.
 
 Si APT/dpkg u otro mantenimiento de AiO está ocupado, se omite esa ejecución y se vuelve a intentar en el siguiente horario. Los errores de dependencias, la falta de espacio o una simulación que proponga eliminar paquetes bloquean el mantenimiento. Los Flatpak del sistema se actualizan; los del usuario solo se actualizan si existe su sesión activa. Los registros técnicos permanecen en el journal del servicio.
 
@@ -285,6 +287,8 @@ flatpak remote-add --user --if-not-exists aio-debian-gui \
 ```
 
 **Distribución oficial Flatpak:** solo mediante el repositorio firmado y el enlace `.flatpakref`. Ya no distribuimos archivos `.flatpak` independientes en Releases. El manifiesto de `flatpak/` se conserva porque es necesario para compilar la aplicación y publicar las actualizaciones.
+
+Desde **2.8.0**, la vía recomendada para preparar el anfitrión sin DEB es **Menú → Programar mantenimiento → Instalar o actualizar integración**. Este instalador utiliza los componentes incluidos en la propia aplicación y pide autorización de administrador. El procedimiento manual que sigue se conserva como alternativa para las tareas administrativas; copiar solo asistente y política no instala el servicio completo de programación.
 
 **Importante sobre las tareas administrativas:** actualizar la interfaz Flatpak **no
 actualiza** el asistente privilegiado instalado manualmente en Debian. Si este asistente

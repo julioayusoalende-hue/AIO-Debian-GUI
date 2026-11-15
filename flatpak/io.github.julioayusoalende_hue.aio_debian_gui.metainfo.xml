@@ -8,7 +8,7 @@
   <description>
     <p>Herramienta gráfica para consultar y realizar tareas habituales de mantenimiento de Debian: actualización de paquetes, limpieza, configuración de repositorios, Debian Backports y gestión de aplicaciones Flatpak.</p>
     <p>La edición Flatpak funciona como interfaz aislada y delega las operaciones administrativas en el asistente del sistema mediante flatpak-spawn y Polkit.</p>
-    <p>Importante: para ejecutar tareas de mantenimiento, primero debe estar instalado en el Debian anfitrión el paquete aio-debian-gui de la misma versión o una versión compatible. El Flatpak por sí solo no instala componentes privilegiados en el sistema anfitrión.</p>
+    <p>La integración del programador se instala desde la aplicación con autorización de administrador. No requiere instalar el paquete DEB de AiO. El anfitrión debe utilizar systemd y disponer de las herramientas de mantenimiento.</p>
   </description>
   <launchable type="desktop-id">io.github.julioayusoalende_hue.aio_debian_gui.desktop</launchable>
   <developer id="io.github.julioayusoalende_hue">
@@ -21,6 +21,7 @@
     <value key="flathub::verification::website">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</value>
   </custom>
   <releases>
+    <release version="2.8.0" date="2026-11-15"><description><p>AppImage y Flatpak pueden instalar, actualizar y retirar la integración autónoma del programador sin instalar el paquete DEB.</p></description></release>
     <release version="2.7.0" date="2026-11-15"><description><p>Programación de mantenimientos automáticos mediante systemd, con selección de tareas, frecuencia, horario, pausa, eliminación y resultados.</p></description></release>
     <release version="2.6.0" date="2026-11-15"><description><p>Interfaz adaptable con detalles técnicos desplegables, tareas agrupadas con casillas, resumen de selección, diagnóstico comprensible y consola plegable con resultados por tarea.</p></description></release>
     <release version="2.5.7" date="2026-11-15"><description><p>Paneles principales de igual ancho y separador vertical centrado al redimensionar la ventana.</p></description></release>

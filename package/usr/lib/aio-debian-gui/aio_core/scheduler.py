@@ -13,13 +13,14 @@ import subprocess
 import sys
 import tempfile
 
-VERSION = '2.7.0'
+VERSION = '2.8.0'
 CONFIG_DIR = Path('/etc/aio-debian-gui/schedules')
 STATE_DIR = Path('/var/lib/aio-debian-gui/schedules')
 UNIT_DIR = Path('/etc/systemd/system')
 SERVICE = Path('/usr/lib/systemd/system/aio-debian-gui-maintenance@.service')
 HELPER = '/usr/lib/aio-debian-gui/aio-debian-gui-helper'
 LOCK = '/run/aio-debian-gui/maintenance.lock'
+INTEGRATION_MARKER = Path('/var/lib/aio-debian-gui/host-integration.json')
 TASKS = ('upgrade', 'autoclean', 'flatpak-update', 'rebootcheck')
 DAYS = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 DEFAULT = {'enabled': False, 'frequency': 'weekly', 'weekday': 6,
@@ -129,13 +130,18 @@ def _require_root():
 def _settings_lock(uid):
     directory = Path(LOCK).parent
     directory.mkdir(mode=0o755, parents=True, exist_ok=True)
-    fd = os.open(directory / ('schedule-' + validate_uid(uid) + '.lock'),
-                 os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    integration_fd = os.open(directory / 'integration.lock', os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    fd = None
     try:
+        fcntl.flock(integration_fd, fcntl.LOCK_SH)
+        fd = os.open(directory / ('schedule-' + validate_uid(uid) + '.lock'),
+                     os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
         fcntl.flock(fd, fcntl.LOCK_EX)
         yield
     finally:
-        os.close(fd)
+        if fd is not None:
+            os.close(fd)
+        os.close(integration_fd)
 
 
 def configure(uid, config):
@@ -152,7 +158,7 @@ def _configure(uid, config):
     pwd.getpwuid(int(uid))
     config = validate_config(config)
     if not available():
-        raise RuntimeError('La programación requiere systemd y el paquete DEB de AiO en el anfitrión.')
+        raise RuntimeError('La programación requiere systemd y la integración del programador en el anfitrión.')
     if config['enabled'] and 'flatpak-update' in config['tasks'] and not shutil.which('flatpak'):
         raise RuntimeError('Flatpak no está instalado en el anfitrión.')
     path, unit = CONFIG_DIR / (uid + '.json'), UNIT_DIR / timer_name(uid)
@@ -213,7 +219,21 @@ def status(uid):
     if config is not None:
         config = validate_config(config)
     last = _read(STATE_DIR / (uid + '.json'))
-    result = {'version': VERSION, 'available': available(), 'config': config, 'last_result': last,
+    try:
+        package = subprocess.run(['dpkg-query', '-W', '-f=${db:Status-Status}', 'aio-debian-gui'],
+                                 capture_output=True, text=True, timeout=10)
+        managed_by_deb = package.returncode == 0 and package.stdout.strip() == 'installed'
+    except (OSError, subprocess.SubprocessError):
+        managed_by_deb = False
+    try:
+        marker = _read(INTEGRATION_MARKER) or {}
+        if not isinstance(marker, dict):
+            marker = {}
+    except (OSError, ValueError):
+        marker = {}
+    result = {'managed_by_deb': managed_by_deb,
+              'integration_owner_uid': marker.get('owner_uid'),
+              'standalone_integration': bool(marker), 'version': VERSION, 'available': available(), 'config': config, 'last_result': last,
               'next_run': '', 'timer_active': False}
     if config and result['available']:
         try:

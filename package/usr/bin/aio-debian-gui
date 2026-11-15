@@ -35,7 +35,7 @@ CORE_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file_
                                       "../lib/aio-debian-gui"))
 if CORE_DIR not in sys.path:
     sys.path.insert(0, CORE_DIR)
-from aio_core import appearance as core_appearance, history as core_history, preferences as core_preferences, updates as core_updates, diagnostics as core_diagnostics, preflight as core_preflight, scheduler as core_scheduler  # noqa: E402
+from aio_core import appearance as core_appearance, history as core_history, preferences as core_preferences, updates as core_updates, diagnostics as core_diagnostics, preflight as core_preflight, scheduler as core_scheduler, host_integration as core_host_integration  # noqa: E402
 
 PRGNAME = "aio-debian-gui"
 POLKIT_ACTION = "es.aiodebian.gui.mantenimiento"
@@ -66,6 +66,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.8.0": "Programación autónoma en AppImage y Flatpak sin instalar el paquete DEB.",
     "2.7.0": "Mantenimientos automáticos programables con selección de tareas, horario, pausa y resultados.",
     "2.6.0": "Paneles adaptables, selección clara de tareas, diagnóstico resumido y consola plegable con resultados por tarea.",
     "2.5.7": "Paneles principales del mismo ancho con el separador vertical centrado al redimensionar la ventana.",
@@ -1271,6 +1272,95 @@ TRADUCCIONES["en"].update({"Programación no activa": "Schedule inactive", "Flat
 TRADUCCIONES["fr"].update({"Programación no activa": "Programmation inactive", "Flatpak no está instalado en el anfitrión.": "Flatpak n’est pas installé sur l’hôte."})
 TRADUCCIONES["zh"].update({"Programación no activa": "计划未启用", "Flatpak no está instalado en el anfitrión.": "主机未安装 Flatpak。"})
 
+TRADUCCIONES["en"].update({'Instalar o actualizar integración': 'Install or update integration',
+ 'Retirar integración': 'Remove integration',
+ 'Instala o actualiza la integración del programador para usar systemd sin instalar el paquete DEB. Requiere autorización de administrador.': 'Install '
+                                                                                                                                              'or '
+                                                                                                                                              'update '
+                                                                                                                                              'the '
+                                                                                                                                              'scheduler '
+                                                                                                                                              'integration '
+                                                                                                                                              'to '
+                                                                                                                                              'use '
+                                                                                                                                              'systemd '
+                                                                                                                                              'without '
+                                                                                                                                              'the '
+                                                                                                                                              'DEB '
+                                                                                                                                              'package. '
+                                                                                                                                              'Administrator '
+                                                                                                                                              'authorization '
+                                                                                                                                              'is '
+                                                                                                                                              'required.',
+ 'La programación necesita systemd y una integración del programador de la misma versión en el anfitrión.': 'Scheduling '
+                                                                                                            'needs '
+                                                                                                            'systemd '
+                                                                                                            'and '
+                                                                                                            'a '
+                                                                                                            'matching '
+                                                                                                            'scheduler '
+                                                                                                            'integration '
+                                                                                                            'on '
+                                                                                                            'the '
+                                                                                                            'host.',
+ 'Programación autónoma en AppImage y Flatpak sin instalar el paquete DEB.': 'Standalone '
+                                                                             'scheduling in '
+                                                                             'AppImage and Flatpak '
+                                                                             'without the DEB '
+                                                                             'package.'})
+TRADUCCIONES["fr"].update({'Instalar o actualizar integración': 'Installer ou mettre à jour l’intégration',
+ 'Retirar integración': 'Retirer l’intégration',
+ 'Instala o actualiza la integración del programador para usar systemd sin instalar el paquete DEB. Requiere autorización de administrador.': 'Installez '
+                                                                                                                                              'ou '
+                                                                                                                                              'mettez '
+                                                                                                                                              'à '
+                                                                                                                                              'jour '
+                                                                                                                                              'l’intégration '
+                                                                                                                                              'du '
+                                                                                                                                              'planificateur '
+                                                                                                                                              'pour '
+                                                                                                                                              'utiliser '
+                                                                                                                                              'systemd '
+                                                                                                                                              'sans '
+                                                                                                                                              'paquet '
+                                                                                                                                              'DEB. '
+                                                                                                                                              'Une '
+                                                                                                                                              'autorisation '
+                                                                                                                                              'administrateur '
+                                                                                                                                              'est '
+                                                                                                                                              'requise.',
+ 'La programación necesita systemd y una integración del programador de la misma versión en el anfitrión.': 'La '
+                                                                                                            'programmation '
+                                                                                                            'nécessite '
+                                                                                                            'systemd '
+                                                                                                            'et '
+                                                                                                            'une '
+                                                                                                            'intégration '
+                                                                                                            'du '
+                                                                                                            'planificateur '
+                                                                                                            'de '
+                                                                                                            'la '
+                                                                                                            'même '
+                                                                                                            'version '
+                                                                                                            'sur '
+                                                                                                            'l’hôte.',
+ 'Programación autónoma en AppImage y Flatpak sin instalar el paquete DEB.': 'Programmation '
+                                                                             'autonome dans '
+                                                                             'AppImage et Flatpak '
+                                                                             'sans installer le '
+                                                                             'paquet DEB.'})
+TRADUCCIONES["zh"].update({'Instalar o actualizar integración': '安装或更新集成',
+ 'Retirar integración': '移除集成',
+ 'Instala o actualiza la integración del programador para usar systemd sin instalar el paquete DEB. Requiere autorización de administrador.': '安装或更新调度器集成以使用 '
+                                                                                                                                              'systemd，无需安装 '
+                                                                                                                                              'DEB '
+                                                                                                                                              '软件包。需要管理员授权。',
+ 'La programación necesita systemd y una integración del programador de la misma versión en el anfitrión.': '计划功能需要 '
+                                                                                                            'systemd '
+                                                                                                            '及主机上相同版本的调度器集成。',
+ 'Programación autónoma en AppImage y Flatpak sin instalar el paquete DEB.': 'AppImage 和 Flatpak '
+                                                                             '无需 DEB '
+                                                                             '软件包即可独立使用计划功能。'})
+
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)
 
@@ -1991,7 +2081,13 @@ class VentanaPrincipal(Gtk.Window):
         pausar = Gtk.Button(label=traducir("Pausar"))
         eliminar = Gtk.Button(label=traducir("Eliminar programación"))
         actualizar = Gtk.Button(label=traducir("Actualizar estado"))
-        for i, boton in enumerate((guardar, pausar, eliminar, actualizar)):
+        integrar = Gtk.Button(label=traducir("Instalar o actualizar integración"))
+        retirar = Gtk.Button(label=traducir("Retirar integración"))
+        portable = formato_actualizacion() in ('appimage', 'flatpak')
+        for boton in (integrar, retirar):
+            boton.set_no_show_all(not portable)
+            boton.set_visible(portable)
+        for i, boton in enumerate((guardar, pausar, eliminar, actualizar, integrar, retirar)):
             boton.get_child().set_line_wrap(True)
             boton.get_child().set_max_width_chars(24)
             acciones.attach(boton, i % 2, i // 2, 1, 1)
@@ -1999,11 +2095,14 @@ class VentanaPrincipal(Gtk.Window):
         self.programacion_widgets = dict(activo=activo, frecuencia=frecuencia, dia=dia,
             hora=hora, minuto=minuto, tareas=tareas, estado=estado, resultados=resultados,
             formulario=formulario, guardar=guardar, pausar=pausar, eliminar=eliminar,
-            actualizar=actualizar, disponible=False, config=None)
+            actualizar=actualizar, integrar=integrar, retirar=retirar,
+            disponible=False, config=None, datos={})
         guardar.connect("clicked", lambda _b: self._cambiar_programacion(dialogo))
         pausar.connect("clicked", lambda _b: self._cambiar_programacion(dialogo, pausar=True))
         eliminar.connect("clicked", lambda _b: self._cambiar_programacion(dialogo, eliminar=True))
         actualizar.connect("clicked", lambda _b: self._cargar_programacion(dialogo, cargar_formulario=False))
+        integrar.connect("clicked", lambda _b: self._integrar_programador(dialogo))
+        retirar.connect("clicked", lambda _b: self._integrar_programador(dialogo, retirar=True))
         dialogo.show_all()
         self._cargar_programacion(dialogo)
 
@@ -2020,7 +2119,7 @@ class VentanaPrincipal(Gtk.Window):
         if self.programando:
             return
         w = self.programacion_widgets
-        for nombre in ("guardar", "pausar", "eliminar", "actualizar"):
+        for nombre in ("guardar", "pausar", "eliminar", "actualizar", "integrar", "retirar"):
             w[nombre].set_sensitive(False)
         def consultar():
             try:
@@ -2046,6 +2145,7 @@ class VentanaPrincipal(Gtk.Window):
         disponible = not error and datos.get("available", False) and datos.get("version") == core_scheduler.VERSION
         w['disponible'] = disponible
         w['config'] = datos.get('config')
+        w['datos'] = datos
         config = datos.get('config') or core_scheduler.DEFAULT
         if cargar_formulario:
             w['activo'].set_active(config['enabled'])
@@ -2060,8 +2160,12 @@ class VentanaPrincipal(Gtk.Window):
         w['pausar'].set_sensitive(bool(disponible and datos.get('config') and config['enabled']))
         w['eliminar'].set_sensitive(bool(disponible and datos.get('config')))
         w['actualizar'].set_sensitive(True)
+        portable = formato_actualizacion() in ('appimage', 'flatpak')
+        bundle = portable and core_host_integration.bundle_available()
+        w['integrar'].set_sensitive(bool(bundle and not disponible))
+        w['retirar'].set_sensitive(bool(bundle and datos.get('standalone_integration') and str(datos.get('integration_owner_uid')) == str(os.getuid()) and not datos.get('managed_by_deb')))
         if not disponible:
-            texto = traducir("Instala o actualiza el paquete DEB de AiO en el anfitrión y utiliza systemd para habilitar la programación.")
+            texto = traducir("Instala o actualiza la integración del programador para usar systemd sin instalar el paquete DEB. Requiere autorización de administrador.") if bundle else traducir("La programación necesita systemd y una integración del programador de la misma versión en el anfitrión.")
         elif datos.get('timer_active'):
             texto = traducir("Programación activa") + " · " + traducir("Próxima ejecución: %s") % (datos.get('next_run') or traducir("No disponible"))
         else:
@@ -2107,17 +2211,35 @@ class VentanaPrincipal(Gtk.Window):
         except (ValueError, TypeError):
             self._mensaje(Gtk.MessageType.ERROR, "Programar mantenimiento", "Selecciona al menos una tarea programable, sin duplicados.")
             return
+        self._operacion_programacion(dialogo, lambda: comando_pkexec(HELPER_SISTEMA, 'C.UTF-8', *argumentos))
+
+    def _integrar_programador(self, dialogo, retirar=False):
+        if self.programando:
+            return
+        def comando():
+            temporal = core_host_integration.prepare(comando_host)
+            argumentos = ['--uninstall'] if retirar else ['--install', temporal + '/payload.json']
+            return (comando_host('pkexec', '/usr/bin/python3', '-I', temporal + '/host_integration.py', *argumentos), temporal)
+        self._operacion_programacion(dialogo, comando)
+
+    def _operacion_programacion(self, dialogo, preparar_comando):
         self.programando = True
+        w = self.programacion_widgets
         self._actualizar_sensibilidad()
-        for nombre in ('formulario', 'guardar', 'pausar', 'eliminar', 'actualizar'):
+        for nombre in ('formulario', 'guardar', 'pausar', 'eliminar', 'actualizar', 'integrar', 'retirar'):
             w[nombre].set_sensitive(False)
         dialogo.set_response_sensitive(Gtk.ResponseType.CLOSE, False)
         w['estado'].set_text(traducir('Esperando autorización de administrador…'))
         def aplicar():
             import select
             import time
+            temporal = None
             try:
-                comando = comando_pkexec(HELPER_SISTEMA, 'C.UTF-8', *argumentos)
+                preparado = preparar_comando()
+                if isinstance(preparado, tuple):
+                    comando, temporal = preparado
+                else:
+                    comando = preparado
                 with subprocess.Popen(comando, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0) as proc:
                     salida = b''
                     limite = time.monotonic() + 90
@@ -2139,8 +2261,14 @@ class VentanaPrincipal(Gtk.Window):
                         detalle = "\n".join(traducir(linea) for linea in salida.decode('utf-8', errors='replace').splitlines() if not linea.startswith('##'))
                         raise RuntimeError(detalle[-1500:] or traducir('No se obtuvo autorización de administrador.'))
                 error = None
-            except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
+            except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
                 error = str(exc)
+            finally:
+                if temporal:
+                    try:
+                        core_host_integration.cleanup(comando_host, temporal)
+                    except (OSError, RuntimeError, subprocess.SubprocessError):
+                        pass
             GLib.idle_add(self._programacion_guardada, dialogo, error)
         threading.Thread(target=aplicar, daemon=True).start()
 

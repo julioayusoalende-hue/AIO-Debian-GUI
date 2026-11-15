@@ -118,3 +118,63 @@ for language in ('es', 'en', 'fr', 'zh'):
         w.ventana_programacion.destroy()
     w.destroy()
 print('GTK programación: carga, selección, hora, guardar, pausar, eliminar, validación, resultados e integración ausente en cuatro idiomas OK')
+
+# Las dos ediciones portátiles ofrecen la integración aun sin asistente en el host.
+for formato in ('appimage', 'flatpak'):
+    w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+    backend = {'version': '', 'available': False, 'config': None, 'last_result': None,
+               'timer_active': False, 'next_run': '', 'standalone_integration': False,
+               'managed_by_deb': False, 'integration_owner_uid': str(os.getuid())}
+    commands = []
+    def portable_status(command, **kwargs):
+        assert command[-1] == '--schedule-status'
+        return SimpleNamespace(returncode=0, stdout=json.dumps(backend), stderr='')
+    class PortableSave(Save):
+        def __init__(self, command, **kwargs):
+            commands.append(command)
+            expected = (['flatpak-spawn', '--host'] if formato == 'flatpak' else []) + ['pkexec', '/usr/bin/python3', '-I']
+            assert command[:len(expected)] == expected
+            assert command[len(expected)] == '/tmp/aio-host-integration-test/host_integration.py'
+            assert app.HELPER_SISTEMA not in command
+            installed = '--install' in command
+            assert installed or command[-1] == '--uninstall'
+            backend.update(version=app.core_scheduler.VERSION if installed else '', available=installed,
+                           standalone_integration=installed)
+            read, write = os.pipe()
+            os.write(write, b'##SCHEDULE:authorized\n')
+            os.close(write)
+            self.stdout = os.fdopen(read, 'rb', buffering=0)
+            self.returncode = None
+    with patch.object(app, 'formato_actualizacion', return_value=formato), \
+         patch.object(app, 'es_flatpak', return_value=formato == 'flatpak'), \
+         patch.object(app.core_host_integration, 'bundle_available', return_value=True), \
+         patch.object(app.core_host_integration, 'prepare', return_value='/tmp/aio-host-integration-test') as prepare, \
+         patch.object(app.core_host_integration, 'cleanup') as cleanup, \
+         patch.object(app.subprocess, 'run', side_effect=portable_status), \
+         patch.object(app.subprocess, 'Popen', side_effect=PortableSave):
+        w._abrir_programacion()
+        dialog = w.ventana_programacion
+        widgets = w.programacion_widgets
+        wait_for(lambda: widgets['actualizar'].get_sensitive())
+        assert widgets['integrar'].get_sensitive() and not widgets['guardar'].get_sensitive()
+        w._integrar_programador(dialog)
+        wait_for(lambda: not w.programando and widgets['guardar'].get_sensitive())
+        assert backend['available'] and widgets['retirar'].get_sensitive()
+        assert prepare.call_count == cleanup.call_count == 1
+        w._integrar_programador(dialog, retirar=True)
+        wait_for(lambda: not w.programando and widgets['integrar'].get_sensitive())
+        assert not backend['available'] and not widgets['retirar'].get_sensitive()
+        assert prepare.call_count == cleanup.call_count == 2
+        # Una integración del paquete o de otra cuenta no se ofrece para retirar.
+        backend.update(available=True, version=app.core_scheduler.VERSION,
+                       standalone_integration=True, managed_by_deb=True)
+        w._cargar_programacion(dialog)
+        wait_for(lambda: widgets['actualizar'].get_sensitive())
+        assert not widgets['retirar'].get_sensitive()
+        backend.update(managed_by_deb=False, integration_owner_uid='999999')
+        w._cargar_programacion(dialog)
+        wait_for(lambda: widgets['actualizar'].get_sensitive())
+        assert not widgets['retirar'].get_sensitive()
+        dialog.destroy()
+    w.destroy()
+print('GTK: bootstrap AppImage/Flatpak sin DEB, retirada, propiedad y limpieza de temporales OK')

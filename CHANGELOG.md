@@ -1,5 +1,14 @@
 # Cambios
 
+## 2.8.0
+
+- AppImage y Flatpak incluyen una integración autónoma del programador, instalable desde la ventana de programación con autorización de administrador, sin instalar el DEB de AiO ni añadir su repositorio APT.
+- El asistente, los módulos, la política Polkit y el servicio quedan en rutas persistentes del anfitrión, independientes del AppImage, del sandbox y de los directorios temporales.
+- Actualización conservando horarios y resultados; retirada explícita cuando no quedan horarios, servicios ni excepciones Polkit en uso.
+- Protección de archivos gestionados por DEB o modificados por el administrador, registro de propiedad y restauración de una integración manual previa.
+- Validación del manifiesto, copias atómicas y bloqueo compartido para evitar carreras con el mantenimiento o cambios de programación.
+- Pruebas de interfaz para ambas ediciones, exportación real desde Flatpak y ejecución con systemd sin tener instalado el DEB.
+
 ## 2.7.0
 
 - Nueva ventana «Programar mantenimiento» con selección de tareas, frecuencia diaria, semanal o mensual y hora local.

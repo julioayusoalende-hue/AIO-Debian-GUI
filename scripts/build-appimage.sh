@@ -56,6 +56,7 @@ install -m 644 package/usr/share/doc/aio-debian-gui/copyright \
     "$APPDIR/usr/share/doc/aio-debian-gui/copyright"
 install -m 644 package/usr/share/polkit-1/actions/es.aiodebian.gui.policy \
     "$APPDIR/usr/share/polkit-1/actions/es.aiodebian.gui.policy"
+python3 scripts/build-host-integration.py "$APPDIR/usr/share/aio-debian-gui/host-integration"
 cp -a package/usr/share/icons/hicolor "$APPDIR/usr/share/icons"
 install -m 644 package/usr/share/icons/hicolor/512x512/apps/aio-debian-gui.png \
     "$APPDIR/aio-debian-gui.png"
