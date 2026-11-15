@@ -10,6 +10,8 @@ AiO Debian GUI reúne tareas habituales de administración en una aplicación GT
 
 > **Versión actual: 2.7.5.** Consulta las [versiones publicadas](../../releases) y descarga la [última versión](../../releases/latest). Algunas funciones, especialmente NVIDIA y la reversión de Backports, requieren revisar cuidadosamente los avisos de compatibilidad.
 
+La versión **2.7.5** es el punto de partida estable del proyecto; las versiones anteriores se conservan como historial de desarrollo. Se mantiene la numeración para no interrumpir las actualizaciones existentes.
+
 ## Funciones principales
 
 | Área | Funciones |
