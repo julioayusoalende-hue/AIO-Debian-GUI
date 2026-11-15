@@ -1,0 +1,33 @@
+name: Update release checksums
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  checksums:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download published packages and upload checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 2
+          WORK_DIR=$(mktemp -d)
+          trap 'rm -rf -- "$WORK_DIR"' EXIT
+          gh release download "$RELEASE_TAG" --dir "$WORK_DIR" \
+            --pattern '*.deb' --pattern '*.AppImage' --pattern '*.flatpak'
+          cd "$WORK_DIR"
+          sha256sum *.deb *.AppImage *.flatpak > SHA256SUMS
+          sha256sum --check SHA256SUMS
+          gh release upload "$RELEASE_TAG" SHA256SUMS --clobber
