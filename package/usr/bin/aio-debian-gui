@@ -66,6 +66,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.7.4": "Corrige el aviso de reinicio tras el mantenimiento programado.",
     "2.7.3": "Abre AiO y muestra el aviso habitual cuando el mantenimiento programado recomienda reiniciar.",
     "2.7.2": "Notificación de escritorio al completar correctamente el mantenimiento programado.",
     "2.7.1": "Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB.",
@@ -1244,6 +1245,10 @@ TRADUCCIONES["zh"].update({"Programación de mantenimiento en Flatpak y AppImage
 TRADUCCIONES["en"].update({"Notificación de escritorio al completar correctamente el mantenimiento programado.": "Desktop notification when scheduled maintenance completes successfully."})
 TRADUCCIONES["fr"].update({"Notificación de escritorio al completar correctamente el mantenimiento programado.": "Notification sur le bureau lorsque la maintenance programmée se termine correctement."})
 TRADUCCIONES["zh"].update({"Notificación de escritorio al completar correctamente el mantenimiento programado.": "计划维护成功完成时显示桌面通知。"})
+
+TRADUCCIONES["en"].update({"Corrige el aviso de reinicio tras el mantenimiento programado.": "Fixes the restart prompt after scheduled maintenance."})
+TRADUCCIONES["fr"].update({"Corrige el aviso de reinicio tras el mantenimiento programado.": "Corrige l'invite de redémarrage après la maintenance programmée."})
+TRADUCCIONES["zh"].update({"Corrige el aviso de reinicio tras el mantenimiento programado.": "修复计划维护后的重启提示。"})
 
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)

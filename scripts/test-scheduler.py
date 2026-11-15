@@ -87,11 +87,12 @@ with tempfile.TemporaryDirectory() as directory:
 
 with patch.object(Path, 'is_dir', return_value=True), \
      patch.object(Path, 'is_socket', return_value=True), \
+     patch.object(s.pwd, 'getpwuid', return_value=SimpleNamespace(pw_name='testuser')), \
      patch.object(s.shutil, 'which', side_effect=lambda name: f'/usr/bin/{name}'), \
      patch.object(s.subprocess, 'run', return_value=SimpleNamespace(returncode=0, stdout='', stderr='')) as notify:
     s._notify_success('1000')
     command = notify.call_args.args[0]
-    assert command[:4] == ['/usr/bin/runuser', '-u', '1000', '--']
+    assert command[:4] == ['/usr/bin/runuser', '-u', 'testuser', '--']
     assert 'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus' in command
     assert command[-5:] == [
         '--app-name=AiO Debian GUI', '--urgency=normal', '--expire-time=10000',
@@ -105,6 +106,7 @@ with patch.object(Path, 'is_dir', return_value=False), \
 
 with patch.object(Path, 'is_dir', return_value=True), \
      patch.object(Path, 'is_socket', return_value=True), \
+     patch.object(s.pwd, 'getpwuid', return_value=SimpleNamespace(pw_name='testuser')), \
      patch.object(s.shutil, 'which', side_effect=lambda name: f'/usr/bin/{name}'), \
      patch.object(s.os, 'access', return_value=True), \
      patch.object(s.subprocess, 'run', return_value=SimpleNamespace(
@@ -113,12 +115,40 @@ with patch.object(Path, 'is_dir', return_value=True), \
     s._launch_for_reboot('1000', {'format': 'deb', 'path': ''})
     assert session_env.call_count == 2
     command = session_env.call_args.args[0]
-    assert command[:4] == ['/usr/bin/runuser', '-u', '1000', '--']
+    assert command[:4] == ['/usr/bin/runuser', '-u', 'testuser', '--']
+    assert session_env.call_args_list[0].args[0][:4] == ['/usr/bin/runuser', '-u', 'testuser', '--']
     assert '/usr/bin/aio-debian-gui' in command
     assert command[-1] == '--scheduled-reboot-required'
     assert '/usr/bin/systemd-run' in command
     assert '--setenv=DISPLAY=:0' in command and '--setenv=WAYLAND_DISPLAY=wayland-0' in command
     launch.assert_not_called()
+    for launcher, expected in (({'format': 'flatpak', 'path': ''},
+                                ['/usr/bin/flatpak', 'run', 'io.github.julioayusoalende_hue.aio_debian_gui']),
+                               ({'format': 'appimage', 'path': '/home/test/AiO.AppImage'},
+                                ['/home/test/AiO.AppImage'])):
+        s._launch_for_reboot('1000', launcher)
+        command = session_env.call_args.args[0]
+        assert command[-len(expected)-1:] == expected + ['--scheduled-reboot-required']
+
+with patch.object(Path, 'is_dir', return_value=True), \
+     patch.object(Path, 'is_socket', return_value=True), \
+     patch.object(s.pwd, 'getpwuid', side_effect=KeyError('unknown')), \
+     patch.object(s.shutil, 'which', side_effect=lambda name: f'/usr/bin/{name}'), \
+     patch.object(s.os, 'access', return_value=True), \
+     patch.object(s.subprocess, 'run') as run:
+    s._notify_success('1000')
+    s._launch_for_reboot('1000', {'format': 'deb', 'path': ''})
+    run.assert_not_called()
+
+with patch.object(Path, 'is_dir', return_value=True), \
+     patch.object(Path, 'is_socket', return_value=True), \
+     patch.object(s.pwd, 'getpwuid', return_value=SimpleNamespace(pw_name='testuser')), \
+     patch.object(s.shutil, 'which', side_effect=lambda name: f'/usr/bin/{name}'), \
+     patch.object(s.os, 'access', return_value=True), \
+     patch.object(s.subprocess, 'run', return_value=SimpleNamespace(
+         returncode=0, stdout='', stderr='')) as run:
+    s._launch_for_reboot('1000', {'format': 'deb', 'path': ''})
+    assert run.call_count == 1
 
 with tempfile.TemporaryDirectory() as directory:
     root = Path(directory)
@@ -200,6 +230,28 @@ with tempfile.TemporaryDirectory() as directory:
             assert result['status'] == 'success' and result['finished'] and result['reboot_required']
             assert all(v == 'success' for v in result['tasks'].values())
             assert run.call_args.args[0] == ['apt-get', '-o', 'APT::Update::Error-Mode=any', 'update']
+            class FailedProcess(Process):
+                def __init__(self, command, **kwargs):
+                    super().__init__(command, **kwargs)
+                    self.stdout = iter(['##REBOOT:1\n', '##RESULT:upgrade:1\n'])
+                def wait(self): return 1
+            notify.reset_mock()
+            launch.reset_mock()
+            with patch.object(s.subprocess, 'Popen', side_effect=FailedProcess):
+                assert s.run_schedule('1000') == 1
+            notify.assert_not_called()
+            launch.assert_called_once_with('1000', config['launcher'])
+            assert s._read(s.STATE_DIR/'1000.json')['reboot_required']
+            class NoRebootProcess(Process):
+                def __init__(self, command, **kwargs):
+                    super().__init__(command, **kwargs)
+                    self.stdout = iter(['##RESULT:' + t + ':0\n' for t in config['tasks']])
+            notify.reset_mock()
+            launch.reset_mock()
+            with patch.object(s.subprocess, 'Popen', side_effect=NoRebootProcess):
+                assert s.run_schedule('1000') == 0
+            notify.assert_called_once_with('1000')
+            launch.assert_not_called()
             with patch.object(preflight, '_check_local', return_value=preflight.Report(True, ['blocked'])):
                 popen.reset_mock()
                 notify.reset_mock()

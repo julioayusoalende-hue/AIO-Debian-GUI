@@ -13,7 +13,7 @@ import subprocess
 import sys
 import tempfile
 
-VERSION = '2.7.3'
+VERSION = '2.7.4'
 CONFIG_DIR = Path('/etc/aio-debian-gui/schedules')
 STATE_DIR = Path('/var/lib/aio-debian-gui/schedules')
 UNIT_DIR = Path('/etc/systemd/system')
@@ -257,17 +257,18 @@ def _notify_success(uid):
     if not notify_send or not runuser:
         print('No se pudo notificar el mantenimiento: faltan notify-send o runuser.', file=sys.stderr)
         return
-    command = [
-        runuser, '-u', uid, '--', '/usr/bin/env',
-        f'XDG_RUNTIME_DIR={runtime}',
-        f'DBUS_SESSION_BUS_ADDRESS=unix:path={bus}',
-        notify_send, '--app-name=AiO Debian GUI', '--urgency=normal',
-        '--expire-time=10000', 'Mantenimiento programado completado',
-        'El mantenimiento programado se ha realizado correctamente.',
-    ]
     try:
+        username = pwd.getpwuid(int(uid)).pw_name
+        command = [
+            runuser, '-u', username, '--', '/usr/bin/env',
+            f'XDG_RUNTIME_DIR={runtime}',
+            f'DBUS_SESSION_BUS_ADDRESS=unix:path={bus}',
+            notify_send, '--app-name=AiO Debian GUI', '--urgency=normal',
+            '--expire-time=10000', 'Mantenimiento programado completado',
+            'El mantenimiento programado se ha realizado correctamente.',
+        ]
         result = subprocess.run(command, capture_output=True, text=True, timeout=15, check=False)
-    except (OSError, subprocess.SubprocessError) as exc:
+    except (KeyError, OSError, subprocess.SubprocessError) as exc:
         print(f'No se pudo notificar el mantenimiento: {str(exc)[:300]}', file=sys.stderr)
         return
     if result.returncode:
@@ -311,8 +312,9 @@ def _launch_for_reboot(uid, launcher):
     env = [f'XDG_RUNTIME_DIR={runtime}',
            f'DBUS_SESSION_BUS_ADDRESS=unix:path={bus}']
     try:
+        username = pwd.getpwuid(int(uid)).pw_name
         session_env = subprocess.run(
-            [runuser, '-u', uid, '--', '/usr/bin/env',
+            [runuser, '-u', username, '--', '/usr/bin/env',
              f'XDG_RUNTIME_DIR={runtime}', f'DBUS_SESSION_BUS_ADDRESS=unix:path={bus}',
              'systemctl', '--user', 'show-environment'],
             capture_output=True, text=True, timeout=10, check=False)
@@ -330,7 +332,7 @@ def _launch_for_reboot(uid, launcher):
         if not systemd_run:
             print('No se pudo abrir AiO: falta systemd-run.', file=sys.stderr)
             return
-        launch = [runuser, '-u', uid, '--', '/usr/bin/env', *env,
+        launch = [runuser, '-u', username, '--', '/usr/bin/env', *env,
                   systemd_run, '--user', '--no-block', '--collect']
         launch.extend('--setenv=' + value for value in env[2:])
         launch.extend(['--', *command, '--scheduled-reboot-required'])
@@ -338,7 +340,7 @@ def _launch_for_reboot(uid, launcher):
         if result.returncode:
             detail = (result.stderr or result.stdout or 'systemd-run falló.').strip()[-300:]
             print(f'No se pudo abrir AiO para avisar del reinicio: {detail}', file=sys.stderr)
-    except (OSError, subprocess.SubprocessError) as exc:
+    except (KeyError, OSError, subprocess.SubprocessError) as exc:
         print(f'No se pudo abrir AiO para avisar del reinicio: {str(exc)[:300]}', file=sys.stderr)
 
 
@@ -357,10 +359,10 @@ def run_schedule(uid):
     def finish(state, detail):
         result.update(status=state, detail=detail, finished=datetime.now(timezone.utc).isoformat())
         _atomic(path, json.dumps(result) + '\n')
+        if result['reboot_required']:
+            _launch_for_reboot(uid, config.get('launcher'))
         if state == 'success':
             _notify_success(uid)
-            if result['reboot_required']:
-                _launch_for_reboot(uid, config.get('launcher'))
         return 0 if state in ('success', 'skipped') else 1
 
     if not host_supported():

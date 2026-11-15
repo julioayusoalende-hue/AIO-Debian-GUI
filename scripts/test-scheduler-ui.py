@@ -123,4 +123,19 @@ for language in ('es', 'en', 'fr', 'zh'):
         assert not w.programacion_widgets['formulario'].get_sensitive()
         w.ventana_programacion.destroy()
     w.destroy()
+
+for args, expected in ((['aio-debian-gui'], False),
+                       (['aio-debian-gui', '--scheduled-reboot-required'], True)):
+    with patch.object(app.sys, 'argv', args), \
+         patch.object(app.os, 'geteuid', return_value=1000), \
+         patch.object(app, 'cargar_preferencias', return_value=app.PREFERENCIAS_DEFECTO.copy()), \
+         patch.object(app, 'VentanaPrincipal') as window, \
+         patch.object(app, 'aplicar_tema'), \
+         patch.object(app.GLib, 'idle_add') as idle, \
+         patch.object(app.Gtk, 'main'):
+        app.main()
+        if expected:
+            idle.assert_called_once_with(window.return_value._preguntar_reinicio)
+        else:
+            idle.assert_not_called()
 print('GTK programación: carga, selección, hora, guardar, pausar, eliminar, validación, resultados e integración ausente en cuatro idiomas OK')

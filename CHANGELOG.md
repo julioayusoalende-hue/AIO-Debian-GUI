@@ -1,5 +1,10 @@
 # Cambios
 
+## 2.7.4
+
+- Corrige la apertura de AiO y la notificación en la sesión del usuario tras el mantenimiento programado.
+- Muestra el aviso habitual al finalizar si se detectó la necesidad de reiniciar, incluso si alguna tarea falló.
+
 ## 2.7.3
 
 - Si el mantenimiento programado recomienda reiniciar, abre AiO en la sesión gráfica del usuario y muestra el aviso habitual, sin reiniciar automáticamente.
