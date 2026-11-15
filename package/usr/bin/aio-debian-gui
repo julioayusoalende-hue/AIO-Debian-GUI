@@ -1052,22 +1052,7 @@ TRADUCCIONES["en"].update({'Programar mantenimiento': 'Schedule maintenance',
  'Pausar': 'Pause',
  'Eliminar programación': 'Delete schedule',
  'Actualizar estado': 'Refresh status',
- 'Instala o actualiza el paquete DEB de AiO en el anfitrión y utiliza systemd para habilitar la programación.': 'Install '
-                                                                                                                'or '
-                                                                                                                'update '
-                                                                                                                'the '
-                                                                                                                'AiO '
-                                                                                                                'DEB '
-                                                                                                                'package '
-                                                                                                                'on '
-                                                                                                                'the '
-                                                                                                                'host '
-                                                                                                                'and '
-                                                                                                                'use '
-                                                                                                                'systemd '
-                                                                                                                'to '
-                                                                                                                'enable '
-                                                                                                                'scheduling.',
+ 'Instala o actualiza la integración de AiO en el anfitrión y utiliza systemd para habilitar la programación. Consulta el README.': 'Install or update the AiO host integration and use systemd to enable scheduling. See the README.',
  'Programación activa': 'Schedule active',
  'Próxima ejecución: %s': 'Next run: %s',
  'Programación pausada': 'Schedule paused',
@@ -1160,24 +1145,7 @@ TRADUCCIONES["fr"].update({'Programar mantenimiento': 'Programmer la maintenance
  'Pausar': 'Suspendre',
  'Eliminar programación': 'Supprimer la programmation',
  'Actualizar estado': 'Actualiser l’état',
- 'Instala o actualiza el paquete DEB de AiO en el anfitrión y utiliza systemd para habilitar la programación.': 'Installez '
-                                                                                                                'ou '
-                                                                                                                'mettez '
-                                                                                                                'à '
-                                                                                                                'jour '
-                                                                                                                'le '
-                                                                                                                'paquet '
-                                                                                                                'DEB '
-                                                                                                                'AiO '
-                                                                                                                'sur '
-                                                                                                                'l’hôte '
-                                                                                                                'et '
-                                                                                                                'utilisez '
-                                                                                                                'systemd '
-                                                                                                                'pour '
-                                                                                                                'activer '
-                                                                                                                'la '
-                                                                                                                'programmation.',
+ 'Instala o actualiza la integración de AiO en el anfitrión y utiliza systemd para habilitar la programación. Consulta el README.': 'Installez ou mettez à jour l’intégration AiO sur l’hôte et utilisez systemd pour activer la programmation. Consultez le README.',
  'Programación activa': 'Programmation active',
  'Próxima ejecución: %s': 'Prochaine exécution : %s',
  'Programación pausada': 'Programmation suspendue',
@@ -1238,12 +1206,7 @@ TRADUCCIONES["zh"].update({'Programar mantenimiento': '计划维护',
  'Pausar': '暂停',
  'Eliminar programación': '删除计划',
  'Actualizar estado': '刷新状态',
- 'Instala o actualiza el paquete DEB de AiO en el anfitrión y utiliza systemd para habilitar la programación.': '请在主机安装或更新 '
-                                                                                                                'AiO '
-                                                                                                                'DEB '
-                                                                                                                '软件包，并使用 '
-                                                                                                                'systemd '
-                                                                                                                '启用计划功能。',
+ 'Instala o actualiza la integración de AiO en el anfitrión y utiliza systemd para habilitar la programación. Consulta el README.': '请在主机安装或更新 AiO 集成并使用 systemd 启用计划功能。请参阅 README。',
  'Programación activa': '计划已启用',
  'Próxima ejecución: %s': '下次执行：%s',
  'Programación pausada': '计划已暂停',
@@ -1563,7 +1526,7 @@ def helper_mantenimiento():
     if os.environ.get("SNAP"):
         return HELPER_SISTEMA
     # El Flatpak es solo la interfaz: las operaciones administrativas se delegan
-    # al asistente instalado en el Debian anfitrión por el paquete .deb.
+    # al asistente instalado en el anfitrión, mediante DEB o integración manual.
     if es_flatpak():
         return HELPER_SISTEMA
     if os.environ.get("APPDIR") and os.path.isfile(HELPER_SISTEMA):
@@ -2061,7 +2024,7 @@ class VentanaPrincipal(Gtk.Window):
         w['eliminar'].set_sensitive(bool(disponible and datos.get('config')))
         w['actualizar'].set_sensitive(True)
         if not disponible:
-            texto = traducir("Instala o actualiza el paquete DEB de AiO en el anfitrión y utiliza systemd para habilitar la programación.")
+            texto = traducir("Instala o actualiza la integración de AiO en el anfitrión y utiliza systemd para habilitar la programación. Consulta el README.")
         elif datos.get('timer_active'):
             texto = traducir("Programación activa") + " · " + traducir("Próxima ejecución: %s") % (datos.get('next_run') or traducir("No disponible"))
         else:
