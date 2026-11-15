@@ -35,7 +35,7 @@ CORE_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file_
                                       "../lib/aio-debian-gui"))
 if CORE_DIR not in sys.path:
     sys.path.insert(0, CORE_DIR)
-from aio_core import appearance as core_appearance, history as core_history, preferences as core_preferences, updates as core_updates, diagnostics as core_diagnostics, preflight as core_preflight, scheduler as core_scheduler  # noqa: E402
+from aio_core import appearance as core_appearance, history as core_history, preferences as core_preferences, updates as core_updates, diagnostics as core_diagnostics, preflight as core_preflight, scheduler as core_scheduler, host_integration as core_host_integration  # noqa: E402
 
 PRGNAME = "aio-debian-gui"
 POLKIT_ACTION = "es.aiodebian.gui.mantenimiento"
@@ -66,6 +66,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.7.8": "Guía integrada para instalar o actualizar el asistente del anfitrión.",
     "2.7.7": "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.",
     "2.7.6": "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.",
     "2.7.5": "Comprobación de reinicio más fiable con needrestart.",
@@ -550,6 +551,7 @@ TRADUCCIONES = {
 
 # Textos del actualizador integrados con las traducciones existentes.
 TRADUCCIONES["en"].update({
+    "Guía integrada para instalar o actualizar el asistente del anfitrión.": "Built-in guide to install or update the host helper.",
     "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.": "Diagnostics refresh APT indexes with authorization before checking the system.",
     "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.": "More complete APT update diagnostics and a warning about local indexes.",
     "Buscar actualizaciones": "Check for updates",
@@ -562,6 +564,7 @@ TRADUCCIONES["en"].update({
     "No se pudo actualizar": "Unable to update",
 })
 TRADUCCIONES["fr"].update({
+    "Guía integrada para instalar o actualizar el asistente del anfitrión.": "Guide intégré pour installer ou mettre à jour l’assistant de l’hôte.",
     "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.": "Le diagnostic actualise les index APT avec autorisation avant de vérifier le système.",
     "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.": "Diagnostic des mises à jour APT plus complet et avertissement sur les index locaux.",
     "Buscar actualizaciones": "Rechercher des mises à jour",
@@ -574,6 +577,7 @@ TRADUCCIONES["fr"].update({
     "No se pudo actualizar": "Mise à jour impossible",
 })
 TRADUCCIONES["zh"].update({
+    "Guía integrada para instalar o actualizar el asistente del anfitrión.": "内置指南可帮助安装或更新主机辅助程序。",
     "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.": "诊断会在检查系统前经授权刷新 APT 索引。",
     "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.": "更全面地诊断 APT 更新并提示本地索引问题。",
     "Buscar actualizaciones": "检查更新",
@@ -1298,6 +1302,49 @@ TRADUCCIONES["zh"].update({
     "No se pudieron verificar las actualizaciones con índices APT actualizados.": "无法使用已刷新的 APT 索引检查更新。",
 })
 
+TRADUCCIONES["en"].update({
+    "Guía de integración del anfitrión": "Host integration guide",
+    "La integración instala el asistente, la política Polkit y el programador en el sistema anfitrión. La aplicación no ejecuta estos comandos por ti.": "Host integration installs the helper, Polkit policy and scheduler. The application does not run these commands for you.",
+    "Antes de actualizar, pausa las programaciones de todos los usuarios y espera a que terminen las tareas. Si el DEB está instalado, actualízalo con APT y no uses esta guía.": "Before updating, pause every user's schedules and wait for tasks to finish. If the DEB is installed, update it with APT instead of using this guide.",
+    "1. Copia y ejecuta este bloque en una terminal del anfitrión. Anota el directorio mostrado y revisa los archivos extraídos.": "1. Copy and run this block in a host terminal. Note the displayed directory and review the extracted files.",
+    "2. En la misma terminal, entra en ese directorio con cd. Copia el segundo bloque solo si confías en los archivos y autorizas su instalación como administrador.": "2. In the same terminal, use cd to enter that directory. Copy the second block only if you trust the files and authorize their installation as administrator.",
+    "3. Reinicia AiO y actualiza el estado de la programación. Tras actualizar AiO, repite estos pasos con la misma versión.": "3. Restart AiO and refresh the schedule status. After updating AiO, repeat these steps with the same version.",
+    "Copiar extracción": "Copy extraction",
+    "Copiar instalación": "Copy installation",
+    "No se pudo preparar la guía de integración.": "Could not prepare the integration guide.",
+    "No se pudo determinar la ruta absoluta del AppImage.": "Could not determine the absolute AppImage path.",
+    "Para las notificaciones y la comprobación de reinicio, instala libnotify-bin y needrestart en el anfitrión.": "For notifications and restart checks, install libnotify-bin and needrestart on the host.",
+    "Abre la guía de integración para instalar o actualizar el asistente del anfitrión.": "Open the integration guide to install or update the host helper.",
+})
+TRADUCCIONES["fr"].update({
+    "Guía de integración del anfitrión": "Guide d’intégration de l’hôte",
+    "La integración instala el asistente, la política Polkit y el programador en el sistema anfitrión. La aplicación no ejecuta estos comandos por ti.": "L’intégration installe l’assistant, la politique Polkit et le planificateur sur l’hôte. L’application n’exécute pas ces commandes à votre place.",
+    "Antes de actualizar, pausa las programaciones de todos los usuarios y espera a que terminen las tareas. Si el DEB está instalado, actualízalo con APT y no uses esta guía.": "Avant la mise à jour, suspendez les planifications de tous les utilisateurs et attendez la fin des tâches. Si le DEB est installé, mettez-le à jour avec APT sans utiliser ce guide.",
+    "1. Copia y ejecuta este bloque en una terminal del anfitrión. Anota el directorio mostrado y revisa los archivos extraídos.": "1. Copiez et exécutez ce bloc dans un terminal de l’hôte. Notez le répertoire affiché et vérifiez les fichiers extraits.",
+    "2. En la misma terminal, entra en ese directorio con cd. Copia el segundo bloque solo si confías en los archivos y autorizas su instalación como administrador.": "2. Dans le même terminal, entrez dans ce répertoire avec cd. Copiez le second bloc uniquement si vous faites confiance aux fichiers et autorisez leur installation en tant qu’administrateur.",
+    "3. Reinicia AiO y actualiza el estado de la programación. Tras actualizar AiO, repite estos pasos con la misma versión.": "3. Redémarrez AiO et actualisez l’état de la planification. Après chaque mise à jour d’AiO, répétez ces étapes avec la même version.",
+    "Copiar extracción": "Copier l’extraction",
+    "Copiar instalación": "Copier l’installation",
+    "No se pudo preparar la guía de integración.": "Impossible de préparer le guide d’intégration.",
+    "No se pudo determinar la ruta absoluta del AppImage.": "Impossible de déterminer le chemin absolu de l’AppImage.",
+    "Para las notificaciones y la comprobación de reinicio, instala libnotify-bin y needrestart en el anfitrión.": "Pour les notifications et la vérification des redémarrages, installez libnotify-bin et needrestart sur l’hôte.",
+    "Abre la guía de integración para instalar o actualizar el asistente del anfitrión.": "Ouvrez le guide d’intégration pour installer ou mettre à jour l’assistant de l’hôte.",
+})
+TRADUCCIONES["zh"].update({
+    "Guía de integración del anfitrión": "主机集成指南",
+    "La integración instala el asistente, la política Polkit y el programador en el sistema anfitrión. La aplicación no ejecuta estos comandos por ti.": "集成会在主机上安装辅助程序、Polkit 策略和计划程序。应用不会替您执行这些命令。",
+    "Antes de actualizar, pausa las programaciones de todos los usuarios y espera a que terminen las tareas. Si el DEB está instalado, actualízalo con APT y no uses esta guía.": "更新前请暂停所有用户的计划并等待任务结束。如果已安装 DEB，请通过 APT 更新，不要使用此指南。",
+    "1. Copia y ejecuta este bloque en una terminal del anfitrión. Anota el directorio mostrado y revisa los archivos extraídos.": "1. 在主机终端复制并执行此代码块。记下显示的目录并检查提取的文件。",
+    "2. En la misma terminal, entra en ese directorio con cd. Copia el segundo bloque solo si confías en los archivos y autorizas su instalación como administrador.": "2. 在同一终端使用 cd 进入该目录。只有信任这些文件并授权以管理员身份安装时，才复制第二个代码块。",
+    "3. Reinicia AiO y actualiza el estado de la programación. Tras actualizar AiO, repite estos pasos con la misma versión.": "3. 重启 AiO 并刷新计划状态。更新 AiO 后，使用相同版本重复这些步骤。",
+    "Copiar extracción": "复制提取命令",
+    "Copiar instalación": "复制安装命令",
+    "No se pudo preparar la guía de integración.": "无法准备集成指南。",
+    "No se pudo determinar la ruta absoluta del AppImage.": "无法确定 AppImage 的绝对路径。",
+    "Para las notificaciones y la comprobación de reinicio, instala libnotify-bin y needrestart en el anfitrión.": "若要使用通知和重启检查，请在主机上安装 libnotify-bin 和 needrestart。",
+    "Abre la guía de integración para instalar o actualizar el asistente del anfitrión.": "打开集成指南以安装或更新主机辅助程序。",
+})
+
 def traducir(texto):
     return TRADUCCIONES.get(IDIOMA_ACTUAL, {}).get(texto, texto)
 
@@ -1926,6 +1973,11 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_programar.connect("clicked", self._abrir_programacion)
         menu.pack_start(self.btn_programar, False, False, 0)
 
+        if formato in ("flatpak", "appimage"):
+            btn_integracion = Gtk.Button(label=traducir("Guía de integración del anfitrión"))
+            btn_integracion.connect("clicked", self._abrir_guia_integracion)
+            menu.pack_start(btn_integracion, False, False, 0)
+
         self.btn_actualizar = Gtk.Button(label=traducir("Buscar actualizaciones"))
         self.btn_actualizar.set_tooltip_text(traducir("Actualizar esta aplicación"))
         self.btn_actualizar.connect("clicked", self._buscar_actualizacion)
@@ -1942,6 +1994,57 @@ class VentanaPrincipal(Gtk.Window):
         hb.pack_start(self.btn_menu)
         self.set_titlebar(hb)
 
+    def _abrir_guia_integracion(self, _boton=None, parent=None):
+        if self.programando:
+            return
+        self.menu_popover.popdown()
+        try:
+            extraccion, instalacion = core_host_integration.commands(
+                formato_actualizacion(), os.environ.get("APPIMAGE"))
+        except ValueError as exc:
+            self._mensaje(Gtk.MessageType.ERROR, "No se pudo preparar la guía de integración.", traducir(str(exc)))
+            return
+        dialogo = Gtk.Dialog(title=traducir("Guía de integración del anfitrión"),
+                             transient_for=parent or self, modal=True)
+        dialogo.set_default_size(700, 600)
+        dialogo.add_button(traducir("Cerrar"), Gtk.ResponseType.CLOSE)
+        dialogo.connect("response", lambda d, _r: d.destroy())
+        area = dialogo.get_content_area()
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        area.pack_start(scroll, True, True, 0)
+        contenido = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        contenido.set_border_width(14)
+        scroll.add(contenido)
+        for texto in (
+            "La integración instala el asistente, la política Polkit y el programador en el sistema anfitrión. La aplicación no ejecuta estos comandos por ti.",
+            "Antes de actualizar, pausa las programaciones de todos los usuarios y espera a que terminen las tareas. Si el DEB está instalado, actualízalo con APT y no uses esta guía.",
+        ):
+            contenido.pack_start(etiqueta(traducir(texto)), False, False, 0)
+        for descripcion, comando, nombre in (
+            ("1. Copia y ejecuta este bloque en una terminal del anfitrión. Anota el directorio mostrado y revisa los archivos extraídos.",
+             extraccion, "Copiar extracción"),
+            ("2. En la misma terminal, entra en ese directorio con cd. Copia el segundo bloque solo si confías en los archivos y autorizas su instalación como administrador.",
+             instalacion, "Copiar instalación"),
+        ):
+            contenido.pack_start(etiqueta(traducir(descripcion)), False, False, 0)
+            codigo = Gtk.TextView()
+            codigo.set_editable(False)
+            codigo.set_cursor_visible(False)
+            codigo.set_monospace(True)
+            codigo.set_wrap_mode(Gtk.WrapMode.CHAR)
+            codigo.get_buffer().set_text(comando)
+            contenido.pack_start(codigo, False, False, 0)
+            copiar = Gtk.Button(label=traducir(nombre))
+            copiar.connect("clicked", lambda _b, texto: Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).set_text(texto, -1), comando)
+            contenido.pack_start(copiar, False, False, 0)
+        contenido.pack_start(etiqueta(traducir(
+            "3. Reinicia AiO y actualiza el estado de la programación. Tras actualizar AiO, repite estos pasos con la misma versión."
+        )), False, False, 0)
+        contenido.pack_start(etiqueta(traducir(
+            "Para las notificaciones y la comprobación de reinicio, instala libnotify-bin y needrestart en el anfitrión."
+        )), False, False, 0)
+        dialogo.show_all()
 
     def _abrir_programacion(self, _boton=None):
         if self.en_curso or self.programando or self.comprobando_actualizacion:
@@ -2026,15 +2129,19 @@ class VentanaPrincipal(Gtk.Window):
             boton.get_child().set_max_width_chars(24)
             acciones.attach(boton, i % 2, i // 2, 1, 1)
         area.pack_start(acciones, False, False, 0)
+        integracion = Gtk.Button(label=traducir("Guía de integración del anfitrión"))
+        integracion.connect("clicked", lambda _b: self._abrir_guia_integracion(parent=dialogo))
+        area.pack_start(integracion, False, False, 0)
         self.programacion_widgets = dict(activo=activo, frecuencia=frecuencia, dia=dia,
             hora=hora, minuto=minuto, tareas=tareas, estado=estado, resultados=resultados,
             formulario=formulario, guardar=guardar, pausar=pausar, eliminar=eliminar,
-            actualizar=actualizar, disponible=False, config=None)
+            actualizar=actualizar, integracion=integracion, disponible=False, config=None)
         guardar.connect("clicked", lambda _b: self._cambiar_programacion(dialogo))
         pausar.connect("clicked", lambda _b: self._cambiar_programacion(dialogo, pausar=True))
         eliminar.connect("clicked", lambda _b: self._cambiar_programacion(dialogo, eliminar=True))
         actualizar.connect("clicked", lambda _b: self._cargar_programacion(dialogo, cargar_formulario=False))
         dialogo.show_all()
+        integracion.set_visible(formato_actualizacion() in ("flatpak", "appimage"))
         self._cargar_programacion(dialogo)
 
     @staticmethod
@@ -2090,6 +2197,7 @@ class VentanaPrincipal(Gtk.Window):
         w['pausar'].set_sensitive(bool(disponible and datos.get('config') and config['enabled']))
         w['eliminar'].set_sensitive(bool(disponible and datos.get('config')))
         w['actualizar'].set_sensitive(True)
+        w['integracion'].set_sensitive(not disponible)
         if not disponible:
             texto = traducir("Instala o actualiza la integración de AiO en el anfitrión y utiliza systemd para habilitar la programación. Consulta el README.")
         elif datos.get('timer_active'):
@@ -2141,7 +2249,7 @@ class VentanaPrincipal(Gtk.Window):
             return
         self.programando = True
         self._actualizar_sensibilidad()
-        for nombre in ('formulario', 'guardar', 'pausar', 'eliminar', 'actualizar'):
+        for nombre in ('formulario', 'guardar', 'pausar', 'eliminar', 'actualizar', 'integracion'):
             w[nombre].set_sensitive(False)
         dialogo.set_response_sensitive(Gtk.ResponseType.CLOSE, False)
         w['estado'].set_text(traducir('Esperando autorización de administrador…'))
@@ -2942,6 +3050,7 @@ class VentanaPrincipal(Gtk.Window):
                         "name": "Índices de APT", "status": "unknown",
                         "detail": "No se pudieron actualizar los índices APT; los resultados pueden estar desactualizados.",
                         "advice": error_apt,
+                        "action": ("integration" if formato in ("flatpak", "appimage") else None),
                     })
                     for resultado in resultados[1:]:
                         if resultado["name"] in ("Actualizaciones pendientes", "Índices de APT"):
@@ -3039,6 +3148,10 @@ class VentanaPrincipal(Gtk.Window):
                 boton.connect("clicked", self._actualizar_desde_diagnostico)
                 fila.pack_end(boton, False, False, 0)
                 self.btn_actualizar_diagnostico = boton
+            elif resultado.get("action") == "integration":
+                boton = Gtk.Button(label=traducir("Guía de integración del anfitrión"))
+                boton.connect("clicked", lambda _b: self._abrir_guia_integracion(parent=dialogo))
+                fila.pack_end(boton, False, False, 0)
             self.lista_diagnostico.pack_start(fila, False, False, 0)
             self.lista_diagnostico.pack_start(Gtk.Separator(), False, False, 0)
         self.lista_diagnostico.show_all()
@@ -3476,6 +3589,9 @@ class VentanaPrincipal(Gtk.Window):
             self._mensaje(Gtk.MessageType.ERROR, "No se pudo preparar el asistente", str(e))
             return
         if not helper_disponible(helper):
+            if es_flatpak():
+                self._abrir_guia_integracion()
+                return
             self._mensaje(Gtk.MessageType.ERROR, "Falta el asistente",
                           (
                               "El Flatpak incluye el asistente, pero todavía no está instalado "
@@ -3497,6 +3613,9 @@ class VentanaPrincipal(Gtk.Window):
             except (OSError, subprocess.SubprocessError):
                 version_helper = ""
             if version_helper != version_app():
+                if es_flatpak():
+                    self._abrir_guia_integracion()
+                    return
                 self._mensaje(
                     Gtk.MessageType.WARNING, "Asistente del sistema desactualizado",
                     "El asistente privilegiado del anfitrión no corresponde a esta versión "
@@ -3735,6 +3854,9 @@ class VentanaPrincipal(Gtk.Window):
             return
         if not helper_disponible(helper):
             self._restablecer_opcion_sin_contrasena(autorizacion_sin_contrasena_activa())
+            if es_flatpak():
+                self._abrir_guia_integracion()
+                return
             self._mensaje(
                 Gtk.MessageType.ERROR,
                 "Falta el asistente",

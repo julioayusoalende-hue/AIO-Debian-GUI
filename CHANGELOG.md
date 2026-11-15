@@ -1,5 +1,11 @@
 # Cambios
 
+## 2.7.8
+
+- Guía en la interfaz para instalar o actualizar la integración del anfitrión en Flatpak y AppImage.
+- Separa extracción y revisión de archivos de la instalación autorizada; no ejecuta comandos automáticamente y evita sobrescribir archivos gestionados por paquetes.
+- Accesible desde el menú, la programación y los errores de actualización de índices del diagnóstico.
+
 ## 2.7.7
 
 - Antes de diagnosticar, actualiza los índices APT mediante el asistente autorizado por Polkit, sin instalar ni eliminar paquetes.

@@ -24,6 +24,7 @@ El diagnóstico solicita autorización para renovar los índices APT antes de co
 
 ## Novedades recientes
 
+- **2.7.8:** guía integrada para instalar o actualizar el asistente del anfitrión en Flatpak y AppImage, con revisión de archivos y autorización explícita.
 - **2.7.7:** actualización autorizada de los índices APT antes del diagnóstico, con aviso si falla.
 - **2.7.6:** diagnóstico más completo de paquetes actualizables y aviso sobre los índices APT locales que pueden ocultar actualizaciones.
 - **2.7.5:** el paquete DEB instala `needrestart`; si la comprobación de reinicio no está disponible o falla, AiO informa del error en lugar de indicar que no hace falta reiniciar. Para AppImage y Flatpak, instala `needrestart` en el anfitrión si quieres usar esa comprobación.
@@ -86,6 +87,8 @@ Programar, pausar o eliminar un horario requiere autorización de administrador.
 Antes de cambiar kernel, Mesa, repositorios o controladores, haz una copia de seguridad y revisa las advertencias de la tarea. La vuelta de kernel y Mesa desde Backports no cambia por sí sola el kernel de arranque; NVIDIA puede quedar bloqueado cuando la compatibilidad no se pueda verificar. La opción de Polkit sin contraseña es opcional, está desactivada inicialmente y reduce la protección de la cuenta.
 
 ### Integración del programador para AppImage y Flatpak
+
+En AppImage o Flatpak, abre **Menú → Guía de integración del anfitrión**. La guía muestra dos bloques que puedes copiar a una terminal del anfitrión: uno extrae los archivos y otro los instala tras tu revisión y autorización. La aplicación no ejecuta los comandos automáticamente. La guía también está disponible desde la ventana de programación cuando la integración no está lista y desde el diagnóstico si falla la actualización APT.
 
 Estos pasos instalan en el anfitrión el asistente, los módulos de programación, la política Polkit y el servicio systemd incluidos en la misma versión de AiO. No los ejecutes si el paquete DEB ya gestiona esos archivos. Requiere autorización de administrador.
 

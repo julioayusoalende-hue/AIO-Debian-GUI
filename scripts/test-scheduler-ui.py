@@ -123,4 +123,20 @@ for language in ('es', 'en', 'fr', 'zh'):
         assert not w.programacion_widgets['formulario'].get_sensitive()
         w.ventana_programacion.destroy()
     w.destroy()
+
+# La guía es accesible desde la programación si la integración del anfitrión falla.
+with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
+    w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+    w.show_all()
+    with patch.object(app.subprocess, 'run', return_value=SimpleNamespace(
+            returncode=1, stdout='', stderr='asistente ausente')):
+        w._abrir_programacion()
+        wait_for(lambda: w.programacion_widgets['actualizar'].get_sensitive())
+        button = w.programacion_widgets['integracion']
+        assert button.get_visible() and button.get_sensitive()
+        with patch.object(w, '_abrir_guia_integracion') as guide:
+            button.clicked()
+            guide.assert_called_once_with(parent=w.ventana_programacion)
+        w.ventana_programacion.destroy()
+    w.destroy()
 print('GTK programación: carga, selección, hora, guardar, pausar, eliminar, validación, resultados e integración ausente en cuatro idiomas OK')

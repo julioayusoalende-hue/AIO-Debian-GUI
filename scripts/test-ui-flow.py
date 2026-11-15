@@ -179,4 +179,36 @@ for refresh_error in (None, 'Autorización cancelada'):
         w.ventana_diagnostico.destroy()
         settle()
 w.destroy()
+
+# La guía muestra dos bloques independientes y no ejecuta la instalación.
+with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
+    w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+    w.show_all()
+    settle()
+    with patch.object(app.core_host_integration, 'commands',
+                      return_value=('EXTRACCION', 'INSTALACION')) as generate:
+        w._abrir_guia_integracion()
+        settle()
+        dialogs = [d for d in Gtk.Window.list_toplevels()
+                   if isinstance(d, Gtk.Dialog) and d.get_title() == 'Guía de integración del anfitrión']
+        assert len(dialogs) == 1
+        dialog = dialogs[0]
+        def children(widget):
+            yield widget
+            if isinstance(widget, Gtk.Container):
+                for child in widget.get_children():
+                    yield from children(child)
+        widgets = list(children(dialog))
+        views = [widget for widget in widgets if isinstance(widget, Gtk.TextView)]
+        assert len(views) == 2 and all(not view.get_editable() for view in views)
+        texts = [view.get_buffer().get_text(*view.get_buffer().get_bounds(), True) for view in views]
+        assert texts == ['EXTRACCION', 'INSTALACION']
+        buttons = {widget.get_label(): widget for widget in widgets if isinstance(widget, Gtk.Button)}
+        buttons['Copiar extracción'].clicked()
+        assert Gtk.Clipboard.get(app.Gdk.SELECTION_CLIPBOARD).wait_for_text() == 'EXTRACCION'
+        buttons['Copiar instalación'].clicked()
+        assert Gtk.Clipboard.get(app.Gdk.SELECTION_CLIPBOARD).wait_for_text() == 'INSTALACION'
+        generate.assert_called_once()
+        dialog.destroy()
+    w.destroy()
 print('GTK: selección, confirmación, exclusión Stable, diagnóstico, consola, resultados y adaptación en cuatro idiomas OK')
