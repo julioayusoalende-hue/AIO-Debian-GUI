@@ -2075,6 +2075,8 @@ class VentanaPrincipal(Gtk.Window):
                     'weekday': int(w['dia'].get_active_id()), 'hour': w['hora'].get_value_as_int(),
                     'minute': w['minuto'].get_value_as_int(),
                     'tasks': [t for t, c in w['tareas'].items() if c.get_active()]})
+                if not pausar:
+                    config['launcher'] = self._lanzador_programacion()
                 config = core_scheduler.validate_config(config)
                 argumentos = ['--schedule-save', json.dumps(config)]
         except (ValueError, TypeError):
@@ -2116,6 +2118,16 @@ class VentanaPrincipal(Gtk.Window):
                 error = str(exc)
             GLib.idle_add(self._programacion_guardada, dialogo, error)
         threading.Thread(target=aplicar, daemon=True).start()
+
+    @staticmethod
+    def _lanzador_programacion():
+        formato = formato_actualizacion()
+        if formato in ("deb", "flatpak"):
+            return {"format": formato, "path": ""}
+        appimage = os.environ.get("APPIMAGE")
+        if formato == "appimage" and appimage and os.path.isabs(appimage):
+            return {"format": formato, "path": appimage}
+        return None
 
     def _programacion_guardada(self, dialogo, error):
         self.programando = False
@@ -4078,6 +4090,7 @@ class VentanaPrincipal(Gtk.Window):
 
 
 def main():
+    aviso_reinicio_programado = "--scheduled-reboot-required" in sys.argv[1:]
     GLib.set_prgname(PRGNAME)
     GLib.set_application_name("AiO Debian")
     if os.geteuid() == 0:
@@ -4095,6 +4108,8 @@ def main():
     win.handler_cierre = win.connect("destroy", Gtk.main_quit)
     win.show_all()
     win._consultar_estados_tareas(inicial=True)
+    if aviso_reinicio_programado:
+        GLib.idle_add(win._preguntar_reinicio)
     if error_preferencias:
         win.estado.set_text(
             traducir("No se pudieron leer las preferencias") + ": " + error_preferencias

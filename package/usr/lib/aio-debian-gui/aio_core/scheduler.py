@@ -318,17 +318,16 @@ def _launch_for_reboot(uid, launcher):
                                          'XDG_CURRENT_DESKTOP', 'XDG_SESSION_TYPE',
                                          'XDG_DATA_DIRS'):
                     env.append(f'{key}={value}')
-        result = subprocess.run(
+        if not any(value.startswith(('DISPLAY=', 'WAYLAND_DISPLAY=')) for value in env):
+            print('No hay una sesión gráfica disponible para abrir AiO.', file=sys.stderr)
+            return
+        subprocess.Popen(
             [runuser, '-u', uid, '--', '/usr/bin/env', *env, *command,
              '--scheduled-reboot-required'],
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL, start_new_session=True, timeout=10, check=False)
+            stderr=subprocess.DEVNULL, start_new_session=True, close_fds=True)
     except (OSError, subprocess.SubprocessError) as exc:
         print(f'No se pudo abrir AiO para avisar del reinicio: {str(exc)[:300]}', file=sys.stderr)
-        return
-    if result.returncode:
-        print(f'No se pudo iniciar AiO para avisar del reinicio (código {result.returncode}).',
-              file=sys.stderr)
 
 
 def run_schedule(uid):
