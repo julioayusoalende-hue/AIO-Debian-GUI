@@ -31,6 +31,7 @@ bash scripts/test-passwordless.sh && bien "reglas Polkit de AiO y Flatpak de usu
 bash scripts/test-distro.sh && bien "detección Debian/Ubuntu LTS y HWE" || fallo "pruebas de distribución"
 python3 scripts/test-updater.py && bien "actualizador AppImage: versiones y SHA-256" || fallo "pruebas de actualizador"
 python3 scripts/test-history.py && bien "historial de mantenimiento y persistencia" || fallo "pruebas del historial"
+bash scripts/test-scheduler-install.sh && bien "integración del programador sin DEB" || fallo "instalación del programador"
 python3 scripts/test-scheduler.py && bien "programación automática de mantenimiento" || fallo "pruebas de programación"
 python3 scripts/test-preflight.py && bien "modo de mantenimiento seguro" || fallo "pruebas de mantenimiento seguro"
 bash scripts/test-upgrade-safety.sh && bien "actualización APT protegida" || fallo "pruebas de actualización APT segura"
