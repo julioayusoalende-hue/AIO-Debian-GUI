@@ -279,6 +279,11 @@ def _launch_for_reboot(uid, launcher):
     runtime = Path('/run/user') / uid
     bus = runtime / 'bus'
     runuser = shutil.which('runuser')
+    if launcher is None:
+        if os.access('/usr/bin/aio-debian-gui', os.X_OK):
+            launcher = {'format': 'deb', 'path': ''}
+        elif shutil.which('flatpak'):
+            launcher = {'format': 'flatpak', 'path': ''}
     if not runtime.is_dir() or not bus.is_socket():
         print('No hay una sesión de usuario activa para abrir AiO.', file=sys.stderr)
         return
@@ -321,11 +326,18 @@ def _launch_for_reboot(uid, launcher):
         if not any(value.startswith(('DISPLAY=', 'WAYLAND_DISPLAY=')) for value in env):
             print('No hay una sesión gráfica disponible para abrir AiO.', file=sys.stderr)
             return
-        subprocess.Popen(
-            [runuser, '-u', uid, '--', '/usr/bin/env', *env, *command,
-             '--scheduled-reboot-required'],
-            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL, start_new_session=True, close_fds=True)
+        systemd_run = shutil.which('systemd-run')
+        if not systemd_run:
+            print('No se pudo abrir AiO: falta systemd-run.', file=sys.stderr)
+            return
+        launch = [runuser, '-u', uid, '--', '/usr/bin/env', *env,
+                  systemd_run, '--user', '--no-block', '--collect']
+        launch.extend('--setenv=' + value for value in env[2:])
+        launch.extend(['--', *command, '--scheduled-reboot-required'])
+        result = subprocess.run(launch, capture_output=True, text=True, timeout=15, check=False)
+        if result.returncode:
+            detail = (result.stderr or result.stdout or 'systemd-run falló.').strip()[-300:]
+            print(f'No se pudo abrir AiO para avisar del reinicio: {detail}', file=sys.stderr)
     except (OSError, subprocess.SubprocessError) as exc:
         print(f'No se pudo abrir AiO para avisar del reinicio: {str(exc)[:300]}', file=sys.stderr)
 

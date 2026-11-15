@@ -111,12 +111,14 @@ with patch.object(Path, 'is_dir', return_value=True), \
          returncode=0, stdout='DISPLAY=:0\nWAYLAND_DISPLAY=wayland-0\n', stderr='')) as session_env, \
      patch.object(s.subprocess, 'Popen') as launch:
     s._launch_for_reboot('1000', {'format': 'deb', 'path': ''})
-    session_env.assert_called_once()
-    command = launch.call_args.args[0]
+    assert session_env.call_count == 2
+    command = session_env.call_args.args[0]
     assert command[:4] == ['/usr/bin/runuser', '-u', '1000', '--']
     assert '/usr/bin/aio-debian-gui' in command
     assert command[-1] == '--scheduled-reboot-required'
-    assert 'DISPLAY=:0' in command and 'WAYLAND_DISPLAY=wayland-0' in command
+    assert '/usr/bin/systemd-run' in command
+    assert '--setenv=DISPLAY=:0' in command and '--setenv=WAYLAND_DISPLAY=wayland-0' in command
+    launch.assert_not_called()
 
 with tempfile.TemporaryDirectory() as directory:
     root = Path(directory)
