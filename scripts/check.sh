@@ -8,6 +8,8 @@ fallos=0
 fallo() { echo "✘ $*" >&2; fallos=1; }
 bien()  { echo "✔ $*"; }
 
+python3 scripts/sync-version.py && bien "versiones sincronizadas DEB/AppImage/Flatpak" || fallo "versiones desincronizadas"
+
 GUI=package/usr/bin/aio-debian-gui
 HELPER=package/usr/lib/aio-debian-gui/aio-debian-gui-helper
 
