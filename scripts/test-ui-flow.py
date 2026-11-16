@@ -31,13 +31,53 @@ for language in ('es', 'en', 'fr', 'zh'):
     w = app.VentanaPrincipal({'idioma': language, 'tema': 'claro', 'modo_simple': False})
     w.show_all()
     settle()
-    assert w.notebook.get_n_pages() == 2
+    assert w.notebook.get_n_pages() == 3
     assert [w.notebook.get_tab_label_text(w.notebook.get_nth_page(i))
             for i in range(2)] == [
                 app.traducir('Configuración y mantenimiento'), app.traducir('Backup')
             ]
+    assert w.notebook.get_tab_label_text(w.notebook.get_nth_page(2)) == \
+        app.traducir('Apps recomendadas')
     assert set(w.backup_buttons) == {'timeshift', 'deja-dup'}
     assert all(button.get_image() is not None for button in w.backup_buttons.values())
+    for app_id, button in w.backup_buttons.items():
+        row = button.get_parent()
+        assert row.get_orientation() == Gtk.Orientation.VERTICAL
+        assert len(row.get_children()) == 2
+        description = row.get_children()[1]
+        assert isinstance(description, Gtk.Label)
+        assert description.get_text() == app.traducir(app.APLICACIONES_BACKUP[app_id]['description'])
+    w.notebook.set_current_page(1)
+    w.resize(600, 900)
+    settle()
+    assert w.get_size()[0] <= 601, (language, w.get_size())
+    assert all(button.get_mapped() for button in w.backup_buttons.values())
+    w.notebook.set_current_page(2)
+    settle()
+    assert w.get_size()[0] <= 601, (language, w.get_size())
+    assert all(button.get_mapped() for button in w.recommended_buttons.values())
+    assert len(w.recommended_grid.get_children()) == 10
+    expected_names = ['Celluloid', 'Feishin', 'GIMP', 'Google Chrome', 'HandBrake',
+                      'Plex', 'Spotify', 'Switcheroo', 'Video Downloader', 'VLC']
+    assert [item['name'] for item in app.APPS_RECOMENDADAS] == expected_names
+    for index, name in enumerate(expected_names):
+        card = w.recommended_grid.get_child_at(index % 2, index // 2)
+        assert card is not None
+        contents = card.get_child().get_children()
+        header = contents[0].get_children()
+        assert isinstance(header[0], Gtk.Image)
+        assert header[1].get_text() == name
+        assert contents[1].get_text() == app.traducir(
+            app.APPS_RECOMENDADAS[index]['description'])
+    assert {key for key in w.recommended_buttons if key[1] == 'deb'} == {
+        ('celluloid', 'deb'), ('gimp', 'deb'), ('handbrake', 'deb'), ('vlc', 'deb')
+    }
+    assert ('feishin', 'flatpak') in w.recommended_buttons
+    assert ('feishin', 'deb-download') in w.recommended_buttons
+    assert ('plex', 'flatpak') in w.recommended_buttons
+    assert ('google-chrome', 'deb-download') in w.recommended_buttons
+    w.notebook.set_current_page(0)
+    settle()
     if language != 'es':
         assert app.traducir('Operación en curso') != 'Operación en curso'
     assert not w.detalles_sistema.get_expanded()
@@ -156,6 +196,83 @@ with patch.object(w, '_mensaje') as message:
     assert w._al_cerrar()
     message.assert_called_once()
     w.backup_action_in_progress = False
+
+# Apps recomendadas: fuentes separadas, ejecuciones seguras y confirmación de instalación.
+gimp = next(item for item in app.APPS_RECOMENDADAS if item['id'] == 'gimp')
+apt_installed = app.subprocess.CompletedProcess([], 0, stdout='installed', stderr='')
+with patch.object(app.subprocess, 'run', return_value=apt_installed), \
+     patch.object(app.threading, 'Thread', ImmediateThread), \
+     patch.object(app.Gio.Subprocess, 'new') as launch:
+    w._accion_app_recomendada(w.recommended_buttons[('gimp', 'deb')], 'gimp', 'deb')
+    settle()
+    launch.assert_called_once_with(['gimp'], app.Gio.SubprocessFlags.NONE)
+
+vlc = next(item for item in app.APPS_RECOMENDADAS if item['id'] == 'vlc')
+flatpak_installed = app.subprocess.CompletedProcess(
+    [], 0, stdout='org.videolan.VLC\n', stderr=''
+)
+with patch.object(app.subprocess, 'run', return_value=flatpak_installed), \
+     patch.object(app.threading, 'Thread', ImmediateThread), \
+     patch.object(app.Gio.Subprocess, 'new') as launch:
+    w._accion_app_recomendada(w.recommended_buttons[('vlc', 'flatpak')], 'vlc', 'flatpak')
+    settle()
+    launch.assert_called_once_with(
+        ['flatpak', 'run', 'org.videolan.VLC'], app.Gio.SubprocessFlags.NONE
+    )
+
+with patch.object(app.Gio.AppInfo, 'launch_default_for_uri') as open_url:
+    w._accion_app_recomendada(
+        w.recommended_buttons[('google-chrome', 'deb-download')],
+        'google-chrome', 'deb-download',
+    )
+    open_url.assert_called_once_with('https://www.google.com/chrome/', None)
+
+missing_apt = app.subprocess.CompletedProcess(
+    [], 1, stdout='', stderr='dpkg-query: no packages found matching gimp'
+)
+install_result = app.subprocess.CompletedProcess(
+    [], 0, stdout='##RECOMMENDED:installed:gimp\n', stderr=''
+)
+with patch.object(app.subprocess, 'run', side_effect=[missing_apt, install_result]), \
+     patch.object(app.threading, 'Thread', ImmediateThread), \
+     patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK), \
+     patch.object(app, 'helper_mantenimiento', return_value='/test/helper'), \
+     patch.object(app, 'helper_disponible', return_value=True), \
+     patch.object(app, 'comando_pkexec',
+                  return_value=['pkexec', '/test/helper', '--recommended-install', 'gimp']), \
+     patch.object(app.Gio.Subprocess, 'new') as launch:
+    w._accion_app_recomendada(
+        w.recommended_buttons[('gimp', 'deb')], 'gimp', 'deb'
+    )
+    settle()
+    launch.assert_called_once_with(['gimp'], app.Gio.SubprocessFlags.NONE)
+
+missing_flatpak = app.subprocess.CompletedProcess([], 0, stdout='', stderr='')
+flathub_remote = app.subprocess.CompletedProcess([], 0, stdout='flathub\n', stderr='')
+user_remote_result = app.subprocess.CompletedProcess([], 0, stdout='', stderr='')
+flatpak_install_result = app.subprocess.CompletedProcess([], 0, stdout='', stderr='')
+with patch.object(app.subprocess, 'run',
+                  side_effect=[missing_flatpak, user_remote_result, flatpak_install_result]) as run, \
+     patch.object(app.threading, 'Thread', ImmediateThread), \
+     patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK), \
+     patch.object(app.Gio.Subprocess, 'new') as launch:
+    w._accion_app_recomendada(
+        w.recommended_buttons[('vlc', 'flatpak')], 'vlc', 'flatpak'
+    )
+    settle()
+    run.assert_any_call(
+        ['flatpak', 'remote-add', '--user', '--if-not-exists', 'flathub',
+         'https://dl.flathub.org/repo/flathub.flatpakrepo'],
+        capture_output=True, text=True, timeout=60,
+    )
+    run.assert_any_call(
+        ['flatpak', 'install', '--user', '--noninteractive', '--assumeyes',
+         'flathub', 'org.videolan.VLC'],
+        capture_output=True, text=True, timeout=600,
+    )
+    launch.assert_called_once_with(
+        ['flatpak', 'run', 'org.videolan.VLC'], app.Gio.SubprocessFlags.NONE
+    )
 
 for app_id, definition in app.APLICACIONES_BACKUP.items():
     installed = app.subprocess.CompletedProcess([], 0, stdout='installed', stderr='')

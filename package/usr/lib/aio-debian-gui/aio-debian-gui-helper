@@ -33,7 +33,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 LISTAS_ACTUALIZADAS=0
 UPGRADE_PLAN=""
 REINICIO_REQUERIDO=0
-HELPER_VERSION=2.7.10
+HELPER_VERSION=2.8.0
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -300,6 +300,33 @@ instalar_aplicacion_backup() {
         return 1
     fi
     echo "##BACKUP:installed:$identificador"
+}
+
+instalar_aplicacion_recomendada() {
+    local identificador paquete
+    identificador="$1"
+    case "$identificador" in
+        celluloid) paquete=celluloid ;;
+        gimp) paquete=gimp ;;
+        handbrake) paquete=handbrake ;;
+        vlc) paquete=vlc ;;
+        *) err "Aplicación recomendada no permitida."; return 2 ;;
+    esac
+    if paquete_instalado "$paquete"; then
+        echo "##RECOMMENDED:installed:$identificador"
+        return 0
+    fi
+    asegurar_listas || return 1
+    info "Instalando $paquete desde los repositorios APT configurados..."
+    if ! apt-get "${APT_OPTS[@]}" --no-remove install "$paquete"; then
+        err "No se pudo instalar $paquete."
+        return 1
+    fi
+    if ! paquete_instalado "$paquete"; then
+        err "APT terminó, pero no se pudo confirmar la instalación de $paquete."
+        return 1
+    fi
+    echo "##RECOMMENDED:installed:$identificador"
 }
 
 asegurar_listas() {
@@ -1369,6 +1396,11 @@ main() {
         --backup-install)
             [ "$#" -eq 2 ] || { err "Uso: $0 [--lang LOCALE] --backup-install timeshift|deja-dup"; exit 2; }
             instalar_aplicacion_backup "$2"
+            exit $?
+            ;;
+        --recommended-install)
+            [ "$#" -eq 2 ] || { err "Uso: $0 [--lang LOCALE] --recommended-install celluloid|gimp|handbrake|vlc"; exit 2; }
+            instalar_aplicacion_recomendada "$2"
             exit $?
             ;;
         --enable-passwordless)

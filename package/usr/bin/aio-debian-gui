@@ -66,6 +66,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.8.0": "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.",
     "2.7.10": "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.",
     "2.7.9": "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.",
     "2.7.8": "Guía integrada para instalar o actualizar el asistente del anfitrión.",
@@ -553,6 +554,7 @@ TRADUCCIONES = {
 
 # Textos del actualizador integrados con las traducciones existentes.
 TRADUCCIONES["en"].update({
+    "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.": "Alphabetical recommended-app catalog with DEB and Flatpak formats.",
     "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.": "Fixes Backup tab startup while keeping the usual controls available.",
     "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.": "New Backup tab to open Timeshift or install it with authorization.",
     "Guía integrada para instalar o actualizar el asistente del anfitrión.": "Built-in guide to install or update the host helper.",
@@ -568,6 +570,7 @@ TRADUCCIONES["en"].update({
     "No se pudo actualizar": "Unable to update",
 })
 TRADUCCIONES["fr"].update({
+    "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.": "Catalogue alphabétique d’applications recommandées aux formats DEB et Flatpak.",
     "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.": "Corrige le démarrage de l’onglet Sauvegarde tout en conservant les commandes habituelles.",
     "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.": "Nouvel onglet Sauvegarde pour ouvrir Timeshift ou l’installer avec autorisation.",
     "Guía integrada para instalar o actualizar el asistente del anfitrión.": "Guide intégré pour installer ou mettre à jour l’assistant de l’hôte.",
@@ -583,6 +586,7 @@ TRADUCCIONES["fr"].update({
     "No se pudo actualizar": "Mise à jour impossible",
 })
 TRADUCCIONES["zh"].update({
+    "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.": "按字母排序的推荐应用目录，提供 DEB 和 Flatpak 格式。",
     "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.": "修复备份选项卡的启动，同时保留常用控件。",
     "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.": "新增备份选项卡，可打开 Timeshift 或经授权安装。",
     "Guía integrada para instalar o actualizar el asistente del anfitrión.": "内置指南可帮助安装或更新主机辅助程序。",
@@ -889,6 +893,8 @@ TRADUCCIONES["en"].update({
     "Timeshift y Respaldos permiten crear copias de seguridad. Cada aplicación gestiona su propia configuración y operaciones.": "Timeshift and Backups create backups. Each application manages its own settings and operations.",
     "Abrir Timeshift": "Open Timeshift",
     "Abrir Respaldos (Déjà Dup)": "Open Backups (Déjà Dup)",
+    "Crea instantáneas de los archivos del sistema para restaurarlo tras una actualización fallida u otro problema. Por defecto no incluye los archivos personales.": "Creates snapshots of system files to restore the system after a failed update or another problem. Personal files are excluded by default.",
+    "Crea copias de seguridad de las carpetas personales seleccionadas para recuperar archivos perdidos o modificados. No restaura el sistema operativo.": "Backs up selected personal folders so lost or modified files can be recovered. It does not restore the operating system.",
     "Timeshift no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.": "Timeshift is not installed. Install it from the configured APT repositories? Administrator authorization will be requested.",
     "Respaldos (Déjà Dup) no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.": "Backups (Déjà Dup) is not installed. Install it from the configured APT repositories? Administrator authorization will be requested.",
     "Comprobando si %s está instalado…": "Checking whether %s is installed…",
@@ -899,10 +905,35 @@ TRADUCCIONES["en"].update({
     "No se pudo instalar %s: %s": "Could not install %s: %s",
     "No se pudo comprobar %s": "Could not check %s",
     "Operación en curso": "Operation in progress",
-    "Espera a que termine la acción de backup antes de cerrar la ventana.": "Wait for the backup action to finish before closing the window.",
+    "Espera a que termine la operación de la aplicación antes de cerrar la ventana.": "Wait for the app operation to finish before closing the window.",
     "No se encuentra el asistente actualizado en el anfitrión. Instala la integración desde su guía y vuelve a intentarlo.": "The current host helper was not found. Install the integration using its guide and try again.",
     "Instalar": "Install",
     "La aplicación todavía no está instalada.": "The application is not installed yet.",
+    "Apps recomendadas": "Recommended apps",
+    "Aplicaciones recomendadas": "Recommended applications",
+    "Elige un formato por aplicación. Los paquetes DEB de los repositorios APT requieren autorización; Flatpak se instala solo para tu usuario y configura Flathub si hace falta.": "Choose a format for each app. DEB packages from APT repositories require authorization; Flatpak is installed for your user only, configuring Flathub if needed.",
+    "DEB (APT)": "DEB (system packages)",
+    "DEB (web oficial)": "DEB (official site)",
+    "Flatpak": "Flatpak (Flathub)",
+    "Las páginas de descarga .deb son oficiales; revisa el paquete e instálalo con el gestor de software.": "The .deb download pages are official; review the package and install it with your software manager.",
+    "Descargar .deb": "Download .deb",
+    "Instalar %s desde %s": "Install %s from %s",
+    "¿Quieres instalar %s en formato %s?": "Install %s in %s format?",
+    "Comprobando %s…": "Checking %s…",
+    "Instalando %s…": "Installing %s…",
+    "Se abrió la página oficial para descargar el paquete .deb.": "The official page to download the .deb package was opened.",
+    "No se pudo configurar Flathub para tu usuario. Comprueba que Flatpak y la conexión estén disponibles e inténtalo de nuevo.": "Could not configure Flathub for your user. Check that Flatpak and your connection are available, then try again.",
+    "Descarga el paquete .deb oficial desde esta página e instálalo con el gestor de software.": "Download the official .deb package from this page and install it with your software manager.",
+    "Reproductor de música para servidores Jellyfin, Navidrome y Subsonic.": "Music player for Jellyfin, Navidrome, and Subsonic servers.",
+    "Convierte imágenes por lotes entre formatos y cambia su tamaño.": "Batch-converts images between formats and resizes them.",
+    "Cliente de escritorio para reproducir contenido de tu biblioteca Plex.": "Desktop client for playing media from your Plex library.",
+    "Aplicación de escritorio para escuchar música, pódcast y listas de reproducción.": "Desktop app for music, podcasts, and playlists.",
+    "Descarga vídeos de sitios compatibles para verlos sin conexión.": "Downloads videos from supported sites for offline viewing.",
+    "Convierte y comprime vídeos con ajustes para formatos y dispositivos comunes.": "Converts and compresses videos with presets for common formats and devices.",
+    "Navegador web de Google. El paquete DEB se descarga desde la página oficial.": "Google's web browser. The DEB package is downloaded from the official website.",
+    "Editor de imágenes para crear, retocar y componer gráficos y fotografías.": "Image editor for creating, retouching, and composing graphics and photos.",
+    "Reproduce vídeos con mpv desde una interfaz GTK sencilla.": "Plays videos with mpv through a simple GTK interface.",
+    "Reproductor multimedia para vídeos, música y transmisiones de red.": "Media player for videos, music, and network streams.",
 })
 TRADUCCIONES["fr"].update({
     "Configuración y mantenimiento": "Configuration et maintenance",
@@ -911,6 +942,8 @@ TRADUCCIONES["fr"].update({
     "Timeshift y Respaldos permiten crear copias de seguridad. Cada aplicación gestiona su propia configuración y operaciones.": "Timeshift et Sauvegardes permettent de créer des sauvegardes. Chaque application gère ses propres paramètres et opérations.",
     "Abrir Timeshift": "Ouvrir Timeshift",
     "Abrir Respaldos (Déjà Dup)": "Ouvrir Sauvegardes (Déjà Dup)",
+    "Crea instantáneas de los archivos del sistema para restaurarlo tras una actualización fallida u otro problema. Por defecto no incluye los archivos personales.": "Crée des instantanés des fichiers système pour restaurer le système après une mise à jour échouée ou un autre problème. Les fichiers personnels sont exclus par défaut.",
+    "Crea copias de seguridad de las carpetas personales seleccionadas para recuperar archivos perdidos o modificados. No restaura el sistema operativo.": "Sauvegarde les dossiers personnels sélectionnés pour récupérer les fichiers perdus ou modifiés. Ne restaure pas le système d’exploitation.",
     "Timeshift no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.": "Timeshift n’est pas installé. Voulez-vous l’installer depuis les dépôts APT configurés ? Une autorisation administrateur sera demandée.",
     "Respaldos (Déjà Dup) no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.": "Sauvegardes (Déjà Dup) n’est pas installé. Voulez-vous l’installer depuis les dépôts APT configurés ? Une autorisation administrateur sera demandée.",
     "Comprobando si %s está instalado…": "Vérification de l’installation de %s…",
@@ -921,10 +954,35 @@ TRADUCCIONES["fr"].update({
     "No se pudo instalar %s: %s": "Impossible d’installer %s : %s",
     "No se pudo comprobar %s": "Impossible de vérifier %s",
     "Operación en curso": "Opération en cours",
-    "Espera a que termine la acción de backup antes de cerrar la ventana.": "Attendez la fin de la sauvegarde avant de fermer la fenêtre.",
+    "Espera a que termine la operación de la aplicación antes de cerrar la ventana.": "Attendez la fin de l’opération de l’application avant de fermer la fenêtre.",
     "No se encuentra el asistente actualizado en el anfitrión. Instala la integración desde su guía y vuelve a intentarlo.": "L’assistant à jour est introuvable sur l’hôte. Installez l’intégration avec son guide, puis réessayez.",
     "Instalar": "Installer",
     "La aplicación todavía no está instalada.": "L’application n’est pas encore installée.",
+    "Apps recomendadas": "Applications recommandées",
+    "Aplicaciones recomendadas": "Applications recommandées",
+    "Elige un formato por aplicación. Los paquetes DEB de los repositorios APT requieren autorización; Flatpak se instala solo para tu usuario y configura Flathub si hace falta.": "Choisissez un format par application. Les paquets DEB des dépôts APT nécessitent une autorisation ; Flatpak est installé uniquement pour votre utilisateur et configure Flathub si nécessaire.",
+    "DEB (APT)": "DEB (dépôts APT)",
+    "DEB (web oficial)": "DEB (site officiel)",
+    "Flatpak": "Flatpak (Flathub)",
+    "Las páginas de descarga .deb son oficiales; revisa el paquete e instálalo con el gestor de software.": "Les pages de téléchargement .deb sont officielles ; vérifiez le paquet et installez-le avec le gestionnaire de logiciels.",
+    "Descargar .deb": "Télécharger .deb",
+    "Instalar %s desde %s": "Installer %s depuis %s",
+    "¿Quieres instalar %s en formato %s?": "Voulez-vous installer %s au format %s ?",
+    "Comprobando %s…": "Vérification de %s…",
+    "Instalando %s…": "Installation de %s…",
+    "Se abrió la página oficial para descargar el paquete .deb.": "La page officielle de téléchargement du paquet .deb a été ouverte.",
+    "No se pudo configurar Flathub para tu usuario. Comprueba que Flatpak y la conexión estén disponibles e inténtalo de nuevo.": "Impossible de configurer Flathub pour votre utilisateur. Vérifiez que Flatpak et la connexion sont disponibles, puis réessayez.",
+    "Descarga el paquete .deb oficial desde esta página e instálalo con el gestor de software.": "Téléchargez le paquet .deb officiel depuis cette page et installez-le avec le gestionnaire de logiciels.",
+    "Reproductor de música para servidores Jellyfin, Navidrome y Subsonic.": "Lecteur musical pour les serveurs Jellyfin, Navidrome et Subsonic.",
+    "Convierte imágenes por lotes entre formatos y cambia su tamaño.": "Convertit des images par lots entre formats et les redimensionne.",
+    "Cliente de escritorio para reproducir contenido de tu biblioteca Plex.": "Client de bureau pour lire le contenu de votre bibliothèque Plex.",
+    "Aplicación de escritorio para escuchar música, pódcast y listas de reproducción.": "Application de bureau pour écouter de la musique, des podcasts et des listes de lecture.",
+    "Descarga vídeos de sitios compatibles para verlos sin conexión.": "Télécharge des vidéos de sites pris en charge pour les regarder hors ligne.",
+    "Convierte y comprime vídeos con ajustes para formatos y dispositivos comunes.": "Convertit et compresse des vidéos avec des préréglages pour les formats et appareils courants.",
+    "Navegador web de Google. El paquete DEB se descarga desde la página oficial.": "Navigateur Web de Google. Le paquet DEB se télécharge depuis le site officiel.",
+    "Editor de imágenes para crear, retocar y componer gráficos y fotografías.": "Éditeur d’images pour créer, retoucher et composer des graphismes et des photos.",
+    "Reproduce vídeos con mpv desde una interfaz GTK sencilla.": "Lit des vidéos avec mpv grâce à une interface GTK simple.",
+    "Reproductor multimedia para vídeos, música y transmisiones de red.": "Lecteur multimédia pour vidéos, musique et flux réseau.",
 })
 TRADUCCIONES["zh"].update({
     "Configuración y mantenimiento": "配置与维护",
@@ -933,6 +991,8 @@ TRADUCCIONES["zh"].update({
     "Timeshift y Respaldos permiten crear copias de seguridad. Cada aplicación gestiona su propia configuración y operaciones.": "Timeshift 和备份应用可创建备份。每个应用分别管理自己的配置和操作。",
     "Abrir Timeshift": "打开 Timeshift",
     "Abrir Respaldos (Déjà Dup)": "打开备份（Déjà Dup）",
+    "Crea instantáneas de los archivos del sistema para restaurarlo tras una actualización fallida u otro problema. Por defecto no incluye los archivos personales.": "创建系统文件快照，以便在更新失败或出现其他问题后恢复系统。默认不包含个人文件。",
+    "Crea copias de seguridad de las carpetas personales seleccionadas para recuperar archivos perdidos o modificados. No restaura el sistema operativo.": "备份选定的个人文件夹，以便恢复丢失或修改的文件。不恢复操作系统。",
     "Timeshift no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.": "尚未安装 Timeshift。要从已配置的 APT 软件源安装吗？安装时会请求管理员授权。",
     "Respaldos (Déjà Dup) no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.": "尚未安装备份（Déjà Dup）。要从已配置的 APT 软件源安装吗？安装时会请求管理员授权。",
     "Comprobando si %s está instalado…": "正在检查是否已安装 %s…",
@@ -943,10 +1003,35 @@ TRADUCCIONES["zh"].update({
     "No se pudo instalar %s: %s": "无法安装 %s：%s",
     "No se pudo comprobar %s": "无法检查 %s",
     "Operación en curso": "操作正在进行",
-    "Espera a que termine la acción de backup antes de cerrar la ventana.": "请等待备份操作完成后再关闭窗口。",
+    "Espera a que termine la operación de la aplicación antes de cerrar la ventana.": "请等待应用操作完成后再关闭窗口。",
     "No se encuentra el asistente actualizado en el anfitrión. Instala la integración desde su guía y vuelve a intentarlo.": "未找到主机上的当前版本辅助程序。请使用集成指南安装后重试。",
     "Instalar": "安装",
     "La aplicación todavía no está instalada.": "应用尚未安装。",
+    "Apps recomendadas": "推荐应用",
+    "Aplicaciones recomendadas": "推荐应用",
+    "Elige un formato por aplicación. Los paquetes DEB de los repositorios APT requieren autorización; Flatpak se instala solo para tu usuario y configura Flathub si hace falta.": "为每个应用选择一种格式。来自 APT 软件源的 DEB 软件包需要授权；Flatpak 仅为当前用户安装，并在需要时配置 Flathub。",
+    "DEB (APT)": "DEB（APT 软件源）",
+    "DEB (web oficial)": "DEB（官方网站）",
+    "Flatpak": "Flatpak（Flathub）",
+    "Las páginas de descarga .deb son oficiales; revisa el paquete e instálalo con el gestor de software.": "这些 .deb 下载页面来自官方网站；请检查软件包并使用软件管理器安装。",
+    "Descargar .deb": "下载 .deb",
+    "Instalar %s desde %s": "从 %s 安装 %s",
+    "¿Quieres instalar %s en formato %s?": "要以 %s 格式安装 %s 吗？",
+    "Comprobando %s…": "正在检查 %s…",
+    "Instalando %s…": "正在安装 %s…",
+    "Se abrió la página oficial para descargar el paquete .deb.": "已打开官方 .deb 软件包下载页面。",
+    "No se pudo configurar Flathub para tu usuario. Comprueba que Flatpak y la conexión estén disponibles e inténtalo de nuevo.": "无法为当前用户配置 Flathub。请确认 Flatpak 和网络连接可用后重试。",
+    "Descarga el paquete .deb oficial desde esta página e instálalo con el gestor de software.": "请从此官方页面下载 .deb 软件包，并使用软件管理器安装。",
+    "Reproductor de música para servidores Jellyfin, Navidrome y Subsonic.": "适用于 Jellyfin、Navidrome 和 Subsonic 服务器的音乐播放器。",
+    "Convierte imágenes por lotes entre formatos y cambia su tamaño.": "批量转换图像格式并调整图像大小。",
+    "Cliente de escritorio para reproducir contenido de tu biblioteca Plex.": "用于播放 Plex 媒体库内容的桌面客户端。",
+    "Aplicación de escritorio para escuchar música, pódcast y listas de reproducción.": "用于收听音乐、播客和播放列表的桌面应用。",
+    "Descarga vídeos de sitios compatibles para verlos sin conexión.": "从支持的网站下载视频以供离线观看。",
+    "Convierte y comprime vídeos con ajustes para formatos y dispositivos comunes.": "使用常见格式和设备预设转换及压缩视频。",
+    "Navegador web de Google. El paquete DEB se descarga desde la página oficial.": "Google 网页浏览器。DEB 软件包从官方网站下载。",
+    "Editor de imágenes para crear, retocar y componer gráficos y fotografías.": "用于创建、修饰和合成图形与照片的图像编辑器。",
+    "Reproduce vídeos con mpv desde una interfaz GTK sencilla.": "通过简洁的 GTK 界面使用 mpv 播放视频。",
+    "Reproductor multimedia para vídeos, música y transmisiones de red.": "用于播放视频、音乐和网络流的多媒体播放器。",
 })
 
 TRADUCCIONES["en"].update({
@@ -1653,6 +1738,7 @@ APLICACIONES_BACKUP = {
         "command": "timeshift-launcher",
         "icon": "timeshift",
         "fallback_icon": "drive-harddisk",
+        "description": "Crea instantáneas de los archivos del sistema para restaurarlo tras una actualización fallida u otro problema. Por defecto no incluye los archivos personales.",
         "prompt": "Timeshift no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.",
     },
     "deja-dup": {
@@ -1661,9 +1747,98 @@ APLICACIONES_BACKUP = {
         "command": "deja-dup",
         "icon": "org.gnome.DejaDup",
         "fallback_icon": "document-save",
+        "description": "Crea copias de seguridad de las carpetas personales seleccionadas para recuperar archivos perdidos o modificados. No restaura el sistema operativo.",
         "prompt": "Respaldos (Déjà Dup) no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.",
     },
 }
+APPS_RECOMENDADAS = [
+    {
+        "id": "celluloid", "name": "Celluloid",
+        "icon": "io.github.celluloid_player.Celluloid",
+        "description": "Reproduce vídeos con mpv desde una interfaz GTK sencilla.",
+        "channels": [
+            {"type": "deb", "package": "celluloid", "command": "celluloid"},
+            {"type": "flatpak", "app_id": "io.github.celluloid_player.Celluloid"},
+        ],
+    },
+    {
+        "id": "feishin", "name": "Feishin",
+        "icon": "org.jeffvli.feishin",
+        "description": "Reproductor de música para servidores Jellyfin, Navidrome y Subsonic.",
+        "channels": [
+            {"type": "deb-download", "uri": "https://github.com/jeffvli/feishin/releases/latest"},
+            {"type": "flatpak", "app_id": "org.jeffvli.feishin"},
+        ],
+    },
+    {
+        "id": "gimp", "name": "GIMP",
+        "icon": "gimp",
+        "description": "Editor de imágenes para crear, retocar y componer gráficos y fotografías.",
+        "channels": [
+            {"type": "deb", "package": "gimp", "command": "gimp"},
+            {"type": "flatpak", "app_id": "org.gimp.GIMP"},
+        ],
+    },
+    {
+        "id": "google-chrome", "name": "Google Chrome",
+        "icon": "google-chrome",
+        "description": "Navegador web de Google. El paquete DEB se descarga desde la página oficial.",
+        "channels": [
+            {"type": "deb-download", "uri": "https://www.google.com/chrome/"},
+        ],
+    },
+    {
+        "id": "handbrake", "name": "HandBrake",
+        "icon": "fr.handbrake.ghb",
+        "description": "Convierte y comprime vídeos con ajustes para formatos y dispositivos comunes.",
+        "channels": [
+            {"type": "deb", "package": "handbrake", "command": "ghb"},
+            {"type": "flatpak", "app_id": "fr.handbrake.ghb"},
+        ],
+    },
+    {
+        "id": "plex", "name": "Plex",
+        "icon": "tv.plex.PlexDesktop",
+        "description": "Cliente de escritorio para reproducir contenido de tu biblioteca Plex.",
+        "channels": [
+            {"type": "flatpak", "app_id": "tv.plex.PlexDesktop"},
+        ],
+    },
+    {
+        "id": "spotify", "name": "Spotify",
+        "icon": "spotify-client",
+        "description": "Aplicación de escritorio para escuchar música, pódcast y listas de reproducción.",
+        "channels": [
+            {"type": "deb-download", "uri": "https://www.spotify.com/download/linux/"},
+            {"type": "flatpak", "app_id": "com.spotify.Client"},
+        ],
+    },
+    {
+        "id": "switcheroo", "name": "Switcheroo",
+        "icon": "io.gitlab.adhami3310.Converter",
+        "description": "Convierte imágenes por lotes entre formatos y cambia su tamaño.",
+        "channels": [
+            {"type": "flatpak", "app_id": "io.gitlab.adhami3310.Converter"},
+        ],
+    },
+    {
+        "id": "video-downloader", "name": "Video Downloader",
+        "icon": "de.unrud.VideoDownloader",
+        "description": "Descarga vídeos de sitios compatibles para verlos sin conexión.",
+        "channels": [
+            {"type": "flatpak", "app_id": "de.unrud.VideoDownloader"},
+        ],
+    },
+    {
+        "id": "vlc", "name": "VLC",
+        "icon": "vlc",
+        "description": "Reproductor multimedia para vídeos, música y transmisiones de red.",
+        "channels": [
+            {"type": "deb", "package": "vlc", "command": "vlc"},
+            {"type": "flatpak", "app_id": "org.videolan.VLC"},
+        ],
+    },
+]
 RELEASE_API = HOMEPAGE.replace("https://github.com/", "https://api.github.com/repos/") + "/releases/latest"
 MAX_APPIMAGE_SIZE = 256 * 1024 * 1024
 
@@ -2786,23 +2961,76 @@ class VentanaPrincipal(Gtk.Window):
             "Timeshift y Respaldos permiten crear copias de seguridad. Cada aplicación gestiona su propia configuración y operaciones."
         ), False, False, 0)
         for app_id, app in APLICACIONES_BACKUP.items():
-            fila = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
-            imagen = self._icono_aplicacion_backup(app, fallback=True)
-            imagen.set_pixel_size(48)
-            fila.pack_start(imagen, False, False, 0)
+            fila = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
             boton = Gtk.Button(label=traducir("Abrir " + app["name"]))
             boton.set_image(self._icono_aplicacion_backup(app, fallback=False))
             boton.set_always_show_image(True)
             boton.set_image_position(Gtk.PositionType.LEFT)
             boton.set_size_request(280, 64)
-            boton.set_hexpand(True)
+            boton.set_halign(Gtk.Align.START)
             boton.connect("clicked", self._accion_backup, app_id)
-            fila.pack_start(boton, True, False, 0)
+            fila.pack_start(boton, False, False, 0)
+            fila.pack_start(etiqueta(app["description"]), False, False, 0)
             backup.pack_start(fila, False, False, 0)
             self.backup_buttons[app_id] = boton
         self.backup_status = etiqueta("")
         backup.pack_start(self.backup_status, False, False, 0)
         notebook.append_page(backup, Gtk.Label(label=traducir("Backup")))
+        recomendadas = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        recomendadas.set_border_width(20)
+        recomendadas.pack_start(etiqueta("Aplicaciones recomendadas", markup=True), False, False, 0)
+        recomendadas.pack_start(etiqueta(
+            "Elige un formato por aplicación. Los paquetes DEB de los repositorios APT requieren autorización; Flatpak se instala solo para tu usuario y configura Flathub si hace falta."
+        ), False, False, 0)
+        recomendadas.pack_start(etiqueta(
+            "Las páginas de descarga .deb son oficiales; revisa el paquete e instálalo con el gestor de software.",
+            dim=True,
+        ), False, False, 0)
+        self.recommended_status = etiqueta("")
+        recomendadas.pack_start(self.recommended_status, False, False, 0)
+        scroll_recomendadas = Gtk.ScrolledWindow()
+        scroll_recomendadas.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        scroll_recomendadas.set_vexpand(True)
+        grid_recomendadas = Gtk.Grid(column_spacing=12, row_spacing=12)
+        grid_recomendadas.set_column_homogeneous(True)
+        self.recommended_buttons = {}
+        self.recommended_grid = grid_recomendadas
+        for index, app in enumerate(APPS_RECOMENDADAS):
+            tarjeta = Gtk.Frame()
+            contenido = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+            contenido.set_border_width(12)
+            tarjeta.add(contenido)
+            cabecera_app = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            tema_iconos = Gtk.IconTheme.get_default()
+            nombre_icono = app["icon"] if tema_iconos.has_icon(app["icon"]) else "application-x-executable"
+            icono_app = Gtk.Image.new_from_icon_name(nombre_icono, Gtk.IconSize.DIALOG)
+            icono_app.set_pixel_size(48)
+            cabecera_app.pack_start(icono_app, False, False, 0)
+            cabecera_app.pack_start(etiqueta(
+                "<b>%s</b>" % GLib.markup_escape_text(app["name"]), markup=True
+            ), True, True, 0)
+            contenido.pack_start(cabecera_app, False, False, 0)
+            descripcion = etiqueta(app["description"], dim=True)
+            descripcion.set_max_width_chars(58)
+            contenido.pack_start(descripcion, True, True, 0)
+            botones_fuente = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+            for canal in app["channels"]:
+                etiqueta_fuente = (
+                    "DEB (APT)" if canal["type"] == "deb" else
+                    "DEB (web oficial)" if canal["type"] == "deb-download" else
+                    "Flatpak"
+                )
+                boton = Gtk.Button(label=traducir(etiqueta_fuente))
+                boton.set_hexpand(True)
+                boton.connect("clicked", self._accion_app_recomendada,
+                              app["id"], canal["type"])
+                botones_fuente.pack_start(boton, True, True, 0)
+                self.recommended_buttons[(app["id"], canal["type"])] = boton
+            contenido.pack_start(botones_fuente, False, False, 0)
+            grid_recomendadas.attach(tarjeta, index % 2, index // 2, 1, 1)
+        scroll_recomendadas.add(grid_recomendadas)
+        recomendadas.pack_start(scroll_recomendadas, True, True, 0)
+        notebook.append_page(recomendadas, Gtk.Label(label=traducir("Apps recomendadas")))
         paneles = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         paneles.set_hexpand(True)
         paneles.set_vexpand(True)
@@ -3058,6 +3286,164 @@ class VentanaPrincipal(Gtk.Window):
             self.backup_status.set_text(traducir("No se pudo abrir %s: %s") % (app["name"], exc.message))
             return
         self.backup_status.set_text(traducir("%s se ha abierto.") % app["name"])
+
+    def _accion_app_recomendada(self, _boton, app_id, tipo_canal):
+        app = next((item for item in APPS_RECOMENDADAS if item["id"] == app_id), None)
+        if app is None:
+            return
+        canal = next((item for item in app["channels"] if item["type"] == tipo_canal), None)
+        if canal is None:
+            return
+        if tipo_canal == "deb-download":
+            try:
+                Gio.AppInfo.launch_default_for_uri(canal["uri"], None)
+                self.recommended_status.set_text(traducir(
+                    "Se abrió la página oficial para descargar el paquete .deb."
+                ))
+            except GLib.Error as exc:
+                self._mensaje(Gtk.MessageType.ERROR, "No se pudo abrir la página oficial.", exc.message)
+            return
+        if (self.backup_action_in_progress or self.en_curso or self.diagnostico_en_curso
+                or self.comprobando_actualizacion or self.programando):
+            return
+        self.backup_action_in_progress = True
+        self.recommended_status.set_text(traducir("Comprobando %s…") % app["name"])
+        self._actualizar_sensibilidad()
+
+        def comprobar():
+            try:
+                if tipo_canal == "deb":
+                    proc = subprocess.run(
+                        comando_host("dpkg-query", "-W", "-f=${db:Status-Status}",
+                                     canal["package"]),
+                        capture_output=True, text=True, timeout=15,
+                        env={**os.environ, "LC_ALL": "C"},
+                    )
+                    if proc.returncode == 0:
+                        accion = "open" if proc.stdout.strip() == "installed" else "install"
+                        error = None
+                    elif "no packages found matching" in (proc.stderr + proc.stdout).lower():
+                        accion, error = "install", None
+                    else:
+                        accion, error = None, (proc.stderr or proc.stdout or "dpkg-query falló.").strip()[-1000:]
+                else:
+                    proc = subprocess.run(
+                        comando_host("flatpak", "list", "--app", "--columns=application"),
+                        capture_output=True, text=True, timeout=15,
+                    )
+                    if proc.returncode:
+                        accion, error = None, (proc.stderr or "No se pudo consultar Flatpak.").strip()[-1000:]
+                    else:
+                        accion = "open" if canal["app_id"] in proc.stdout.splitlines() else "install"
+                        error = None
+            except (OSError, subprocess.SubprocessError) as exc:
+                accion, error = None, str(exc)
+            GLib.idle_add(self._app_recomendada_comprobada, app_id, tipo_canal, accion, error)
+
+        threading.Thread(target=comprobar, daemon=True).start()
+
+    def _app_recomendada_comprobada(self, app_id, tipo_canal, accion, error):
+        self.backup_action_in_progress = False
+        self._actualizar_sensibilidad()
+        app = next(item for item in APPS_RECOMENDADAS if item["id"] == app_id)
+        canal = next(item for item in app["channels"] if item["type"] == tipo_canal)
+        if error:
+            self._mensaje(Gtk.MessageType.ERROR, "No se pudo comprobar %s" % app["name"], error)
+            return GLib.SOURCE_REMOVE
+        if accion == "open":
+            comando = (comando_host(canal["command"]) if tipo_canal == "deb"
+                       else comando_host("flatpak", "run", canal["app_id"]))
+            try:
+                Gio.Subprocess.new(comando, Gio.SubprocessFlags.NONE)
+            except GLib.Error as exc:
+                self._mensaje(Gtk.MessageType.ERROR, "No se pudo abrir %s" % app["name"], exc.message)
+            return GLib.SOURCE_REMOVE
+        fuente = traducir("DEB (APT)") if tipo_canal == "deb" else traducir("Flatpak")
+        dialogo = Gtk.MessageDialog(
+            transient_for=self, modal=True, message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.NONE,
+            text=traducir("¿Quieres instalar %s en formato %s?") % (app["name"], fuente),
+        )
+        dialogo.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
+        dialogo.add_button(traducir("Instalar"), Gtk.ResponseType.OK)
+        dialogo.set_default_response(Gtk.ResponseType.CANCEL)
+        instalar = dialogo.run() == Gtk.ResponseType.OK
+        dialogo.destroy()
+        if instalar:
+            self._instalar_app_recomendada(app, canal)
+        return GLib.SOURCE_REMOVE
+
+    def _instalar_app_recomendada(self, app, canal):
+        if self.backup_action_in_progress:
+            return
+        tipo_canal = canal["type"]
+        self.backup_action_in_progress = True
+        self.recommended_status.set_text(traducir("Instalando %s…") % app["name"])
+        self._actualizar_sensibilidad()
+
+        def instalar():
+            error = None
+            try:
+                if tipo_canal == "deb":
+                    helper = helper_mantenimiento()
+                    if not helper_disponible(helper):
+                        raise RuntimeError("No se encuentra el asistente de mantenimiento.")
+                    if es_flatpak():
+                        version = subprocess.run(
+                            comando_host(HELPER_SISTEMA, "--version"),
+                            capture_output=True, text=True, timeout=10,
+                        )
+                        if version.returncode or version.stdout.strip() != version_app():
+                            raise RuntimeError(traducir(
+                                "No se encuentra el asistente actualizado en el anfitrión. Instala la integración desde su guía y vuelve a intentarlo."
+                            ))
+                    proc = subprocess.run(
+                        comando_pkexec(helper, "C.UTF-8", "--recommended-install", app["id"]),
+                        capture_output=True, text=True, timeout=600,
+                    )
+                    marcador = "##RECOMMENDED:installed:%s" % app["id"]
+                    if proc.returncode or marcador not in proc.stdout.splitlines():
+                        error = (proc.stderr or proc.stdout or
+                                 "El asistente no confirmó la instalación.").strip()[-1600:]
+                else:
+                    remote = subprocess.run(
+                        comando_host("flatpak", "remote-add", "--user", "--if-not-exists",
+                                     "flathub", "https://dl.flathub.org/repo/flathub.flatpakrepo"),
+                        capture_output=True, text=True, timeout=60,
+                    )
+                    if remote.returncode:
+                        raise RuntimeError(traducir(
+                            "No se pudo configurar Flathub para tu usuario. Comprueba que Flatpak y la conexión estén disponibles e inténtalo de nuevo."
+                        ))
+                    proc = subprocess.run(
+                        comando_host("flatpak", "install", "--user", "--noninteractive",
+                                     "--assumeyes", "flathub", canal["app_id"]),
+                        capture_output=True, text=True, timeout=600,
+                    )
+                    if proc.returncode:
+                        error = (proc.stderr or proc.stdout or
+                                 "Flatpak no confirmó la instalación.").strip()[-1600:]
+            except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
+                error = str(exc)
+            GLib.idle_add(self._app_recomendada_instalada, app, canal, error)
+
+        threading.Thread(target=instalar, daemon=True).start()
+
+    def _app_recomendada_instalada(self, app, canal, error):
+        self.backup_action_in_progress = False
+        self._actualizar_sensibilidad()
+        if error:
+            self._mensaje(Gtk.MessageType.ERROR, "No se pudo instalar %s" % app["name"], error)
+            return GLib.SOURCE_REMOVE
+        tipo_canal = canal["type"]
+        comando = (comando_host(canal["command"]) if tipo_canal == "deb"
+                   else comando_host("flatpak", "run", canal["app_id"]))
+        try:
+            Gio.Subprocess.new(comando, Gio.SubprocessFlags.NONE)
+        except GLib.Error as exc:
+            self._mensaje(Gtk.MessageType.ERROR, "No se pudo abrir %s" % app["name"], exc.message)
+        return GLib.SOURCE_REMOVE
+
     def _adaptar_paneles(self, _ventana, allocation):
         estrecha = allocation.width < 900
         orientacion = Gtk.Orientation.VERTICAL if estrecha else Gtk.Orientation.HORIZONTAL
@@ -3659,6 +4045,11 @@ class VentanaPrincipal(Gtk.Window):
             fila.set_sensitive(habilitada)
             self.switches[pid][0].set_sensitive(habilitada)
         for boton in self.backup_buttons.values():
+            boton.set_sensitive(not self.en_curso and not self.programando
+                                and not self.comprobando_actualizacion
+                                and not self.diagnostico_en_curso
+                                and not self.backup_action_in_progress)
+        for boton in self.recommended_buttons.values():
             boton.set_sensitive(not self.en_curso and not self.programando
                                 and not self.comprobando_actualizacion
                                 and not self.diagnostico_en_curso
@@ -4549,7 +4940,7 @@ class VentanaPrincipal(Gtk.Window):
         )):
             self._mensaje(
                 Gtk.MessageType.INFO, "Operación en curso",
-                "Espera a que termine la acción de backup antes de cerrar la ventana.",
+                "Espera a que termine la operación de la aplicación antes de cerrar la ventana.",
             )
         else:
             self._mensaje(

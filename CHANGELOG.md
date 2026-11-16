@@ -1,5 +1,12 @@
 # Cambios
 
+## 2.8.0
+
+- Añade «Apps recomendadas» en dos columnas, ordenadas alfabéticamente, con GIMP, VLC, Celluloid, Plex, Switcheroo, Video Downloader, HandBrake, Spotify, Feishin y Google Chrome.
+- Distingue los canales DEB y Flatpak disponibles para cada aplicación. Las instalaciones APT usan lista permitida, autorización y `--no-remove`; Flatpak se instala para el usuario actual.
+- Los DEB externos abren las páginas oficiales para descarga y requieren instalación manual.
+- Conserva las descripciones de Timeshift y Respaldos (Déjà Dup), y elimina los iconos duplicados junto a sus botones.
+
 ## 2.7.10
 
 - Corrige la inicialización de la interfaz Backup para conservar disponibles la consola y los controles de mantenimiento.

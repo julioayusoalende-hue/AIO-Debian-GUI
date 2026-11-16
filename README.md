@@ -17,6 +17,7 @@ AiO Debian GUI reúne tareas habituales de administración en una aplicación GT
 - **Diagnóstico:** actualiza los índices APT con autorización de administrador y después informa sobre espacio, APT/dpkg, actualizaciones, DKMS, reinicios y servicios. No instala ni elimina paquetes.
 - **Sistema y hardware:** gestión de repositorios, kernel y Mesa de Backports; detección NVIDIA con instalación conservadora en Debian. Algunas operaciones tienen requisitos y bloqueos adicionales.
 - **Copias de seguridad:** acceso a Timeshift y Respaldos (Déjà Dup); si no están instalados, AiO ofrece instalarlos con confirmación y autorización de administrador.
+- **Apps recomendadas:** catálogo en dos columnas con GIMP, VLC, Celluloid, Plex, Switcheroo, Video Downloader, HandBrake, Spotify, Feishin y Google Chrome. Presenta DEB y Flatpak cuando están disponibles; las instalaciones requieren confirmación.
 - **Escritorio:** integración con Flatpak, AppImage y complementos de GNOME; interfaz en español, inglés, francés y chino, con temas claro y oscuro.
 
 La aplicación es compatible con Debian 12 o superior y Ubuntu 24.04/26.04 LTS. Algunas tareas dependen de la distribución y se bloquean cuando no son compatibles.
@@ -25,6 +26,7 @@ El diagnóstico solicita autorización para renovar los índices APT antes de co
 
 ## Novedades recientes
 
+- **2.8.0:** catálogo alfabético de diez apps recomendadas, con canales DEB y Flatpak disponibles y selección explícita del formato.
 - **2.7.10:** corrige la inicialización de la pestaña Backup y conserva la consola y los controles habituales.
 - **2.7.9:** pestaña Backup con Timeshift y Respaldos (Déjà Dup), e instalación opcional autorizada.
 - **2.7.8:** guía integrada para instalar o actualizar el asistente del anfitrión en Flatpak y AppImage, con revisión de archivos y autorización explícita.
