@@ -78,6 +78,8 @@ for task in ("upgrade", "autoremove"):
             report = mod.check([task])
             assert report.blocked
             assert "ELIMINAR: old-package" in report.preview
+            assert ("La simulación de autoremove propone eliminar paquetes:"
+                    in report.messages[-1]) == (task == "autoremove")
             assert not any("sin eliminaciones" in item for item in report.messages)
 
 plan = "Inst nano [7.2] (7.3 Debian:stable)\n"

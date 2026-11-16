@@ -146,7 +146,7 @@ if bash -c '
     source "$1"
     paquete_instalado() {
         case "$1" in
-            needrestart|fastfetch|kitty|synaptic|libfuse2t64) return 0 ;;
+            needrestart|libnotify-bin|fastfetch|kitty|synaptic|libfuse2t64) return 0 ;;
             *) return 1 ;;
         esac
     }

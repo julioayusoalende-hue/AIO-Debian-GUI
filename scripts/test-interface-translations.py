@@ -26,6 +26,7 @@ essential = (
     "Próxima ejecución: %s", "Última ejecución: %s · %s",
     "Detalles técnicos", "No comprobado", "Sin incidencias",
     "Mantenimiento habitual", "Aplicaciones y repositorios",
+    "apt-get autoremove; puede quitar paquetes que APT considera huérfanos.",
     "Kernel y controladores · Avanzado", "Ejecutar 1 tarea", "Ejecutar %d tareas",
     "No hay tareas seleccionadas.", "Pendiente", "En curso", "Completada", "No ejecutada",
     "La comprobación de actualizaciones de AiO funciona también con APT en español.",

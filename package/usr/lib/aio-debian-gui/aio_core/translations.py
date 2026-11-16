@@ -80,7 +80,7 @@ TRADUCCIONES = {
         "Eliminar dependencias huérfanas": "Remove orphaned dependencies",
         "Limpiar la caché de paquetes obsoletos": "Clean the obsolete package cache",
         "apt-get update y apt-get dist-upgrade.": "apt-get update and apt-get dist-upgrade.",
-        "apt-get autoremove.": "apt-get autoremove.",
+        "apt-get autoremove; puede quitar paquetes que APT considera huérfanos.": "apt-get autoremove; this can remove packages APT considers orphaned.",
         "apt-get autoclean.": "apt-get autoclean.",
         "Instalar soporte Flatpak y añadir Flathub": "Install Flatpak support and add Flathub",
         "Flatpak no está instalado en este sistema.": "Flatpak is not installed on this system.",
@@ -216,7 +216,7 @@ TRADUCCIONES = {
         "Eliminar dependencias huérfanas": "Supprimer les dépendances orphelines",
         "Limpiar la caché de paquetes obsoletos": "Nettoyer le cache des paquets obsolètes",
         "apt-get update y apt-get dist-upgrade.": "apt-get update et apt-get dist-upgrade.",
-        "apt-get autoremove.": "apt-get autoremove.",
+        "apt-get autoremove; puede quitar paquetes que APT considera huérfanos.": "apt-get autoremove ; cette commande peut supprimer les paquets qu’APT considère comme orphelins.",
         "apt-get autoclean.": "apt-get autoclean.",
         "Instalar soporte Flatpak y añadir Flathub": "Installer Flatpak et ajouter Flathub",
         "Flatpak no está instalado en este sistema.": "Flatpak n’est pas installé sur ce système.",
@@ -352,7 +352,7 @@ TRADUCCIONES = {
         "Eliminar dependencias huérfanas": "删除孤立依赖",
         "Limpiar la caché de paquetes obsoletos": "清理过时软件包缓存",
         "apt-get update y apt-get dist-upgrade.": "运行 apt-get update 和 apt-get dist-upgrade。",
-        "apt-get autoremove.": "运行 apt-get autoremove。",
+        "apt-get autoremove; puede quitar paquetes que APT considera huérfanos.": "apt-get autoremove；可能会移除 APT 视为孤立的软件包。",
         "apt-get autoclean.": "运行 apt-get autoclean。",
         "Instalar soporte Flatpak y añadir Flathub": "安装 Flatpak 支持并添加 Flathub",
         "Flatpak no está instalado en este sistema.": "此系统尚未安装 Flatpak。",
@@ -416,6 +416,7 @@ TRADUCCIONES = {
 # Textos del actualizador integrados con las traducciones existentes.
 TRADUCCIONES["en"].update({
     "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.": "Automatically installs the initial scheduler integration for AppImage and Flatpak with administrator authorization.",
+    "Mantiene libnotify-bin y needrestart al eliminar dependencias huérfanas, necesarios para la programación en AppImage y Flatpak.": "Keeps libnotify-bin and needrestart when removing orphaned dependencies; AppImage and Flatpak scheduling needs them.",
     "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.": "Adds icons for backup and recommended apps, even when they are not installed.",
     "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.": "Shows maintenance output in the terminal and adds shortcuts.",
     "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.": "Adds an interactive terminal that runs Fastfetch on startup when installed.",
@@ -448,6 +449,7 @@ TRADUCCIONES["en"].update({
 })
 TRADUCCIONES["fr"].update({
     "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.": "Installe automatiquement l’intégration initiale du planificateur pour AppImage et Flatpak avec une autorisation administrateur.",
+    "Mantiene libnotify-bin y needrestart al eliminar dependencias huérfanas, necesarios para la programación en AppImage y Flatpak.": "Conserve libnotify-bin et needrestart lors de la suppression des dépendances orphelines ; la planification AppImage et Flatpak en a besoin.",
     "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.": "Ajoute des icônes pour les applications de sauvegarde et recommandées, même lorsqu’elles ne sont pas installées.",
     "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.": "Affiche la sortie de maintenance dans le terminal et ajoute des raccourcis.",
     "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.": "Ajoute un terminal interactif qui lance Fastfetch au démarrage lorsqu’il est installé.",
@@ -480,6 +482,7 @@ TRADUCCIONES["fr"].update({
 })
 TRADUCCIONES["zh"].update({
     "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.": "通过管理员授权自动安装 AppImage 和 Flatpak 的初始计划程序集成。",
+    "Mantiene libnotify-bin y needrestart al eliminar dependencias huérfanas, necesarios para la programación en AppImage y Flatpak.": "清理孤立依赖时保留 libnotify-bin 和 needrestart；AppImage 和 Flatpak 的计划任务需要它们。",
     "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.": "为备份和推荐应用添加图标，即使尚未安装也会显示。",
     "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.": "在终端显示维护输出并添加快捷操作。",
     "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.": "新增交互式终端；安装 Fastfetch 时会在启动时运行。",

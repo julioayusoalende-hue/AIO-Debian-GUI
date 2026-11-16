@@ -1,5 +1,11 @@
 # Cambios
 
+## 2.10.4
+
+- Conserva `libnotify-bin` y `needrestart` en la simulación y ejecución de `autoremove`; la programación en AppImage y Flatpak los necesita.
+- La tarea de herramientas instala también `libnotify-bin`.
+- `autoremove` queda desmarcado por defecto y el bloqueo indica qué simulación propone eliminaciones.
+
 ## 2.10.3
 
 - Instala automáticamente la integración inicial del programador para AppImage y Flatpak con autorización de administrador.

@@ -33,7 +33,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 LISTAS_ACTUALIZADAS=0
 UPGRADE_PLAN=""
 REINICIO_REQUERIDO=0
-HELPER_VERSION=2.10.3
+HELPER_VERSION=2.10.4
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -655,6 +655,7 @@ paso_tools() {
     asegurar_listas || return 1
     local r=0
     instalar_paquete_si_falta needrestart "No se pudo instalar 'needrestart'; no se podrá comprobar completamente si hace falta reiniciar." || r=1
+    instalar_paquete_si_falta libnotify-bin "No se pudo instalar 'libnotify-bin'; no se podrán mostrar avisos del mantenimiento programado." || r=1
     instalar_paquete_si_falta fastfetch   "No se pudo instalar 'fastfetch'. Puede que no esté disponible en tus repositorios." || r=1
     instalar_paquete_si_falta kitty       "No se pudo instalar 'kitty'. Puede que no esté disponible en tus repositorios." || r=1
     instalar_paquete_si_falta synaptic    "No se pudo instalar 'synaptic'. Puede que no esté disponible en tus repositorios." || r=1
@@ -674,7 +675,7 @@ paso_tools() {
 
 estado_tools() {
     local paquete
-    for paquete in needrestart fastfetch kitty synaptic; do
+    for paquete in needrestart libnotify-bin fastfetch kitty synaptic; do
         paquete_instalado "$paquete" || return 1
     done
     paquete_instalado libfuse2 || paquete_instalado libfuse2t64
@@ -982,7 +983,13 @@ paso_upgrade() {
 
 paso_autoremove() {
     info "Eliminando dependencias huérfanas (apt-get autoremove)..."
-    if ! apt-get "${APT_OPTS[@]}" autoremove; then
+    local -a conservar=()
+    local paquete
+    # needrestart y libnotify-bin son necesarios para el programador en AppImage/Flatpak.
+    for paquete in libnotify-bin needrestart; do
+        paquete_instalado "$paquete" && conservar+=("${paquete}+")
+    done
+    if ! apt-get "${APT_OPTS[@]}" autoremove "${conservar[@]}"; then
         err "No se pudieron eliminar las dependencias huérfanas."
         return 1
     fi
