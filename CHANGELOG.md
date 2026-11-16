@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.7.10
+
+- Corrige la inicialización de la interfaz Backup para conservar disponibles la consola y los controles de mantenimiento.
+
 ## 2.7.9
 
 - Añade una pestaña «Backup» con accesos a Timeshift y Respaldos (Déjà Dup).

@@ -66,6 +66,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.7.10": "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.",
     "2.7.9": "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.",
     "2.7.8": "Guía integrada para instalar o actualizar el asistente del anfitrión.",
     "2.7.7": "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.",
@@ -552,6 +553,7 @@ TRADUCCIONES = {
 
 # Textos del actualizador integrados con las traducciones existentes.
 TRADUCCIONES["en"].update({
+    "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.": "Fixes Backup tab startup while keeping the usual controls available.",
     "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.": "New Backup tab to open Timeshift or install it with authorization.",
     "Guía integrada para instalar o actualizar el asistente del anfitrión.": "Built-in guide to install or update the host helper.",
     "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.": "Diagnostics refresh APT indexes with authorization before checking the system.",
@@ -566,6 +568,7 @@ TRADUCCIONES["en"].update({
     "No se pudo actualizar": "Unable to update",
 })
 TRADUCCIONES["fr"].update({
+    "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.": "Corrige le démarrage de l’onglet Sauvegarde tout en conservant les commandes habituelles.",
     "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.": "Nouvel onglet Sauvegarde pour ouvrir Timeshift ou l’installer avec autorisation.",
     "Guía integrada para instalar o actualizar el asistente del anfitrión.": "Guide intégré pour installer ou mettre à jour l’assistant de l’hôte.",
     "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.": "Le diagnostic actualise les index APT avec autorisation avant de vérifier le système.",
@@ -580,6 +583,7 @@ TRADUCCIONES["fr"].update({
     "No se pudo actualizar": "Mise à jour impossible",
 })
 TRADUCCIONES["zh"].update({
+    "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.": "修复备份选项卡的启动，同时保留常用控件。",
     "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.": "新增备份选项卡，可打开 Timeshift 或经授权安装。",
     "Guía integrada para instalar o actualizar el asistente del anfitrión.": "内置指南可帮助安装或更新主机辅助程序。",
     "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.": "诊断会在检查系统前经授权刷新 APT 索引。",
@@ -2870,6 +2874,64 @@ class VentanaPrincipal(Gtk.Window):
         acciones_caja.pack_end(self.btn_iniciar, False, False, 0)
         inf.pack_start(acciones, False, False, 0)
 
+        self.resumen_ejecucion = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+        self.scroll_resultados = Gtk.ScrolledWindow()
+        self.scroll_resultados.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        self.scroll_resultados.set_min_content_height(45)
+        self.scroll_resultados.set_max_content_height(120)
+        self.scroll_resultados.set_propagate_natural_height(True)
+        self.scroll_resultados.add(self.resumen_ejecucion)
+        self.scroll_resultados.set_no_show_all(True)
+        inf.pack_start(self.scroll_resultados, False, False, 0)
+        self.expansor_consola = Gtk.Expander(label=traducir("Salida de la consola"))
+        self.expansor_consola.set_expanded(False)
+        self.expansor_consola.set_no_show_all(self.preferencias["modo_simple"])
+        contenido_consola = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        self.expansor_consola.add(contenido_consola)
+        inf.pack_start(self.expansor_consola, False, False, 0)
+
+        cabecera_log = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        icono_log = Gtk.Image.new_from_icon_name("utilities-terminal-symbolic", Gtk.IconSize.BUTTON)
+        cabecera_log.pack_start(icono_log, False, False, 0)
+        cabecera_log.pack_start(
+            etiqueta("<b>Salida de la consola</b>", markup=True), True, True, 0)
+        self.btn_separar_consola = Gtk.Button(label=traducir("Abrir en otra ventana"))
+        self.btn_separar_consola.set_image(Gtk.Image.new_from_icon_name(
+            "window-new-symbolic", Gtk.IconSize.BUTTON))
+        self.btn_separar_consola.set_always_show_image(True)
+        self.btn_separar_consola.connect("clicked", self._alternar_ventana_consola)
+        cabecera_log.pack_end(self.btn_separar_consola, False, False, 0)
+
+        btn_borrar = Gtk.Button(label=traducir("Borrar"))
+        btn_borrar.set_image(Gtk.Image.new_from_icon_name(
+            "edit-clear-symbolic", Gtk.IconSize.BUTTON))
+        btn_borrar.set_always_show_image(True)
+        btn_borrar.connect("clicked", self._borrar_consola)
+        self.btn_borrar = btn_borrar
+        cabecera_log.pack_end(btn_borrar, False, False, 0)
+        self.cabecera_consola = cabecera_log
+        contenido_consola.pack_start(cabecera_log, False, False, 0)
+
+        marco = Gtk.ScrolledWindow()
+        marco.set_shadow_type(Gtk.ShadowType.IN)
+        marco.set_size_request(-1, 132)
+        marco.set_min_content_height(110)
+        self.marco_consola = marco
+        self.log = Gtk.TextView(editable=False, cursor_visible=False)
+        self.log.set_monospace(True)
+        self.log.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        self.log.set_left_margin(8)
+        self.log.set_right_margin(8)
+        self.buf = self.log.get_buffer()
+        self.buf.create_tag("ok", foreground="#26a269")
+        self.buf.create_tag("aviso", foreground="#cd9309")
+        self.buf.create_tag("error", foreground="#e01b24")
+        self.buf.create_tag("info", foreground="#1c71d8")
+        self.buf.create_tag("paso", weight=Pango.Weight.BOLD)
+        marco.add(self.log)
+        contenido_consola.pack_start(marco, False, True, 0)
+        contenido_consola.show_all()
+
     @staticmethod
     def _icono_aplicacion_backup(app, fallback=False):
         theme = Gtk.IconTheme.get_default()
@@ -2996,64 +3058,6 @@ class VentanaPrincipal(Gtk.Window):
             self.backup_status.set_text(traducir("No se pudo abrir %s: %s") % (app["name"], exc.message))
             return
         self.backup_status.set_text(traducir("%s se ha abierto.") % app["name"])
-        self.resumen_ejecucion = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
-        self.scroll_resultados = Gtk.ScrolledWindow()
-        self.scroll_resultados.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        self.scroll_resultados.set_min_content_height(45)
-        self.scroll_resultados.set_max_content_height(120)
-        self.scroll_resultados.set_propagate_natural_height(True)
-        self.scroll_resultados.add(self.resumen_ejecucion)
-        self.scroll_resultados.set_no_show_all(True)
-        inf.pack_start(self.scroll_resultados, False, False, 0)
-        self.expansor_consola = Gtk.Expander(label=traducir("Salida de la consola"))
-        self.expansor_consola.set_expanded(False)
-        self.expansor_consola.set_no_show_all(self.preferencias["modo_simple"])
-        contenido_consola = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        self.expansor_consola.add(contenido_consola)
-        inf.pack_start(self.expansor_consola, False, False, 0)
-
-        cabecera_log = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        icono_log = Gtk.Image.new_from_icon_name("utilities-terminal-symbolic", Gtk.IconSize.BUTTON)
-        cabecera_log.pack_start(icono_log, False, False, 0)
-        cabecera_log.pack_start(
-            etiqueta("<b>Salida de la consola</b>", markup=True), True, True, 0)
-        self.btn_separar_consola = Gtk.Button(label=traducir("Abrir en otra ventana"))
-        self.btn_separar_consola.set_image(Gtk.Image.new_from_icon_name(
-            "window-new-symbolic", Gtk.IconSize.BUTTON))
-        self.btn_separar_consola.set_always_show_image(True)
-        self.btn_separar_consola.connect("clicked", self._alternar_ventana_consola)
-        cabecera_log.pack_end(self.btn_separar_consola, False, False, 0)
-
-        btn_borrar = Gtk.Button(label=traducir("Borrar"))
-        btn_borrar.set_image(Gtk.Image.new_from_icon_name(
-            "edit-clear-symbolic", Gtk.IconSize.BUTTON))
-        btn_borrar.set_always_show_image(True)
-        btn_borrar.connect("clicked", self._borrar_consola)
-        self.btn_borrar = btn_borrar
-        cabecera_log.pack_end(btn_borrar, False, False, 0)
-        self.cabecera_consola = cabecera_log
-        contenido_consola.pack_start(cabecera_log, False, False, 0)
-
-        marco = Gtk.ScrolledWindow()
-        marco.set_shadow_type(Gtk.ShadowType.IN)
-        marco.set_size_request(-1, 132)
-        marco.set_min_content_height(110)
-        self.marco_consola = marco
-        self.log = Gtk.TextView(editable=False, cursor_visible=False)
-        self.log.set_monospace(True)
-        self.log.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
-        self.log.set_left_margin(8)
-        self.log.set_right_margin(8)
-        self.buf = self.log.get_buffer()
-        self.buf.create_tag("ok", foreground="#26a269")
-        self.buf.create_tag("aviso", foreground="#cd9309")
-        self.buf.create_tag("error", foreground="#e01b24")
-        self.buf.create_tag("info", foreground="#1c71d8")
-        self.buf.create_tag("paso", weight=Pango.Weight.BOLD)
-        marco.add(self.log)
-        contenido_consola.pack_start(marco, False, True, 0)
-        contenido_consola.show_all()
-
     def _adaptar_paneles(self, _ventana, allocation):
         estrecha = allocation.width < 900
         orientacion = Gtk.Orientation.VERTICAL if estrecha else Gtk.Orientation.HORIZONTAL

@@ -22,6 +22,7 @@
     <value key="flathub::verification::website">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</value>
   </custom>
   <releases>
+    <release version="2.7.10" date="2026-11-16"><description><p>Corrige la inicialización de la interfaz Backup y mantiene disponibles la consola y los controles de mantenimiento.</p></description></release>
     <release version="2.7.9" date="2026-11-16"><description><p>Añade una pestaña Backup con accesos a Timeshift y Respaldos (Déjà Dup), e instalación opcional con autorización explícita.</p></description></release>
     <release version="2.7.8" date="2026-11-15"><description><p>Guía integrada para instalar o actualizar el asistente del anfitrión desde Flatpak y AppImage.</p></description></release>
     <release version="2.7.7" date="2026-11-15"><description><p>Actualiza los índices APT con autorización antes del diagnóstico e informa si la operación falla.</p></description></release>

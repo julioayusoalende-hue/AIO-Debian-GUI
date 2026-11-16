@@ -25,6 +25,7 @@ El diagnóstico solicita autorización para renovar los índices APT antes de co
 
 ## Novedades recientes
 
+- **2.7.10:** corrige la inicialización de la pestaña Backup y conserva la consola y los controles habituales.
 - **2.7.9:** pestaña Backup con Timeshift y Respaldos (Déjà Dup), e instalación opcional autorizada.
 - **2.7.8:** guía integrada para instalar o actualizar el asistente del anfitrión en Flatpak y AppImage, con revisión de archivos y autorización explícita.
 - **2.7.7:** actualización autorizada de los índices APT antes del diagnóstico, con aviso si falla.
