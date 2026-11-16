@@ -12,7 +12,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
+from gi.repository import GLib, Gtk
 
 if not Gtk.init_check([])[0]:
     print('Sin pantalla: prueba GTK de programación omitida.')
@@ -65,19 +65,21 @@ for language in ('es', 'en', 'fr', 'zh'):
     with patch.object(app.subprocess, 'run', side_effect=read_status), \
          patch.object(app.subprocess, 'Popen', side_effect=Save):
         w._abrir_programacion()
-        dialog = w.ventana_programacion
-        wait_for(lambda: w.programacion_widgets['guardar'].get_sensitive())
-        widgets = w.programacion_widgets
+        dialog = w.programacion.ventana_programacion
+        wait_for(lambda: w.programacion.programacion_widgets['guardar'].get_sensitive())
+        widgets = w.programacion.programacion_widgets
+        w._abrir_programacion()
+        assert w.programacion.ventana_programacion is dialog
         assert dialog.get_size()[0] <= 700 and dialog.get_size()[1] <= 720, (language, dialog.get_size())
         assert widgets['config'] is None
         assert not widgets['activo'].get_active()
         assert set(widgets['tareas']) == set(app.core_scheduler.TASKS)
         assert 'backports-kernel-mesa' not in widgets['tareas']
         with patch.object(app, 'formato_actualizacion', return_value='deb'):
-            assert w._lanzador_programacion() == {'format': 'deb', 'path': ''}
+            assert w.programacion._lanzador_programacion() == {'format': 'deb', 'path': ''}
         with patch.object(app, 'formato_actualizacion', return_value='appimage'), \
              patch.dict(app.os.environ, {'APPIMAGE': '/home/test/AiO.AppImage'}):
-            assert w._lanzador_programacion() == {
+            assert w.programacion._lanzador_programacion() == {
                 'format': 'appimage', 'path': '/home/test/AiO.AppImage'}
         widgets['frecuencia'].set_active_id('daily')
         assert not widgets['dia'].get_sensitive()
@@ -88,40 +90,45 @@ for language in ('es', 'en', 'fr', 'zh'):
         widgets['minuto'].set_value(25)
         widgets['activo'].set_active(True)
         for task, check in widgets['tareas'].items(): check.set_active(task in ('upgrade', 'autoclean'))
-        w._cambiar_programacion(dialog)
+        w.programacion._cambiar_programacion(dialog)
         assert w.programando and not w.btn_iniciar.get_sensitive()
         wait_for(lambda: not w.programando and widgets['guardar'].get_sensitive())
         assert backend['config'] == {'enabled':True,'frequency':'weekly','weekday':2,'hour':3,'minute':25,'tasks':['upgrade','autoclean'],'launcher':None}
         assert widgets['pausar'].get_sensitive()
-        w._cambiar_programacion(dialog, pausar=True)
+        w.programacion._cambiar_programacion(dialog, pausar=True)
         wait_for(lambda: not w.programando and widgets['guardar'].get_sensitive())
         assert not backend['config']['enabled'] and not widgets['activo'].get_active()
         assert not widgets['pausar'].get_sensitive()
         before = len(commands)
         for check in widgets['tareas'].values(): check.set_active(False)
         with patch.object(w, '_mensaje') as message:
-            w._cambiar_programacion(dialog)
+            w.programacion._cambiar_programacion(dialog)
             assert message.called and len(commands) == before
         # Actualizar los resultados no debe borrar un formulario aún no guardado.
         widgets['hora'].set_value(5)
         backend['last_result'] = {'status':'blocked','started':'2026-11-15T01:00:00+00:00',
             'detail':'APT/dpkg ocupado o no se pudo comprobar su bloqueo.', 'tasks':{'upgrade':'not-run'}}
-        w._cargar_programacion(dialog, cargar_formulario=False)
+        w.programacion._cargar_programacion(dialog, cargar_formulario=False)
         wait_for(lambda: widgets['actualizar'].get_sensitive())
         assert widgets['hora'].get_value_as_int() == 5
         assert app.traducir('Bloqueado') in widgets['resultados'].get_text()
-        w._cambiar_programacion(dialog, eliminar=True)
+        w.programacion._cambiar_programacion(dialog, eliminar=True)
         wait_for(lambda: not w.programando and widgets['guardar'].get_sensitive())
         assert backend['config'] is None and not widgets['eliminar'].get_sensitive()
         dialog.destroy()
-        assert w.ventana_programacion is None
+        assert w.programacion.ventana_programacion is None
         # Una integración ausente o desactualizada no habilita escrituras.
         backend['available'] = False
         w._abrir_programacion()
-        wait_for(lambda: w.programacion_widgets['actualizar'].get_sensitive())
-        assert not w.programacion_widgets['guardar'].get_sensitive()
-        assert not w.programacion_widgets['formulario'].get_sensitive()
-        w.ventana_programacion.destroy()
+        wait_for(lambda: w.programacion.programacion_widgets['actualizar'].get_sensitive())
+        assert not w.programacion.programacion_widgets['guardar'].get_sensitive()
+        assert not w.programacion.programacion_widgets['formulario'].get_sensitive()
+        current = w.programacion.ventana_programacion
+        assert current is not dialog
+        assert w.programacion._programacion_cargada(dialog, backend, None) == GLib.SOURCE_REMOVE
+        assert w.programacion.ventana_programacion is current
+        assert not w.programacion.programacion_widgets['formulario'].get_sensitive()
+        w.programacion.ventana_programacion.destroy()
     w.destroy()
 
 # La guía es accesible desde la programación si la integración del anfitrión falla.
@@ -131,12 +138,12 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
     with patch.object(app.subprocess, 'run', return_value=SimpleNamespace(
             returncode=1, stdout='', stderr='asistente ausente')):
         w._abrir_programacion()
-        wait_for(lambda: w.programacion_widgets['actualizar'].get_sensitive())
-        button = w.programacion_widgets['integracion']
+        wait_for(lambda: w.programacion.programacion_widgets['actualizar'].get_sensitive())
+        button = w.programacion.programacion_widgets['integracion']
         assert button.get_visible() and button.get_sensitive()
         with patch.object(w, '_abrir_guia_integracion') as guide:
             button.clicked()
-            guide.assert_called_once_with(parent=w.ventana_programacion)
-        w.ventana_programacion.destroy()
+            guide.assert_called_once_with(parent=w.programacion.ventana_programacion)
+        w.programacion.ventana_programacion.destroy()
     w.destroy()
 print('GTK programación: carga, selección, hora, guardar, pausar, eliminar, validación, resultados e integración ausente en cuatro idiomas OK')

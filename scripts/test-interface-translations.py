@@ -3,28 +3,20 @@
 import ast
 from pathlib import Path
 import re
+import sys
 
-path = Path(__file__).resolve().parents[1] / "package/usr/bin/aio-debian-gui"
+root = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(root / "package/usr/lib/aio-debian-gui"))
+from aio_core.translations import TRADUCCIONES
+
+path = root / "package/usr/bin/aio-debian-gui"
 source = path.read_text(encoding="utf-8")
 tree = ast.parse(source)
-namespace = {"re": re}
+namespace = {"re": re, "TRADUCCIONES": TRADUCCIONES}
 
-# Ejecutar exclusivamente declaraciones del catálogo, sin importar Gtk ni
-# ejecutar el programa completo.
+# Ejecutar solo las funciones de traducción de la interfaz, sin importar GTK.
 for node in tree.body:
-    if isinstance(node, ast.Assign):
-        targets = node.targets
-        if any(isinstance(t, ast.Name) and t.id == "TRADUCCIONES" for t in targets):
-            exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), "exec"), namespace)
-        elif any(isinstance(t, ast.Subscript) and
-                 "TRADUCCIONES" in ast.unparse(t) for t in targets):
-            exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), "exec"), namespace)
-    elif (isinstance(node, ast.Expr) and isinstance(node.value, ast.Call)
-          and isinstance(node.value.func, ast.Attribute)
-          and node.value.func.attr == "update"
-          and "TRADUCCIONES" in ast.unparse(node.value.func.value)):
-        exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), "exec"), namespace)
-    elif isinstance(node, ast.FunctionDef) and node.name in (
+    if isinstance(node, ast.FunctionDef) and node.name in (
             "traducir", "traducir_detalle_diagnostico"):
         exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), "exec"), namespace)
 

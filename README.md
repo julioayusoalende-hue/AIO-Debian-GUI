@@ -161,6 +161,12 @@ cd AIO-Debian-GUI
 ./scripts/check.sh
 ```
 
+El catálogo de traducciones de la interfaz está en
+`package/usr/lib/aio-debian-gui/aio_core/translations.py`; la selección del
+idioma sigue gestionándose en la interfaz. El seguimiento del tema GTK está en
+`package/usr/lib/aio-debian-gui/aio_core/gtk_appearance.py` y el diálogo de
+programación en `package/usr/lib/aio-debian-gui/aio_core/gtk_scheduler.py`.
+
 ## Licencia
 
 GNU GPL v3 o posterior. Consulta [LICENSE](LICENSE). Sin ninguna garantía.

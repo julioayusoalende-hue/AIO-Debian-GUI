@@ -46,6 +46,9 @@ bash scripts/test-backup-apps.sh && bien "instalación segura de aplicaciones de
 bash scripts/test-recommended-apps.sh && bien "instalación segura de apps recomendadas" || fallo "pruebas de apps recomendadas"
 
 if python3 -c 'import gi; gi.require_version("Gtk", "3.0")' >/dev/null 2>&1; then
+    python3 scripts/test-gtk-appearance.py &&
+        bien "seguimiento GTK del tema del sistema" ||
+        fallo "seguimiento GTK del tema del sistema"
     python3 scripts/test-preferences.py "$GUI" &&
         bien "preferencias, traducciones, Acerca de y modo simple" ||
         fallo "pruebas de preferencias"

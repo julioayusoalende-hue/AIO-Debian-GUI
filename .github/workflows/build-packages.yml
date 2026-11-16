@@ -80,6 +80,9 @@ jobs:
           dpkg-deb --info "$DEB"
           dpkg-deb --contents "$DEB" >/dev/null
           dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/updates.py' >/dev/null
+          dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/translations.py' >/dev/null
+          dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/gtk_appearance.py' >/dev/null
+          dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/gtk_scheduler.py' >/dev/null
           dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/host_integration.py' >/dev/null
           dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/scheduler.py' >/dev/null
           dpkg-deb --contents "$DEB" | grep -F 'usr/lib/systemd/system/aio-debian-gui-maintenance@.service' >/dev/null
@@ -89,6 +92,9 @@ jobs:
           test -x squashfs-root/AppRun
           test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/history.py
           test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/updates.py
+          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/translations.py
+          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/gtk_appearance.py
+          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/gtk_scheduler.py
           test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/host_integration.py
           test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/scheduler.py
           test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/preflight.py
@@ -99,6 +105,9 @@ jobs:
           flatpak install --user --noninteractive --bundle "$FLATPAK"
           flatpak info --user --show-metadata io.github.julioayusoalende_hue.aio_debian_gui >/dev/null
           flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/updates.py
+          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/translations.py
+          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/gtk_appearance.py
+          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/gtk_scheduler.py
           flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/host_integration.py
           flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/history.py
           flatpak run --user --command=python3 io.github.julioayusoalende_hue.aio_debian_gui -c 'import gi; gi.require_version("Gtk", "3.0"); gi.require_version("Vte", "2.91"); from gi.repository import Gtk, Vte'

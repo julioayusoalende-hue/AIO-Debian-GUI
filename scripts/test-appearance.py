@@ -34,7 +34,4 @@ with tempfile.TemporaryDirectory() as tmp:
 src = Path("package/usr/bin/aio-debian-gui").read_text(encoding="utf-8")
 ast.parse(src)
 assert 'combo_tema.append("sistema", traducir("Seguir el sistema"))' in src
-assert 'self.gnome.connect("changed::color-scheme"' in src
-assert 'self.portal.connect("g-signal", self._cambio_portal)' in src
-assert 'self.gtk.connect("notify::gtk-theme-name"' in src
 print("✔ tema sistema (portal/GNOME/GTK), ajustes manuales y migración de preferencias")
