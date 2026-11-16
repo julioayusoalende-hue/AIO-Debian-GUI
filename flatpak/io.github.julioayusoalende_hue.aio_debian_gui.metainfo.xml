@@ -23,6 +23,7 @@
     <value key="flathub::verification::website">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</value>
   </custom>
   <releases>
+    <release version="2.10.5" date="2026-11-16"><description><p>Activa autoremove por defecto y conserva libnotify-bin y needrestart para la programación del mantenimiento en AppImage y Flatpak.</p></description></release>
     <release version="2.10.4" date="2026-11-16"><description><p>Conserva libnotify-bin y needrestart al eliminar dependencias huérfanas y deja autoremove desmarcado por defecto.</p></description></release>
     <release version="2.10.3" date="2026-11-16"><description><p>Instala automáticamente la integración inicial del programador para AppImage y Flatpak con autorización de administrador; rechaza sobrescribir instalaciones existentes.</p></description></release>
     <release version="2.10.2" date="2026-11-16"><description><p>Modulariza traducciones, apariencia GTK y programación, conservando los flujos existentes. Validada en Debian 13 con AppImage y Flatpak.</p></description></release>

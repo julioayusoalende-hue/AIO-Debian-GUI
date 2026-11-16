@@ -415,6 +415,7 @@ TRADUCCIONES = {
 
 # Textos del actualizador integrados con las traducciones existentes.
 TRADUCCIONES["en"].update({
+    "Activa autoremove por defecto y conserva libnotify-bin y needrestart, necesarios para la programación en AppImage y Flatpak.": "Enables autoremove by default and preserves libnotify-bin and needrestart, required for AppImage and Flatpak scheduling.",
     "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.": "Automatically installs the initial scheduler integration for AppImage and Flatpak with administrator authorization.",
     "Mantiene libnotify-bin y needrestart al eliminar dependencias huérfanas, necesarios para la programación en AppImage y Flatpak.": "Keeps libnotify-bin and needrestart when removing orphaned dependencies; AppImage and Flatpak scheduling needs them.",
     "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.": "Adds icons for backup and recommended apps, even when they are not installed.",
@@ -448,6 +449,7 @@ TRADUCCIONES["en"].update({
     "No se pudo actualizar": "Unable to update",
 })
 TRADUCCIONES["fr"].update({
+    "Activa autoremove por defecto y conserva libnotify-bin y needrestart, necesarios para la programación en AppImage y Flatpak.": "Active autoremove par défaut et conserve libnotify-bin et needrestart, requis pour la planification AppImage et Flatpak.",
     "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.": "Installe automatiquement l’intégration initiale du planificateur pour AppImage et Flatpak avec une autorisation administrateur.",
     "Mantiene libnotify-bin y needrestart al eliminar dependencias huérfanas, necesarios para la programación en AppImage y Flatpak.": "Conserve libnotify-bin et needrestart lors de la suppression des dépendances orphelines ; la planification AppImage et Flatpak en a besoin.",
     "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.": "Ajoute des icônes pour les applications de sauvegarde et recommandées, même lorsqu’elles ne sont pas installées.",
@@ -481,6 +483,7 @@ TRADUCCIONES["fr"].update({
     "No se pudo actualizar": "Mise à jour impossible",
 })
 TRADUCCIONES["zh"].update({
+    "Activa autoremove por defecto y conserva libnotify-bin y needrestart, necesarios para la programación en AppImage y Flatpak.": "默认启用 autoremove，并保留 AppImage 和 Flatpak 计划任务所需的 libnotify-bin 和 needrestart。",
     "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.": "通过管理员授权自动安装 AppImage 和 Flatpak 的初始计划程序集成。",
     "Mantiene libnotify-bin y needrestart al eliminar dependencias huérfanas, necesarios para la programación en AppImage y Flatpak.": "清理孤立依赖时保留 libnotify-bin 和 needrestart；AppImage 和 Flatpak 的计划任务需要它们。",
     "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.": "为备份和推荐应用添加图标，即使尚未安装也会显示。",

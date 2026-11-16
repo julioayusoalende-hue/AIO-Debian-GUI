@@ -19,7 +19,7 @@ maintenance of Debian and Ubuntu LTS systems:
 - Snapcraft recipe: https://github.com/julioayusoalende-hue/AIO-Debian-GUI/blob/main/snap/snapcraft.yaml
 - App ID/name requested: `aio-debian-gui` (subject to name registration)
 - License: GPL-3.0-or-later
-- Current candidate: 2.10.4, `grade: devel`, `confinement: classic`
+- Current candidate: 2.10.5, `grade: devel`, `confinement: classic`
 - Supported architecture: amd64
 
 The application displays system information and offers optional APT updates,

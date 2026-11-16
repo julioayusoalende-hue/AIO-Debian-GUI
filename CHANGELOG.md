@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.10.5
+
+- Vuelve a activar `autoremove` por defecto, conservando `libnotify-bin` y `needrestart` en su simulación y ejecución para que la programación de AppImage y Flatpak siga funcionando.
+
 ## 2.10.4
 
 - Conserva `libnotify-bin` y `needrestart` en la simulación y ejecución de `autoremove`; la programación en AppImage y Flatpak los necesita.

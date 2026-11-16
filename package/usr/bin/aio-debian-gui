@@ -76,6 +76,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.10.5": "Activa autoremove por defecto y conserva libnotify-bin y needrestart, necesarios para la programación en AppImage y Flatpak.",
     "2.10.4": "Mantiene libnotify-bin y needrestart al eliminar dependencias huérfanas, necesarios para la programación en AppImage y Flatpak.",
     "2.10.3": "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.",
     "2.10.2": "Modulariza traducciones, apariencia GTK y programación; conserva los flujos existentes.",
@@ -710,7 +711,7 @@ PASOS = [
     ("upgrade", "Actualizar los paquetes del sistema",
      "apt-get update y apt-get dist-upgrade.", True, "apt"),
     ("autoremove", "Eliminar dependencias huérfanas",
-     "apt-get autoremove; puede quitar paquetes que APT considera huérfanos.", False, "apt"),
+     "apt-get autoremove; puede quitar paquetes que APT considera huérfanos.", True, "apt"),
     ("autoclean", "Limpiar la caché de paquetes obsoletos",
      "apt-get autoclean.", True, "apt"),
     ("flatpak-setup", "Instalar soporte Flatpak y añadir Flathub",

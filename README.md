@@ -27,6 +27,7 @@ El diagnóstico solicita autorización para renovar los índices APT antes de co
 
 ## Novedades recientes
 
+- **2.10.5:** `autoremove` vuelve a estar activado por defecto y conserva las dependencias de la programación en AppImage y Flatpak.
 - **2.10.4:** `autoremove` conserva `libnotify-bin` y `needrestart`, necesarios para la programación en AppImage y Flatpak.
 - **2.10.3:** instalación automática inicial de la integración del programador para AppImage y Flatpak, con autorización de administrador.
 - **2.10.2:** modulariza traducciones, apariencia GTK y programación; comprobada en Debian 13 con AppImage y Flatpak.
