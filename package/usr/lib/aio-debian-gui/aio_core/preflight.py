@@ -28,6 +28,16 @@ def _run(command, timeout=25):
         return None
 
 
+def autoremove_keep():
+    """Paquetes del programador que autoremove no debe retirar en AppImage/Flatpak."""
+    keep = []
+    for package in ("libnotify-bin", "needrestart"):
+        result = _run(["dpkg-query", "-W", "-f=${db:Status-Status}", package])
+        if result is not None and result.returncode == 0 and result.stdout == "installed":
+            keep.append(package + "+")
+    return keep
+
+
 def _apt_locks():
     """Detectar bloqueos POSIX existentes sin modificarlos."""
     try:
@@ -147,12 +157,12 @@ def _check_local(tasks):
         if "upgrade" in tasks:
             simulations.append(["apt-get", "-s", "-o", "Debug::NoLocking=1", "dist-upgrade"])
         if "autoremove" in tasks:
-            simulations.append(["apt-get", "-s", "-o", "Debug::NoLocking=1", "autoremove"])
+            simulations.append(["apt-get", "-s", "-o", "Debug::NoLocking=1", "autoremove", *autoremove_keep()])
         for cmd in simulations:
             result = _run(cmd, timeout=45)
             if result is None or result.returncode != 0:
                 blocked = True
-                messages.append("No se pudo simular APT: " + cmd[-1])
+                messages.append("No se pudo simular APT: " + cmd[4])
                 continue
             for line in result.stdout.splitlines():
                 parts = line.split()
@@ -170,7 +180,7 @@ def _check_local(tasks):
             installs = [line.split()[1] for line in result.stdout.splitlines() if line.startswith("Inst ") and len(line.split()) > 1]
             removed = [line for line in result.stdout.splitlines()
                        if line.startswith(("Remv ", "Purg "))]
-            if cmd[-1] == "dist-upgrade":
+            if "dist-upgrade" in cmd:
                 plan = "".join(line + "\n" for line in result.stdout.splitlines()
                                if line.startswith(("Inst ", "Remv ", "Purg ")))
                 upgrade_plan = hashlib.sha256(plan.encode("utf-8")).hexdigest()
@@ -178,10 +188,11 @@ def _check_local(tasks):
                 messages.append("Paquetes previstos para instalar/actualizar (" + str(len(installs)) + "): " + ", ".join(installs[:15]))
             if removed:
                 blocked = True
-                messages.append("La simulación propone eliminar paquetes: " +
+                action = " de autoremove" if "autoremove" in cmd else ""
+                messages.append("La simulación" + action + " propone eliminar paquetes: " +
                                 ", ".join(line.split()[1] for line in removed[:12]))
             else:
-                messages.append("Simulación APT correcta: " + cmd[-1] +
+                messages.append("Simulación APT correcta: " + cmd[4] +
                                 " (sin eliminaciones previstas).")
     elif tasks:
         blocked = True
