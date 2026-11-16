@@ -18,7 +18,7 @@ AiO Debian GUI reúne tareas habituales de administración en una aplicación GT
 - **Sistema y hardware:** gestión de repositorios, kernel y Mesa de Backports; detección NVIDIA con instalación conservadora en Debian. Algunas operaciones tienen requisitos y bloqueos adicionales.
 - **Copias de seguridad:** acceso a Timeshift y Respaldos (Déjà Dup); si no están instalados, AiO ofrece instalarlos con confirmación y autorización de administrador.
 - **Apps recomendadas:** catálogo en dos columnas con GIMP, VLC, Celluloid, Plex, Switcheroo, Video Downloader, HandBrake, Spotify, Feishin y Google Chrome. Distingue DEB y Flatpak, indica qué formato está instalado y no abre las aplicaciones tras instalarlas. Las instalaciones requieren confirmación; los DEB externos se descargan e instalan manualmente.
-- **Terminal:** pestaña interactiva con Bash que muestra Fastfetch al iniciar si está instalado y recibe en directo la salida de mantenimiento. El botón «Ver en Terminal» de la consola integrada abre esta pestaña. Incluye accesos para limpiar la pantalla, ejecutar Fastfetch y abrir Nautilus en `admin:/` (puede solicitar autorización). Los accesos ejecutan procesos independientes, sin enviar texto a la sesión interactiva. En Flatpak se ejecutan en el anfitrión; se aplican los permisos habituales del usuario.
+- **Terminal:** pestaña interactiva con Bash que recibe en directo la salida de mantenimiento. El botón «Ver en Terminal» de la consola integrada abre esta pestaña. Incluye accesos para limpiar la pantalla, ejecutar Fastfetch y abrir Nautilus en `admin:/` (puede solicitar autorización). Los accesos ejecutan procesos independientes, sin enviar texto a la sesión interactiva. En Flatpak se ejecutan en el anfitrión; se aplican los permisos habituales del usuario.
 - **Escritorio:** integración con Flatpak, AppImage y complementos de GNOME; interfaz en español, inglés, francés y chino, con temas claro y oscuro.
 
 La aplicación es compatible con Debian 12 o superior y Ubuntu 24.04/26.04 LTS. Algunas tareas dependen de la distribución y se bloquean cuando no son compatibles.
@@ -27,6 +27,7 @@ El diagnóstico solicita autorización para renovar los índices APT antes de co
 
 ## Novedades recientes
 
+- **2.10.6:** la terminal ya no ejecuta Fastfetch al iniciar; su acceso manual sigue disponible.
 - **2.10.5:** `autoremove` vuelve a estar activado por defecto y conserva las dependencias de la programación en AppImage y Flatpak.
 - **2.10.4:** `autoremove` conserva `libnotify-bin` y `needrestart`, necesarios para la programación en AppImage y Flatpak.
 - **2.10.3:** instalación automática inicial de la integración del programador para AppImage y Flatpak, con autorización de administrador.
@@ -73,7 +74,7 @@ chmod +x aio-debian-gui_X.Y.Z_x86_64.AppImage
 ./aio-debian-gui_X.Y.Z_x86_64.AppImage
 ```
 
-Requiere arquitectura `x86_64`, Python 3, GTK 3, `gir1.2-vte-2.91`, Polkit y FUSE 2 (`libfuse2` en Debian 12 o `libfuse2t64` en Debian 13). Instala `fastfetch` para mostrar el resumen al abrir la terminal. La aplicación no necesita que instales el paquete DEB.
+Requiere arquitectura `x86_64`, Python 3, GTK 3, `gir1.2-vte-2.91`, Polkit y FUSE 2 (`libfuse2` en Debian 12 o `libfuse2t64` en Debian 13). Instala `fastfetch` para usar su acceso en la terminal. La aplicación no necesita que instales el paquete DEB.
 
 ### Flatpak
 
