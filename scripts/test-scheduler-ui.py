@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import threading
 import time
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -128,6 +129,12 @@ for language in ('es', 'en', 'fr', 'zh'):
         assert w.programacion._programacion_cargada(dialog, backend, None) == GLib.SOURCE_REMOVE
         assert w.programacion.ventana_programacion is current
         assert not w.programacion.programacion_widgets['formulario'].get_sensitive()
+        # Una consulta iniciada antes de la instalación no reactiva los controles.
+        w.programando = True
+        available = {**backend, 'available': True}
+        assert w.programacion._programacion_cargada(current, available, None) == GLib.SOURCE_REMOVE
+        assert not w.programacion.programacion_widgets['formulario'].get_sensitive()
+        w.programando = False
         w.programacion.ventana_programacion.destroy()
     w.destroy()
 
@@ -144,6 +151,21 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
         with patch.object(w, '_abrir_guia_integracion') as guide:
             button.clicked()
             guide.assert_called_once_with(parent=w.programacion.ventana_programacion)
+        dialog = w.programacion.ventana_programacion
+        entered, release = threading.Event(), threading.Event()
+        def install(*_args):
+            entered.set()
+            assert release.wait(5)
+        with patch.object(app.core_host_integration, 'install', side_effect=install, create=True), \
+             patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK):
+            w._abrir_guia_integracion(parent=dialog)
+            guide = next(d for d in Gtk.Window.list_toplevels()
+                         if isinstance(d, Gtk.Dialog) and d.get_title() == 'Guía de integración del anfitrión')
+            w._instalar_integracion(None, guide, dialog)
+            wait_for(entered.is_set)
+            assert w.programando and not button.get_sensitive()
+            release.set()
+            wait_for(lambda: not w.programando and button.get_sensitive())
         w.programacion.ventana_programacion.destroy()
     w.destroy()
 print('GTK programación: carga, selección, hora, guardar, pausar, eliminar, validación, resultados e integración ausente en cuatro idiomas OK')

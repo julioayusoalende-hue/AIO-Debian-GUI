@@ -1,5 +1,11 @@
 # Cambios
 
+## 2.10.3
+
+- Instala automáticamente la integración inicial del programador para AppImage y Flatpak con autorización de administrador.
+- Rechaza sobrescribir integraciones existentes o archivos gestionados por paquetes; las actualizaciones siguen usando la guía manual.
+- Verifica en una VM systemd de CI la instalación, el estado del programador y el rechazo de instalaciones duplicadas.
+
 ## 2.10.2
 
 - Modulariza el catálogo de traducciones, el seguimiento del tema GTK y el diálogo de programación, conservando el comportamiento existente.

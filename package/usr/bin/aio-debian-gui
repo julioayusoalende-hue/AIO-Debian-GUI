@@ -76,6 +76,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.10.3": "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.",
     "2.10.2": "Modulariza traducciones, apariencia GTK y programación; conserva los flujos existentes.",
     "2.10.1": "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.",
     "2.10.0": "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.",
@@ -891,10 +892,13 @@ class VentanaPrincipal(Gtk.Window):
         contenido.set_border_width(14)
         scroll.add(contenido)
         for texto in (
-            "La integración instala el asistente, la política Polkit y el programador en el sistema anfitrión. La aplicación no ejecuta estos comandos por ti.",
+            "Puedes instalar una integración nueva automáticamente con autorización de administrador. Para actualizar una integración existente, sigue la guía manual.",
             "Antes de actualizar, pausa las programaciones de todos los usuarios y espera a que terminen las tareas. Si el DEB está instalado, actualízalo con APT y no uses esta guía.",
         ):
             contenido.pack_start(etiqueta(traducir(texto)), False, False, 0)
+        automatico = Gtk.Button(label=traducir("Instalar integración automáticamente"))
+        automatico.connect("clicked", self._instalar_integracion, dialogo, parent)
+        contenido.pack_start(automatico, False, False, 0)
         for descripcion, comando, nombre in (
             ("1. Copia y ejecuta este bloque en una terminal del anfitrión. Anota el directorio mostrado y revisa los archivos extraídos.",
              extraccion, "Copiar extracción"),
@@ -919,6 +923,66 @@ class VentanaPrincipal(Gtk.Window):
             "Para las notificaciones y la comprobación de reinicio, instala libnotify-bin y needrestart en el anfitrión."
         )), False, False, 0)
         dialogo.show_all()
+
+    def _instalar_integracion(self, _boton, guia, parent):
+        if (self.programando or self.en_curso or self.comprobando_actualizacion
+                or self.diagnostico_en_curso or self.backup_action_in_progress):
+            return
+        pregunta = Gtk.MessageDialog(
+            transient_for=guia, modal=True, message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.NONE, text=traducir("Instalar integración automáticamente"),
+        )
+        pregunta.format_secondary_text(traducir(
+            "Se instalarán en el anfitrión el asistente privilegiado, la política Polkit y el programador de esta versión. Solo continúa si confías en esta aplicación. Se solicitará autorización de administrador."
+        ))
+        pregunta.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
+        pregunta.add_button(traducir("Continuar"), Gtk.ResponseType.OK)
+        pregunta.set_default_response(Gtk.ResponseType.CANCEL)
+        aceptar = pregunta.run() == Gtk.ResponseType.OK
+        pregunta.destroy()
+        if not aceptar:
+            return
+        formato, appimage = formato_actualizacion(), os.environ.get("APPIMAGE")
+        guia.destroy()
+        self.programando = True
+        self._actualizar_sensibilidad()
+        if parent is not None and parent is self.programacion.ventana_programacion:
+            w = self.programacion.programacion_widgets
+            for nombre in ('formulario', 'guardar', 'pausar', 'eliminar', 'actualizar', 'integracion'):
+                w[nombre].set_sensitive(False)
+            parent.set_response_sensitive(Gtk.ResponseType.CLOSE, False)
+            w['estado'].set_text(traducir('Esperando autorización de administrador…'))
+
+        def instalar():
+            try:
+                core_host_integration.install(formato, appimage)
+                error = None
+            except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
+                error = str(exc)
+            GLib.idle_add(self._integracion_instalada, parent, error)
+
+        threading.Thread(target=instalar, daemon=True).start()
+
+    def _integracion_instalada(self, parent, error):
+        self.programando = False
+        self._actualizar_sensibilidad()
+        vigente = parent is not None and parent is self.programacion.ventana_programacion
+        if vigente:
+            parent.set_response_sensitive(Gtk.ResponseType.CLOSE, True)
+        dialogo = Gtk.MessageDialog(
+            transient_for=parent if vigente else self, modal=True,
+            message_type=Gtk.MessageType.ERROR if error else Gtk.MessageType.INFO,
+            buttons=Gtk.ButtonsType.CLOSE,
+            text=traducir("No se pudo instalar la integración." if error else "Integración instalada"),
+        )
+        dialogo.format_secondary_text(error if error else traducir(
+            "La integración se ha instalado. Comprueba el estado de la programación."
+        ))
+        dialogo.run()
+        dialogo.destroy()
+        if vigente:
+            self.programacion._cargar_programacion(parent)
+        return GLib.SOURCE_REMOVE
 
     def _abrir_programacion(self, _boton=None):
         self.programacion.abrir()

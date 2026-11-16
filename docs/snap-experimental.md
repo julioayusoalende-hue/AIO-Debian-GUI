@@ -21,7 +21,7 @@ En Ubuntu 24.04, con Snapcraft y un proveedor de compilación configurados:
 
 ```bash
 snapcraft pack
-sudo snap install ./aio-debian-gui_2.10.2_amd64.snap --dangerous --classic
+sudo snap install ./aio-debian-gui_2.10.3_amd64.snap --dangerous --classic
 ```
 
 El workflow `build-snap.yml` también genera un artefacto experimental. La ruta exacta puede
@@ -31,7 +31,7 @@ variar según la versión de Snapcraft.
 
 - La interfaz usa Python 3 y GTK 3 incluidos en el paquete; **se requiere probarla en un escritorio Ubuntu real**.
 - El snap **no instala automáticamente** el asistente privilegiado ni políticas en `/usr` o `/etc`.
-  Para tareas administrativas se necesita un asistente `aio-debian-gui-helper` versión 2.10.2 instalado
+  Para tareas administrativas se necesita un asistente `aio-debian-gui-helper` versión 2.10.3 instalado
   previamente por el administrador en `/usr/lib/aio-debian-gui/` junto a su política Polkit válida.
 - Si ese asistente no está disponible, la interfaz puede abrirse para consultar el sistema,
   pero no ejecutará el mantenimiento.

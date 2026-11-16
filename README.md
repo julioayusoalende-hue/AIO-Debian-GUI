@@ -27,6 +27,7 @@ El diagnóstico solicita autorización para renovar los índices APT antes de co
 
 ## Novedades recientes
 
+- **2.10.3:** instalación automática inicial de la integración del programador para AppImage y Flatpak, con autorización de administrador.
 - **2.10.2:** modulariza traducciones, apariencia GTK y programación; comprobada en Debian 13 con AppImage y Flatpak.
 - **2.10.1:** iconos propios para Timeshift y Déjà Dup, y para las seis aplicaciones recomendadas restantes, incluso sin instalarlas.
 - **2.10.0:** salida de mantenimiento en la terminal, accesos a `clear`, Fastfetch y Nautilus como administrador, y Enter limitado a la pestaña de mantenimiento.
@@ -101,7 +102,7 @@ Antes de cambiar kernel, Mesa, repositorios o controladores, haz una copia de se
 
 ### Integración del programador para AppImage y Flatpak
 
-En AppImage o Flatpak, abre **Menú → Guía de integración del anfitrión**. La guía muestra dos bloques que puedes copiar a una terminal del anfitrión: uno extrae los archivos y otro los instala tras tu revisión y autorización. La aplicación no ejecuta los comandos automáticamente. La guía también está disponible desde la ventana de programación cuando la integración no está lista y desde el diagnóstico si falla la actualización APT.
+En AppImage o Flatpak, abre **Menú → Guía de integración del anfitrión** y selecciona **Instalar integración automáticamente**. Confirma la instalación y autorízala como administrador. Esta opción solo sirve para una instalación nueva: si ya existe algún archivo de la integración o el DEB está instalado, no sobrescribe nada. Para actualizar una integración existente, usa los bloques manuales de la guía después de pausar las programaciones de todos los usuarios y esperar a que finalice cualquier mantenimiento. La guía también está disponible desde la ventana de programación cuando la integración no está lista y desde el diagnóstico si falla la actualización APT.
 
 Estos pasos instalan en el anfitrión el asistente, los módulos de programación, la política Polkit y el servicio systemd incluidos en la misma versión de AiO. No los ejecutes si el paquete DEB ya gestiona esos archivos. Requiere autorización de administrador.
 
@@ -142,6 +143,19 @@ Comprueba que se extrajeron los seis archivos antes de instalarlos como administ
 set -e
 for f in aio-debian-gui-helper es.aiodebian.gui.policy aio-debian-gui-maintenance@.service __init__.py scheduler.py preflight.py; do
   test -s "$f" || { echo "Falta $f; no se instalará la integración." >&2; exit 1; }
+done
+if dpkg-query -W -f='${db:Status-Status}' aio-debian-gui 2>/dev/null | grep -qx installed; then
+  echo "El DEB está instalado; actualízalo con APT." >&2
+  exit 1
+fi
+for f in /usr/lib/aio-debian-gui/aio-debian-gui-helper /usr/lib/aio-debian-gui/aio_core/__init__.py /usr/lib/aio-debian-gui/aio_core/scheduler.py /usr/lib/aio-debian-gui/aio_core/preflight.py /usr/share/polkit-1/actions/es.aiodebian.gui.policy /usr/lib/systemd/system/aio-debian-gui-maintenance@.service; do
+  if resultado=$(LC_ALL=C dpkg-query -S "$f" 2>&1); then
+    echo "Archivo gestionado por un paquete: $f." >&2
+    exit 1
+  elif [ "$resultado" != "dpkg-query: no path found matching pattern $f" ]; then
+    echo "No se pudo verificar el propietario de $f: $resultado" >&2
+    exit 1
+  fi
 done
 sudo install -D -o root -g root -m 0755 aio-debian-gui-helper /usr/lib/aio-debian-gui/aio-debian-gui-helper
 for f in __init__.py scheduler.py preflight.py; do
