@@ -49,6 +49,8 @@ def install():
 
 result = install()
 if result.returncode:
+    subprocess.run(["stat", "-c", "%U %G %a %n", "/", "/usr", "/usr/share", "/usr/lib",
+                    "/usr/lib/systemd/system", "/usr/share/polkit-1/actions"], check=False)
     raise SystemExit("Falló la instalación: " + result.stderr)
 try:
     status = subprocess.run([destinations[-1], "--schedule-status"],
