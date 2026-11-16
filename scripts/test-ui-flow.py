@@ -152,8 +152,8 @@ for language in ('es', 'en', 'fr', 'zh'):
         w.switches['revertir-backports'][0].set_active(False)
         assert w.switches['upgrade'][0].get_sensitive()
     w._preset_completo(None)
-    assert 'autoremove' not in w._pasos_seleccionados()
-    assert not w.switches['autoremove'][0].get_active()
+    assert 'autoremove' in w._pasos_seleccionados()
+    assert w.switches['autoremove'][0].get_active()
     assert 'upgrade' in w._pasos_seleccionados()
 
     ok = {'name': 'Estado de dpkg', 'status': 'ok', 'detail': 'ok', 'advice': ''}
