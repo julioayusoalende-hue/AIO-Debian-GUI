@@ -237,6 +237,8 @@ esac
                                        stderr="dpkg-query: no path found matching pattern " + args[-1])
             if mode == "unit" and args[1] == "list-units":
                 return SimpleNamespace(returncode=0, stdout="aio-debian-gui-maintenance-1000.timer loaded active", stderr="")
+            if mode == "foreign-timer" and "--type=timer" in args:
+                return SimpleNamespace(returncode=0, stdout="custom.timer loaded active waiting", stderr="")
             if mode == "foreign-timer" and args[1] == "show":
                 return SimpleNamespace(returncode=0, stdout="Id=custom.timer\nTriggers=aio-debian-gui-maintenance@1000.service\n", stderr="")
             if mode == "reload-error" and args[1] == "daemon-reload" and sum(

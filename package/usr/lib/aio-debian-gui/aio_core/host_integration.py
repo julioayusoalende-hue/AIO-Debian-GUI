@@ -105,18 +105,30 @@ def check_residual():
                                 fail("Existe una dependencia anterior: " + base + "/" + entry.name + "/" + child.name)
     for subcommand in ("list-units", "list-unit-files"):
         p = command(["/usr/bin/systemctl", subcommand, "--all", "--plain", "--no-legend",
-                     "--no-pager", "aio-debian-gui-maintenance@*.service",
-                     "aio-debian-gui-maintenance-*.timer"])
+                     "--no-pager"])
         if p.returncode:
             fail("No se pudieron comprobar las unidades systemd: " + (p.stderr or p.stdout).strip()[-600:])
-        if p.stdout.strip():
-            fail("Existen unidades o temporizadores de AiO en systemd.")
-    p = command(["/usr/bin/systemctl", "show", "--all", "--property=Id",
-                 "--property=Triggers", "--", "*.timer"])
+        for line in p.stdout.splitlines():
+            fields = line.split()
+            if fields and fields[0].startswith(("aio-debian-gui-maintenance@", "aio-debian-gui-maintenance-")):
+                fail("Existen unidades o temporizadores de AiO en systemd.")
+    p = command(["/usr/bin/systemctl", "list-units", "--all", "--plain", "--no-legend",
+                 "--no-pager", "--type=timer"])
     if p.returncode:
-        fail("No se pudieron comprobar los temporizadores: " + (p.stderr or p.stdout).strip()[-600:])
-    if "aio-debian-gui-maintenance@" in p.stdout:
-        fail("Un temporizador existente puede iniciar el servicio de AiO.")
+        fail("No se pudieron enumerar los temporizadores: " + (p.stderr or p.stdout).strip()[-600:])
+    timers = []
+    for line in p.stdout.splitlines():
+        fields = line.split()
+        if not fields or not fields[0].endswith(".timer"):
+            fail("Respuesta de systemd no válida al enumerar temporizadores.")
+        timers.append(fields[0])
+    if timers:
+        p = command(["/usr/bin/systemctl", "show", "--all", "--property=Id",
+                     "--property=Triggers", "--", *timers])
+        if p.returncode:
+            fail("No se pudieron comprobar los temporizadores: " + (p.stderr or p.stdout).strip()[-600:])
+        if "aio-debian-gui-maintenance@" in p.stdout:
+            fail("Un temporizador existente puede iniciar el servicio de AiO.")
 
 def check_packages():
     p = command(["/usr/bin/dpkg-query", "-W", "-f=${binary:Package}\t${db:Status-Status}\n"])
