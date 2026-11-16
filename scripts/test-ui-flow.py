@@ -5,8 +5,9 @@ import importlib.util
 import os
 from pathlib import Path
 import sys
+import tempfile
 import time
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import gi
 gi.require_version('Gtk', '3.0')
@@ -31,13 +32,15 @@ for language in ('es', 'en', 'fr', 'zh'):
     w = app.VentanaPrincipal({'idioma': language, 'tema': 'claro', 'modo_simple': False})
     w.show_all()
     settle()
-    assert w.notebook.get_n_pages() == 3
+    assert w.notebook.get_n_pages() == 4
     assert [w.notebook.get_tab_label_text(w.notebook.get_nth_page(i))
             for i in range(2)] == [
                 app.traducir('Configuración y mantenimiento'), app.traducir('Backup')
             ]
     assert w.notebook.get_tab_label_text(w.notebook.get_nth_page(2)) == \
         app.traducir('Apps recomendadas')
+    assert w.notebook.get_tab_label_text(w.notebook.get_nth_page(3)) == \
+        app.traducir('Terminal')
     assert set(w.backup_buttons) == {'timeshift', 'deja-dup'}
     assert all(button.get_image() is not None for button in w.backup_buttons.values())
     for app_id, button in w.backup_buttons.items():
@@ -490,4 +493,77 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
         generate.assert_called_once()
         dialog.destroy()
     w.destroy()
+
+    # La terminal ejecuta Fastfetch una vez y conserva una sesión interactiva real.
+    with tempfile.TemporaryDirectory() as directory:
+        fastfetch = Path(directory) / 'fastfetch'
+        fastfetch.write_text('#!/bin/sh\nprintf "AIO_FASTFETCH_TEST\\n"\n')
+        fastfetch.chmod(0o755)
+        with patch.dict(os.environ, {'PATH': directory + os.pathsep + os.environ['PATH']}):
+            w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+            w.show_all()
+            w.notebook.set_current_page(3)
+
+            def terminal_contains(text):
+                deadline = time.monotonic() + 8
+                while time.monotonic() < deadline:
+                    settle()
+                    stream = app.Gio.MemoryOutputStream.new_resizable()
+                    w.terminal.write_contents_sync(stream, app.Vte.WriteFlags.DEFAULT, None)
+                    stream.close(None)
+                    if text in stream.steal_as_bytes().get_data().decode('utf-8'):
+                        return True
+                return False
+
+            assert terminal_contains('AIO_FASTFETCH_TEST')
+            w.terminal.feed_child(b"printf '%s%s\\n' AIO_TERMINAL_ COMMAND_OK\n")
+            assert terminal_contains('AIO_TERMINAL_COMMAND_OK')
+            w.terminal.feed_child(b'exit\n')
+            deadline = time.monotonic() + 8
+            while w.terminal_started and time.monotonic() < deadline:
+                settle()
+            assert not w.terminal_started
+            assert w.terminal_restart.get_visible()
+            with patch.object(w, '_terminal_iniciada', wraps=w._terminal_iniciada) as started:
+                w.terminal_restart.clicked()
+                deadline = time.monotonic() + 8
+                while not started.called and time.monotonic() < deadline:
+                    settle()
+                assert started.called and w.terminal_started
+                assert started.call_args.args[2] is None
+            w.terminal.feed_child(b'exit\n')
+            deadline = time.monotonic() + 8
+            while w.terminal_started and time.monotonic() < deadline:
+                settle()
+            assert not w.terminal_started
+            w.destroy()
+
+with patch.dict(os.environ, {'PATH': '/nonexistent'}):
+    w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+    w.show_all()
+    w.notebook.set_current_page(3)
+    assert terminal_contains('Fastfetch no está instalado')
+    w.terminal.feed_child(b"printf '%s%s\\n' AIO_MISSING_ FASTFETCH_OK\n")
+    assert terminal_contains('AIO_MISSING_FASTFETCH_OK')
+    w.terminal.feed_child(b'exit\n')
+    deadline = time.monotonic() + 8
+    while w.terminal_started and time.monotonic() < deadline:
+            settle()
+    assert not w.terminal_started
+    w.destroy()
+
+# La edición Flatpak abre la sesión en el anfitrión sin elevar privilegios.
+fake_window = Mock()
+fake_window.terminal_started = False
+with patch.object(app, 'es_flatpak', return_value=True):
+    app.VentanaPrincipal._iniciar_terminal(fake_window)
+argv = fake_window.terminal.spawn_async.call_args.args[2]
+assert argv[:4] == ['flatpak-spawn', '--host', '/bin/bash', '-c']
+assert 'fastfetch' in argv[4] and 'exec /bin/bash -i' in argv[4]
+error = Mock(message='spawn failed')
+app.VentanaPrincipal._terminal_iniciada(fake_window, None, -1, error, None)
+assert not fake_window.terminal_started
+assert 'spawn failed' in fake_window.terminal_status.set_text.call_args.args[0]
+fake_window.terminal_restart.show.assert_called()
+
 print('GTK: selección, confirmación, exclusión Stable, diagnóstico, consola, resultados y adaptación en cuatro idiomas OK')

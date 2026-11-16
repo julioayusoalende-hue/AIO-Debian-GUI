@@ -15,5 +15,9 @@ if ! command -v pkexec >/dev/null 2>&1 || ! command -v apt-get >/dev/null 2>&1; 
     echo "Este AppImage requiere pkexec y apt-get del sistema." >&2
     exit 1
 fi
+if ! python3 -c 'import gi; gi.require_version("Vte", "2.91")' >/dev/null 2>&1; then
+    echo "Falta VTE para la terminal. Instala gir1.2-vte-2.91 en el sistema." >&2
+    exit 1
+fi
 
 exec python3 "$APPDIR/usr/bin/aio-debian-gui" "$@"

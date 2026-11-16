@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.9.0
+
+- Añade una pestaña de terminal interactiva que inicia Fastfetch cuando está disponible.
+
 ## 2.8.3
 
 - Incluye los iconos facilitados para Celluloid, GIMP, Spotify y VLC en «Apps recomendadas».

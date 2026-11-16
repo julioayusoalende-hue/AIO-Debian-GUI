@@ -23,6 +23,7 @@
     <value key="flathub::verification::website">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</value>
   </custom>
   <releases>
+    <release version="2.9.0" date="2026-11-16"><description><p>Añade una terminal interactiva que muestra Fastfetch al iniciar cuando está instalado.</p></description></release>
     <release version="2.8.3" date="2026-11-16"><description><p>Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.</p></description></release>
     <release version="2.8.2" date="2026-11-16"><description><p>Corrige la instalación de Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.</p></description></release>
     <release version="2.8.1" date="2026-11-16"><description><p>Mejora los iconos de las aplicaciones recomendadas cuando sus iconos propios no están disponibles en el sistema.</p></description></release>

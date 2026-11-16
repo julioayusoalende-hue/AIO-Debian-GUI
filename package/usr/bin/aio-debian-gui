@@ -28,7 +28,8 @@ import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
-from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango  # noqa: E402
+gi.require_version("Vte", "2.91")
+from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango, Vte  # noqa: E402
 
 # Ruta equivalente en DEB (/usr), AppImage (AppDir/usr) y Flatpak (/app).
 CORE_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -69,6 +70,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.9.0": "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.",
     "2.8.3": "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.",
     "2.8.2": "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.",
     "2.8.1": "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.",
@@ -560,6 +562,12 @@ TRADUCCIONES = {
 
 # Textos del actualizador integrados con las traducciones existentes.
 TRADUCCIONES["en"].update({
+    "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.": "Adds an interactive terminal that runs Fastfetch on startup when installed.",
+    "Terminal": "Terminal",
+    "Abrir nueva sesión": "Open new session",
+    "La sesión de terminal ha terminado.": "The terminal session has ended.",
+    "No se pudo iniciar la terminal.": "Could not start the terminal.",
+    "Fastfetch no está instalado; instala fastfetch para mostrar la información del sistema.": "Fastfetch is not installed; install fastfetch to show system information.",
     "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.": "Adds icons for Celluloid, GIMP, Spotify and VLC to recommended apps.",
     "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.": "Fixes Video Downloader and shows installed formats without opening apps automatically.",
     "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.": "Improves recommended-app icons when an app's own icon is unavailable.",
@@ -579,6 +587,12 @@ TRADUCCIONES["en"].update({
     "No se pudo actualizar": "Unable to update",
 })
 TRADUCCIONES["fr"].update({
+    "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.": "Ajoute un terminal interactif qui lance Fastfetch au démarrage lorsqu’il est installé.",
+    "Terminal": "Terminal",
+    "Abrir nueva sesión": "Ouvrir une nouvelle session",
+    "La sesión de terminal ha terminado.": "La session du terminal est terminée.",
+    "No se pudo iniciar la terminal.": "Impossible de démarrer le terminal.",
+    "Fastfetch no está instalado; instala fastfetch para mostrar la información del sistema.": "Fastfetch n’est pas installé ; installez fastfetch pour afficher les informations système.",
     "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.": "Ajoute des icônes pour Celluloid, GIMP, Spotify et VLC aux applications recommandées.",
     "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.": "Corrige Video Downloader et indique les formats installés sans ouvrir les applications automatiquement.",
     "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.": "Améliore les icônes des applications recommandées lorsque leur icône propre est indisponible.",
@@ -598,6 +612,12 @@ TRADUCCIONES["fr"].update({
     "No se pudo actualizar": "Mise à jour impossible",
 })
 TRADUCCIONES["zh"].update({
+    "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.": "新增交互式终端；安装 Fastfetch 时会在启动时运行。",
+    "Terminal": "终端",
+    "Abrir nueva sesión": "打开新会话",
+    "La sesión de terminal ha terminado.": "终端会话已结束。",
+    "No se pudo iniciar la terminal.": "无法启动终端。",
+    "Fastfetch no está instalado; instala fastfetch para mostrar la información del sistema.": "尚未安装 Fastfetch；请安装 fastfetch 以显示系统信息。",
     "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.": "为推荐应用中的 Celluloid、GIMP、Spotify 和 VLC 添加图标。",
     "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.": "修复 Video Downloader 并显示已安装的格式，不再自动打开应用。",
     "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.": "当应用自身图标不可用时，改进推荐应用的图标显示。",
@@ -2240,6 +2260,7 @@ class VentanaPrincipal(Gtk.Window):
         self.backup_action_in_progress = False
         self.backup_buttons = {}
         self.recommended_scan_generation = 0
+        self.terminal_started = False
         self.programando = False
         self.ventana_programacion = None
         self.diagnostico_en_curso = False
@@ -3100,6 +3121,24 @@ class VentanaPrincipal(Gtk.Window):
         recomendadas.pack_start(scroll_recomendadas, True, True, 0)
         notebook.append_page(recomendadas, Gtk.Label(label=traducir("Apps recomendadas")))
         notebook.connect("switch-page", self._cambiar_pestana_recomendadas)
+        consola = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        consola.set_border_width(12)
+        self.terminal_status = etiqueta("")
+        consola.pack_start(self.terminal_status, False, False, 0)
+        self.terminal_restart = Gtk.Button(label=traducir("Abrir nueva sesión"))
+        self.terminal_restart.set_halign(Gtk.Align.START)
+        self.terminal_restart.set_no_show_all(True)
+        self.terminal_restart.connect("clicked", self._iniciar_terminal)
+        consola.pack_start(self.terminal_restart, False, False, 0)
+        terminal_scroll = Gtk.ScrolledWindow()
+        terminal_scroll.set_vexpand(True)
+        self.terminal = Vte.Terminal()
+        self.terminal.set_scrollback_lines(10000)
+        self.terminal.connect("child-exited", self._terminal_finalizada)
+        terminal_scroll.add(self.terminal)
+        consola.pack_start(terminal_scroll, True, True, 0)
+        notebook.append_page(consola, Gtk.Label(label=traducir("Terminal")))
+        notebook.connect("switch-page", self._cambiar_pestana_terminal)
         paneles = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         paneles.set_hexpand(True)
         paneles.set_vexpand(True)
@@ -3378,6 +3417,40 @@ class VentanaPrincipal(Gtk.Window):
         if proc.returncode:
             raise RuntimeError((proc.stderr or "No se pudo consultar Flatpak.").strip()[-1000:])
         return set(proc.stdout.splitlines())
+
+    def _cambiar_pestana_terminal(self, _notebook, _pagina, numero):
+        if numero == 3 and not self.terminal_started:
+            self._iniciar_terminal()
+        if numero == 3:
+            self.terminal.grab_focus()
+
+    def _iniciar_terminal(self, _boton=None):
+        if self.terminal_started:
+            return
+        self.terminal_started = True
+        self.terminal_restart.hide()
+        self.terminal_status.set_text("")
+        script = ('if command -v fastfetch >/dev/null 2>&1; then fastfetch; '
+                  'else printf "%s\\n" "$1"; fi; exec /bin/bash -i')
+        argv = comando_host(
+            "/bin/bash", "-c", script, "aio-terminal",
+            traducir("Fastfetch no está instalado; instala fastfetch para mostrar la información del sistema."),
+        )
+        self.terminal.spawn_async(
+            Vte.PtyFlags.DEFAULT, None, argv, None, GLib.SpawnFlags.DEFAULT,
+            None, None, -1, None, self._terminal_iniciada, None,
+        )
+
+    def _terminal_iniciada(self, _terminal, _pid, error, _data):
+        if error is not None:
+            self.terminal_started = False
+            self.terminal_status.set_text(traducir("No se pudo iniciar la terminal.") + " " + error.message)
+            self.terminal_restart.show()
+
+    def _terminal_finalizada(self, _terminal, _status):
+        self.terminal_started = False
+        self.terminal_status.set_text(traducir("La sesión de terminal ha terminado."))
+        self.terminal_restart.show()
 
     def _refrescar_recomendadas_al_volver(self, _ventana, _evento):
         if self.notebook.get_current_page() == 2:

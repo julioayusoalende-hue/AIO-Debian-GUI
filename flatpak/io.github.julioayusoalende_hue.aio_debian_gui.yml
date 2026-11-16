@@ -11,8 +11,20 @@ finish-args:
   - --socket=fallback-x11
   - --talk-name=org.freedesktop.Flatpak
   # Required only for flatpak-spawn --host; does not grant root privileges.
-  - --env=AIO_DEBIAN_GUI_VERSION=2.8.3
+  - --env=AIO_DEBIAN_GUI_VERSION=2.9.0
 modules:
+  - name: vte-gtk3
+    buildsystem: meson
+    config-opts:
+      - -Dgtk3=true
+      - -Dgtk4=false
+      - -Ddocs=false
+      - -Dglade=false
+      - -Dapp=false
+    sources:
+      - type: archive
+        url: https://download.gnome.org/sources/vte/0.84/vte-0.84.1.tar.xz
+        sha256: aca1caa8478aebcdbb1d67897fb3511eb7601debae6810e16a15b6fa25f31ac8
   - name: aio-debian-gui
     buildsystem: simple
     build-commands:
