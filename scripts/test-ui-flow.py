@@ -212,7 +212,9 @@ with patch.object(app.subprocess, 'run', return_value=apt_installed), \
      patch.object(app.Gio.Subprocess, 'new') as launch:
     w._accion_app_recomendada(w.recommended_buttons[('gimp', 'deb')], 'gimp', 'deb')
     settle()
-    launch.assert_called_once_with(['gimp'], app.Gio.SubprocessFlags.NONE)
+    launch.assert_not_called()
+    assert w.recommended_indicators[('gimp', 'deb')].get_visible()
+    assert not w.recommended_buttons[('gimp', 'deb')].get_sensitive()
 
 vlc = next(item for item in app.APPS_RECOMENDADAS if item['id'] == 'vlc')
 flatpak_installed = app.subprocess.CompletedProcess(
@@ -223,15 +225,18 @@ with patch.object(app.subprocess, 'run', return_value=flatpak_installed), \
      patch.object(app.Gio.Subprocess, 'new') as launch:
     w._accion_app_recomendada(w.recommended_buttons[('vlc', 'flatpak')], 'vlc', 'flatpak')
     settle()
-    launch.assert_called_once_with(
-        ['flatpak', 'run', 'org.videolan.VLC'], app.Gio.SubprocessFlags.NONE
-    )
+    launch.assert_not_called()
+    assert w.recommended_indicators[('vlc', 'flatpak')].get_visible()
 
-with patch.object(app.Gio.AppInfo, 'launch_default_for_uri') as open_url:
+with patch.object(app, 'comando_host', side_effect=lambda *args: list(args)), \
+     patch.object(w, '_comprobar_deb_recomendada', return_value=False), \
+     patch.object(app.threading, 'Thread', ImmediateThread), \
+     patch.object(app.Gio.AppInfo, 'launch_default_for_uri') as open_url:
     w._accion_app_recomendada(
         w.recommended_buttons[('google-chrome', 'deb-download')],
         'google-chrome', 'deb-download',
     )
+    settle()
     open_url.assert_called_once_with('https://www.google.com/chrome/', None)
 
 missing_apt = app.subprocess.CompletedProcess(
@@ -240,6 +245,7 @@ missing_apt = app.subprocess.CompletedProcess(
 install_result = app.subprocess.CompletedProcess(
     [], 0, stdout='##RECOMMENDED:installed:gimp\n', stderr=''
 )
+w.recommended_installed.pop(('gimp', 'deb'))
 with patch.object(app.subprocess, 'run', side_effect=[missing_apt, install_result]), \
      patch.object(app.threading, 'Thread', ImmediateThread), \
      patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK), \
@@ -252,12 +258,14 @@ with patch.object(app.subprocess, 'run', side_effect=[missing_apt, install_resul
         w.recommended_buttons[('gimp', 'deb')], 'gimp', 'deb'
     )
     settle()
-    launch.assert_called_once_with(['gimp'], app.Gio.SubprocessFlags.NONE)
+    launch.assert_not_called()
+    assert w.recommended_indicators[('gimp', 'deb')].get_visible()
 
 missing_flatpak = app.subprocess.CompletedProcess([], 0, stdout='', stderr='')
 flathub_remote = app.subprocess.CompletedProcess([], 0, stdout='flathub\n', stderr='')
 user_remote_result = app.subprocess.CompletedProcess([], 0, stdout='', stderr='')
 flatpak_install_result = app.subprocess.CompletedProcess([], 0, stdout='', stderr='')
+w.recommended_installed.pop(('vlc', 'flatpak'))
 with patch.object(app.subprocess, 'run',
                   side_effect=[missing_flatpak, user_remote_result, flatpak_install_result]) as run, \
      patch.object(app.threading, 'Thread', ImmediateThread), \
@@ -277,9 +285,96 @@ with patch.object(app.subprocess, 'run',
          'flathub', 'org.videolan.VLC'],
         capture_output=True, text=True, timeout=600,
     )
-    launch.assert_called_once_with(
-        ['flatpak', 'run', 'org.videolan.VLC'], app.Gio.SubprocessFlags.NONE
+    launch.assert_not_called()
+    assert w.recommended_indicators[('vlc', 'flatpak')].get_visible()
+
+video_id = 'com.github.unrud.VideoDownloader'
+with patch.object(app.subprocess, 'run',
+                  side_effect=[missing_flatpak, user_remote_result, flatpak_install_result]) as run, \
+     patch.object(app.threading, 'Thread', ImmediateThread), \
+     patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK), \
+     patch.object(app.Gio.Subprocess, 'new') as launch:
+    w._accion_app_recomendada(
+        w.recommended_buttons[('video-downloader', 'flatpak')], 'video-downloader', 'flatpak'
     )
+    settle()
+    run.assert_any_call(
+        ['flatpak', 'install', '--user', '--noninteractive', '--assumeyes',
+         'flathub', video_id], capture_output=True, text=True, timeout=600,
+    )
+    launch.assert_not_called()
+    assert w.recommended_indicators[('video-downloader', 'flatpak')].get_visible()
+    assert w.recommended_status.get_text() == ''
+
+w.recommended_installed.pop(('video-downloader', 'flatpak'))
+with patch.object(app.subprocess, 'run',
+                  return_value=app.subprocess.CompletedProcess([], 0, stdout=video_id + '\n', stderr='')), \
+     patch.object(app.threading, 'Thread', ImmediateThread), \
+     patch.object(app.Gio.Subprocess, 'new') as launch:
+    w._accion_app_recomendada(
+        w.recommended_buttons[('video-downloader', 'flatpak')], 'video-downloader', 'flatpak'
+    )
+    settle()
+    launch.assert_not_called()
+    assert w.recommended_indicators[('video-downloader', 'flatpak')].get_visible()
+    assert w.recommended_status.get_text() == ''
+
+w.recommended_installed.pop(('video-downloader', 'flatpak'))
+w.recommended_indicators[('video-downloader', 'flatpak')].hide()
+with patch.object(app.subprocess, 'run', side_effect=[
+        missing_flatpak, user_remote_result,
+        app.subprocess.CompletedProcess([], 1, stdout='', stderr='installation failed')]), \
+     patch.object(app.threading, 'Thread', ImmediateThread), \
+     patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK), \
+     patch.object(w, '_mensaje') as message:
+    w._accion_app_recomendada(
+        w.recommended_buttons[('video-downloader', 'flatpak')], 'video-downloader', 'flatpak'
+    )
+    settle()
+    message.assert_called_once()
+    assert w.recommended_status.get_text() == ''
+    assert not w.recommended_indicators[('video-downloader', 'flatpak')].get_visible()
+
+# La consulta por pestaña distingue formatos y detecta DEB descargados externamente.
+with patch.object(w, '_comprobar_deb_recomendada',
+                  side_effect=lambda package: package in {'gimp', 'google-chrome-stable'}), \
+     patch.object(w, '_flatpaks_recomendadas_instaladas', return_value={video_id}), \
+     patch.object(app.threading, 'Thread', ImmediateThread):
+    w._cambiar_pestana_recomendadas(None, None, 2)
+    settle()
+    assert w.recommended_indicators[('gimp', 'deb')].get_visible()
+    assert not w.recommended_indicators[('gimp', 'flatpak')].get_visible()
+    assert w.recommended_indicators[('gimp', 'deb')].get_text() == app.traducir('Instalado')
+    assert 'foreground="#258b45"' in w.recommended_indicators[('gimp', 'deb')].get_label()
+    assert w.recommended_indicators[('google-chrome', 'deb-download')].get_visible()
+    assert w.recommended_indicators[('video-downloader', 'flatpak')].get_visible()
+    assert not w.recommended_buttons[('google-chrome', 'deb-download')].get_sensitive()
+    with patch.object(app.Gio.AppInfo, 'launch_default_for_uri') as open_url:
+        w._accion_app_recomendada(None, 'google-chrome', 'deb-download')
+        open_url.assert_not_called()
+
+with patch.object(w, '_comprobar_deb_recomendada', return_value=False), \
+     patch.object(w, '_flatpaks_recomendadas_instaladas', side_effect=RuntimeError('test error')), \
+     patch.object(app.threading, 'Thread', ImmediateThread):
+    w._cambiar_pestana_recomendadas(None, None, 2)
+    settle()
+    assert not w.recommended_indicators[('video-downloader', 'flatpak')].get_visible()
+    assert w.recommended_status.get_text() == app.traducir(
+        'No se pudo comprobar el estado de algunas aplicaciones.')
+    assert 'test error' in w.recommended_status.get_tooltip_text()
+
+# Una lectura antigua no debe sobrescribir el resultado de una instalación posterior.
+w.recommended_scan_generation += 1
+w._marcar_recomendada_instalada('video-downloader', 'flatpak')
+w._recomendadas_comprobadas(w.recommended_scan_generation - 1, {}, [])
+assert w.recommended_indicators[('video-downloader', 'flatpak')].get_visible()
+
+with patch.object(w, '_cambiar_pestana_recomendadas') as refresh:
+    w.notebook.set_current_page(2)
+    refresh.reset_mock()
+    w._refrescar_recomendadas_al_volver(None, None)
+    refresh.assert_called_once_with(w.notebook, None, 2)
+w.notebook.set_current_page(0)
 
 for app_id, definition in app.APLICACIONES_BACKUP.items():
     installed = app.subprocess.CompletedProcess([], 0, stdout='installed', stderr='')

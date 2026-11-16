@@ -66,6 +66,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.8.2": "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.",
     "2.8.1": "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.",
     "2.8.0": "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.",
     "2.7.10": "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.",
@@ -555,6 +556,7 @@ TRADUCCIONES = {
 
 # Textos del actualizador integrados con las traducciones existentes.
 TRADUCCIONES["en"].update({
+    "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.": "Fixes Video Downloader and shows installed formats without opening apps automatically.",
     "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.": "Improves recommended-app icons when an app's own icon is unavailable.",
     "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.": "Alphabetical recommended-app catalog with DEB and Flatpak formats.",
     "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.": "Fixes Backup tab startup while keeping the usual controls available.",
@@ -572,6 +574,7 @@ TRADUCCIONES["en"].update({
     "No se pudo actualizar": "Unable to update",
 })
 TRADUCCIONES["fr"].update({
+    "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.": "Corrige Video Downloader et indique les formats installés sans ouvrir les applications automatiquement.",
     "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.": "Améliore les icônes des applications recommandées lorsque leur icône propre est indisponible.",
     "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.": "Catalogue alphabétique d’applications recommandées aux formats DEB et Flatpak.",
     "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.": "Corrige le démarrage de l’onglet Sauvegarde tout en conservant les commandes habituelles.",
@@ -589,6 +592,7 @@ TRADUCCIONES["fr"].update({
     "No se pudo actualizar": "Mise à jour impossible",
 })
 TRADUCCIONES["zh"].update({
+    "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.": "修复 Video Downloader 并显示已安装的格式，不再自动打开应用。",
     "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.": "当应用自身图标不可用时，改进推荐应用的图标显示。",
     "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.": "按字母排序的推荐应用目录，提供 DEB 和 Flatpak 格式。",
     "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.": "修复备份选项卡的启动，同时保留常用控件。",
@@ -914,6 +918,8 @@ TRADUCCIONES["en"].update({
     "Instalar": "Install",
     "La aplicación todavía no está instalada.": "The application is not installed yet.",
     "Apps recomendadas": "Recommended apps",
+    "Instalado": "Installed",
+    "No se pudo comprobar el estado de algunas aplicaciones.": "Could not check the status of some applications.",
     "Aplicaciones recomendadas": "Recommended applications",
     "Elige un formato por aplicación. Los paquetes DEB de los repositorios APT requieren autorización; Flatpak se instala solo para tu usuario y configura Flathub si hace falta.": "Choose a format for each app. DEB packages from APT repositories require authorization; Flatpak is installed for your user only, configuring Flathub if needed.",
     "DEB (APT)": "DEB (system packages)",
@@ -963,6 +969,8 @@ TRADUCCIONES["fr"].update({
     "Instalar": "Installer",
     "La aplicación todavía no está instalada.": "L’application n’est pas encore installée.",
     "Apps recomendadas": "Applications recommandées",
+    "Instalado": "Installé",
+    "No se pudo comprobar el estado de algunas aplicaciones.": "Impossible de vérifier l’état de certaines applications.",
     "Aplicaciones recomendadas": "Applications recommandées",
     "Elige un formato por aplicación. Los paquetes DEB de los repositorios APT requieren autorización; Flatpak se instala solo para tu usuario y configura Flathub si hace falta.": "Choisissez un format par application. Les paquets DEB des dépôts APT nécessitent une autorisation ; Flatpak est installé uniquement pour votre utilisateur et configure Flathub si nécessaire.",
     "DEB (APT)": "DEB (dépôts APT)",
@@ -1012,6 +1020,8 @@ TRADUCCIONES["zh"].update({
     "Instalar": "安装",
     "La aplicación todavía no está instalada.": "应用尚未安装。",
     "Apps recomendadas": "推荐应用",
+    "Instalado": "已安装",
+    "No se pudo comprobar el estado de algunas aplicaciones.": "无法检查部分应用的状态。",
     "Aplicaciones recomendadas": "推荐应用",
     "Elige un formato por aplicación. Los paquetes DEB de los repositorios APT requieren autorización; Flatpak se instala solo para tu usuario y configura Flathub si hace falta.": "为每个应用选择一种格式。来自 APT 软件源的 DEB 软件包需要授权；Flatpak 仅为当前用户安装，并在需要时配置 Flathub。",
     "DEB (APT)": "DEB（APT 软件源）",
@@ -1772,7 +1782,7 @@ APPS_RECOMENDADAS = [
         "fallback_icon": "audio-x-generic",
         "description": "Reproductor de música para servidores Jellyfin, Navidrome y Subsonic.",
         "channels": [
-            {"type": "deb-download", "uri": "https://github.com/jeffvli/feishin/releases/latest"},
+            {"type": "deb-download", "package": "feishin", "uri": "https://github.com/jeffvli/feishin/releases/latest"},
             {"type": "flatpak", "app_id": "org.jeffvli.feishin"},
         ],
     },
@@ -1792,7 +1802,7 @@ APPS_RECOMENDADAS = [
         "fallback_icon": "web-browser",
         "description": "Navegador web de Google. El paquete DEB se descarga desde la página oficial.",
         "channels": [
-            {"type": "deb-download", "uri": "https://www.google.com/chrome/"},
+            {"type": "deb-download", "package": "google-chrome-stable", "uri": "https://www.google.com/chrome/"},
         ],
     },
     {
@@ -1820,7 +1830,7 @@ APPS_RECOMENDADAS = [
         "fallback_icon": "audio-x-generic",
         "description": "Aplicación de escritorio para escuchar música, pódcast y listas de reproducción.",
         "channels": [
-            {"type": "deb-download", "uri": "https://www.spotify.com/download/linux/"},
+            {"type": "deb-download", "package": "spotify-client", "uri": "https://www.spotify.com/download/linux/"},
             {"type": "flatpak", "app_id": "com.spotify.Client"},
         ],
     },
@@ -1835,11 +1845,11 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "video-downloader", "name": "Video Downloader",
-        "icon": "de.unrud.VideoDownloader",
+        "icon": "com.github.unrud.VideoDownloader",
         "fallback_icon": "folder-download",
         "description": "Descarga vídeos de sitios compatibles para verlos sin conexión.",
         "channels": [
-            {"type": "flatpak", "app_id": "de.unrud.VideoDownloader"},
+            {"type": "flatpak", "app_id": "com.github.unrud.VideoDownloader"},
         ],
     },
     {
@@ -2205,6 +2215,7 @@ class VentanaPrincipal(Gtk.Window):
         self.comprobando_actualizacion = False
         self.backup_action_in_progress = False
         self.backup_buttons = {}
+        self.recommended_scan_generation = 0
         self.programando = False
         self.ventana_programacion = None
         self.diagnostico_en_curso = False
@@ -2229,6 +2240,7 @@ class VentanaPrincipal(Gtk.Window):
         self._actualizar_sensibilidad()
         self.connect("key-press-event", self._al_pulsar_tecla)
         self.connect("delete-event", self._al_cerrar)
+        self.connect("focus-in-event", self._refrescar_recomendadas_al_volver)
 
     # -- Construcción ----------------------------------------------------------
     def _construir_cabecera(self):
@@ -3018,6 +3030,8 @@ class VentanaPrincipal(Gtk.Window):
         grid_recomendadas = Gtk.Grid(column_spacing=12, row_spacing=12)
         grid_recomendadas.set_column_homogeneous(True)
         self.recommended_buttons = {}
+        self.recommended_installed = {}
+        self.recommended_indicators = {}
         self.recommended_grid = grid_recomendadas
         for index, app in enumerate(APPS_RECOMENDADAS):
             tarjeta = Gtk.Frame()
@@ -3048,13 +3062,23 @@ class VentanaPrincipal(Gtk.Window):
                 boton.set_hexpand(True)
                 boton.connect("clicked", self._accion_app_recomendada,
                               app["id"], canal["type"])
-                botones_fuente.pack_start(boton, True, True, 0)
-                self.recommended_buttons[(app["id"], canal["type"])] = boton
+                columna = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+                columna.pack_start(boton, False, False, 0)
+                indicador = Gtk.Label()
+                indicador.set_markup('<span foreground="#258b45">%s</span>' %
+                                     GLib.markup_escape_text(traducir("Instalado")))
+                indicador.set_no_show_all(True)
+                columna.pack_start(indicador, False, False, 0)
+                botones_fuente.pack_start(columna, True, True, 0)
+                clave = (app["id"], canal["type"])
+                self.recommended_buttons[clave] = boton
+                self.recommended_indicators[clave] = indicador
             contenido.pack_start(botones_fuente, False, False, 0)
             grid_recomendadas.attach(tarjeta, index % 2, index // 2, 1, 1)
         scroll_recomendadas.add(grid_recomendadas)
         recomendadas.pack_start(scroll_recomendadas, True, True, 0)
         notebook.append_page(recomendadas, Gtk.Label(label=traducir("Apps recomendadas")))
+        notebook.connect("switch-page", self._cambiar_pestana_recomendadas)
         paneles = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         paneles.set_hexpand(True)
         paneles.set_vexpand(True)
@@ -3311,6 +3335,87 @@ class VentanaPrincipal(Gtk.Window):
             return
         self.backup_status.set_text(traducir("%s se ha abierto.") % app["name"])
 
+    @staticmethod
+    def _comprobar_deb_recomendada(paquete):
+        proc = subprocess.run(
+            comando_host("dpkg-query", "-W", "-f=${db:Status-Status}", paquete),
+            capture_output=True, text=True, timeout=15,
+            env={**os.environ, "LC_ALL": "C"},
+        )
+        if proc.returncode == 0:
+            return proc.stdout.strip() == "installed"
+        if "no packages found matching" in (proc.stderr + proc.stdout).lower():
+            return False
+        raise RuntimeError((proc.stderr or proc.stdout or "dpkg-query falló.").strip()[-1000:])
+
+    @staticmethod
+    def _flatpaks_recomendadas_instaladas():
+        proc = subprocess.run(
+            comando_host("flatpak", "list", "--app", "--columns=application"),
+            capture_output=True, text=True, timeout=15,
+        )
+        if proc.returncode:
+            raise RuntimeError((proc.stderr or "No se pudo consultar Flatpak.").strip()[-1000:])
+        return set(proc.stdout.splitlines())
+
+    def _refrescar_recomendadas_al_volver(self, _ventana, _evento):
+        if self.notebook.get_current_page() == 2:
+            self._cambiar_pestana_recomendadas(self.notebook, None, 2)
+        return False
+
+    def _cambiar_pestana_recomendadas(self, _notebook, _pagina, numero):
+        if numero != 2 or self.backup_action_in_progress:
+            return
+        self.recommended_scan_generation += 1
+        generation = self.recommended_scan_generation
+        self.recommended_installed.clear()
+        for indicador in self.recommended_indicators.values():
+            indicador.hide()
+        self._actualizar_sensibilidad()
+
+        def comprobar():
+            estados, errores = {}, []
+            try:
+                flatpaks = self._flatpaks_recomendadas_instaladas()
+            except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
+                flatpaks = None
+                errores.append(str(exc))
+            for app in APPS_RECOMENDADAS:
+                for canal in app["channels"]:
+                    clave = (app["id"], canal["type"])
+                    try:
+                        if canal["type"] == "flatpak":
+                            if flatpaks is not None:
+                                estados[clave] = canal["app_id"] in flatpaks
+                        else:
+                            estados[clave] = self._comprobar_deb_recomendada(canal["package"])
+                    except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
+                        errores.append(str(exc))
+            GLib.idle_add(self._recomendadas_comprobadas, generation, estados, errores)
+
+        threading.Thread(target=comprobar, daemon=True).start()
+
+    def _recomendadas_comprobadas(self, generation, estados, errores):
+        if generation != self.recommended_scan_generation:
+            return GLib.SOURCE_REMOVE
+        self.recommended_installed = estados
+        for clave, indicador in self.recommended_indicators.items():
+            indicador.set_visible(estados.get(clave) is True)
+        if errores:
+            self.recommended_status.set_text(traducir("No se pudo comprobar el estado de algunas aplicaciones."))
+            self.recommended_status.set_tooltip_text("\n".join(errores))
+        else:
+            self.recommended_status.set_text("")
+            self.recommended_status.set_tooltip_text(None)
+        self._actualizar_sensibilidad()
+        return GLib.SOURCE_REMOVE
+
+    def _marcar_recomendada_instalada(self, app_id, tipo_canal):
+        clave = (app_id, tipo_canal)
+        self.recommended_installed[clave] = True
+        self.recommended_indicators[clave].show()
+        self._actualizar_sensibilidad()
+
     def _accion_app_recomendada(self, _boton, app_id, tipo_canal):
         app = next((item for item in APPS_RECOMENDADAS if item["id"] == app_id), None)
         if app is None:
@@ -3318,6 +3423,40 @@ class VentanaPrincipal(Gtk.Window):
         canal = next((item for item in app["channels"] if item["type"] == tipo_canal), None)
         if canal is None:
             return
+        if (self.backup_action_in_progress or self.en_curso or self.diagnostico_en_curso
+                or self.comprobando_actualizacion or self.programando
+                or self.recommended_installed.get((app_id, tipo_canal)) is True):
+            return
+        self.recommended_scan_generation += 1
+        self.backup_action_in_progress = True
+        self.recommended_status.set_text(traducir("Comprobando %s…") % app["name"])
+        self._actualizar_sensibilidad()
+
+        def comprobar():
+            try:
+                if tipo_canal in ("deb", "deb-download"):
+                    instalado = self._comprobar_deb_recomendada(canal["package"])
+                else:
+                    instalado = canal["app_id"] in self._flatpaks_recomendadas_instaladas()
+                accion, error = ("installed" if instalado else "install"), None
+            except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
+                accion, error = None, str(exc)
+            GLib.idle_add(self._app_recomendada_comprobada, app_id, tipo_canal, accion, error)
+
+        threading.Thread(target=comprobar, daemon=True).start()
+
+    def _app_recomendada_comprobada(self, app_id, tipo_canal, accion, error):
+        self.backup_action_in_progress = False
+        self.recommended_status.set_text("")
+        self._actualizar_sensibilidad()
+        app = next(item for item in APPS_RECOMENDADAS if item["id"] == app_id)
+        canal = next(item for item in app["channels"] if item["type"] == tipo_canal)
+        if error:
+            self._mensaje(Gtk.MessageType.ERROR, "No se pudo comprobar %s" % app["name"], error)
+            return GLib.SOURCE_REMOVE
+        if accion == "installed":
+            self._marcar_recomendada_instalada(app_id, tipo_canal)
+            return GLib.SOURCE_REMOVE
         if tipo_canal == "deb-download":
             try:
                 Gio.AppInfo.launch_default_for_uri(canal["uri"], None)
@@ -3326,61 +3465,6 @@ class VentanaPrincipal(Gtk.Window):
                 ))
             except GLib.Error as exc:
                 self._mensaje(Gtk.MessageType.ERROR, "No se pudo abrir la página oficial.", exc.message)
-            return
-        if (self.backup_action_in_progress or self.en_curso or self.diagnostico_en_curso
-                or self.comprobando_actualizacion or self.programando):
-            return
-        self.backup_action_in_progress = True
-        self.recommended_status.set_text(traducir("Comprobando %s…") % app["name"])
-        self._actualizar_sensibilidad()
-
-        def comprobar():
-            try:
-                if tipo_canal == "deb":
-                    proc = subprocess.run(
-                        comando_host("dpkg-query", "-W", "-f=${db:Status-Status}",
-                                     canal["package"]),
-                        capture_output=True, text=True, timeout=15,
-                        env={**os.environ, "LC_ALL": "C"},
-                    )
-                    if proc.returncode == 0:
-                        accion = "open" if proc.stdout.strip() == "installed" else "install"
-                        error = None
-                    elif "no packages found matching" in (proc.stderr + proc.stdout).lower():
-                        accion, error = "install", None
-                    else:
-                        accion, error = None, (proc.stderr or proc.stdout or "dpkg-query falló.").strip()[-1000:]
-                else:
-                    proc = subprocess.run(
-                        comando_host("flatpak", "list", "--app", "--columns=application"),
-                        capture_output=True, text=True, timeout=15,
-                    )
-                    if proc.returncode:
-                        accion, error = None, (proc.stderr or "No se pudo consultar Flatpak.").strip()[-1000:]
-                    else:
-                        accion = "open" if canal["app_id"] in proc.stdout.splitlines() else "install"
-                        error = None
-            except (OSError, subprocess.SubprocessError) as exc:
-                accion, error = None, str(exc)
-            GLib.idle_add(self._app_recomendada_comprobada, app_id, tipo_canal, accion, error)
-
-        threading.Thread(target=comprobar, daemon=True).start()
-
-    def _app_recomendada_comprobada(self, app_id, tipo_canal, accion, error):
-        self.backup_action_in_progress = False
-        self._actualizar_sensibilidad()
-        app = next(item for item in APPS_RECOMENDADAS if item["id"] == app_id)
-        canal = next(item for item in app["channels"] if item["type"] == tipo_canal)
-        if error:
-            self._mensaje(Gtk.MessageType.ERROR, "No se pudo comprobar %s" % app["name"], error)
-            return GLib.SOURCE_REMOVE
-        if accion == "open":
-            comando = (comando_host(canal["command"]) if tipo_canal == "deb"
-                       else comando_host("flatpak", "run", canal["app_id"]))
-            try:
-                Gio.Subprocess.new(comando, Gio.SubprocessFlags.NONE)
-            except GLib.Error as exc:
-                self._mensaje(Gtk.MessageType.ERROR, "No se pudo abrir %s" % app["name"], exc.message)
             return GLib.SOURCE_REMOVE
         fuente = traducir("DEB (APT)") if tipo_canal == "deb" else traducir("Flatpak")
         dialogo = Gtk.MessageDialog(
@@ -3455,17 +3539,12 @@ class VentanaPrincipal(Gtk.Window):
 
     def _app_recomendada_instalada(self, app, canal, error):
         self.backup_action_in_progress = False
+        self.recommended_status.set_text("")
         self._actualizar_sensibilidad()
         if error:
             self._mensaje(Gtk.MessageType.ERROR, "No se pudo instalar %s" % app["name"], error)
             return GLib.SOURCE_REMOVE
-        tipo_canal = canal["type"]
-        comando = (comando_host(canal["command"]) if tipo_canal == "deb"
-                   else comando_host("flatpak", "run", canal["app_id"]))
-        try:
-            Gio.Subprocess.new(comando, Gio.SubprocessFlags.NONE)
-        except GLib.Error as exc:
-            self._mensaje(Gtk.MessageType.ERROR, "No se pudo abrir %s" % app["name"], exc.message)
+        self._marcar_recomendada_instalada(app["id"], canal["type"])
         return GLib.SOURCE_REMOVE
 
     def _adaptar_paneles(self, _ventana, allocation):
@@ -4073,11 +4152,12 @@ class VentanaPrincipal(Gtk.Window):
                                 and not self.comprobando_actualizacion
                                 and not self.diagnostico_en_curso
                                 and not self.backup_action_in_progress)
-        for boton in self.recommended_buttons.values():
+        for clave, boton in self.recommended_buttons.items():
             boton.set_sensitive(not self.en_curso and not self.programando
                                 and not self.comprobando_actualizacion
                                 and not self.diagnostico_en_curso
-                                and not self.backup_action_in_progress)
+                                and not self.backup_action_in_progress
+                                and not self.recommended_installed.get(clave, False))
 
     def _visible(self, pid):
         if pid in ("backports-kernel-mesa", "revertir-backports"):

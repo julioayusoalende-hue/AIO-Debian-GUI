@@ -1,5 +1,10 @@
 # Cambios
 
+## 2.8.2
+
+- Corrige el identificador de Video Downloader en Flathub para permitir su instalación.
+- Muestra el estado instalado por formato en las apps recomendadas y deja de abrirlas automáticamente al pulsar sus botones o completar la instalación.
+
 ## 2.8.1
 
 - Usa iconos de categoría diferenciados en «Apps recomendadas» cuando no está disponible el icono propio de una aplicación.

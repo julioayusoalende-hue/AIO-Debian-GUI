@@ -17,7 +17,7 @@ AiO Debian GUI reúne tareas habituales de administración en una aplicación GT
 - **Diagnóstico:** actualiza los índices APT con autorización de administrador y después informa sobre espacio, APT/dpkg, actualizaciones, DKMS, reinicios y servicios. No instala ni elimina paquetes.
 - **Sistema y hardware:** gestión de repositorios, kernel y Mesa de Backports; detección NVIDIA con instalación conservadora en Debian. Algunas operaciones tienen requisitos y bloqueos adicionales.
 - **Copias de seguridad:** acceso a Timeshift y Respaldos (Déjà Dup); si no están instalados, AiO ofrece instalarlos con confirmación y autorización de administrador.
-- **Apps recomendadas:** catálogo en dos columnas con GIMP, VLC, Celluloid, Plex, Switcheroo, Video Downloader, HandBrake, Spotify, Feishin y Google Chrome. Presenta DEB y Flatpak cuando están disponibles; las instalaciones requieren confirmación.
+- **Apps recomendadas:** catálogo en dos columnas con GIMP, VLC, Celluloid, Plex, Switcheroo, Video Downloader, HandBrake, Spotify, Feishin y Google Chrome. Distingue DEB y Flatpak, indica qué formato está instalado y no abre las aplicaciones tras instalarlas. Las instalaciones requieren confirmación; los DEB externos se descargan e instalan manualmente.
 - **Escritorio:** integración con Flatpak, AppImage y complementos de GNOME; interfaz en español, inglés, francés y chino, con temas claro y oscuro.
 
 La aplicación es compatible con Debian 12 o superior y Ubuntu 24.04/26.04 LTS. Algunas tareas dependen de la distribución y se bloquean cuando no son compatibles.
@@ -26,6 +26,7 @@ El diagnóstico solicita autorización para renovar los índices APT antes de co
 
 ## Novedades recientes
 
+- **2.8.2:** corrige la instalación de Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.
 - **2.8.1:** mejora los iconos de aplicaciones recomendadas cuando sus logos no están disponibles en el sistema.
 - **2.8.0:** catálogo alfabético de diez apps recomendadas, con canales DEB y Flatpak disponibles y selección explícita del formato.
 - **2.7.10:** corrige la inicialización de la pestaña Backup y conserva la consola y los controles habituales.
