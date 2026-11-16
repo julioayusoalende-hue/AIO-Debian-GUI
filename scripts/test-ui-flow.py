@@ -7,6 +7,7 @@ from pathlib import Path
 import sys
 import tempfile
 import time
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import gi
@@ -104,6 +105,25 @@ for language in ('es', 'en', 'fr', 'zh'):
     w._preset_flatpak(None)
     assert w._pasos_seleccionados() == ['flatpak-update']
     assert w.btn_iniciar.get_label() == app.traducir('Ejecutar 1 tarea')
+    if language == 'es':
+        with patch.object(w, 'is_active', return_value=True), \
+             patch.object(w, 'get_focus', return_value=None), \
+             patch.object(w, '_iniciar') as start, \
+             patch.object(w, '_iniciar_terminal'):
+            for page in range(w.notebook.get_n_pages()):
+                w.notebook.set_current_page(page)
+                for key in (app.Gdk.KEY_Return, app.Gdk.KEY_KP_Enter):
+                    event = SimpleNamespace(keyval=key, state=0)
+                    start.reset_mock()
+                    assert w._al_pulsar_tecla(w, event) is (page == 0)
+                    assert start.call_count == (1 if page == 0 else 0)
+            w.notebook.set_current_page(0)
+            event = SimpleNamespace(keyval=app.Gdk.KEY_Return,
+                                    state=app.Gdk.ModifierType.CONTROL_MASK)
+            start.reset_mock()
+            assert not w._al_pulsar_tecla(w, event)
+            start.assert_not_called()
+        w._actualizar_sensibilidad()
     w.switches['flatpak-update'][0].set_active(False)
     assert not w.btn_iniciar.get_sensitive()
     assert w.resumen_seleccion.get_text() == app.traducir('No hay tareas seleccionadas.')
@@ -499,10 +519,15 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
         fastfetch = Path(directory) / 'fastfetch'
         fastfetch.write_text('#!/bin/sh\nprintf "AIO_FASTFETCH_TEST\\n"\n')
         fastfetch.chmod(0o755)
+        nautilus = Path(directory) / 'nautilus'
+        nautilus.write_text('#!/bin/sh\nprintf "%s" "$1" > "' + directory + '/nautilus-arg"\n')
+        nautilus.chmod(0o755)
         with patch.dict(os.environ, {'PATH': directory + os.pathsep + os.environ['PATH']}):
             w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
             w.show_all()
-            w.notebook.set_current_page(3)
+            w._escribir('AIO_LOG_BEFORE_OPEN\n')
+            w.btn_ver_terminal.clicked()
+            assert w.notebook.get_current_page() == 3
 
             def terminal_contains(text):
                 deadline = time.monotonic() + 8
@@ -515,7 +540,55 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
                         return True
                 return False
 
+            def wait_button(name):
+                deadline = time.monotonic() + 8
+                while not w.terminal_buttons[name].get_sensitive() and time.monotonic() < deadline:
+                    settle()
+                assert w.terminal_buttons[name].get_sensitive()
+
             assert terminal_contains('AIO_FASTFETCH_TEST')
+            assert terminal_contains('AIO_LOG_BEFORE_OPEN')
+            w._escribir('AIO_LOG_LIVE\n', 'error')
+            assert terminal_contains('AIO_LOG_LIVE')
+            w._escribir('\x1b[2JAIO_LOG_SAFE\n')
+            assert terminal_contains('AIO_LOG_BEFORE_OPEN')
+            assert terminal_contains('AIO_LOG_SAFE')
+            assert set(w.terminal_buttons) == {'clear', 'fastfetch', 'nautilus'}
+            w.terminal_buttons['clear'].clicked()
+            wait_button('clear')
+            assert not w.terminal_status.get_text()
+            stream = app.Gio.MemoryOutputStream.new_resizable()
+            w.terminal.write_contents_sync(stream, app.Vte.WriteFlags.DEFAULT, None)
+            stream.close(None)
+            assert b'AIO_FASTFETCH_TEST' not in stream.steal_as_bytes().get_data()
+            w.terminal.feed_child(b"printf '%s%s\\n' AIO_PENDING_")
+            w._escribir('AIO_LOG_DURING_INPUT\n')
+            assert terminal_contains('AIO_LOG_DURING_INPUT')
+            w.terminal_buttons['fastfetch'].clicked()
+            wait_button('fastfetch')
+            assert terminal_contains('AIO_FASTFETCH_TEST')
+            w.terminal.feed_child(b'INPUT_OK\n')
+            assert terminal_contains('AIO_PENDING_INPUT_OK')
+            w.terminal_buttons['nautilus'].clicked()
+            wait_button('nautilus')
+            deadline = time.monotonic() + 8
+            while not (Path(directory) / 'nautilus-arg').exists() and time.monotonic() < deadline:
+                settle()
+            assert (Path(directory) / 'nautilus-arg').read_text() == 'admin:/'
+            with patch.dict(os.environ, {'PATH': '/nonexistent'}):
+                w.terminal_buttons['fastfetch'].clicked()
+                wait_button('fastfetch')
+                assert 'No se pudo ejecutar fastfetch.' in w.terminal_status.get_text()
+            process = Mock(returncode=0)
+            process.communicate.return_value = (None, b'')
+            with patch.object(app, 'es_flatpak', return_value=True), \
+                 patch.object(app.subprocess, 'Popen', return_value=process) as popen:
+                w.terminal_buttons['nautilus'].clicked()
+                wait_button('nautilus')
+                popen.assert_called_once_with(
+                    ['flatpak-spawn', '--host', 'env', 'TERM=xterm-256color', 'nautilus', 'admin:/'],
+                    stdout=app.subprocess.DEVNULL, stderr=app.subprocess.PIPE,
+                )
             w.terminal.feed_child(b"printf '%s%s\\n' AIO_TERMINAL_ COMMAND_OK\n")
             assert terminal_contains('AIO_TERMINAL_COMMAND_OK')
             w.terminal.feed_child(b'exit\n')
@@ -524,6 +597,8 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
                 settle()
             assert not w.terminal_started
             assert w.terminal_restart.get_visible()
+            w._escribir('AIO_LOG_SESSION_ENDED\n')
+            assert terminal_contains('AIO_LOG_SESSION_ENDED')
             with patch.object(w, '_terminal_iniciada', wraps=w._terminal_iniciada) as started:
                 w.terminal_restart.clicked()
                 deadline = time.monotonic() + 8

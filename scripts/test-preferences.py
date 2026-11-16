@@ -6,6 +6,7 @@ import pathlib
 import subprocess
 import sys
 import tempfile
+import time
 
 import gi
 
@@ -103,8 +104,11 @@ if Gtk.init_check([])[0]:
         assert ventana.btn_actualizar is botones_menu[3]
         assert ventana.paneles_principales.get_orientation() == Gtk.Orientation.HORIZONTAL
         ventana.btn_menu.set_active(True)
-        while Gtk.events_pending():
-            Gtk.main_iteration()
+        deadline = time.monotonic() + 2
+        while menu.get_allocation().width <= 1 and time.monotonic() < deadline:
+            while Gtk.events_pending():
+                Gtk.main_iteration()
+            time.sleep(.005)
         assert ventana.menu_popover.get_visible()
         assert menu.get_allocation().width > 1
         ventana.btn_menu.set_active(False)
@@ -113,20 +117,11 @@ if Gtk.init_check([])[0]:
         ventana._escribir("visible output")
         inicio, fin = ventana.buf.get_bounds()
         assert ventana.buf.get_text(inicio, fin, True) == "visible output"
-        # Abrir una ventana de consola independiente conserva el mismo buffer
-        # y sigue mostrando la salida en tiempo real, sin duplicar procesos.
-        ventana._alternar_ventana_consola()
-        separada = ventana.ventana_consola
-        assert separada is not None and separada.get_visible()
-        assert separada.get_transient_for() is ventana
-        assert ventana.log_separado.get_buffer() is ventana.buf
-        assert not ventana.marco_consola.get_visible()
-        ventana._escribir(" - detached")
+        ventana.btn_ver_terminal.clicked()
+        assert ventana.notebook.get_current_page() == 3
+        ventana._escribir(" - terminal")
         inicio, fin = ventana.buf.get_bounds()
-        assert ventana.buf.get_text(inicio, fin, True) == "visible output - detached"
-        ventana._alternar_ventana_consola()
-        assert ventana.ventana_consola is None
-        assert ventana.log_separado is None
+        assert ventana.buf.get_text(inicio, fin, True) == "visible output - terminal"
         assert ventana.marco_consola.get_visible()
         ventana.destroy()
 

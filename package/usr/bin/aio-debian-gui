@@ -70,6 +70,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.10.0": "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.",
     "2.9.0": "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.",
     "2.8.3": "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.",
     "2.8.2": "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.",
@@ -562,12 +563,17 @@ TRADUCCIONES = {
 
 # Textos del actualizador integrados con las traducciones existentes.
 TRADUCCIONES["en"].update({
+    "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.": "Shows maintenance output in the terminal and adds shortcuts.",
     "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.": "Adds an interactive terminal that runs Fastfetch on startup when installed.",
     "Terminal": "Terminal",
     "Abrir nueva sesión": "Open new session",
     "La sesión de terminal ha terminado.": "The terminal session has ended.",
     "No se pudo iniciar la terminal.": "Could not start the terminal.",
     "Fastfetch no está instalado; instala fastfetch para mostrar la información del sistema.": "Fastfetch is not installed; install fastfetch to show system information.",
+    "Limpiar": "Clear",
+    "Ver en Terminal": "View in Terminal",
+    "Abrir archivos como administrador": "Open files as administrator",
+    "No se pudo ejecutar %s.": "Could not run %s.",
     "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.": "Adds icons for Celluloid, GIMP, Spotify and VLC to recommended apps.",
     "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.": "Fixes Video Downloader and shows installed formats without opening apps automatically.",
     "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.": "Improves recommended-app icons when an app's own icon is unavailable.",
@@ -587,12 +593,17 @@ TRADUCCIONES["en"].update({
     "No se pudo actualizar": "Unable to update",
 })
 TRADUCCIONES["fr"].update({
+    "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.": "Affiche la sortie de maintenance dans le terminal et ajoute des raccourcis.",
     "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.": "Ajoute un terminal interactif qui lance Fastfetch au démarrage lorsqu’il est installé.",
     "Terminal": "Terminal",
     "Abrir nueva sesión": "Ouvrir une nouvelle session",
     "La sesión de terminal ha terminado.": "La session du terminal est terminée.",
     "No se pudo iniciar la terminal.": "Impossible de démarrer le terminal.",
     "Fastfetch no está instalado; instala fastfetch para mostrar la información del sistema.": "Fastfetch n’est pas installé ; installez fastfetch pour afficher les informations système.",
+    "Limpiar": "Effacer",
+    "Ver en Terminal": "Voir dans le terminal",
+    "Abrir archivos como administrador": "Ouvrir les fichiers en tant qu’administrateur",
+    "No se pudo ejecutar %s.": "Impossible d’exécuter %s.",
     "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.": "Ajoute des icônes pour Celluloid, GIMP, Spotify et VLC aux applications recommandées.",
     "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.": "Corrige Video Downloader et indique les formats installés sans ouvrir les applications automatiquement.",
     "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.": "Améliore les icônes des applications recommandées lorsque leur icône propre est indisponible.",
@@ -612,12 +623,17 @@ TRADUCCIONES["fr"].update({
     "No se pudo actualizar": "Mise à jour impossible",
 })
 TRADUCCIONES["zh"].update({
+    "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.": "在终端显示维护输出并添加快捷操作。",
     "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.": "新增交互式终端；安装 Fastfetch 时会在启动时运行。",
     "Terminal": "终端",
     "Abrir nueva sesión": "打开新会话",
     "La sesión de terminal ha terminado.": "终端会话已结束。",
     "No se pudo iniciar la terminal.": "无法启动终端。",
     "Fastfetch no está instalado; instala fastfetch para mostrar la información del sistema.": "尚未安装 Fastfetch；请安装 fastfetch 以显示系统信息。",
+    "Limpiar": "清屏",
+    "Ver en Terminal": "在终端中查看",
+    "Abrir archivos como administrador": "以管理员身份打开文件",
+    "No se pudo ejecutar %s.": "无法运行 %s。",
     "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.": "为推荐应用中的 Celluloid、GIMP、Spotify 和 VLC 添加图标。",
     "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.": "修复 Video Downloader 并显示已安装的格式，不再自动打开应用。",
     "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.": "当应用自身图标不可用时，改进推荐应用的图标显示。",
@@ -2271,8 +2287,6 @@ class VentanaPrincipal(Gtk.Window):
         self.switches = {}
         self.filas = {}
         self.indicadores = {}
-        self.ventana_consola = None
-        self.log_separado = None
         self.resultados_tareas = {}
         self.estado_diagnostico = "No comprobado"
 
@@ -2997,17 +3011,12 @@ class VentanaPrincipal(Gtk.Window):
             return
 
         idioma_cambiado = nuevas["idioma"] != self.preferencias["idioma"]
-        modo_simple_activado = (
-            nuevas["modo_simple"] and not self.preferencias["modo_simple"]
-        )
         self.preferencias = nuevas
         aplicar_tema(nuevas["tema"])
         dialogo.destroy()
         if idioma_cambiado:
             self._reiniciar_interfaz()
             return
-        if modo_simple_activado and self.ventana_consola is not None:
-            self.ventana_consola.destroy()
         self.expansor_consola.set_expanded(False)
         self.expansor_consola.set_no_show_all(nuevas["modo_simple"])
         self.expansor_consola.set_visible(not nuevas["modo_simple"])
@@ -3123,6 +3132,15 @@ class VentanaPrincipal(Gtk.Window):
         notebook.connect("switch-page", self._cambiar_pestana_recomendadas)
         consola = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         consola.set_border_width(12)
+        accesos_terminal = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        self.terminal_buttons = {}
+        for clave, texto in (("clear", "Limpiar"), ("fastfetch", "Fastfetch"),
+                             ("nautilus", "Abrir archivos como administrador")):
+            boton = Gtk.Button(label=traducir(texto))
+            boton.connect("clicked", self._ejecutar_acceso_terminal, clave)
+            accesos_terminal.pack_start(boton, False, False, 0)
+            self.terminal_buttons[clave] = boton
+        consola.pack_start(accesos_terminal, False, False, 0)
         self.terminal_status = etiqueta("")
         consola.pack_start(self.terminal_status, False, False, 0)
         self.terminal_restart = Gtk.Button(label=traducir("Abrir nueva sesión"))
@@ -3231,12 +3249,12 @@ class VentanaPrincipal(Gtk.Window):
         cabecera_log.pack_start(icono_log, False, False, 0)
         cabecera_log.pack_start(
             etiqueta("<b>Salida de la consola</b>", markup=True), True, True, 0)
-        self.btn_separar_consola = Gtk.Button(label=traducir("Abrir en otra ventana"))
-        self.btn_separar_consola.set_image(Gtk.Image.new_from_icon_name(
-            "window-new-symbolic", Gtk.IconSize.BUTTON))
-        self.btn_separar_consola.set_always_show_image(True)
-        self.btn_separar_consola.connect("clicked", self._alternar_ventana_consola)
-        cabecera_log.pack_end(self.btn_separar_consola, False, False, 0)
+        self.btn_ver_terminal = Gtk.Button(label=traducir("Ver en Terminal"))
+        self.btn_ver_terminal.set_image(Gtk.Image.new_from_icon_name(
+            "utilities-terminal-symbolic", Gtk.IconSize.BUTTON))
+        self.btn_ver_terminal.set_always_show_image(True)
+        self.btn_ver_terminal.connect("clicked", self._abrir_terminal)
+        cabecera_log.pack_end(self.btn_ver_terminal, False, False, 0)
 
         btn_borrar = Gtk.Button(label=traducir("Borrar"))
         btn_borrar.set_image(Gtk.Image.new_from_icon_name(
@@ -3423,6 +3441,54 @@ class VentanaPrincipal(Gtk.Window):
             self._iniciar_terminal()
         if numero == 3:
             self.terminal.grab_focus()
+
+    def _ejecutar_acceso_terminal(self, boton, clave):
+        comandos = {
+            "clear": ("clear",),
+            "fastfetch": ("fastfetch",),
+            "nautilus": ("nautilus", "admin:/"),
+        }
+        comando = comandos[clave]
+        boton.set_sensitive(False)
+        self.terminal_status.set_text("")
+
+        def ejecutar():
+            try:
+                # clear necesita TERM también cuando se ejecuta en el anfitrión.
+                argv = comando_host("env", "TERM=xterm-256color", *comando)
+                if clave == "nautilus":
+                    proceso = subprocess.Popen(
+                        argv, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
+                    )
+                    GLib.idle_add(boton.set_sensitive, True)
+                    _, stderr = proceso.communicate()
+                    salida, codigo = b"", proceso.returncode
+                else:
+                    resultado = subprocess.run(argv, capture_output=True, timeout=30)
+                    salida, stderr, codigo = resultado.stdout, resultado.stderr, resultado.returncode
+                error = stderr.decode("utf-8", errors="replace").strip()
+                if codigo:
+                    error = error or f"Exit status {codigo}"
+                    salida = b""
+                else:
+                    error = ""
+            except (OSError, subprocess.SubprocessError) as exc:
+                salida, error = b"", str(exc)
+            GLib.idle_add(terminar, salida, error)
+
+        def terminar(salida, error):
+            boton.set_sensitive(True)
+            if error:
+                self.terminal_status.set_text(
+                    (traducir("No se pudo ejecutar %s.") % " ".join(comando)) + " " + error
+                )
+            elif salida:
+                if clave == "fastfetch":
+                    salida = b"\r\n" + salida.replace(b"\n", b"\r\n")
+                self.terminal.feed(salida)
+            return False
+
+        threading.Thread(target=ejecutar, daemon=True).start()
 
     def _iniciar_terminal(self, _boton=None):
         if self.terminal_started:
@@ -3709,43 +3775,8 @@ class VentanaPrincipal(Gtk.Window):
             self.expansor_consola.show()
             self.expansor_consola.set_expanded(True)
 
-    def _alternar_ventana_consola(self, _boton=None):
-        # Se reutiliza el mismo Gtk.TextBuffer en las dos vistas: no se
-        # duplica la salida ni se pierde el formato o el historial.
-        if self.ventana_consola is not None:
-            self.ventana_consola.destroy()
-            return
-        ventana = Gtk.Window(title=traducir("Salida de la consola"))
-        ventana.set_transient_for(self)
-        ventana.set_destroy_with_parent(True)
-        ventana.set_default_size(900, 480)
-        ventana.set_icon_name("aio-debian-gui")
-        marco = Gtk.ScrolledWindow()
-        marco.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        marco.set_shadow_type(Gtk.ShadowType.IN)
-        vista = Gtk.TextView.new_with_buffer(self.buf)
-        vista.set_editable(False)
-        vista.set_cursor_visible(False)
-        vista.set_monospace(True)
-        vista.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
-        vista.set_left_margin(10)
-        vista.set_right_margin(10)
-        marco.add(vista)
-        ventana.add(marco)
-        self.ventana_consola = ventana
-        self.log_separado = vista
-        ventana.connect("destroy", self._consola_separada_cerrada)
-        self.marco_consola.hide()
-        self.btn_separar_consola.set_label(traducir("Volver a integrar"))
-        ventana.show_all()
-        self._desplazar_consola(vista)
-        ventana.present()
-
-    def _consola_separada_cerrada(self, _ventana):
-        self.ventana_consola = None
-        self.log_separado = None
-        self.btn_separar_consola.set_label(traducir("Abrir en otra ventana"))
-        self.marco_consola.show_all()
+    def _abrir_terminal(self, _boton=None):
+        self.notebook.set_current_page(3)
 
     def _desplazar_consola(self, vista):
         marca = self.buf.create_mark(None, self.buf.get_end_iter(), False)
@@ -4344,8 +4375,10 @@ class VentanaPrincipal(Gtk.Window):
                 estilo.remove_class("suggested-action")
 
     def _al_pulsar_tecla(self, _ventana, evento):
-        """Enter inicia tareas solo desde la ventana principal y fuera de controles interactivos."""
+        """Enter inicia tareas solo en la pestaña de mantenimiento, fuera de controles interactivos."""
         if evento.keyval not in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
+            return False
+        if self.notebook.get_current_page() != 0:
             return False
         if evento.state & (Gdk.ModifierType.CONTROL_MASK |
                            Gdk.ModifierType.MOD1_MASK |
@@ -4890,8 +4923,11 @@ class VentanaPrincipal(Gtk.Window):
         else:
             self.buf.insert(fin, texto)
         self._desplazar_consola(self.log)
-        if self.log_separado is not None:
-            self._desplazar_consola(self.log_separado)
+        # La salida externa no debe poder enviar secuencias de control a VTE.
+        salida = "".join(
+            c for c in texto if c in "\n\t" or 32 <= ord(c) < 127 or ord(c) >= 160
+        )
+        self.terminal.feed(salida.replace("\n", "\r\n").encode("utf-8"))
 
     def _proceso_terminado(self, proc, res):
         if self.terminado_gestionado:

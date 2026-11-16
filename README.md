@@ -18,7 +18,7 @@ AiO Debian GUI reúne tareas habituales de administración en una aplicación GT
 - **Sistema y hardware:** gestión de repositorios, kernel y Mesa de Backports; detección NVIDIA con instalación conservadora en Debian. Algunas operaciones tienen requisitos y bloqueos adicionales.
 - **Copias de seguridad:** acceso a Timeshift y Respaldos (Déjà Dup); si no están instalados, AiO ofrece instalarlos con confirmación y autorización de administrador.
 - **Apps recomendadas:** catálogo en dos columnas con GIMP, VLC, Celluloid, Plex, Switcheroo, Video Downloader, HandBrake, Spotify, Feishin y Google Chrome. Distingue DEB y Flatpak, indica qué formato está instalado y no abre las aplicaciones tras instalarlas. Las instalaciones requieren confirmación; los DEB externos se descargan e instalan manualmente.
-- **Terminal:** pestaña interactiva con Bash que muestra Fastfetch al iniciar si está instalado. En Flatpak ejecuta los comandos en el anfitrión; se aplican los permisos habituales del usuario.
+- **Terminal:** pestaña interactiva con Bash que muestra Fastfetch al iniciar si está instalado y recibe en directo la salida de mantenimiento. El botón «Ver en Terminal» de la consola integrada abre esta pestaña. Incluye accesos para limpiar la pantalla, ejecutar Fastfetch y abrir Nautilus en `admin:/` (puede solicitar autorización). Los accesos ejecutan procesos independientes, sin enviar texto a la sesión interactiva. En Flatpak se ejecutan en el anfitrión; se aplican los permisos habituales del usuario.
 - **Escritorio:** integración con Flatpak, AppImage y complementos de GNOME; interfaz en español, inglés, francés y chino, con temas claro y oscuro.
 
 La aplicación es compatible con Debian 12 o superior y Ubuntu 24.04/26.04 LTS. Algunas tareas dependen de la distribución y se bloquean cuando no son compatibles.
@@ -27,6 +27,7 @@ El diagnóstico solicita autorización para renovar los índices APT antes de co
 
 ## Novedades recientes
 
+- **2.10.0:** salida de mantenimiento en la terminal, accesos a `clear`, Fastfetch y Nautilus como administrador, y Enter limitado a la pestaña de mantenimiento.
 - **2.9.0:** terminal interactiva con Fastfetch al iniciar cuando está instalado.
 - **2.8.3:** incorpora iconos para Celluloid, GIMP, Spotify y VLC en «Apps recomendadas».
 - **2.8.2:** corrige la instalación de Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.

@@ -1,5 +1,11 @@
 # Cambios
 
+## 2.10.0
+
+- La salida de mantenimiento también se muestra en la terminal, accesible desde la consola integrada.
+- Añade accesos en la terminal para `clear`, `fastfetch` y `nautilus admin:/`.
+- Limita el atajo Enter para iniciar mantenimiento a su propia pestaña, sin interferir con las demás.
+
 ## 2.9.0
 
 - Añade una pestaña de terminal interactiva que inicia Fastfetch cuando está disponible.
