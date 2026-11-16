@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.8.3
+
+- Incluye los iconos facilitados para Celluloid, GIMP, Spotify y VLC en «Apps recomendadas».
+
 ## 2.8.2
 
 - Corrige el identificador de Video Downloader en Flathub para permitir su instalación.

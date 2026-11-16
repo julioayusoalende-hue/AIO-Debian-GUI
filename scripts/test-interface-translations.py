@@ -71,6 +71,7 @@ essential = (
     "Apps recomendadas", "Aplicaciones recomendadas",
     "Instalado", "No se pudo comprobar el estado de algunas aplicaciones.",
     "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.",
+    "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.",
     "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.",
     "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.",
     "Espera a que termine la operación de la aplicación antes de cerrar la ventana.",

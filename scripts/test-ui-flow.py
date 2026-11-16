@@ -67,6 +67,11 @@ for language in ('es', 'en', 'fr', 'zh'):
         header = contents[0].get_children()
         assert isinstance(header[0], Gtk.Image)
         assert header[1].get_text() == name
+        if app.APPS_RECOMENDADAS[index]['id'] in ('celluloid', 'gimp', 'spotify', 'vlc'):
+            image = header[0]
+            assert image.get_storage_type() == Gtk.ImageType.PIXBUF
+            pixbuf = image.get_pixbuf()
+            assert max(pixbuf.get_width(), pixbuf.get_height()) == 48
         assert contents[1].get_text() == app.traducir(
             app.APPS_RECOMENDADAS[index]['description'])
         fallback_theme = type(

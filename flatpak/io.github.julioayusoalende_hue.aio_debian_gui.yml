@@ -11,7 +11,7 @@ finish-args:
   - --socket=fallback-x11
   - --talk-name=org.freedesktop.Flatpak
   # Required only for flatpak-spawn --host; does not grant root privileges.
-  - --env=AIO_DEBIAN_GUI_VERSION=2.8.2
+  - --env=AIO_DEBIAN_GUI_VERSION=2.8.3
 modules:
   - name: aio-debian-gui
     buildsystem: simple
@@ -25,6 +25,8 @@ modules:
       - install -D -m 644 package/usr/share/aio-debian-gui/debian-openlogo.png /app/share/aio-debian-gui/debian-openlogo.png
       - install -D -m 644 package/usr/share/aio-debian-gui/ubuntu-logo.svg /app/share/aio-debian-gui/ubuntu-logo.svg
       - install -D -m 644 package/usr/share/aio-debian-gui/adri-y-lu.jpg /app/share/aio-debian-gui/adri-y-lu.jpg
+      - mkdir -p /app/share/aio-debian-gui/recommended-icons
+      - install -m 644 package/usr/share/aio-debian-gui/recommended-icons/*.png /app/share/aio-debian-gui/recommended-icons/
       - install -D -m 644 package/usr/share/applications/aio-debian-gui.desktop /app/share/applications/io.github.julioayusoalende_hue.aio_debian_gui.desktop
       - sed -i 's/^Icon=aio-debian-gui$/Icon=io.github.julioayusoalende_hue.aio_debian_gui/' /app/share/applications/io.github.julioayusoalende_hue.aio_debian_gui.desktop
       - install -D -m 644 flatpak/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml /app/share/metainfo/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml

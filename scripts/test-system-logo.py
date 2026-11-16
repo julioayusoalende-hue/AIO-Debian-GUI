@@ -23,6 +23,11 @@ assert "GdkPixbuf.Pixbuf.new_from_file_at_scale(" in gui
 for script in ("scripts/build-appimage.sh", "flatpak/io.github.julioayusoalende_hue.aio_debian_gui.yml"):
     content = Path(script).read_text(encoding="utf-8")
     assert "ubuntu-logo.svg" in content, script
+for icon in ("celluloid", "gimp", "spotify", "vlc"):
+    assert (root / "recommended-icons" / (icon + ".png")).is_file()
+for script in ("scripts/build-appimage.sh", "flatpak/io.github.julioayusoalende_hue.aio_debian_gui.yml",
+               "snap/snapcraft.yaml"):
+    assert "recommended-icons/*.png" in Path(script).read_text(encoding="utf-8"), script
 control = Path("package/DEBIAN/control").read_text(encoding="utf-8")
 assert "librsvg2-common" in control
 print("✔ logos de Debian y Ubuntu, accesibilidad y recursos en DEB/AppImage/Flatpak")

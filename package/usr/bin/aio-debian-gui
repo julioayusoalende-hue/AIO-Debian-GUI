@@ -50,6 +50,9 @@ DEBIAN_LOGO = os.path.normpath(
 UBUNTU_LOGO = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/ubuntu-logo.svg")
 )
+RECOMMENDED_ICON_DIR = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/recommended-icons")
+)
 
 def logo_distribucion(distribucion):
     """Devuelve el recurso y el nombre accesible para cada sistema soportado."""
@@ -66,6 +69,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.8.3": "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.",
     "2.8.2": "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.",
     "2.8.1": "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.",
     "2.8.0": "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.",
@@ -556,6 +560,7 @@ TRADUCCIONES = {
 
 # Textos del actualizador integrados con las traducciones existentes.
 TRADUCCIONES["en"].update({
+    "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.": "Adds icons for Celluloid, GIMP, Spotify and VLC to recommended apps.",
     "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.": "Fixes Video Downloader and shows installed formats without opening apps automatically.",
     "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.": "Improves recommended-app icons when an app's own icon is unavailable.",
     "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.": "Alphabetical recommended-app catalog with DEB and Flatpak formats.",
@@ -574,6 +579,7 @@ TRADUCCIONES["en"].update({
     "No se pudo actualizar": "Unable to update",
 })
 TRADUCCIONES["fr"].update({
+    "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.": "Ajoute des icônes pour Celluloid, GIMP, Spotify et VLC aux applications recommandées.",
     "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.": "Corrige Video Downloader et indique les formats installés sans ouvrir les applications automatiquement.",
     "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.": "Améliore les icônes des applications recommandées lorsque leur icône propre est indisponible.",
     "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.": "Catalogue alphabétique d’applications recommandées aux formats DEB et Flatpak.",
@@ -592,6 +598,7 @@ TRADUCCIONES["fr"].update({
     "No se pudo actualizar": "Mise à jour impossible",
 })
 TRADUCCIONES["zh"].update({
+    "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.": "为推荐应用中的 Celluloid、GIMP、Spotify 和 VLC 添加图标。",
     "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.": "修复 Video Downloader 并显示已安装的格式，不再自动打开应用。",
     "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.": "当应用自身图标不可用时，改进推荐应用的图标显示。",
     "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.": "按字母排序的推荐应用目录，提供 DEB 和 Flatpak 格式。",
@@ -1769,6 +1776,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "celluloid", "name": "Celluloid",
         "icon": "io.github.celluloid_player.Celluloid",
+        "bundled_icon": "celluloid.png",
         "fallback_icon": "media-playback-start",
         "description": "Reproduce vídeos con mpv desde una interfaz GTK sencilla.",
         "channels": [
@@ -1789,6 +1797,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "gimp", "name": "GIMP",
         "icon": "gimp",
+        "bundled_icon": "gimp.png",
         "fallback_icon": "applications-graphics-symbolic",
         "description": "Editor de imágenes para crear, retocar y componer gráficos y fotografías.",
         "channels": [
@@ -1827,6 +1836,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "spotify", "name": "Spotify",
         "icon": "spotify-client",
+        "bundled_icon": "spotify.png",
         "fallback_icon": "audio-x-generic",
         "description": "Aplicación de escritorio para escuchar música, pódcast y listas de reproducción.",
         "channels": [
@@ -1855,6 +1865,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "vlc", "name": "VLC",
         "icon": "vlc",
+        "bundled_icon": "vlc.png",
         "fallback_icon": "multimedia-player",
         "description": "Reproductor multimedia para vídeos, música y transmisiones de red.",
         "channels": [
@@ -1871,6 +1882,19 @@ def nombre_icono_recomendada(app, tema=None):
         if tema.has_icon(nombre):
             return nombre
     return "application-x-executable"
+
+
+def icono_recomendada(app):
+    if "bundled_icon" in app:
+        ruta = os.path.join(RECOMMENDED_ICON_DIR, app["bundled_icon"])
+        try:
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(ruta, 48, 48, True)
+            return Gtk.Image.new_from_pixbuf(pixbuf)
+        except GLib.Error as exc:
+            print("No se pudo cargar el icono %s: %s" % (ruta, exc.message), file=sys.stderr)
+    icono = Gtk.Image.new_from_icon_name(nombre_icono_recomendada(app), Gtk.IconSize.DIALOG)
+    icono.set_pixel_size(48)
+    return icono
 
 
 RELEASE_API = HOMEPAGE.replace("https://github.com/", "https://api.github.com/repos/") + "/releases/latest"
@@ -3039,10 +3063,7 @@ class VentanaPrincipal(Gtk.Window):
             contenido.set_border_width(12)
             tarjeta.add(contenido)
             cabecera_app = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-            icono_app = Gtk.Image.new_from_icon_name(
-                nombre_icono_recomendada(app), Gtk.IconSize.DIALOG
-            )
-            icono_app.set_pixel_size(48)
+            icono_app = icono_recomendada(app)
             cabecera_app.pack_start(icono_app, False, False, 0)
             cabecera_app.pack_start(etiqueta(
                 "<b>%s</b>" % GLib.markup_escape_text(app["name"]), markup=True

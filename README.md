@@ -26,6 +26,7 @@ El diagnóstico solicita autorización para renovar los índices APT antes de co
 
 ## Novedades recientes
 
+- **2.8.3:** incorpora iconos para Celluloid, GIMP, Spotify y VLC en «Apps recomendadas».
 - **2.8.2:** corrige la instalación de Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.
 - **2.8.1:** mejora los iconos de aplicaciones recomendadas cuando sus logos no están disponibles en el sistema.
 - **2.8.0:** catálogo alfabético de diez apps recomendadas, con canales DEB y Flatpak disponibles y selección explícita del formato.
