@@ -73,6 +73,7 @@ essential = (
     "Instalado", "No se pudo comprobar el estado de algunas aplicaciones.",
     "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.",
     "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.",
+    "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.",
     "Modulariza traducciones, apariencia GTK y programación; conserva los flujos existentes.",
     "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.",
     "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.",

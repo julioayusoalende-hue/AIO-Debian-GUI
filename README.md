@@ -27,6 +27,7 @@ El diagnóstico solicita autorización para renovar los índices APT antes de co
 
 ## Novedades recientes
 
+- **2.10.3:** instalación automática inicial de la integración del programador para AppImage y Flatpak, con autorización de administrador.
 - **2.10.2:** modulariza traducciones, apariencia GTK y programación; comprobada en Debian 13 con AppImage y Flatpak.
 - **2.10.1:** iconos propios para Timeshift y Déjà Dup, y para las seis aplicaciones recomendadas restantes, incluso sin instalarlas.
 - **2.10.0:** salida de mantenimiento en la terminal, accesos a `clear`, Fastfetch y Nautilus como administrador, y Enter limitado a la pestaña de mantenimiento.

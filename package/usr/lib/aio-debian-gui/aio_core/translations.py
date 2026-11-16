@@ -415,6 +415,7 @@ TRADUCCIONES = {
 
 # Textos del actualizador integrados con las traducciones existentes.
 TRADUCCIONES["en"].update({
+    "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.": "Automatically installs the initial scheduler integration for AppImage and Flatpak with administrator authorization.",
     "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.": "Adds icons for backup and recommended apps, even when they are not installed.",
     "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.": "Shows maintenance output in the terminal and adds shortcuts.",
     "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.": "Adds an interactive terminal that runs Fastfetch on startup when installed.",
@@ -446,6 +447,7 @@ TRADUCCIONES["en"].update({
     "No se pudo actualizar": "Unable to update",
 })
 TRADUCCIONES["fr"].update({
+    "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.": "Installe automatiquement l’intégration initiale du planificateur pour AppImage et Flatpak avec une autorisation administrateur.",
     "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.": "Ajoute des icônes pour les applications de sauvegarde et recommandées, même lorsqu’elles ne sont pas installées.",
     "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.": "Affiche la sortie de maintenance dans le terminal et ajoute des raccourcis.",
     "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.": "Ajoute un terminal interactif qui lance Fastfetch au démarrage lorsqu’il est installé.",
@@ -477,6 +479,7 @@ TRADUCCIONES["fr"].update({
     "No se pudo actualizar": "Mise à jour impossible",
 })
 TRADUCCIONES["zh"].update({
+    "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.": "通过管理员授权自动安装 AppImage 和 Flatpak 的初始计划程序集成。",
     "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.": "为备份和推荐应用添加图标，即使尚未安装也会显示。",
     "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.": "在终端显示维护输出并添加快捷操作。",
     "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.": "新增交互式终端；安装 Fastfetch 时会在启动时运行。",
