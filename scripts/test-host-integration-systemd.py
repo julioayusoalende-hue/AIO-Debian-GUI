@@ -47,23 +47,34 @@ def install():
     return subprocess.run(command, input=json.dumps(payload), text=True,
                           capture_output=True, timeout=120)
 
-result = install()
-if result.returncode:
-    subprocess.run(["stat", "-c", "%U %G %a %n", "/", "/usr", "/usr/share", "/usr/lib",
-                    "/usr/lib/systemd/system", "/usr/share/polkit-1/actions"], check=False)
-    raise SystemExit("Falló la instalación: " + result.stderr)
+permissions = {}
 try:
-    status = subprocess.run([destinations[-1], "--schedule-status"],
-                            text=True, capture_output=True, check=True, timeout=30)
-    report = json.loads(status.stdout)
-    assert report["available"] and report["version"] == scheduler.VERSION, report
-    again = install()
-    assert again.returncode and again.stderr.strip(), (again.stdout, again.stderr)
-    for path, name in zip(destinations, ("__init__.py", "scheduler.py", "preflight.py",
-                                         "es.aiodebian.gui.policy", "aio-debian-gui-maintenance@.service",
-                                         "aio-debian-gui-helper")):
-        assert hashlib.sha256(Path(path).read_bytes()).hexdigest() == payload[name]["sha256"], path
+    # Las imágenes de Actions hacen estas rutas escribibles para el runner;
+    # emular los permisos del sistema instalado sin debilitarlos en producción.
+    for path in ("/usr/share", "/usr/share/polkit-1", "/usr/share/polkit-1/actions"):
+        info = os.stat(path, follow_symlinks=False)
+        if info.st_uid != 0:
+            raise RuntimeError("Directorio CI no gestionado por root: " + path)
+        permissions[path] = info.st_mode & 0o7777
+        subprocess.run(["sudo", "chmod", format(permissions[path] & ~0o022, "o"), path], check=True)
+    result = install()
+    if result.returncode:
+        raise RuntimeError("Falló la instalación: " + result.stderr)
+    try:
+        status = subprocess.run([destinations[-1], "--schedule-status"],
+                                text=True, capture_output=True, check=True, timeout=30)
+        report = json.loads(status.stdout)
+        assert report["available"] and report["version"] == scheduler.VERSION, report
+        again = install()
+        assert again.returncode and again.stderr.strip(), (again.stdout, again.stderr)
+        for path, name in zip(destinations, ("__init__.py", "scheduler.py", "preflight.py",
+                                             "es.aiodebian.gui.policy", "aio-debian-gui-maintenance@.service",
+                                             "aio-debian-gui-helper")):
+            assert hashlib.sha256(Path(path).read_bytes()).hexdigest() == payload[name]["sha256"], path
+    finally:
+        subprocess.run(["sudo", "rm", "--", *destinations], check=True)
+        subprocess.run(["sudo", "systemctl", "daemon-reload"], check=True)
 finally:
-    subprocess.run(["sudo", "rm", "--", *destinations], check=True)
-    subprocess.run(["sudo", "systemctl", "daemon-reload"], check=True)
+    for path, mode in reversed(list(permissions.items())):
+        subprocess.run(["sudo", "chmod", format(mode, "o"), path], check=True)
 print("Instalación real inicial, estado del programador y protección ante repetición: OK")
