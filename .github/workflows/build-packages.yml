@@ -8,11 +8,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -80,6 +82,9 @@ jobs:
           dpkg-deb --info "$DEB"
           dpkg-deb --contents "$DEB" >/dev/null
           dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/updates.py' >/dev/null
+          dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/translations.py' >/dev/null
+          dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/gtk_appearance.py' >/dev/null
+          dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/gtk_scheduler.py' >/dev/null
           dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/host_integration.py' >/dev/null
           dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/scheduler.py' >/dev/null
           dpkg-deb --contents "$DEB" | grep -F 'usr/lib/systemd/system/aio-debian-gui-maintenance@.service' >/dev/null
@@ -89,6 +94,9 @@ jobs:
           test -x squashfs-root/AppRun
           test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/history.py
           test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/updates.py
+          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/translations.py
+          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/gtk_appearance.py
+          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/gtk_scheduler.py
           test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/host_integration.py
           test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/scheduler.py
           test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/preflight.py
@@ -99,6 +107,9 @@ jobs:
           flatpak install --user --noninteractive --bundle "$FLATPAK"
           flatpak info --user --show-metadata io.github.julioayusoalende_hue.aio_debian_gui >/dev/null
           flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/updates.py
+          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/translations.py
+          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/gtk_appearance.py
+          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/gtk_scheduler.py
           flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/host_integration.py
           flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/history.py
           flatpak run --user --command=python3 io.github.julioayusoalende_hue.aio_debian_gui -c 'import gi; gi.require_version("Gtk", "3.0"); gi.require_version("Vte", "2.91"); from gi.repository import Gtk, Vte'
@@ -122,14 +133,35 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  publish:
+    needs: build
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Checkout release notes
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download release candidates
+        uses: actions/download-artifact@v4
+        with:
+          name: aio-debian-gui-linux-x86_64
+          path: dist
+
       - name: Publish stable release
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          VERSION="$(sed -n 's/^Version: //p' package/DEBIAN/control)"
-          test -n "$VERSION"
+          DEB="$(find dist -maxdepth 1 -name '*.deb' -print -quit)"
+          test -n "$DEB"
+          DEB_NAME="${DEB##*/}"
+          [[ "$DEB_NAME" =~ ^aio-debian-gui_([0-9]+\.[0-9]+\.[0-9]+)_all\.deb$ ]]
+          VERSION="${BASH_REMATCH[1]}"
           TAG="v$VERSION"
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "$TAG already exists; not overwriting previously published assets."

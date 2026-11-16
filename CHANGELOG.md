@@ -1,5 +1,11 @@
 # Cambios
 
+## 2.10.2
+
+- Modulariza el catálogo de traducciones, el seguimiento del tema GTK y el diálogo de programación, conservando el comportamiento existente.
+- Verifica la interfaz GTK, la programación y los formatos AppImage y Flatpak en Debian 13.
+- Limita los permisos de escritura del workflow de publicación al job protegido que corre en `main`.
+
 ## 2.10.1
 
 - Incluye los iconos de Timeshift y Déjà Dup aunque no estén instalados.

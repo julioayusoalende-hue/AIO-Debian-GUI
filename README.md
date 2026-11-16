@@ -27,6 +27,7 @@ El diagnóstico solicita autorización para renovar los índices APT antes de co
 
 ## Novedades recientes
 
+- **2.10.2:** modulariza traducciones, apariencia GTK y programación; comprobada en Debian 13 con AppImage y Flatpak.
 - **2.10.1:** iconos propios para Timeshift y Déjà Dup, y para las seis aplicaciones recomendadas restantes, incluso sin instalarlas.
 - **2.10.0:** salida de mantenimiento en la terminal, accesos a `clear`, Fastfetch y Nautilus como administrador, y Enter limitado a la pestaña de mantenimiento.
 - **2.9.0:** terminal interactiva con Fastfetch al iniciar cuando está instalado.
@@ -160,6 +161,12 @@ git clone https://github.com/julioayusoalende-hue/AIO-Debian-GUI.git
 cd AIO-Debian-GUI
 ./scripts/check.sh
 ```
+
+El catálogo de traducciones de la interfaz está en
+`package/usr/lib/aio-debian-gui/aio_core/translations.py`; la selección del
+idioma sigue gestionándose en la interfaz. El seguimiento del tema GTK está en
+`package/usr/lib/aio-debian-gui/aio_core/gtk_appearance.py` y el diálogo de
+programación en `package/usr/lib/aio-debian-gui/aio_core/gtk_scheduler.py`.
 
 ## Licencia
 
