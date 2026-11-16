@@ -8,11 +8,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -131,14 +133,35 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  publish:
+    needs: build
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Checkout release notes
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download release candidates
+        uses: actions/download-artifact@v4
+        with:
+          name: aio-debian-gui-linux-x86_64
+          path: dist
+
       - name: Publish stable release
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          VERSION="$(sed -n 's/^Version: //p' package/DEBIAN/control)"
-          test -n "$VERSION"
+          DEB="$(find dist -maxdepth 1 -name '*.deb' -print -quit)"
+          test -n "$DEB"
+          DEB_NAME="${DEB##*/}"
+          [[ "$DEB_NAME" =~ ^aio-debian-gui_([0-9]+\.[0-9]+\.[0-9]+)_all\.deb$ ]]
+          VERSION="${BASH_REMATCH[1]}"
           TAG="v$VERSION"
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "$TAG already exists; not overwriting previously published assets."
