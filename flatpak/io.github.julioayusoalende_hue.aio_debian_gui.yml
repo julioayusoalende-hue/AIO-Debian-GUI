@@ -16,6 +16,7 @@ modules:
   - name: vte-gtk3
     buildsystem: meson
     config-opts:
+      - --libdir=lib
       - -Dgtk3=true
       - -Dgtk4=false
       - -Ddocs=false
