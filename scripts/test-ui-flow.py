@@ -69,6 +69,13 @@ for language in ('es', 'en', 'fr', 'zh'):
         assert header[1].get_text() == name
         assert contents[1].get_text() == app.traducir(
             app.APPS_RECOMENDADAS[index]['description'])
+        fallback_theme = type(
+            'FallbackTheme', (), {'has_icon': lambda self, icon: icon == app.APPS_RECOMENDADAS[index]['fallback_icon']}
+        )()
+        assert app.nombre_icono_recomendada(
+            {'icon': 'missing-app-icon', 'fallback_icon': app.APPS_RECOMENDADAS[index]['fallback_icon']},
+            fallback_theme,
+        ) == app.APPS_RECOMENDADAS[index]['fallback_icon']
     assert {key for key in w.recommended_buttons if key[1] == 'deb'} == {
         ('celluloid', 'deb'), ('gimp', 'deb'), ('handbrake', 'deb'), ('vlc', 'deb')
     }

@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.8.1
+
+- Usa iconos de categoría diferenciados en «Apps recomendadas» cuando no está disponible el icono propio de una aplicación.
+
 ## 2.8.0
 
 - Añade «Apps recomendadas» en dos columnas, ordenadas alfabéticamente, con GIMP, VLC, Celluloid, Plex, Switcheroo, Video Downloader, HandBrake, Spotify, Feishin y Google Chrome.

@@ -26,6 +26,7 @@ El diagnóstico solicita autorización para renovar los índices APT antes de co
 
 ## Novedades recientes
 
+- **2.8.1:** mejora los iconos de aplicaciones recomendadas cuando sus logos no están disponibles en el sistema.
 - **2.8.0:** catálogo alfabético de diez apps recomendadas, con canales DEB y Flatpak disponibles y selección explícita del formato.
 - **2.7.10:** corrige la inicialización de la pestaña Backup y conserva la consola y los controles habituales.
 - **2.7.9:** pestaña Backup con Timeshift y Respaldos (Déjà Dup), e instalación opcional autorizada.

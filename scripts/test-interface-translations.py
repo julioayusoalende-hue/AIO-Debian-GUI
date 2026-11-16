@@ -70,6 +70,7 @@ essential = (
     "Crea copias de seguridad de las carpetas personales seleccionadas para recuperar archivos perdidos o modificados. No restaura el sistema operativo.",
     "Apps recomendadas", "Aplicaciones recomendadas",
     "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.",
+    "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.",
     "Espera a que termine la operación de la aplicación antes de cerrar la ventana.",
     "Elige un formato por aplicación. Los paquetes DEB de los repositorios APT requieren autorización; Flatpak se instala solo para tu usuario y configura Flathub si hace falta.",
     "DEB (APT)", "DEB (web oficial)", "Flatpak",

@@ -66,6 +66,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.8.1": "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.",
     "2.8.0": "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.",
     "2.7.10": "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.",
     "2.7.9": "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.",
@@ -554,6 +555,7 @@ TRADUCCIONES = {
 
 # Textos del actualizador integrados con las traducciones existentes.
 TRADUCCIONES["en"].update({
+    "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.": "Improves recommended-app icons when an app's own icon is unavailable.",
     "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.": "Alphabetical recommended-app catalog with DEB and Flatpak formats.",
     "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.": "Fixes Backup tab startup while keeping the usual controls available.",
     "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.": "New Backup tab to open Timeshift or install it with authorization.",
@@ -570,6 +572,7 @@ TRADUCCIONES["en"].update({
     "No se pudo actualizar": "Unable to update",
 })
 TRADUCCIONES["fr"].update({
+    "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.": "Améliore les icônes des applications recommandées lorsque leur icône propre est indisponible.",
     "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.": "Catalogue alphabétique d’applications recommandées aux formats DEB et Flatpak.",
     "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.": "Corrige le démarrage de l’onglet Sauvegarde tout en conservant les commandes habituelles.",
     "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.": "Nouvel onglet Sauvegarde pour ouvrir Timeshift ou l’installer avec autorisation.",
@@ -586,6 +589,7 @@ TRADUCCIONES["fr"].update({
     "No se pudo actualizar": "Mise à jour impossible",
 })
 TRADUCCIONES["zh"].update({
+    "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.": "当应用自身图标不可用时，改进推荐应用的图标显示。",
     "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.": "按字母排序的推荐应用目录，提供 DEB 和 Flatpak 格式。",
     "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.": "修复备份选项卡的启动，同时保留常用控件。",
     "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.": "新增备份选项卡，可打开 Timeshift 或经授权安装。",
@@ -1755,6 +1759,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "celluloid", "name": "Celluloid",
         "icon": "io.github.celluloid_player.Celluloid",
+        "fallback_icon": "media-playback-start",
         "description": "Reproduce vídeos con mpv desde una interfaz GTK sencilla.",
         "channels": [
             {"type": "deb", "package": "celluloid", "command": "celluloid"},
@@ -1764,6 +1769,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "feishin", "name": "Feishin",
         "icon": "org.jeffvli.feishin",
+        "fallback_icon": "audio-x-generic",
         "description": "Reproductor de música para servidores Jellyfin, Navidrome y Subsonic.",
         "channels": [
             {"type": "deb-download", "uri": "https://github.com/jeffvli/feishin/releases/latest"},
@@ -1773,6 +1779,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "gimp", "name": "GIMP",
         "icon": "gimp",
+        "fallback_icon": "applications-graphics-symbolic",
         "description": "Editor de imágenes para crear, retocar y componer gráficos y fotografías.",
         "channels": [
             {"type": "deb", "package": "gimp", "command": "gimp"},
@@ -1782,6 +1789,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "google-chrome", "name": "Google Chrome",
         "icon": "google-chrome",
+        "fallback_icon": "web-browser",
         "description": "Navegador web de Google. El paquete DEB se descarga desde la página oficial.",
         "channels": [
             {"type": "deb-download", "uri": "https://www.google.com/chrome/"},
@@ -1790,6 +1798,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "handbrake", "name": "HandBrake",
         "icon": "fr.handbrake.ghb",
+        "fallback_icon": "video-x-generic",
         "description": "Convierte y comprime vídeos con ajustes para formatos y dispositivos comunes.",
         "channels": [
             {"type": "deb", "package": "handbrake", "command": "ghb"},
@@ -1799,6 +1808,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "plex", "name": "Plex",
         "icon": "tv.plex.PlexDesktop",
+        "fallback_icon": "video-x-generic",
         "description": "Cliente de escritorio para reproducir contenido de tu biblioteca Plex.",
         "channels": [
             {"type": "flatpak", "app_id": "tv.plex.PlexDesktop"},
@@ -1807,6 +1817,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "spotify", "name": "Spotify",
         "icon": "spotify-client",
+        "fallback_icon": "audio-x-generic",
         "description": "Aplicación de escritorio para escuchar música, pódcast y listas de reproducción.",
         "channels": [
             {"type": "deb-download", "uri": "https://www.spotify.com/download/linux/"},
@@ -1816,6 +1827,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "switcheroo", "name": "Switcheroo",
         "icon": "io.gitlab.adhami3310.Converter",
+        "fallback_icon": "image-x-generic",
         "description": "Convierte imágenes por lotes entre formatos y cambia su tamaño.",
         "channels": [
             {"type": "flatpak", "app_id": "io.gitlab.adhami3310.Converter"},
@@ -1824,6 +1836,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "video-downloader", "name": "Video Downloader",
         "icon": "de.unrud.VideoDownloader",
+        "fallback_icon": "folder-download",
         "description": "Descarga vídeos de sitios compatibles para verlos sin conexión.",
         "channels": [
             {"type": "flatpak", "app_id": "de.unrud.VideoDownloader"},
@@ -1832,6 +1845,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "vlc", "name": "VLC",
         "icon": "vlc",
+        "fallback_icon": "multimedia-player",
         "description": "Reproductor multimedia para vídeos, música y transmisiones de red.",
         "channels": [
             {"type": "deb", "package": "vlc", "command": "vlc"},
@@ -1839,6 +1853,16 @@ APPS_RECOMENDADAS = [
         ],
     },
 ]
+
+
+def nombre_icono_recomendada(app, tema=None):
+    tema = tema or Gtk.IconTheme.get_default()
+    for nombre in (app["icon"], app["fallback_icon"], "application-x-executable"):
+        if tema.has_icon(nombre):
+            return nombre
+    return "application-x-executable"
+
+
 RELEASE_API = HOMEPAGE.replace("https://github.com/", "https://api.github.com/repos/") + "/releases/latest"
 MAX_APPIMAGE_SIZE = 256 * 1024 * 1024
 
@@ -3001,9 +3025,9 @@ class VentanaPrincipal(Gtk.Window):
             contenido.set_border_width(12)
             tarjeta.add(contenido)
             cabecera_app = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-            tema_iconos = Gtk.IconTheme.get_default()
-            nombre_icono = app["icon"] if tema_iconos.has_icon(app["icon"]) else "application-x-executable"
-            icono_app = Gtk.Image.new_from_icon_name(nombre_icono, Gtk.IconSize.DIALOG)
+            icono_app = Gtk.Image.new_from_icon_name(
+                nombre_icono_recomendada(app), Gtk.IconSize.DIALOG
+            )
             icono_app.set_pixel_size(48)
             cabecera_app.pack_start(icono_app, False, False, 0)
             cabecera_app.pack_start(etiqueta(
