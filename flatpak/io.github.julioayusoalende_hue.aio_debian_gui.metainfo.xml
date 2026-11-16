@@ -23,6 +23,7 @@
     <value key="flathub::verification::website">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</value>
   </custom>
   <releases>
+    <release version="2.10.2" date="2026-11-16"><description><p>Modulariza traducciones, apariencia GTK y programación, conservando los flujos existentes. Validada en Debian 13 con AppImage y Flatpak.</p></description></release>
     <release version="2.10.1" date="2026-11-16"><description><p>Incluye los iconos de Timeshift y Déjà Dup y completa los iconos de las aplicaciones recomendadas, sin necesidad de instalarlas.</p></description></release>
     <release version="2.10.0" date="2026-11-16"><description><p>Integra la salida de mantenimiento en la terminal y añade accesos para limpiar, ejecutar Fastfetch y abrir Nautilus como administrador. Limita Enter a la pestaña de mantenimiento.</p></description></release>
     <release version="2.9.0" date="2026-11-16"><description><p>Añade una terminal interactiva que muestra Fastfetch al iniciar cuando está instalado.</p></description></release>

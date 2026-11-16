@@ -1375,6 +1375,7 @@ TRADUCCIONES["zh"].update({
 })
 
 TRADUCCIONES["en"].update({
+    "Modulariza traducciones, apariencia GTK y programación; conserva los flujos existentes.": "Modularizes translations, GTK appearance and scheduling while preserving existing workflows.",
     "Guía de integración del anfitrión": "Host integration guide",
     "La integración instala el asistente, la política Polkit y el programador en el sistema anfitrión. La aplicación no ejecuta estos comandos por ti.": "Host integration installs the helper, Polkit policy and scheduler. The application does not run these commands for you.",
     "Antes de actualizar, pausa las programaciones de todos los usuarios y espera a que terminen las tareas. Si el DEB está instalado, actualízalo con APT y no uses esta guía.": "Before updating, pause every user's schedules and wait for tasks to finish. If the DEB is installed, update it with APT instead of using this guide.",
@@ -1389,6 +1390,7 @@ TRADUCCIONES["en"].update({
     "Abre la guía de integración para instalar o actualizar el asistente del anfitrión.": "Open the integration guide to install or update the host helper.",
 })
 TRADUCCIONES["fr"].update({
+    "Modulariza traducciones, apariencia GTK y programación; conserva los flujos existentes.": "Modularise les traductions, l’apparence GTK et la planification tout en préservant les flux existants.",
     "Guía de integración del anfitrión": "Guide d’intégration de l’hôte",
     "La integración instala el asistente, la política Polkit y el programador en el sistema anfitrión. La aplicación no ejecuta estos comandos por ti.": "L’intégration installe l’assistant, la politique Polkit et le planificateur sur l’hôte. L’application n’exécute pas ces commandes à votre place.",
     "Antes de actualizar, pausa las programaciones de todos los usuarios y espera a que terminen las tareas. Si el DEB está instalado, actualízalo con APT y no uses esta guía.": "Avant la mise à jour, suspendez les planifications de tous les utilisateurs et attendez la fin des tâches. Si le DEB est installé, mettez-le à jour avec APT sans utiliser ce guide.",
@@ -1403,6 +1405,7 @@ TRADUCCIONES["fr"].update({
     "Abre la guía de integración para instalar o actualizar el asistente del anfitrión.": "Ouvrez le guide d’intégration pour installer ou mettre à jour l’assistant de l’hôte.",
 })
 TRADUCCIONES["zh"].update({
+    "Modulariza traducciones, apariencia GTK y programación; conserva los flujos existentes.": "将翻译、GTK 外观和计划功能模块化，同时保留现有工作流程。",
     "Guía de integración del anfitrión": "主机集成指南",
     "La integración instala el asistente, la política Polkit y el programador en el sistema anfitrión. La aplicación no ejecuta estos comandos por ti.": "集成会在主机上安装辅助程序、Polkit 策略和计划程序。应用不会替您执行这些命令。",
     "Antes de actualizar, pausa las programaciones de todos los usuarios y espera a que terminen las tareas. Si el DEB está instalado, actualízalo con APT y no uses esta guía.": "更新前请暂停所有用户的计划并等待任务结束。如果已安装 DEB，请通过 APT 更新，不要使用此指南。",

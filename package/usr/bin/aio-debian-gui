@@ -76,6 +76,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.10.2": "Modulariza traducciones, apariencia GTK y programación; conserva los flujos existentes.",
     "2.10.1": "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.",
     "2.10.0": "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.",
     "2.9.0": "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.",

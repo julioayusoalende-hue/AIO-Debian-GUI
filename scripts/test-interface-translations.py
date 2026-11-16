@@ -68,6 +68,7 @@ essential = (
     "Instalado", "No se pudo comprobar el estado de algunas aplicaciones.",
     "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.",
     "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.",
+    "Modulariza traducciones, apariencia GTK y programación; conserva los flujos existentes.",
     "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.",
     "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.",
     "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.",
