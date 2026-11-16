@@ -1376,6 +1376,12 @@ TRADUCCIONES["zh"].update({
 
 TRADUCCIONES["en"].update({
     "Modulariza traducciones, apariencia GTK y programación; conserva los flujos existentes.": "Modularizes translations, GTK appearance and scheduling while preserving existing workflows.",
+    "Puedes instalar una integración nueva automáticamente con autorización de administrador. Para actualizar una integración existente, sigue la guía manual.": "You can install a new integration automatically with administrator authorization. To update an existing integration, follow the manual guide.",
+    "Instalar integración automáticamente": "Install integration automatically",
+    "Se instalarán en el anfitrión el asistente privilegiado, la política Polkit y el programador de esta versión. Solo continúa si confías en esta aplicación. Se solicitará autorización de administrador.": "The privileged helper, Polkit policy and scheduler from this version will be installed on the host. Continue only if you trust this application. Administrator authorization will be requested.",
+    "No se pudo instalar la integración.": "Could not install the integration.",
+    "Integración instalada": "Integration installed",
+    "La integración se ha instalado. Comprueba el estado de la programación.": "The integration has been installed. Check the schedule status.",
     "Guía de integración del anfitrión": "Host integration guide",
     "La integración instala el asistente, la política Polkit y el programador en el sistema anfitrión. La aplicación no ejecuta estos comandos por ti.": "Host integration installs the helper, Polkit policy and scheduler. The application does not run these commands for you.",
     "Antes de actualizar, pausa las programaciones de todos los usuarios y espera a que terminen las tareas. Si el DEB está instalado, actualízalo con APT y no uses esta guía.": "Before updating, pause every user's schedules and wait for tasks to finish. If the DEB is installed, update it with APT instead of using this guide.",
@@ -1391,6 +1397,12 @@ TRADUCCIONES["en"].update({
 })
 TRADUCCIONES["fr"].update({
     "Modulariza traducciones, apariencia GTK y programación; conserva los flujos existentes.": "Modularise les traductions, l’apparence GTK et la planification tout en préservant les flux existants.",
+    "Puedes instalar una integración nueva automáticamente con autorización de administrador. Para actualizar una integración existente, sigue la guía manual.": "Vous pouvez installer une nouvelle intégration automatiquement avec une autorisation administrateur. Pour mettre à jour une intégration existante, suivez le guide manuel.",
+    "Instalar integración automáticamente": "Installer l’intégration automatiquement",
+    "Se instalarán en el anfitrión el asistente privilegiado, la política Polkit y el programador de esta versión. Solo continúa si confías en esta aplicación. Se solicitará autorización de administrador.": "L’assistant privilégié, la politique Polkit et le planificateur de cette version seront installés sur l’hôte. Ne continuez que si vous faites confiance à cette application. Une autorisation administrateur sera demandée.",
+    "No se pudo instalar la integración.": "Impossible d’installer l’intégration.",
+    "Integración instalada": "Intégration installée",
+    "La integración se ha instalado. Comprueba el estado de la programación.": "L’intégration est installée. Vérifiez l’état de la planification.",
     "Guía de integración del anfitrión": "Guide d’intégration de l’hôte",
     "La integración instala el asistente, la política Polkit y el programador en el sistema anfitrión. La aplicación no ejecuta estos comandos por ti.": "L’intégration installe l’assistant, la politique Polkit et le planificateur sur l’hôte. L’application n’exécute pas ces commandes à votre place.",
     "Antes de actualizar, pausa las programaciones de todos los usuarios y espera a que terminen las tareas. Si el DEB está instalado, actualízalo con APT y no uses esta guía.": "Avant la mise à jour, suspendez les planifications de tous les utilisateurs et attendez la fin des tâches. Si le DEB est installé, mettez-le à jour avec APT sans utiliser ce guide.",
@@ -1406,6 +1418,12 @@ TRADUCCIONES["fr"].update({
 })
 TRADUCCIONES["zh"].update({
     "Modulariza traducciones, apariencia GTK y programación; conserva los flujos existentes.": "将翻译、GTK 外观和计划功能模块化，同时保留现有工作流程。",
+    "Puedes instalar una integración nueva automáticamente con autorización de administrador. Para actualizar una integración existente, sigue la guía manual.": "可以使用管理员授权自动安装新的集成。要更新现有集成，请按照手动指南操作。",
+    "Instalar integración automáticamente": "自动安装集成",
+    "Se instalarán en el anfitrión el asistente privilegiado, la política Polkit y el programador de esta versión. Solo continúa si confías en esta aplicación. Se solicitará autorización de administrador.": "将在主机上安装此版本的特权辅助程序、Polkit 策略和计划程序。只有信任此应用时才继续。系统会请求管理员授权。",
+    "No se pudo instalar la integración.": "无法安装集成。",
+    "Integración instalada": "集成已安装",
+    "La integración se ha instalado. Comprueba el estado de la programación.": "集成已安装。请检查计划状态。",
     "Guía de integración del anfitrión": "主机集成指南",
     "La integración instala el asistente, la política Polkit y el programador en el sistema anfitrión. La aplicación no ejecuta estos comandos por ti.": "集成会在主机上安装辅助程序、Polkit 策略和计划程序。应用不会替您执行这些命令。",
     "Antes de actualizar, pausa las programaciones de todos los usuarios y espera a que terminen las tareas. Si el DEB está instalado, actualízalo con APT y no uses esta guía.": "更新前请暂停所有用户的计划并等待任务结束。如果已安装 DEB，请通过 APT 更新，不要使用此指南。",

@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
 """Prueba la guía sin ejecutar operaciones privilegiadas reales."""
 import importlib.util
+import base64
+from contextlib import nullcontext
+import fcntl
+import hashlib
+import io
+import json
 import os
 from pathlib import Path
+import stat
 import subprocess
+import sys
 import tempfile
+from types import SimpleNamespace
+from unittest import mock
 
 module = Path(__file__).resolve().parents[1] / "package/usr/lib/aio-debian-gui/aio_core/host_integration.py"
 spec = importlib.util.spec_from_file_location("host_integration", module)
@@ -82,4 +92,253 @@ esac
     calls = (root / "calls").read_text().splitlines()
     assert len(calls) == 7 and calls[-1] == "systemctl daemon-reload"
 
-print("✔ Guía de integración: comandos separados, bloqueo DEB y autorización explícita")
+    appdir = root / "mount"
+    core = appdir / "usr/lib/aio-debian-gui/aio_core"
+    core.mkdir(parents=True)
+    paths = {
+        **{name: core / name for name in integration._NAMES[:3]},
+        "aio-debian-gui-helper": appdir / "usr/lib/aio-debian-gui/aio-debian-gui-helper",
+        "es.aiodebian.gui.policy": appdir / "usr/share/polkit-1/actions/es.aiodebian.gui.policy",
+        "aio-debian-gui-maintenance@.service": appdir / "usr/lib/systemd/system/aio-debian-gui-maintenance@.service",
+    }
+    for name, path in paths.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(("resource " + name).encode())
+    module_path = core / "host_integration.py"
+    module_path.touch()
+    image = root / "image with spaces.AppImage"
+    image.touch()
+    with mock.patch.object(integration, "__file__", str(module_path)), \
+         mock.patch.dict(os.environ, {"APPDIR": str(appdir), "APPIMAGE": str(image)}):
+        resources = integration._resources("appimage", str(image))
+        for name, item in resources.items():
+            contents = base64.b64decode(item["data"])
+            assert contents == paths[name].read_bytes()
+            assert hashlib.sha256(contents).hexdigest() == item["sha256"]
+        paths["scheduler.py"].unlink()
+        paths["scheduler.py"].symlink_to("/etc/passwd")
+        try:
+            integration.install("appimage", str(image))
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError("El recurso enlazado no fue rechazado")
+        paths["scheduler.py"].unlink()
+        paths["scheduler.py"].write_bytes(b"resource scheduler.py")
+        try:
+            integration.install("appimage", str(root / "other.AppImage"))
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError("Se aceptó un AppImage distinto")
+        for invalid in (None, "relative", "/bad\0image"):
+            try:
+                integration.install("appimage", invalid)
+            except RuntimeError as exc:
+                assert "ruta absoluta" in str(exc)
+            else:
+                raise AssertionError(("Ruta aceptada", invalid))
+
+    flatpak = root / "flatpak"
+    flat_core = flatpak / "lib/aio-debian-gui/aio_core"
+    flat_shared = flatpak / "share/aio-debian-gui/host-integration"
+    flat_core.mkdir(parents=True)
+    flat_shared.mkdir(parents=True)
+    for name in integration._NAMES:
+        (flat_core if name in integration._NAMES[:3] else flat_shared).joinpath(name).write_bytes(
+            base64.b64decode(resources[name]["data"]))
+    flat_module = flat_core / "host_integration.py"
+    flat_module.touch()
+    marker = root / "flatpak-info"
+    marker.touch()
+    def fake_path(value):
+        return flatpak if value == "/app" else marker if value == "/.flatpak-info" else Path(value)
+    with mock.patch.object(integration, "__file__", str(flat_module)), \
+         mock.patch.object(integration, "Path", side_effect=fake_path):
+        assert integration._resources("flatpak", None) == resources
+
+    real_popen = subprocess.Popen
+    launched = []
+    def fake_popen(args, **kwargs):
+        launched.append(args)
+        program = ('import sys; print("READY",flush=True); '
+                   'data=sys.stdin.buffer.read(); sys.exit(0 if data else 1)')
+        return real_popen([sys.executable, "-c", program], **kwargs)
+    with mock.patch.object(integration, "_resources", return_value=resources), \
+         mock.patch.object(subprocess, "Popen", side_effect=fake_popen):
+        integration.install("flatpak")
+    assert launched[0][:5] == ["flatpak-spawn", "--host", "/usr/bin/pkexec", "/usr/bin/python3", "-I"]
+    assert launched[0][5:] == ["-c", integration._ROOT_PROGRAM]
+    def cancelled(args, **kwargs):
+        return real_popen([sys.executable, "-c", 'import sys; print("denied",file=sys.stderr); sys.exit(126)'], **kwargs)
+    with mock.patch.object(integration, "_resources", return_value=resources), \
+         mock.patch.object(subprocess, "Popen", side_effect=cancelled):
+        try:
+            integration.install("appimage", str(image))
+        except RuntimeError as exc:
+            assert "denied" in str(exc)
+        else:
+            raise AssertionError("No se notificó la cancelación")
+    sleeping = []
+    def waiting(args, **kwargs):
+        process = real_popen([sys.executable, "-c", "import time; time.sleep(60)"], **kwargs)
+        sleeping.append(process)
+        return process
+    with mock.patch.object(integration, "_resources", return_value=resources), \
+         mock.patch.object(subprocess, "Popen", side_effect=waiting), \
+         mock.patch.object(integration, "time", SimpleNamespace(monotonic=mock.Mock(side_effect=[0, 121]))):
+        try:
+            integration.install("flatpak")
+        except RuntimeError as exc:
+            assert "autorización agotado" in str(exc)
+        else:
+            raise AssertionError("No se aplicó el timeout de autorización")
+    assert sleeping[0].poll() is not None
+
+    def root_test(mode):
+        """Ejecuta el texto root contra un árbol simulado, sin pkexec ni sistema real."""
+        sandbox = root / ("host-" + mode)
+        sandbox.mkdir()
+        for path in ("var/lib/dpkg/lock", "var/lib/dpkg/lock-frontend"):
+            (sandbox / path).parent.mkdir(parents=True, exist_ok=True)
+            (sandbox / path).touch()
+        if mode != "missing-lock":
+            lock_path = sandbox / "run/aio-debian-gui/maintenance.lock"
+            lock_path.parent.mkdir(parents=True)
+            lock_path.touch(mode=0o600)
+        code = integration._ROOT_PROGRAM.rsplit("\ntry:\n    main()", 1)[0]
+        code = code.replace('os.open("/", os.O_RDONLY | os.O_DIRECTORY | NOFOLLOW)',
+                            f'os.open({str(sandbox)!r}, os.O_RDONLY | os.O_DIRECTORY | NOFOLLOW)')
+        code = code.replace('("/etc/aio-debian-gui", "/var/lib/aio-debian-gui")',
+                            repr((str(sandbox / "etc/aio-debian-gui"), str(sandbox / "var/lib/aio-debian-gui"))))
+        for path in ("/etc/systemd/system", "/run/systemd/system",
+                     "/usr/local/lib/systemd/system", "/usr/lib/systemd/system"):
+            code = code.replace('"' + path + '"', repr(str(sandbox) + path))
+        code = code.replace("basefd = directory(base)",
+                            "basefd = directory(base.removeprefix(" + repr(str(sandbox)) + "))")
+        for path in ("/var/lib/dpkg/lock-frontend", "/var/lib/dpkg/lock", "/run/aio-debian-gui/maintenance.lock"):
+            code = code.replace('lock_file("' + path + '"', "lock_file(" + repr(str(sandbox) + path))
+        code = code.replace('dir="/run/aio-debian-gui"', 'dir=' + repr(str(sandbox / "run/aio-debian-gui")))
+        namespace = {}
+        exec(compile(code, "<fixed-root-program-test>", "exec"), namespace)
+        commands = []
+
+        def fake_command(args):
+            commands.append(args)
+            if args[0].endswith("dpkg-query"):
+                if mode == "dpkg-error":
+                    return SimpleNamespace(returncode=2, stdout="", stderr="database unavailable")
+                if args[1] == "-W":
+                    text = "aio-debian-gui\tinstalled\n" if mode == "deb" else "other\tinstalled\n"
+                    return SimpleNamespace(returncode=0, stdout=text, stderr="")
+                if mode == "owned":
+                    return SimpleNamespace(returncode=0, stdout="other: " + args[-1], stderr="")
+                return SimpleNamespace(returncode=1, stdout="",
+                                       stderr="dpkg-query: no path found matching pattern " + args[-1])
+            if mode == "unit" and args[1] == "list-units":
+                return SimpleNamespace(returncode=0, stdout="aio-debian-gui-maintenance-1000.timer loaded active", stderr="")
+            if mode == "foreign-timer" and args[1] == "show":
+                return SimpleNamespace(returncode=0, stdout="Id=custom.timer\nTriggers=aio-debian-gui-maintenance@1000.service\n", stderr="")
+            if mode == "reload-error" and args[1] == "daemon-reload" and sum(
+                    cmd[1] == "daemon-reload" for cmd in commands if cmd[0].endswith("systemctl")) == 1:
+                return SimpleNamespace(returncode=1, stdout="", stderr="reload failed")
+            if args[1] == "daemon-reload":
+                assert not (sandbox / "usr/lib/aio-debian-gui/aio-debian-gui-helper").exists()
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+        namespace["command"] = fake_command
+        if mode == "stage-hash":
+            real_open = open
+            def corrupt_stage(path, access="r", *args, **kwargs):
+                if access == "rb" and ".aio-integration-" in str(path):
+                    with real_open(path, "ab") as stream:
+                        stream.write(b"alterado")
+                return real_open(path, access, *args, **kwargs)
+            namespace["open"] = corrupt_stage
+        if mode == "existing":
+            destination = sandbox / "usr/lib/aio-debian-gui/aio_core/scheduler.py"
+            destination.parent.mkdir(parents=True)
+            destination.write_text("preexisting")
+        if mode == "symlink":
+            destination = sandbox / "usr/lib/aio-debian-gui/aio_core/scheduler.py"
+            destination.parent.mkdir(parents=True)
+            destination.symlink_to(sandbox / "missing")
+        if mode == "residual":
+            (sandbox / "etc/aio-debian-gui").mkdir(parents=True)
+        if mode == "timer-file":
+            timer = sandbox / "etc/systemd/system/timers.target.wants/aio-debian-gui-maintenance-1000.timer"
+            timer.parent.mkdir(parents=True)
+            timer.symlink_to(sandbox / "missing-timer")
+        if mode == "unsafe":
+            unsafe = sandbox / "usr/lib/aio-debian-gui"
+            unsafe.mkdir(parents=True)
+            unsafe.chmod(0o777)
+        if mode == "parent-symlink":
+            parent = sandbox / "usr/lib/aio-debian-gui"
+            parent.parent.mkdir(parents=True)
+            parent.symlink_to(sandbox / "outside", target_is_directory=True)
+        held = None
+        if mode == "maintenance":
+            lock = sandbox / "run/aio-debian-gui/maintenance.lock"
+            held = lock.open("w")
+            fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        payload = json.loads(json.dumps(resources))
+        if mode == "hash":
+            payload["scheduler.py"]["sha256"] = "0" * 64
+        stdin = io.TextIOWrapper(io.BytesIO(json.dumps(payload).encode()))
+        real_fstat = os.fstat
+
+        def fake_fstat(fd):
+            values = list(real_fstat(fd))
+            values[4] = 0
+            return os.stat_result(values)
+
+        with mock.patch.object(sys, "stdin", stdin), mock.patch.object(sys, "stdout", io.StringIO()), \
+             mock.patch.object(os, "geteuid", return_value=0), mock.patch.object(os, "fstat", side_effect=fake_fstat), \
+             mock.patch("signal.signal"), \
+             (mock.patch.object(os, "link", side_effect=OSError("publicación fallida"))
+              if mode == "link-error" else nullcontext()):
+            try:
+                namespace["main"]()
+            except (OSError, ValueError, RuntimeError) as exc:
+                if mode in ("ok", "missing-lock"):
+                    raise
+                assert str(exc), mode
+            else:
+                assert mode in ("ok", "missing-lock"), mode
+            finally:
+                for fd in reversed(namespace["handles"]):
+                    os.close(fd)
+                if held:
+                    held.close()
+        targets = [sandbox / path.lstrip("/") for _, path, _ in namespace["RESOURCES"]]
+        if mode in ("ok", "missing-lock"):
+            assert all(p.is_file() for p in targets)
+            assert [name for _, name in namespace["created"]][-1] == "aio-debian-gui-helper"
+            assert stat.S_IMODE(targets[-1].stat().st_mode) == 0o755
+            assert all(path.read_bytes() == base64.b64decode(resources[name]["data"])
+                       for (name, _, _), path in zip(namespace["RESOURCES"], targets))
+            assert commands[-1][1] == "daemon-reload"
+        elif mode == "existing":
+            assert targets[1].read_text() == "preexisting"
+            assert sum(p.exists() for p in targets) == 1
+        elif mode == "symlink":
+            assert targets[1].is_symlink()
+            assert not any(p.exists() for p in targets)
+        else:
+            assert not any(p.exists() for p in targets), mode
+        if (sandbox / "run/aio-debian-gui").exists():
+            assert sorted(p.name for p in (sandbox / "run/aio-debian-gui").iterdir()) == ["maintenance.lock"]
+        if mode in ("reload-error", "link-error"):
+            assert not (sandbox / "usr/lib/aio-debian-gui").exists()
+        if mode in ("deb", "owned", "dpkg-error", "unit", "foreign-timer", "residual", "timer-file",
+                    "existing", "symlink", "parent-symlink", "hash", "stage-hash", "unsafe",
+                    "maintenance"):
+            assert not any(c[1] == "daemon-reload" for c in commands if c[0].endswith("systemctl"))
+
+    for mode in ("ok", "deb", "owned", "dpkg-error", "unit", "foreign-timer", "residual", "timer-file", "existing",
+                 "symlink", "parent-symlink", "hash", "stage-hash", "unsafe", "maintenance",
+                 "missing-lock", "reload-error", "link-error"):
+        root_test(mode)
+
+print("✔ Integración manual y automática: extracción, seguridad y reversión simuladas")

@@ -485,7 +485,7 @@ for refresh_error in (None, 'Autorización cancelada'):
         settle()
 w.destroy()
 
-# La guía muestra dos bloques independientes y no ejecuta la instalación.
+# La guía conserva los comandos manuales y solicita confirmación para automatizar.
 with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
     w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
     w.show_all()
@@ -513,8 +513,35 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
         assert Gtk.Clipboard.get(app.Gdk.SELECTION_CLIPBOARD).wait_for_text() == 'EXTRACCION'
         buttons['Copiar instalación'].clicked()
         assert Gtk.Clipboard.get(app.Gdk.SELECTION_CLIPBOARD).wait_for_text() == 'INSTALACION'
+        with patch.object(app.core_host_integration, 'install', create=True) as install, \
+             patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.CANCEL):
+            buttons['Instalar integración automáticamente'].clicked()
+            install.assert_not_called()
+            assert not w.programando
+        with patch.object(app.core_host_integration, 'install', create=True) as install, \
+             patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK):
+            buttons['Instalar integración automáticamente'].clicked()
+            deadline = time.monotonic() + 5
+            while w.programando and time.monotonic() < deadline:
+                settle()
+            assert not w.programando
+            install.assert_called_once_with('flatpak', os.environ.get('APPIMAGE'))
         generate.assert_called_once()
-        dialog.destroy()
+    with patch.object(app.core_host_integration, 'commands',
+                      return_value=('EXTRACCION', 'INSTALACION')), \
+         patch.object(app.core_host_integration, 'install', create=True,
+                      side_effect=RuntimeError('autorización rechazada')), \
+         patch.object(w, '_integracion_instalada', wraps=w._integracion_instalada) as finish, \
+         patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK):
+        w._abrir_guia_integracion()
+        dialog = next(d for d in Gtk.Window.list_toplevels()
+                      if isinstance(d, Gtk.Dialog) and d.get_title() == 'Guía de integración del anfitrión')
+        w._instalar_integracion(None, dialog, None)
+        deadline = time.monotonic() + 5
+        while w.programando and time.monotonic() < deadline:
+            settle()
+        assert not w.programando
+        assert finish.call_args.args == (None, 'autorización rechazada')
     w.destroy()
 
     # La terminal ejecuta Fastfetch una vez y conserva una sesión interactiva real.

@@ -157,7 +157,7 @@ class ControladorProgramacion:
     def _programacion_cargada(self, dialogo, datos, error, cargar_formulario=True):
         contexto = self.ventana._contexto_programacion()
         traducir, PASOS = contexto["traducir"], contexto["pasos"]
-        if self.ventana_programacion is not dialogo:
+        if self.ventana_programacion is not dialogo or self.ventana.programando:
             return GLib.SOURCE_REMOVE
         w = self.programacion_widgets
         disponible = not error and datos.get("available", False) and datos.get("version") == core_scheduler.VERSION

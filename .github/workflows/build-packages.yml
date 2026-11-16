@@ -43,6 +43,11 @@ jobs:
       - name: Build DEB
         run: ./scripts/build-deb.sh
 
+      - name: Test initial host integration on systemd
+        env:
+          AIO_HOST_INTEGRATION_TEST: '1'
+        run: python3 scripts/test-host-integration-systemd.py
+
       - name: Test scheduled maintenance with systemd
         env:
           AIO_SYSTEMD_INTEGRATION: '1'
