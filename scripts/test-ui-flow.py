@@ -547,10 +547,10 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
         assert finish.call_args.args == (None, 'autorización rechazada')
     w.destroy()
 
-    # La terminal ejecuta Fastfetch una vez y conserva una sesión interactiva real.
+    # La terminal abre Bash sin ejecutar Fastfetch y conserva los accesos manuales.
     with tempfile.TemporaryDirectory() as directory:
         fastfetch = Path(directory) / 'fastfetch'
-        fastfetch.write_text('#!/bin/sh\nprintf "AIO_FASTFETCH_TEST\\n"\n')
+        fastfetch.write_text('#!/bin/sh\nprintf "run\\n" >> "' + directory + '/fastfetch-runs"\nprintf "AIO_FASTFETCH_TEST\\n"\n')
         fastfetch.chmod(0o755)
         nautilus = Path(directory) / 'nautilus'
         nautilus.write_text('#!/bin/sh\nprintf "%s" "$1" > "' + directory + '/nautilus-arg"\n')
@@ -559,7 +559,12 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
             w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
             w.show_all()
             w._escribir('AIO_LOG_BEFORE_OPEN\n')
-            w.btn_ver_terminal.clicked()
+            with patch.object(w, '_terminal_iniciada', wraps=w._terminal_iniciada) as started:
+                w.btn_ver_terminal.clicked()
+                deadline = time.monotonic() + 8
+                while not started.called and time.monotonic() < deadline:
+                    settle()
+                assert started.called and started.call_args.args[2] is None
             assert w.notebook.get_current_page() == 3
 
             def terminal_contains(text):
@@ -579,7 +584,9 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
                     settle()
                 assert w.terminal_buttons[name].get_sensitive()
 
-            assert terminal_contains('AIO_FASTFETCH_TEST')
+            w.terminal.feed_child(b"printf '%s%s\\n' AIO_SHELL_ READY\n")
+            assert terminal_contains('AIO_SHELL_READY')
+            assert not (Path(directory) / 'fastfetch-runs').exists()
             assert terminal_contains('AIO_LOG_BEFORE_OPEN')
             w._escribir('AIO_LOG_LIVE\n', 'error')
             assert terminal_contains('AIO_LOG_LIVE')
@@ -600,6 +607,7 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
             w.terminal_buttons['fastfetch'].clicked()
             wait_button('fastfetch')
             assert terminal_contains('AIO_FASTFETCH_TEST')
+            assert (Path(directory) / 'fastfetch-runs').read_text() == 'run\n'
             w.terminal.feed_child(b'INPUT_OK\n')
             assert terminal_contains('AIO_PENDING_INPUT_OK')
             w.terminal_buttons['nautilus'].clicked()
@@ -639,6 +647,9 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
                     settle()
                 assert started.called and w.terminal_started
                 assert started.call_args.args[2] is None
+            w.terminal.feed_child(b"printf '%s%s\\n' AIO_RESTART_ READY\n")
+            assert terminal_contains('AIO_RESTART_READY')
+            assert (Path(directory) / 'fastfetch-runs').read_text() == 'run\n'
             w.terminal.feed_child(b'exit\n')
             deadline = time.monotonic() + 8
             while w.terminal_started and time.monotonic() < deadline:
@@ -649,8 +660,12 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
 with patch.dict(os.environ, {'PATH': '/nonexistent'}):
     w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
     w.show_all()
-    w.notebook.set_current_page(3)
-    assert terminal_contains('Fastfetch no está instalado')
+    with patch.object(w, '_terminal_iniciada', wraps=w._terminal_iniciada) as started:
+        w.notebook.set_current_page(3)
+        deadline = time.monotonic() + 8
+        while not started.called and time.monotonic() < deadline:
+            settle()
+        assert started.called and started.call_args.args[2] is None
     w.terminal.feed_child(b"printf '%s%s\\n' AIO_MISSING_ FASTFETCH_OK\n")
     assert terminal_contains('AIO_MISSING_FASTFETCH_OK')
     w.terminal.feed_child(b'exit\n')
@@ -666,8 +681,7 @@ fake_window.terminal_started = False
 with patch.object(app, 'es_flatpak', return_value=True):
     app.VentanaPrincipal._iniciar_terminal(fake_window)
 argv = fake_window.terminal.spawn_async.call_args.args[2]
-assert argv[:4] == ['flatpak-spawn', '--host', '/bin/bash', '-c']
-assert 'fastfetch' in argv[4] and 'exec /bin/bash -i' in argv[4]
+assert argv == ['flatpak-spawn', '--host', '/bin/bash', '-i']
 error = Mock(message='spawn failed')
 app.VentanaPrincipal._terminal_iniciada(fake_window, None, -1, error, None)
 assert not fake_window.terminal_started

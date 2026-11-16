@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.10.6
+
+- La terminal inicia Bash sin ejecutar Fastfetch automáticamente; el botón de Fastfetch sigue disponible.
+
 ## 2.10.5
 
 - Vuelve a activar `autoremove` por defecto, conservando `libnotify-bin` y `needrestart` en su simulación y ejecución para que la programación de AppImage y Flatpak siga funcionando.
