@@ -42,6 +42,7 @@ python3 scripts/test-install-format.py && bien "detección de formato DEB/AppIma
 python3 scripts/test-system-logo.py && bien "logotipos dinámicos Debian/Ubuntu" || fallo "pruebas de logotipos"
 bash scripts/test-nvidia.sh && bien "detección NVIDIA e híbrida" || fallo "pruebas NVIDIA"
 bash scripts/test-backports-rollback.sh && bien "reversión Backports segura" || fallo "pruebas de reversión Backports"
+bash scripts/test-backup-apps.sh && bien "instalación segura de aplicaciones de backup" || fallo "pruebas de aplicaciones de backup"
 
 if python3 -c 'import gi; gi.require_version("Gtk", "3.0")' >/dev/null 2>&1; then
     python3 scripts/test-preferences.py "$GUI" &&

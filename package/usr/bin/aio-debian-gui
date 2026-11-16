@@ -66,6 +66,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.7.9": "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.",
     "2.7.8": "Guía integrada para instalar o actualizar el asistente del anfitrión.",
     "2.7.7": "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.",
     "2.7.6": "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.",
@@ -551,6 +552,7 @@ TRADUCCIONES = {
 
 # Textos del actualizador integrados con las traducciones existentes.
 TRADUCCIONES["en"].update({
+    "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.": "New Backup tab to open Timeshift or install it with authorization.",
     "Guía integrada para instalar o actualizar el asistente del anfitrión.": "Built-in guide to install or update the host helper.",
     "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.": "Diagnostics refresh APT indexes with authorization before checking the system.",
     "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.": "More complete APT update diagnostics and a warning about local indexes.",
@@ -564,6 +566,7 @@ TRADUCCIONES["en"].update({
     "No se pudo actualizar": "Unable to update",
 })
 TRADUCCIONES["fr"].update({
+    "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.": "Nouvel onglet Sauvegarde pour ouvrir Timeshift ou l’installer avec autorisation.",
     "Guía integrada para instalar o actualizar el asistente del anfitrión.": "Guide intégré pour installer ou mettre à jour l’assistant de l’hôte.",
     "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.": "Le diagnostic actualise les index APT avec autorisation avant de vérifier le système.",
     "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.": "Diagnostic des mises à jour APT plus complet et avertissement sur les index locaux.",
@@ -577,6 +580,7 @@ TRADUCCIONES["fr"].update({
     "No se pudo actualizar": "Mise à jour impossible",
 })
 TRADUCCIONES["zh"].update({
+    "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.": "新增备份选项卡，可打开 Timeshift 或经授权安装。",
     "Guía integrada para instalar o actualizar el asistente del anfitrión.": "内置指南可帮助安装或更新主机辅助程序。",
     "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.": "诊断会在检查系统前经授权刷新 APT 索引。",
     "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.": "更全面地诊断 APT 更新并提示本地索引问题。",
@@ -872,6 +876,73 @@ TRADUCCIONES["zh"].update({
     "Instalada: %s. Al día según los índices APT locales.": "已安装：%s。根据本地 APT 索引已是最新。",
     "No hay versión candidata en los índices APT.": "APT 索引中没有候选版本。",
     "2.0.9 — Traducciones completas para los paneles y el diagnóstico preventivo.": "2.0.9 — 完善面板和预防性诊断的翻译。",
+})
+
+TRADUCCIONES["en"].update({
+    "Configuración y mantenimiento": "Configuration and maintenance",
+    "Backup": "Backup",
+    "Copias de seguridad": "Backup applications",
+    "Timeshift y Respaldos permiten crear copias de seguridad. Cada aplicación gestiona su propia configuración y operaciones.": "Timeshift and Backups create backups. Each application manages its own settings and operations.",
+    "Abrir Timeshift": "Open Timeshift",
+    "Abrir Respaldos (Déjà Dup)": "Open Backups (Déjà Dup)",
+    "Timeshift no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.": "Timeshift is not installed. Install it from the configured APT repositories? Administrator authorization will be requested.",
+    "Respaldos (Déjà Dup) no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.": "Backups (Déjà Dup) is not installed. Install it from the configured APT repositories? Administrator authorization will be requested.",
+    "Comprobando si %s está instalado…": "Checking whether %s is installed…",
+    "Instalando %s; se solicitará autorización de administrador…": "Installing %s; administrator authorization will be requested…",
+    "Abriendo %s…": "Opening %s…",
+    "%s se ha abierto.": "%s opened.",
+    "No se pudo abrir %s: %s": "Could not open %s: %s",
+    "No se pudo instalar %s: %s": "Could not install %s: %s",
+    "No se pudo comprobar %s": "Could not check %s",
+    "Operación en curso": "Operation in progress",
+    "Espera a que termine la acción de backup antes de cerrar la ventana.": "Wait for the backup action to finish before closing the window.",
+    "No se encuentra el asistente actualizado en el anfitrión. Instala la integración desde su guía y vuelve a intentarlo.": "The current host helper was not found. Install the integration using its guide and try again.",
+    "Instalar": "Install",
+    "La aplicación todavía no está instalada.": "The application is not installed yet.",
+})
+TRADUCCIONES["fr"].update({
+    "Configuración y mantenimiento": "Configuration et maintenance",
+    "Backup": "Sauvegarde",
+    "Copias de seguridad": "Applications de sauvegarde",
+    "Timeshift y Respaldos permiten crear copias de seguridad. Cada aplicación gestiona su propia configuración y operaciones.": "Timeshift et Sauvegardes permettent de créer des sauvegardes. Chaque application gère ses propres paramètres et opérations.",
+    "Abrir Timeshift": "Ouvrir Timeshift",
+    "Abrir Respaldos (Déjà Dup)": "Ouvrir Sauvegardes (Déjà Dup)",
+    "Timeshift no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.": "Timeshift n’est pas installé. Voulez-vous l’installer depuis les dépôts APT configurés ? Une autorisation administrateur sera demandée.",
+    "Respaldos (Déjà Dup) no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.": "Sauvegardes (Déjà Dup) n’est pas installé. Voulez-vous l’installer depuis les dépôts APT configurés ? Une autorisation administrateur sera demandée.",
+    "Comprobando si %s está instalado…": "Vérification de l’installation de %s…",
+    "Instalando %s; se solicitará autorización de administrador…": "Installation de %s ; une autorisation administrateur sera demandée…",
+    "Abriendo %s…": "Ouverture de %s…",
+    "%s se ha abierto.": "%s est ouvert.",
+    "No se pudo abrir %s: %s": "Impossible d’ouvrir %s : %s",
+    "No se pudo instalar %s: %s": "Impossible d’installer %s : %s",
+    "No se pudo comprobar %s": "Impossible de vérifier %s",
+    "Operación en curso": "Opération en cours",
+    "Espera a que termine la acción de backup antes de cerrar la ventana.": "Attendez la fin de la sauvegarde avant de fermer la fenêtre.",
+    "No se encuentra el asistente actualizado en el anfitrión. Instala la integración desde su guía y vuelve a intentarlo.": "L’assistant à jour est introuvable sur l’hôte. Installez l’intégration avec son guide, puis réessayez.",
+    "Instalar": "Installer",
+    "La aplicación todavía no está instalada.": "L’application n’est pas encore installée.",
+})
+TRADUCCIONES["zh"].update({
+    "Configuración y mantenimiento": "配置与维护",
+    "Backup": "备份",
+    "Copias de seguridad": "备份应用",
+    "Timeshift y Respaldos permiten crear copias de seguridad. Cada aplicación gestiona su propia configuración y operaciones.": "Timeshift 和备份应用可创建备份。每个应用分别管理自己的配置和操作。",
+    "Abrir Timeshift": "打开 Timeshift",
+    "Abrir Respaldos (Déjà Dup)": "打开备份（Déjà Dup）",
+    "Timeshift no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.": "尚未安装 Timeshift。要从已配置的 APT 软件源安装吗？安装时会请求管理员授权。",
+    "Respaldos (Déjà Dup) no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.": "尚未安装备份（Déjà Dup）。要从已配置的 APT 软件源安装吗？安装时会请求管理员授权。",
+    "Comprobando si %s está instalado…": "正在检查是否已安装 %s…",
+    "Instalando %s; se solicitará autorización de administrador…": "正在安装 %s；将请求管理员授权…",
+    "Abriendo %s…": "正在打开 %s…",
+    "%s se ha abierto.": "已打开 %s。",
+    "No se pudo abrir %s: %s": "无法打开 %s：%s",
+    "No se pudo instalar %s: %s": "无法安装 %s：%s",
+    "No se pudo comprobar %s": "无法检查 %s",
+    "Operación en curso": "操作正在进行",
+    "Espera a que termine la acción de backup antes de cerrar la ventana.": "请等待备份操作完成后再关闭窗口。",
+    "No se encuentra el asistente actualizado en el anfitrión. Instala la integración desde su guía y vuelve a intentarlo.": "未找到主机上的当前版本辅助程序。请使用集成指南安装后重试。",
+    "Instalar": "安装",
+    "La aplicación todavía no está instalada.": "应用尚未安装。",
 })
 
 TRADUCCIONES["en"].update({
@@ -1571,6 +1642,24 @@ def version_app():
 # Los AppImage se descargan como archivo nuevo, sin sustituir el ejecutable activo.
 # El Flatpak siempre se actualiza desde su repositorio firmado en el anfitrión.
 APP_ID_FLATPAK = "io.github.julioayusoalende_hue.aio_debian_gui"
+APLICACIONES_BACKUP = {
+    "timeshift": {
+        "name": "Timeshift",
+        "package": "timeshift",
+        "command": "timeshift-launcher",
+        "icon": "timeshift",
+        "fallback_icon": "drive-harddisk",
+        "prompt": "Timeshift no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.",
+    },
+    "deja-dup": {
+        "name": "Respaldos (Déjà Dup)",
+        "package": "deja-dup",
+        "command": "deja-dup",
+        "icon": "org.gnome.DejaDup",
+        "fallback_icon": "document-save",
+        "prompt": "Respaldos (Déjà Dup) no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.",
+    },
+}
 RELEASE_API = HOMEPAGE.replace("https://github.com/", "https://api.github.com/repos/") + "/releases/latest"
 MAX_APPIMAGE_SIZE = 256 * 1024 * 1024
 
@@ -1911,6 +2000,8 @@ class VentanaPrincipal(Gtk.Window):
         self.nvidia_secureboot = "desconocido"
         self.salida_estados = []
         self.comprobando_actualizacion = False
+        self.backup_action_in_progress = False
+        self.backup_buttons = {}
         self.programando = False
         self.ventana_programacion = None
         self.diagnostico_en_curso = False
@@ -2677,7 +2768,37 @@ class VentanaPrincipal(Gtk.Window):
         # Cada columna puede desplazarse independientemente sin tapar los
         # controles de ejecución ni la consola de la parte inferior.
         principal = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        self.add(principal)
+        notebook = Gtk.Notebook()
+        notebook.set_tab_pos(Gtk.PositionType.TOP)
+        notebook.set_scrollable(True)
+        self.notebook = notebook
+        self.add(notebook)
+        notebook.append_page(principal, Gtk.Label(label=traducir("Configuración y mantenimiento")))
+        backup = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+        backup.set_border_width(24)
+        backup.set_valign(Gtk.Align.START)
+        backup.pack_start(etiqueta("Copias de seguridad", markup=True), False, False, 0)
+        backup.pack_start(etiqueta(
+            "Timeshift y Respaldos permiten crear copias de seguridad. Cada aplicación gestiona su propia configuración y operaciones."
+        ), False, False, 0)
+        for app_id, app in APLICACIONES_BACKUP.items():
+            fila = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+            imagen = self._icono_aplicacion_backup(app, fallback=True)
+            imagen.set_pixel_size(48)
+            fila.pack_start(imagen, False, False, 0)
+            boton = Gtk.Button(label=traducir("Abrir " + app["name"]))
+            boton.set_image(self._icono_aplicacion_backup(app, fallback=False))
+            boton.set_always_show_image(True)
+            boton.set_image_position(Gtk.PositionType.LEFT)
+            boton.set_size_request(280, 64)
+            boton.set_hexpand(True)
+            boton.connect("clicked", self._accion_backup, app_id)
+            fila.pack_start(boton, True, False, 0)
+            backup.pack_start(fila, False, False, 0)
+            self.backup_buttons[app_id] = boton
+        self.backup_status = etiqueta("")
+        backup.pack_start(self.backup_status, False, False, 0)
+        notebook.append_page(backup, Gtk.Label(label=traducir("Backup")))
         paneles = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         paneles.set_hexpand(True)
         paneles.set_vexpand(True)
@@ -2748,6 +2869,133 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_iniciar.connect("clicked", self._iniciar)
         acciones_caja.pack_end(self.btn_iniciar, False, False, 0)
         inf.pack_start(acciones, False, False, 0)
+
+    @staticmethod
+    def _icono_aplicacion_backup(app, fallback=False):
+        theme = Gtk.IconTheme.get_default()
+        icon = app["fallback_icon"] if fallback and not theme.has_icon(app["icon"]) else app["icon"]
+        if not theme.has_icon(icon):
+            icon = "application-x-executable"
+        return Gtk.Image.new_from_icon_name(icon, Gtk.IconSize.DIALOG)
+
+    def _accion_backup(self, _boton, app_id):
+        if (app_id not in APLICACIONES_BACKUP or self.backup_action_in_progress
+                or self.en_curso or self.diagnostico_en_curso or self.comprobando_actualizacion
+                or self.programando):
+            return
+        self.backup_action_in_progress = True
+        app = APLICACIONES_BACKUP[app_id]
+        self.backup_status.set_text(traducir("Comprobando si %s está instalado…") % app["name"])
+        self._actualizar_sensibilidad()
+
+        def comprobar():
+            try:
+                proc = subprocess.run(
+                    comando_host("dpkg-query", "-W", "-f=${db:Status-Status}", app["package"]),
+                    capture_output=True, text=True, timeout=15,
+                    env={**os.environ, "LC_ALL": "C"},
+                )
+                if proc.returncode == 0:
+                    accion = "open" if proc.stdout.strip() == "installed" else "install"
+                    error = None
+                elif "no packages found matching" in (proc.stderr + proc.stdout).lower():
+                    accion, error = "install", None
+                else:
+                    accion, error = None, (proc.stderr or proc.stdout or "dpkg-query falló.").strip()[-1000:]
+            except (OSError, subprocess.SubprocessError) as exc:
+                accion, error = None, str(exc)
+            GLib.idle_add(self._backup_comprobado, app_id, accion, error)
+        threading.Thread(target=comprobar, daemon=True).start()
+
+    def _backup_comprobado(self, app_id, accion, error):
+        self.backup_action_in_progress = False
+        self._actualizar_sensibilidad()
+        app = APLICACIONES_BACKUP[app_id]
+        if error:
+            self.backup_status.set_text(traducir("No se pudo abrir %s: %s") % (app["name"], error))
+            self._mensaje(Gtk.MessageType.ERROR, "No se pudo comprobar %s" % app["name"], error)
+        elif accion == "open":
+            self._abrir_aplicacion_backup(app_id)
+        elif accion == "install":
+            dialogo = Gtk.MessageDialog(
+                transient_for=self, modal=True, message_type=Gtk.MessageType.QUESTION,
+                buttons=Gtk.ButtonsType.NONE, text=traducir(app["prompt"]),
+            )
+            dialogo.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
+            dialogo.add_button(traducir("Instalar"), Gtk.ResponseType.OK)
+            dialogo.set_default_response(Gtk.ResponseType.CANCEL)
+            instalar = dialogo.run() == Gtk.ResponseType.OK
+            dialogo.destroy()
+            if instalar:
+                self._instalar_aplicacion_backup(app_id)
+            else:
+                self.backup_status.set_text(traducir("La aplicación todavía no está instalada."))
+        else:
+            self.backup_status.set_text(traducir("No se pudo abrir %s: %s") % (app["name"], "resultado inesperado"))
+        return GLib.SOURCE_REMOVE
+
+    def _instalar_aplicacion_backup(self, app_id):
+        if self.backup_action_in_progress:
+            return
+        app = APLICACIONES_BACKUP[app_id]
+        self.backup_action_in_progress = True
+        self.backup_status.set_text(traducir("Instalando %s; se solicitará autorización de administrador…") % app["name"])
+        self._actualizar_sensibilidad()
+
+        def instalar():
+            error = None
+            requiere_integracion = False
+            try:
+                helper = helper_mantenimiento()
+                if not helper_disponible(helper):
+                    requiere_integracion = es_flatpak()
+                    if not requiere_integracion:
+                        raise RuntimeError("No se encuentra el asistente de mantenimiento.")
+                elif es_flatpak():
+                    version = subprocess.run(
+                        comando_host(HELPER_SISTEMA, "--version"),
+                        capture_output=True, text=True, timeout=10,
+                    )
+                    if version.returncode or version.stdout.strip() != version_app():
+                        requiere_integracion = True
+                if not requiere_integracion:
+                    proc = subprocess.run(
+                        comando_pkexec(helper, "C.UTF-8", "--backup-install", app_id),
+                        capture_output=True, text=True, timeout=600,
+                    )
+                    marcador = f"##BACKUP:installed:{app_id}"
+                    if proc.returncode or marcador not in proc.stdout.splitlines():
+                        error = (proc.stderr or proc.stdout or "El asistente no confirmó la instalación.").strip()[-1600:]
+            except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
+                error = str(exc)
+            GLib.idle_add(self._backup_instalado, app_id, error, requiere_integracion)
+        threading.Thread(target=instalar, daemon=True).start()
+
+    def _backup_instalado(self, app_id, error, requiere_integracion):
+        self.backup_action_in_progress = False
+        self._actualizar_sensibilidad()
+        app = APLICACIONES_BACKUP[app_id]
+        if requiere_integracion:
+            self.backup_status.set_text(traducir(
+                "No se encuentra el asistente actualizado en el anfitrión. Instala la integración desde su guía y vuelve a intentarlo."
+            ))
+            self._abrir_guia_integracion()
+        elif error:
+            self.backup_status.set_text(traducir("No se pudo instalar %s: %s") % (app["name"], error))
+            self._mensaje(Gtk.MessageType.ERROR, "No se pudo instalar %s" % app["name"], error)
+        else:
+            self._abrir_aplicacion_backup(app_id)
+        return GLib.SOURCE_REMOVE
+
+    def _abrir_aplicacion_backup(self, app_id):
+        app = APLICACIONES_BACKUP[app_id]
+        self.backup_status.set_text(traducir("Abriendo %s…") % app["name"])
+        try:
+            Gio.Subprocess.new(comando_host(app["command"]), Gio.SubprocessFlags.NONE)
+        except GLib.Error as exc:
+            self.backup_status.set_text(traducir("No se pudo abrir %s: %s") % (app["name"], exc.message))
+            return
+        self.backup_status.set_text(traducir("%s se ha abierto.") % app["name"])
         self.resumen_ejecucion = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
         self.scroll_resultados = Gtk.ScrolledWindow()
         self.scroll_resultados.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
@@ -3377,7 +3625,9 @@ class VentanaPrincipal(Gtk.Window):
         self._escribir("[!] %s\n" % mensaje, "aviso")
 
     def _actualizar_sensibilidad(self):
-        disponible = not self.en_curso and not self.comprobando_actualizacion and not self.programando and not self.diagnostico_en_curso and self.distribucion != "no-soportada"
+        disponible = (not self.en_curso and not self.comprobando_actualizacion and not self.programando
+                     and not self.diagnostico_en_curso and not self.backup_action_in_progress
+                     and self.distribucion != "no-soportada")
         self._actualizar_seleccion()
         self.btn_iniciar.set_sensitive(disponible and not self.consultando_estados and bool(self._pasos_seleccionados()))
         if self.btn_actualizar is not None:
@@ -3389,7 +3639,8 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_programar.set_sensitive(disponible)
         self.btn_borrar.set_sensitive(not self.en_curso)
         self.btn_diagnostico.set_sensitive(not self.en_curso and not self.diagnostico_en_curso
-                                           and not self.comprobando_actualizacion and not self.programando)
+                                           and not self.comprobando_actualizacion and not self.programando
+                                           and not self.backup_action_in_progress)
         if self.btn_actualizar_diagnostico is not None:
             self.btn_actualizar_diagnostico.set_sensitive(
                 not self.en_curso and not self.comprobando_actualizacion)
@@ -3403,6 +3654,11 @@ class VentanaPrincipal(Gtk.Window):
                          and (not reversion_activa or pid == "revertir-backports"))
             fila.set_sensitive(habilitada)
             self.switches[pid][0].set_sensitive(habilitada)
+        for boton in self.backup_buttons.values():
+            boton.set_sensitive(not self.en_curso and not self.programando
+                                and not self.comprobando_actualizacion
+                                and not self.diagnostico_en_curso
+                                and not self.backup_action_in_progress)
 
     def _visible(self, pid):
         if pid in ("backports-kernel-mesa", "revertir-backports"):
@@ -4279,13 +4535,24 @@ class VentanaPrincipal(Gtk.Window):
         if self.programando:
             self._mensaje(Gtk.MessageType.INFO, "Programar mantenimiento", "Espera a que termine de guardar la programación.")
             return True
-        if not self.en_curso and not self.comprobando_actualizacion and not self.programando:
+        if not any((self.en_curso, self.comprobando_actualizacion,
+                    self.programando, self.diagnostico_en_curso,
+                    self.backup_action_in_progress)):
             return False
-        self._mensaje(
-            Gtk.MessageType.WARNING, "Mantenimiento en curso",
-            "Espera a que termine: interrumpir apt o dpkg a mitad puede dejar el sistema "
-            "en un estado inconsistente.",
-        )
+        if self.backup_action_in_progress and not any((
+            self.en_curso, self.comprobando_actualizacion,
+            self.programando, self.diagnostico_en_curso,
+        )):
+            self._mensaje(
+                Gtk.MessageType.INFO, "Operación en curso",
+                "Espera a que termine la acción de backup antes de cerrar la ventana.",
+            )
+        else:
+            self._mensaje(
+                Gtk.MessageType.WARNING, "Mantenimiento en curso",
+                "Espera a que termine: interrumpir apt o dpkg a mitad puede dejar el sistema "
+                "en un estado inconsistente.",
+            )
         return True  # impide cerrar
 
 

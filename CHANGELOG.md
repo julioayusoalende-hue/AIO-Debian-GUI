@@ -1,5 +1,11 @@
 # Cambios
 
+## 2.7.9
+
+- Añade una pestaña «Backup» con accesos a Timeshift y Respaldos (Déjà Dup).
+- Si una aplicación no está instalada, permite solicitar su instalación desde los repositorios APT tras confirmación explícita y autorización de administrador.
+- Deshabilita los controles durante las operaciones y evita cerrar la ventana mientras haya una acción en curso.
+
 ## 2.7.8
 
 - Guía en la interfaz para instalar o actualizar la integración del anfitrión en Flatpak y AppImage.

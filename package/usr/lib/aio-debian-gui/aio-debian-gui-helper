@@ -33,7 +33,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 LISTAS_ACTUALIZADAS=0
 UPGRADE_PLAN=""
 REINICIO_REQUERIDO=0
-HELPER_VERSION=2.7.8
+HELPER_VERSION=2.7.9
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -275,6 +275,31 @@ deshabilitar_sin_contrasena() {
 
 paquete_instalado() {
     dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q "install ok installed"
+}
+
+instalar_aplicacion_backup() {
+    local identificador paquete
+    identificador="$1"
+    case "$identificador" in
+        timeshift) paquete=timeshift ;;
+        deja-dup) paquete=deja-dup ;;
+        *) err "Aplicación de copia no permitida."; return 2 ;;
+    esac
+    if paquete_instalado "$paquete"; then
+        echo "##BACKUP:installed:$identificador"
+        return 0
+    fi
+    asegurar_listas || return 1
+    info "Instalando $paquete desde los repositorios APT configurados..."
+    if ! apt-get "${APT_OPTS[@]}" --no-remove install "$paquete"; then
+        err "No se pudo instalar $paquete."
+        return 1
+    fi
+    if ! paquete_instalado "$paquete"; then
+        err "APT terminó, pero no se pudo confirmar la instalación de $paquete."
+        return 1
+    fi
+    echo "##BACKUP:installed:$identificador"
 }
 
 asegurar_listas() {
@@ -1340,6 +1365,11 @@ main() {
             fi
             ok "Comprobación y actualización del paquete DEB completadas."
             exit 0
+            ;;
+        --backup-install)
+            [ "$#" -eq 2 ] || { err "Uso: $0 [--lang LOCALE] --backup-install timeshift|deja-dup"; exit 2; }
+            instalar_aplicacion_backup "$2"
+            exit $?
             ;;
         --enable-passwordless)
             [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --enable-passwordless"; exit 2; }

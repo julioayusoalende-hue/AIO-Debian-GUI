@@ -31,6 +31,15 @@ for language in ('es', 'en', 'fr', 'zh'):
     w = app.VentanaPrincipal({'idioma': language, 'tema': 'claro', 'modo_simple': False})
     w.show_all()
     settle()
+    assert w.notebook.get_n_pages() == 2
+    assert [w.notebook.get_tab_label_text(w.notebook.get_nth_page(i))
+            for i in range(2)] == [
+                app.traducir('Configuración y mantenimiento'), app.traducir('Backup')
+            ]
+    assert set(w.backup_buttons) == {'timeshift', 'deja-dup'}
+    assert all(button.get_image() is not None for button in w.backup_buttons.values())
+    if language != 'es':
+        assert app.traducir('Operación en curso') != 'Operación en curso'
     assert not w.detalles_sistema.get_expanded()
     assert not w.expansor_consola.get_expanded()
     assert not w.grupos_tareas[-1].get_expanded()
@@ -127,6 +136,52 @@ for language in ('es', 'en', 'fr', 'zh'):
             shot.savev(str(directory / f'ui-{width}.png'), 'png', [], [])
     w.destroy()
     settle()
+
+# Backup: abrir aplicaciones presentes, pedir confirmación para instalar las ausentes,
+# mantener los controles ocupados durante la detección y no bloquear el cierre en reposo.
+w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+w.show_all()
+settle()
+
+class ImmediateThread:
+    def __init__(self, target, daemon=False):
+        self.target = target
+
+    def start(self):
+        self.target()
+
+with patch.object(w, '_mensaje') as message:
+    assert not w._al_cerrar()
+    w.backup_action_in_progress = True
+    assert w._al_cerrar()
+    message.assert_called_once()
+    w.backup_action_in_progress = False
+
+for app_id, definition in app.APLICACIONES_BACKUP.items():
+    installed = app.subprocess.CompletedProcess([], 0, stdout='installed', stderr='')
+    with patch.object(app.subprocess, 'run', return_value=installed), \
+         patch.object(app.threading, 'Thread', ImmediateThread), \
+         patch.object(app.Gio.Subprocess, 'new') as launch:
+        w._accion_backup(w.backup_buttons[app_id], app_id)
+        assert not w.backup_buttons[app_id].get_sensitive()
+        settle()
+        launch.assert_called_once_with(app.comando_host(definition['command']),
+                                      app.Gio.SubprocessFlags.NONE)
+
+    missing = app.subprocess.CompletedProcess(
+        [], 1, stdout='', stderr='dpkg-query: no packages found matching ' + definition['package']
+    )
+    with patch.object(app.subprocess, 'run', return_value=missing), \
+         patch.object(app.threading, 'Thread', ImmediateThread), \
+         patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK), \
+         patch.object(w, '_instalar_aplicacion_backup') as install:
+        w._accion_backup(w.backup_buttons[app_id], app_id)
+        settle()
+        install.assert_called_once_with(app_id)
+
+w.destroy()
+settle()
+
 w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': True})
 w.show_all()
 settle()
