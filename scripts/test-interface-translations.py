@@ -75,6 +75,7 @@ essential = (
     "Fastfetch no está instalado; instala fastfetch para mostrar la información del sistema.",
     "Instalado", "No se pudo comprobar el estado de algunas aplicaciones.",
     "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.",
+    "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.",
     "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.",
     "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.",
     "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.",

@@ -56,6 +56,7 @@ install -m 644 package/usr/share/aio-debian-gui/adri-y-lu.jpg \
 mkdir -p "$APPDIR/usr/share/aio-debian-gui/recommended-icons"
 install -m 644 package/usr/share/aio-debian-gui/recommended-icons/*.png \
     "$APPDIR/usr/share/aio-debian-gui/recommended-icons/"
+cp -a package/usr/share/aio-debian-gui/backup-icons "$APPDIR/usr/share/aio-debian-gui/"
 install -m 644 package/usr/share/doc/aio-debian-gui/copyright \
     "$APPDIR/usr/share/doc/aio-debian-gui/copyright"
 install -m 644 package/usr/share/polkit-1/actions/es.aiodebian.gui.policy \

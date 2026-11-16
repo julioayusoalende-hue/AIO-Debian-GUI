@@ -11,7 +11,7 @@ finish-args:
   - --socket=fallback-x11
   - --talk-name=org.freedesktop.Flatpak
   # Required only for flatpak-spawn --host; does not grant root privileges.
-  - --env=AIO_DEBIAN_GUI_VERSION=2.10.0
+  - --env=AIO_DEBIAN_GUI_VERSION=2.10.1
 modules:
   - name: vte-gtk3
     buildsystem: meson
@@ -40,6 +40,7 @@ modules:
       - install -D -m 644 package/usr/share/aio-debian-gui/adri-y-lu.jpg /app/share/aio-debian-gui/adri-y-lu.jpg
       - mkdir -p /app/share/aio-debian-gui/recommended-icons
       - install -m 644 package/usr/share/aio-debian-gui/recommended-icons/*.png /app/share/aio-debian-gui/recommended-icons/
+      - cp -a package/usr/share/aio-debian-gui/backup-icons /app/share/aio-debian-gui/
       - install -D -m 644 package/usr/share/applications/aio-debian-gui.desktop /app/share/applications/io.github.julioayusoalende_hue.aio_debian_gui.desktop
       - sed -i 's/^Icon=aio-debian-gui$/Icon=io.github.julioayusoalende_hue.aio_debian_gui/' /app/share/applications/io.github.julioayusoalende_hue.aio_debian_gui.desktop
       - install -D -m 644 flatpak/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml /app/share/metainfo/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml

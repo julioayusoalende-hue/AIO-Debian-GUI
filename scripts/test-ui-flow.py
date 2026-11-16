@@ -45,6 +45,10 @@ for language in ('es', 'en', 'fr', 'zh'):
     assert set(w.backup_buttons) == {'timeshift', 'deja-dup'}
     assert all(button.get_image() is not None for button in w.backup_buttons.values())
     for app_id, button in w.backup_buttons.items():
+        image = button.get_image()
+        assert image.get_storage_type() == Gtk.ImageType.PIXBUF
+        pixbuf = image.get_pixbuf()
+        assert max(pixbuf.get_width(), pixbuf.get_height()) == 48
         row = button.get_parent()
         assert row.get_orientation() == Gtk.Orientation.VERTICAL
         assert len(row.get_children()) == 2
@@ -71,11 +75,10 @@ for language in ('es', 'en', 'fr', 'zh'):
         header = contents[0].get_children()
         assert isinstance(header[0], Gtk.Image)
         assert header[1].get_text() == name
-        if app.APPS_RECOMENDADAS[index]['id'] in ('celluloid', 'gimp', 'spotify', 'vlc'):
-            image = header[0]
-            assert image.get_storage_type() == Gtk.ImageType.PIXBUF
-            pixbuf = image.get_pixbuf()
-            assert max(pixbuf.get_width(), pixbuf.get_height()) == 48
+        image = header[0]
+        assert image.get_storage_type() == Gtk.ImageType.PIXBUF
+        pixbuf = image.get_pixbuf()
+        assert max(pixbuf.get_width(), pixbuf.get_height()) == 48
         assert contents[1].get_text() == app.traducir(
             app.APPS_RECOMENDADAS[index]['description'])
         fallback_theme = type(

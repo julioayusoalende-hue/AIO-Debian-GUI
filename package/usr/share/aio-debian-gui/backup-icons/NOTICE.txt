@@ -1,0 +1,13 @@
+Timeshift icon (timeshift.png)
+Copyright: Tony George
+Source: https://github.com/linuxmint/timeshift
+Obtained from Ubuntu's timeshift 24.01.1-1build2 package, unmodified.
+License: GPL-2.0-or-later; see GPL-2.txt in this directory.
+
+Déjà Dup icon (deja-dup.png)
+Copyright: 2019 Jakub Steiner
+Source: https://gitlab.gnome.org/World/deja-dup
+Obtained from Ubuntu's deja-dup 45.2-1build2 package and converted from
+data/icons/org.gnome.DejaDup.svg to PNG at 256 pixels.
+License: Creative Commons Attribution-ShareAlike 4.0 International
+https://creativecommons.org/licenses/by-sa/4.0/

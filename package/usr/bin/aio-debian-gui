@@ -54,6 +54,9 @@ UBUNTU_LOGO = os.path.normpath(
 RECOMMENDED_ICON_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/recommended-icons")
 )
+BACKUP_ICON_DIR = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/backup-icons")
+)
 
 def logo_distribucion(distribucion):
     """Devuelve el recurso y el nombre accesible para cada sistema soportado."""
@@ -70,6 +73,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.10.1": "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.",
     "2.10.0": "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.",
     "2.9.0": "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.",
     "2.8.3": "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.",
@@ -563,6 +567,7 @@ TRADUCCIONES = {
 
 # Textos del actualizador integrados con las traducciones existentes.
 TRADUCCIONES["en"].update({
+    "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.": "Adds icons for backup and recommended apps, even when they are not installed.",
     "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.": "Shows maintenance output in the terminal and adds shortcuts.",
     "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.": "Adds an interactive terminal that runs Fastfetch on startup when installed.",
     "Terminal": "Terminal",
@@ -593,6 +598,7 @@ TRADUCCIONES["en"].update({
     "No se pudo actualizar": "Unable to update",
 })
 TRADUCCIONES["fr"].update({
+    "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.": "Ajoute des icônes pour les applications de sauvegarde et recommandées, même lorsqu’elles ne sont pas installées.",
     "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.": "Affiche la sortie de maintenance dans le terminal et ajoute des raccourcis.",
     "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.": "Ajoute un terminal interactif qui lance Fastfetch au démarrage lorsqu’il est installé.",
     "Terminal": "Terminal",
@@ -623,6 +629,7 @@ TRADUCCIONES["fr"].update({
     "No se pudo actualizar": "Mise à jour impossible",
 })
 TRADUCCIONES["zh"].update({
+    "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.": "为备份和推荐应用添加图标，即使尚未安装也会显示。",
     "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.": "在终端显示维护输出并添加快捷操作。",
     "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.": "新增交互式终端；安装 Fastfetch 时会在启动时运行。",
     "Terminal": "终端",
@@ -1794,6 +1801,7 @@ APLICACIONES_BACKUP = {
         "package": "timeshift",
         "command": "timeshift-launcher",
         "icon": "timeshift",
+        "bundled_icon": "timeshift.png",
         "fallback_icon": "drive-harddisk",
         "description": "Crea instantáneas de los archivos del sistema para restaurarlo tras una actualización fallida u otro problema. Por defecto no incluye los archivos personales.",
         "prompt": "Timeshift no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.",
@@ -1803,6 +1811,7 @@ APLICACIONES_BACKUP = {
         "package": "deja-dup",
         "command": "deja-dup",
         "icon": "org.gnome.DejaDup",
+        "bundled_icon": "deja-dup.png",
         "fallback_icon": "document-save",
         "description": "Crea copias de seguridad de las carpetas personales seleccionadas para recuperar archivos perdidos o modificados. No restaura el sistema operativo.",
         "prompt": "Respaldos (Déjà Dup) no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.",
@@ -1823,6 +1832,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "feishin", "name": "Feishin",
         "icon": "org.jeffvli.feishin",
+        "bundled_icon": "feishin.png",
         "fallback_icon": "audio-x-generic",
         "description": "Reproductor de música para servidores Jellyfin, Navidrome y Subsonic.",
         "channels": [
@@ -1844,6 +1854,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "google-chrome", "name": "Google Chrome",
         "icon": "google-chrome",
+        "bundled_icon": "google-chrome.png",
         "fallback_icon": "web-browser",
         "description": "Navegador web de Google. El paquete DEB se descarga desde la página oficial.",
         "channels": [
@@ -1853,6 +1864,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "handbrake", "name": "HandBrake",
         "icon": "fr.handbrake.ghb",
+        "bundled_icon": "handbrake.png",
         "fallback_icon": "video-x-generic",
         "description": "Convierte y comprime vídeos con ajustes para formatos y dispositivos comunes.",
         "channels": [
@@ -1863,6 +1875,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "plex", "name": "Plex",
         "icon": "tv.plex.PlexDesktop",
+        "bundled_icon": "plex.png",
         "fallback_icon": "video-x-generic",
         "description": "Cliente de escritorio para reproducir contenido de tu biblioteca Plex.",
         "channels": [
@@ -1883,6 +1896,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "switcheroo", "name": "Switcheroo",
         "icon": "io.gitlab.adhami3310.Converter",
+        "bundled_icon": "switcheroo.png",
         "fallback_icon": "image-x-generic",
         "description": "Convierte imágenes por lotes entre formatos y cambia su tamaño.",
         "channels": [
@@ -1892,6 +1906,7 @@ APPS_RECOMENDADAS = [
     {
         "id": "video-downloader", "name": "Video Downloader",
         "icon": "com.github.unrud.VideoDownloader",
+        "bundled_icon": "video-downloader.png",
         "fallback_icon": "folder-download",
         "description": "Descarga vídeos de sitios compatibles para verlos sin conexión.",
         "channels": [
@@ -3053,7 +3068,7 @@ class VentanaPrincipal(Gtk.Window):
         for app_id, app in APLICACIONES_BACKUP.items():
             fila = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
             boton = Gtk.Button(label=traducir("Abrir " + app["name"]))
-            boton.set_image(self._icono_aplicacion_backup(app, fallback=False))
+            boton.set_image(self._icono_aplicacion_backup(app))
             boton.set_always_show_image(True)
             boton.set_image_position(Gtk.PositionType.LEFT)
             boton.set_size_request(280, 64)
@@ -3287,11 +3302,16 @@ class VentanaPrincipal(Gtk.Window):
         contenido_consola.show_all()
 
     @staticmethod
-    def _icono_aplicacion_backup(app, fallback=False):
+    def _icono_aplicacion_backup(app):
+        ruta = os.path.join(BACKUP_ICON_DIR, app["bundled_icon"])
+        try:
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(ruta, 48, 48, True)
+            return Gtk.Image.new_from_pixbuf(pixbuf)
+        except GLib.Error as exc:
+            print("No se pudo cargar el icono %s: %s" % (ruta, exc.message), file=sys.stderr)
         theme = Gtk.IconTheme.get_default()
-        icon = app["fallback_icon"] if fallback and not theme.has_icon(app["icon"]) else app["icon"]
-        if not theme.has_icon(icon):
-            icon = "application-x-executable"
+        icon = next((name for name in (app["icon"], app["fallback_icon"])
+                     if theme.has_icon(name)), "application-x-executable")
         return Gtk.Image.new_from_icon_name(icon, Gtk.IconSize.DIALOG)
 
     def _accion_backup(self, _boton, app_id):

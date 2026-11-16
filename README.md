@@ -27,6 +27,7 @@ El diagnóstico solicita autorización para renovar los índices APT antes de co
 
 ## Novedades recientes
 
+- **2.10.1:** iconos propios para Timeshift y Déjà Dup, y para las seis aplicaciones recomendadas restantes, incluso sin instalarlas.
 - **2.10.0:** salida de mantenimiento en la terminal, accesos a `clear`, Fastfetch y Nautilus como administrador, y Enter limitado a la pestaña de mantenimiento.
 - **2.9.0:** terminal interactiva con Fastfetch al iniciar cuando está instalado.
 - **2.8.3:** incorpora iconos para Celluloid, GIMP, Spotify y VLC en «Apps recomendadas».

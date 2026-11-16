@@ -1,5 +1,10 @@
 # Cambios
 
+## 2.10.1
+
+- Incluye los iconos de Timeshift y Déjà Dup aunque no estén instalados.
+- Incluye los iconos facilitados para Feishin, Google Chrome, HandBrake, Plex, Switcheroo y Video Downloader.
+
 ## 2.10.0
 
 - La salida de mantenimiento también se muestra en la terminal, accesible desde la consola integrada.
