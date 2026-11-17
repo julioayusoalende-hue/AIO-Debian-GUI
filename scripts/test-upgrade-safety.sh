@@ -22,8 +22,8 @@ apt-get() {
 }
 reset_calls() { : > "$TEST_DIR/calls"; }
 assert_no_install() {
-    if grep -q -- '--no-remove' "$TEST_DIR/calls"; then
-        echo 'ERROR: se ejecutó APT pese al bloqueo'; exit 1
+    if grep -qE '^-y .*dist-upgrade$' "$TEST_DIR/calls"; then
+        echo 'ERROR: se ejecutó APT pese al rechazo del plan'; exit 1
     fi
 }
 
@@ -45,7 +45,7 @@ reset_calls
 paso_upgrade
 [ "$(head -n 1 "$TEST_DIR/calls")" = update ]
 grep -q -- '^-s -o Debug::NoLocking=1 dist-upgrade$' "$TEST_DIR/calls"
-grep -q -- '--no-remove dist-upgrade$' "$TEST_DIR/calls"
+grep -qE '^-y .*dist-upgrade$' "$TEST_DIR/calls"
 
 for SIMULATION in 'Remv old-package [1]' 'Purg old-package [1]' 'Inst nano [7.2] (7.4 Debian:stable)'; do
     reset_calls
@@ -66,13 +66,17 @@ UPDATE_STATUS=0
 INSTALL_STATUS=1
 if paso_upgrade; then echo 'ERROR: fallo real de APT ignorado'; exit 1; fi
 
-# Invocaciones sin GUI también simulan y bloquean las eliminaciones.
+# Las eliminaciones siguen adelante cuando la comprobación aprobó el plan.
 UPGRADE_PLAN=''
 INSTALL_STATUS=0
 SIMULATION='Remv old-package [1]'
 reset_calls
-if paso_upgrade; then echo 'ERROR: eliminación sin GUI aceptada'; exit 1; fi
-assert_no_install
+paso_upgrade
+grep -qE '^-y .*dist-upgrade$' "$TEST_DIR/calls"
+UPGRADE_PLAN=$(python3 -c 'import hashlib, sys; print(hashlib.sha256((sys.argv[1]+"\n").encode()).hexdigest())' "$SIMULATION")
+reset_calls
+paso_upgrade
+grep -qE '^-y .*dist-upgrade$' "$TEST_DIR/calls"
 
 # La comprobación no debe anunciar éxito cuando falta o falla needrestart.
 (
@@ -98,4 +102,4 @@ assert_no_install
     output=$(paso_rebootcheck)
     [[ "$output" == *'##REBOOT:1'* ]]
 )
-echo 'Actualización segura: índices, simulación, plan aprobado y --no-remove OK'
+echo 'Actualización segura: índices, simulación, plan aprobado y eliminaciones confirmadas OK'

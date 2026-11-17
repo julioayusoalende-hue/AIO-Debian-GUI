@@ -191,6 +191,20 @@ for language in ('es', 'en', 'fr', 'zh'):
     with patch.object(w, '_continuar_mantenimiento', return_value=None):
         w._terminar_preflight(['upgrade'], app.core_preflight.Report(False, []), None)
     assert not w.en_curso
+    for tarea, package in (('autoremove', 'old-kernel'), ('upgrade', 'unsafe-package')):
+        warning = f'Aviso: la simulación de {tarea if tarea == "autoremove" else "dist-upgrade"} propone eliminar paquetes: {package}'
+        w.en_curso = True
+        with patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK), \
+             patch.object(w, '_continuar_mantenimiento') as continue_maintenance:
+            w._terminar_preflight([tarea], app.core_preflight.Report(False, [warning]), None)
+        continue_maintenance.assert_called_once_with([tarea], upgrade_plan=None)
+    w.en_curso = True
+    with patch.object(w, '_mensaje') as blocked_message, \
+         patch.object(w, '_continuar_mantenimiento') as continue_maintenance:
+        w._terminar_preflight(['upgrade'], app.core_preflight.Report(True, [warning]), None)
+    blocked_message.assert_called_once()
+    continue_maintenance.assert_not_called()
+    w.en_curso = False
 
     for width in (1160, 700, 600, 1161, 1400):
         w.resize(width, 900)

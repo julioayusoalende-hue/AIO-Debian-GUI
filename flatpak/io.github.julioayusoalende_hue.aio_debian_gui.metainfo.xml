@@ -23,6 +23,7 @@
     <value key="flathub::verification::website">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</value>
   </custom>
   <releases>
+    <release version="2.10.7" date="2026-11-17"><description><p>Las eliminaciones previstas por autoremove y dist-upgrade se muestran como aviso y permiten continuar el mantenimiento.</p></description></release>
     <release version="2.10.6" date="2026-11-16"><description><p>La terminal inicia Bash sin ejecutar Fastfetch automáticamente; el acceso manual sigue disponible.</p></description></release>
     <release version="2.10.5" date="2026-11-16"><description><p>Activa autoremove por defecto y conserva libnotify-bin y needrestart para la programación del mantenimiento en AppImage y Flatpak.</p></description></release>
     <release version="2.10.4" date="2026-11-16"><description><p>Conserva libnotify-bin y needrestart al eliminar dependencias huérfanas y deja autoremove desmarcado por defecto.</p></description></release>

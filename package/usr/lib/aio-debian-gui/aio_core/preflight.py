@@ -187,9 +187,9 @@ def _check_local(tasks):
             if installs:
                 messages.append("Paquetes previstos para instalar/actualizar (" + str(len(installs)) + "): " + ", ".join(installs[:15]))
             if removed:
-                blocked = True
-                action = " de autoremove" if "autoremove" in cmd else ""
-                messages.append("La simulación" + action + " propone eliminar paquetes: " +
+                action = "autoremove" if "autoremove" in cmd else "dist-upgrade"
+                messages.append("Aviso: la simulación de " + action +
+                                " propone eliminar paquetes: " +
                                 ", ".join(line.split()[1] for line in removed[:12]))
             else:
                 messages.append("Simulación APT correcta: " + cmd[4] +

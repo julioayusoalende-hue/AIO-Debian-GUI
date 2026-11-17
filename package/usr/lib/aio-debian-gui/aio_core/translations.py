@@ -415,6 +415,7 @@ TRADUCCIONES = {
 
 # Textos del actualizador integrados con las traducciones existentes.
 TRADUCCIONES["en"].update({
+    "Las eliminaciones previstas por autoremove y dist-upgrade se muestran como aviso y permiten continuar.": "Planned removals from autoremove and dist-upgrade are shown as a warning, and maintenance can continue.",
     "La terminal inicia Bash sin ejecutar Fastfetch automáticamente; el acceso manual sigue disponible.": "The terminal starts Bash without running Fastfetch automatically; the manual shortcut remains available.",
     "Activa autoremove por defecto y conserva libnotify-bin y needrestart, necesarios para la programación en AppImage y Flatpak.": "Enables autoremove by default and preserves libnotify-bin and needrestart, required for AppImage and Flatpak scheduling.",
     "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.": "Automatically installs the initial scheduler integration for AppImage and Flatpak with administrator authorization.",
@@ -450,6 +451,7 @@ TRADUCCIONES["en"].update({
     "No se pudo actualizar": "Unable to update",
 })
 TRADUCCIONES["fr"].update({
+    "Las eliminaciones previstas por autoremove y dist-upgrade se muestran como aviso y permiten continuar.": "Les suppressions prévues par autoremove et dist-upgrade sont signalées et il est possible de continuer la maintenance.",
     "La terminal inicia Bash sin ejecutar Fastfetch automáticamente; el acceso manual sigue disponible.": "Le terminal lance Bash sans exécuter Fastfetch automatiquement ; le raccourci manuel reste disponible.",
     "Activa autoremove por defecto y conserva libnotify-bin y needrestart, necesarios para la programación en AppImage y Flatpak.": "Active autoremove par défaut et conserve libnotify-bin et needrestart, requis pour la planification AppImage et Flatpak.",
     "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.": "Installe automatiquement l’intégration initiale du planificateur pour AppImage et Flatpak avec une autorisation administrateur.",
@@ -485,6 +487,7 @@ TRADUCCIONES["fr"].update({
     "No se pudo actualizar": "Mise à jour impossible",
 })
 TRADUCCIONES["zh"].update({
+    "Las eliminaciones previstas por autoremove y dist-upgrade se muestran como aviso y permiten continuar.": "autoremove 和 dist-upgrade 计划删除的软件包会显示警告，但仍可继续维护。",
     "La terminal inicia Bash sin ejecutar Fastfetch automáticamente; el acceso manual sigue disponible.": "终端启动 Bash 时不再自动运行 Fastfetch；仍可手动使用快捷按钮。",
     "Activa autoremove por defecto y conserva libnotify-bin y needrestart, necesarios para la programación en AppImage y Flatpak.": "默认启用 autoremove，并保留 AppImage 和 Flatpak 计划任务所需的 libnotify-bin 和 needrestart。",
     "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.": "通过管理员授权自动安装 AppImage 和 Flatpak 的初始计划程序集成。",

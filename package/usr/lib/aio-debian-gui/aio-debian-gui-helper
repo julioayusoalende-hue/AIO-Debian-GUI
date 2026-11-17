@@ -33,7 +33,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 LISTAS_ACTUALIZADAS=0
 UPGRADE_PLAN=""
 REINICIO_REQUERIDO=0
-HELPER_VERSION=2.10.6
+HELPER_VERSION=2.10.7
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -963,9 +963,7 @@ paso_upgrade() {
         return 1
     fi
     if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
-        err "La actualización propone eliminar paquetes. Operación bloqueada."
-        printf '%s\n' "$simulation"
-        return 1
+        warn "La actualización propone eliminar paquetes; se continuará con los cambios previstos."
     fi
     plan=$(printf '%s\n' "$simulation" | LC_ALL=C awk '/^(Inst|Remv|Purg) /' | sha256sum)
     plan=${plan%% *}
@@ -974,7 +972,7 @@ paso_upgrade() {
         return 1
     fi
     info "Actualizando los paquetes del sistema (apt-get dist-upgrade)..."
-    if ! apt-get "${APT_OPTS[@]}" --no-remove dist-upgrade; then
+    if ! apt-get "${APT_OPTS[@]}" dist-upgrade; then
         err "Error durante la actualización de paquetes."
         return 1
     fi

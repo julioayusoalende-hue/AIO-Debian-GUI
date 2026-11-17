@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.10.7
+
+- Las eliminaciones previstas por `autoremove` y `dist-upgrade` se muestran en la comprobación de seguridad y permiten continuar tras confirmar el aviso.
+
 ## 2.10.6
 
 - La terminal inicia Bash sin ejecutar Fastfetch automáticamente; el botón de Fastfetch sigue disponible.
