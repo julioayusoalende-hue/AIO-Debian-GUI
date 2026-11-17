@@ -24,7 +24,7 @@ with patch.object(mod, "_apt_locks", return_value=[]), \
      patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), \
      patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), \
      patch.object(mod, "_run", side_effect=run):
-    assert mod.check(["upgrade"]).blocked
+    assert not mod.check(["upgrade"]).blocked
     assert not mod.check(["flatpak-update"]).blocked
     assert not mod.check(["autoclean"]).blocked
 with patch.object(mod, "_apt_locks", return_value=[]), \
@@ -76,11 +76,27 @@ for task in ("upgrade", "autoremove"):
              patch.object(mod, "_run", side_effect=lambda cmd, timeout=25: SimpleNamespace(
                  returncode=0, stdout=f"{marker} old-package [1]\n" if "-s" in cmd else "", stderr="")):
             report = mod.check([task])
-            assert report.blocked
+            assert not report.blocked
             assert "ELIMINAR: old-package" in report.preview
-            assert ("La simulación de autoremove propone eliminar paquetes:"
-                    in report.messages[-1]) == (task == "autoremove")
+            action = "dist-upgrade" if task == "upgrade" else "autoremove"
+            expected = "Aviso: la simulación de " + action + " propone eliminar paquetes:"
+            assert expected in report.messages[-1]
             assert not any("sin eliminaciones" in item for item in report.messages)
+
+# Las eliminaciones previstas por ambas simulaciones son avisos confirmables.
+with patch.object(mod, "_apt_locks", return_value=[]), \
+     patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), \
+     patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), \
+     patch.object(mod, "_run", side_effect=lambda cmd, timeout=25: SimpleNamespace(
+         returncode=0,
+         stdout=("Remv old-kernel [1]\n" if "autoremove" in cmd
+                 else "Remv unsafe-package [1]\n" if "dist-upgrade" in cmd
+                 else ""),
+         stderr="")):
+    report = mod.check(["upgrade", "autoremove"])
+    assert not report.blocked
+    assert any("Aviso: la simulación de autoremove" in item for item in report.messages)
+    assert any("Aviso: la simulación de dist-upgrade propone eliminar" in item for item in report.messages)
 
 plan = "Inst nano [7.2] (7.3 Debian:stable)\n"
 with patch.object(mod, "_apt_locks", return_value=[]), \

@@ -76,6 +76,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.10.7": "Las eliminaciones previstas por autoremove y dist-upgrade se muestran como aviso y permiten continuar.",
     "2.10.6": "La terminal inicia Bash sin ejecutar Fastfetch automáticamente; el acceso manual sigue disponible.",
     "2.10.5": "Activa autoremove por defecto y conserva libnotify-bin y needrestart, necesarios para la programación en AppImage y Flatpak.",
     "2.10.4": "Mantiene libnotify-bin y needrestart al eliminar dependencias huérfanas, necesarios para la programación en AppImage y Flatpak.",

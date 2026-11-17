@@ -27,6 +27,7 @@ El diagnóstico solicita autorización para renovar los índices APT antes de co
 
 ## Novedades recientes
 
+- **2.10.7:** las eliminaciones previstas por `autoremove` y `dist-upgrade` se muestran como aviso y permiten continuar.
 - **2.10.6:** la terminal ya no ejecuta Fastfetch al iniciar; su acceso manual sigue disponible.
 - **2.10.5:** `autoremove` vuelve a estar activado por defecto y conserva las dependencias de la programación en AppImage y Flatpak.
 - **2.10.4:** `autoremove` conserva `libnotify-bin` y `needrestart`, necesarios para la programación en AppImage y Flatpak.
