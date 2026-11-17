@@ -5,31 +5,31 @@ Origin: aio-debian-gui
 Label: aio-debian-gui
 Suite: stable
 Codename: stable
-Date: Tue, 17 Nov 2026 20:57:43 UTC
+Date: Tue, 17 Nov 2026 21:26:34 UTC
 Architectures: all
 Components: main
 Description: Repositorio APT de aio-debian-gui
 MD5Sum:
- 1a6bb5d11b173cc705e0cc6b5dbd4c67             1253 main/binary-all/Packages
- 636be7995cc5f2de38d9ef7e66b63535              792 main/binary-all/Packages.gz
- a141a7dd37e61e54a1e1e921d4619090              872 main/binary-all/Packages.xz
+ 2bf92e4dc44bb973b7eced73c0e1a3bb             1293 main/binary-all/Packages
+ abebfbb024d0906967a9a36221c5caff              797 main/binary-all/Packages.gz
+ 76200a917003b6dc57f7cc884d27362b              876 main/binary-all/Packages.xz
 SHA256:
- 278fc3bba250facdbb453cb72f27ac1be88dff875db4953e7d8d3ce2d9dc8ac5             1253 main/binary-all/Packages
- 10ebb9993aebfba9d5c2958ed8a2c22772a5c3c3aae09511ff7cfa61caae18de              792 main/binary-all/Packages.gz
- 18503cea47db1b7d6ed6d995fa37e94c4fe32bfac017c457beb8b48f5f82a931              872 main/binary-all/Packages.xz
+ e604bfd01c46d4f6ce3811aca5458ab77ca33bc946d8f962f1d99778b74f21a1             1293 main/binary-all/Packages
+ 8ca1a0bc6101c6ef3726391e4aeb7006ed80e6cf2b4439f351d102380b7ffe49              797 main/binary-all/Packages.gz
+ 699ec0fbada127e492fe22b87958b4e2988907cb68b1eb5f7cf38d02da0dd10c              876 main/binary-all/Packages.xz
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEBKUjgaIDXVuVJMpq4OZLjuD5AAwFAmr8v8gACgkQ4OZLjuD5
-AAwSIg//Zoxsog9W8y/Y2XjShLHu35x0B6aN7Kkgd6Y1f217J/ZjuqOIGoa5TK6b
-9XKvyy4xScDkB4sei4ZNrDPWCYxT8YER93L6Zbmll+agW7PER2+0MR1ABBjN7l8J
-g6eQppzaBlsR9G71p0P9GF+InqfGEVtsZwDJUEwLqW6+rl8BoF+SFzc0fXTLAwkq
-heI2QGkEqaIykFZdMg2iS05CsBAppkvA/A7IC+wjVnoBjNwBOW/xz5MCqAqJtfsS
-cPFktYs0Qw1c73CXJbv4lXmGudkFgCi0jRUKwwaWai1cLhmdzmxhNBpXkZ4rMd2y
-z9ZtO/7o/PBrj6imQm14CYAtVNtI8Y2eZOj1rtZBDgxNWMAuu+Ww6z/4l4pvCh0z
-7YgthJ2HLCaO/B5CSqmNGWrLDXHy2i1boei+1Eauto959Kn1i29o+VtMfrarcMQs
-aAIDxRJHPg+BGBJoNK3AiNpMZu0Vh+RzDt9gk8n1Mn3YfQAHB07WOG1EdMJHJ0VQ
-Ot6I4wgksvslashrJFBnj6JpXKpcHahDI0196dNy6BE4shnqVbt/WiJlgvKy0zlt
-xskUcicSnGRC6v+daI4dfD2JLuVGliMHkgZKs+q6JeiwlJPFAuEiGkzvXfDHm/fa
-AqD5oPhobkzwQwmlZqFQb2qEnmHIzA6AD8WHmYaay0JWiOykrcI=
-=eWa7
+iQIzBAEBCgAdFiEEBKUjgaIDXVuVJMpq4OZLjuD5AAwFAmr8xooACgkQ4OZLjuD5
+AAxKEw//cPDKsybsOqXwiSqpgu3Z3QRrcDRjL/jLTc5TlA6bNiIzRAhGW7Xudz8k
+J9Dj1Ah/L3rlbhR5snNwYVUSSI0d54V9So/ZXLPdJKiqlyisddcqk58M0PMrkRx2
+KQCbjo+aJbUX7HsmH8YVXWrpLmEmdSu8l6lIIYBdLLlPsxrlh6pbubfM4dzmibgJ
+FSiC2ftgbIIVTAEqIc7qQpNMJiOjoJiJ+1fcSZGXyZfQ50rl3VsFyUgiXye9Ql1Y
+jAi40HpR7R8BJ3R0/TzOxEVZDIQC1Y1ojVgHBuDM6PGGCFxDbn1PvpwUd1WsGf6k
+c8ExDd41TBlQxCI9olm/grpRkodVsuZi1IgfuWiQv69S3bGLlacwvZirgGDyk1Tr
+IjPp37OBoGsjsQd7YzDw7kIiq6co6Uiuosx6UOO0+wBVNgGe8XF9+aJCDqhcGTV8
+FP/fiV9SisYzy7FNMvwF3QRhXpmkkWPcja5Iwf0JqS2mj8eo7RITk5EOBw+oz5Q8
+YYXPhF+3bwZvDvt1A+3jQ/prsVZeNBkvU/MgoxINkwFHFwI7rSTxa0wJJCbo2p5E
+40KTW+zdoNB/GqK3JI6v9CUvOvJwOs2G4gGOkPuOkMSj5Chourdqgv2jm1B2W2+C
++hLIGluNqjFtUBeIU85cEFr7TFCEgUGOjN8OpbcGqDM5ySBgmdA=
+=h1Sb
 -----END PGP SIGNATURE-----
