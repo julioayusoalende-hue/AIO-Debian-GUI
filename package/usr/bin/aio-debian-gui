@@ -76,6 +76,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.11.0": "DEB, Flatpak y AppImage comparten el mantenimiento del anfitrión. La app prepara la integración al abrirse y conserva los horarios y el historial.",
     "2.10.15": "La integración de Flatpak también recupera horarios compatibles guardados desde Flatpak o AppImage.",
     "2.10.14": "Flatpak recupera automáticamente horarios compatibles de instalaciones DEB anteriores y conserva su historial.",
     "2.10.13": "Mejora la detección de la integración del anfitrión en Flatpak y comprueba el estado de las tareas después de instalarla.",
@@ -530,50 +531,13 @@ def _ejecutar(cmd):
 
 
 def helper_mantenimiento():
-    global _helper_appimage_temporal
-    # Snap no instala un asistente de root fuera del propio snap.
-    # Reutilizar exclusivamente el asistente del anfitrión autorizado por Polkit.
-    if os.environ.get("SNAP"):
+    if es_flatpak() or os.environ.get("APPDIR") or os.environ.get("SNAP"):
         return HELPER_SISTEMA
-    # El Flatpak es solo la interfaz: las operaciones administrativas se delegan
-    # al asistente instalado en el anfitrión, mediante DEB o integración manual.
-    if es_flatpak():
-        return HELPER_SISTEMA
-    if os.environ.get("APPDIR") and os.path.isfile(HELPER_SISTEMA):
-        return HELPER_SISTEMA
-    if os.environ.get("APPDIR"):
-        if _helper_appimage_temporal and os.path.isfile(_helper_appimage_temporal):
-            return _helper_appimage_temporal
-        directorio = tempfile.TemporaryDirectory(
-            prefix="aio-debian-gui-", dir="/tmp"
-        )
-        _directorios_helper_appimage.append(directorio)
-        raiz = directorio.name
-        ruta_helper = os.path.join(
-            raiz, "usr", "lib", "aio-debian-gui", "aio-debian-gui-helper"
-        )
-        ruta_politica = os.path.join(
-            raiz, "usr", "share", "polkit-1", "actions",
-            "es.aiodebian.gui.policy",
-        )
-        os.makedirs(os.path.dirname(ruta_helper), mode=0o755, exist_ok=True)
-        os.makedirs(os.path.dirname(ruta_politica), mode=0o755, exist_ok=True)
-        origen_politica = os.path.normpath(
-            os.path.join(
-                os.path.dirname(HELPER),
-                "../../share/polkit-1/actions/es.aiodebian.gui.policy",
-            )
-        )
-        shutil.copyfile(HELPER, ruta_helper)
-        os.chmod(ruta_helper, 0o755)
-        shutil.copyfile(origen_politica, ruta_politica)
-        _helper_appimage_temporal = ruta_helper
-        return ruta_helper
     return HELPER
 
 
-_directorios_helper_appimage = []
-_helper_appimage_temporal = None
+def usa_integracion_portable():
+    return es_flatpak() or bool(os.environ.get("APPDIR"))
 
 
 def helper_disponible(ruta):
@@ -591,8 +555,6 @@ def helper_disponible(ruta):
 def comando_pkexec(helper, lang, *argumentos):
     if es_flatpak():
         return ["flatpak-spawn", "--host", "pkexec", helper, "--lang", lang, *argumentos]
-    if os.environ.get("APPDIR") and helper != HELPER_SISTEMA:
-        return ["pkexec", "/bin/bash", helper, "--lang", lang, *argumentos]
     return ["pkexec", helper, "--lang", lang, *argumentos]
 
 
@@ -789,6 +751,8 @@ class VentanaPrincipal(Gtk.Window):
         super().__init__(title="AiO Debian")
         self.preferencias = (preferencias or PREFERENCIAS_DEFECTO).copy()
         self.handler_cierre = None
+        self.destruida = False
+        self.connect("destroy", self._ventana_destruida)
         global IDIOMA_ACTUAL
         IDIOMA_ACTUAL = self.preferencias["idioma"]
         self.set_default_size(1160, 780)
@@ -844,19 +808,40 @@ class VentanaPrincipal(Gtk.Window):
         self.connect("key-press-event", self._al_pulsar_tecla)
         self.connect("delete-event", self._al_cerrar)
         self.connect("focus-in-event", self._refrescar_recomendadas_al_volver)
+    def _preparar_anfitrion_al_iniciar(self):
         formato = formato_actualizacion()
-        if formato in ("flatpak", "appimage"):
-            version = version_app()
-            def solicitar_actualizacion():
-                try:
-                    core_host_integration.request_host_update(formato, version)
-                except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
-                    GLib.idle_add(
-                        self._escribir,
-                        "[!] " + traducir("No se pudo solicitar la actualización del programador.") + " " + str(error) + "\n",
-                        "aviso",
-                    )
-            threading.Thread(target=solicitar_actualizacion, daemon=True).start()
+        if formato not in ("flatpak", "appimage") or self.distribucion == "no-soportada":
+            self._consultar_estados_tareas(inicial=True)
+            return
+        self.programando = True
+        self.estado.set_text(traducir("Preparando el mantenimiento del sistema…"))
+        self._actualizar_sensibilidad()
+        version, appimage = version_app(), os.environ.get("APPIMAGE")
+
+        def preparar():
+            try:
+                core_host_integration.prepare_host(formato, version, appimage)
+                error = None
+            except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
+                error = str(exc)
+            GLib.idle_add(self._anfitrion_preparado, error)
+
+        threading.Thread(target=preparar, daemon=True).start()
+
+    def _ventana_destruida(self, _ventana):
+        self.destruida = True
+
+    def _anfitrion_preparado(self, error):
+        if self.destruida:
+            return GLib.SOURCE_REMOVE
+        self.programando = False
+        self._actualizar_sensibilidad()
+        if error:
+            self._escribir("[!] %s %s\n" % (
+                traducir("No se pudo preparar la integración del anfitrión."), error,
+            ), "aviso")
+        self._consultar_estados_tareas(inicial=True)
+        return GLib.SOURCE_REMOVE
 
     # -- Construcción ----------------------------------------------------------
     def _construir_cabecera(self):
@@ -920,55 +905,20 @@ class VentanaPrincipal(Gtk.Window):
         if self.programando:
             return
         self.menu_popover.popdown()
-        try:
-            extraccion, instalacion = core_host_integration.commands(
-                formato_actualizacion(), os.environ.get("APPIMAGE"))
-        except ValueError as exc:
-            self._mensaje(Gtk.MessageType.ERROR, "No se pudo preparar la guía de integración.", traducir(str(exc)))
-            return
         dialogo = Gtk.Dialog(title=traducir("Guía de integración del anfitrión"),
                              transient_for=parent or self, modal=True)
-        dialogo.set_default_size(700, 600)
+        dialogo.set_default_size(440, -1)
         dialogo.add_button(traducir("Cerrar"), Gtk.ResponseType.CLOSE)
         dialogo.connect("response", lambda d, _r: d.destroy())
-        area = dialogo.get_content_area()
-        scroll = Gtk.ScrolledWindow()
-        scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        area.pack_start(scroll, True, True, 0)
-        contenido = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        contenido = dialogo.get_content_area()
+        contenido.set_spacing(12)
         contenido.set_border_width(14)
-        scroll.add(contenido)
-        for texto in (
-            "El programador está incluido en Flatpak y AppImage. Tras la instalación inicial, las actualizaciones firmadas se aplican automáticamente al abrir una versión nueva de AiO.",
-            "Antes de actualizar, pausa las programaciones de todos los usuarios y espera a que terminen las tareas. Si el DEB está instalado, actualízalo con APT y no uses esta guía.",
-        ):
-            contenido.pack_start(etiqueta(traducir(texto)), False, False, 0)
+        contenido.pack_start(etiqueta(traducir(
+            "AiO comparte la integración de mantenimiento entre DEB, Flatpak y AppImage. Puedes volver a prepararla desde aquí."
+        )), False, False, 0)
         automatico = Gtk.Button(label=traducir("Instalar integración automáticamente"))
         automatico.connect("clicked", self._instalar_integracion, dialogo, parent)
         contenido.pack_start(automatico, False, False, 0)
-        for descripcion, comando, nombre in (
-            ("1. Copia y ejecuta este bloque en una terminal del anfitrión. Anota el directorio mostrado y revisa los archivos extraídos.",
-             extraccion, "Copiar extracción"),
-            ("2. En la misma terminal, entra en ese directorio con cd. Copia el segundo bloque solo si confías en los archivos y autorizas su instalación como administrador.",
-             instalacion, "Copiar instalación"),
-        ):
-            contenido.pack_start(etiqueta(traducir(descripcion)), False, False, 0)
-            codigo = Gtk.TextView()
-            codigo.set_editable(False)
-            codigo.set_cursor_visible(False)
-            codigo.set_monospace(True)
-            codigo.set_wrap_mode(Gtk.WrapMode.CHAR)
-            codigo.get_buffer().set_text(comando)
-            contenido.pack_start(codigo, False, False, 0)
-            copiar = Gtk.Button(label=traducir(nombre))
-            copiar.connect("clicked", lambda _b, texto: Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).set_text(texto, -1), comando)
-            contenido.pack_start(copiar, False, False, 0)
-        contenido.pack_start(etiqueta(traducir(
-            "3. Reinicia AiO y actualiza el estado de la programación. Tras actualizar AiO, repite estos pasos con la misma versión."
-        )), False, False, 0)
-        contenido.pack_start(etiqueta(traducir(
-            "Para las notificaciones y la comprobación de reinicio, instala libnotify-bin y needrestart en el anfitrión."
-        )), False, False, 0)
         dialogo.show_all()
 
     def _instalar_integracion(self, _boton, guia, parent):
@@ -982,10 +932,9 @@ class VentanaPrincipal(Gtk.Window):
         detalle = traducir(
             "Se instalarán en el anfitrión el asistente privilegiado, la política Polkit y el programador de esta versión. Solo continúa si confías en esta aplicación. Se solicitará autorización de administrador."
         )
-        if es_flatpak():
-            detalle += "\n\n" + traducir(
-                "Si se encuentra una programación compatible de una instalación anterior, se guardará una copia y se recuperará su horario. Si estaba activada, el mantenimiento volverá a ejecutarse automáticamente."
-            )
+        detalle += "\n\n" + traducir(
+            "Los horarios compatibles y su historial se conservan. Los horarios que estaban activados volverán a ejecutarse automáticamente."
+        )
         pregunta.format_secondary_text(detalle)
         pregunta.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
         pregunta.add_button(traducir("Continuar"), Gtk.ResponseType.OK)
@@ -1739,16 +1688,12 @@ class VentanaPrincipal(Gtk.Window):
             try:
                 helper = helper_mantenimiento()
                 if not helper_disponible(helper):
-                    requiere_integracion = es_flatpak()
+                    requiere_integracion = usa_integracion_portable()
                     if not requiere_integracion:
                         raise RuntimeError("No se encuentra el asistente de mantenimiento.")
-                elif es_flatpak():
-                    version = subprocess.run(
-                        comando_host(HELPER_SISTEMA, "--version"),
-                        capture_output=True, text=True, timeout=10,
-                    )
-                    if version.returncode or version.stdout.strip() != version_app():
-                        requiere_integracion = True
+                elif usa_integracion_portable():
+                    requiere_integracion = not core_host_integration.compatible_helper(
+                        formato_actualizacion(), helper)
                 if not requiere_integracion:
                     proc = subprocess.run(
                         comando_pkexec(helper, "C.UTF-8", "--backup-install", app_id),
@@ -2029,15 +1974,11 @@ class VentanaPrincipal(Gtk.Window):
                     helper = helper_mantenimiento()
                     if not helper_disponible(helper):
                         raise RuntimeError("No se encuentra el asistente de mantenimiento.")
-                    if es_flatpak():
-                        version = subprocess.run(
-                            comando_host(HELPER_SISTEMA, "--version"),
-                            capture_output=True, text=True, timeout=10,
-                        )
-                        if version.returncode or version.stdout.strip() != version_app():
-                            raise RuntimeError(traducir(
-                                "No se encuentra el asistente actualizado en el anfitrión. Instala la integración desde su guía y vuelve a intentarlo."
-                            ))
+                    if usa_integracion_portable() and not core_host_integration.compatible_helper(
+                            formato_actualizacion(), helper):
+                        raise RuntimeError(traducir(
+                            "No se encuentra el asistente actualizado en el anfitrión. Instala la integración desde su guía y vuelve a intentarlo."
+                        ))
                     proc = subprocess.run(
                         comando_pkexec(helper, "C.UTF-8", "--recommended-install", app["id"]),
                         capture_output=True, text=True, timeout=600,
@@ -2474,12 +2415,12 @@ class VentanaPrincipal(Gtk.Window):
         if inicial:
             self.estado.set_text(traducir("Comprobando tareas ya instaladas…"))
         self._actualizar_sensibilidad()
-        flatpak = es_flatpak()
+        portable = usa_integracion_portable()
         sin_integracion = 42
         comando_estado = (
             comando_host("/bin/sh", "-c", f'[ -e "$1" ] || exit {sin_integracion}; exec "$1" --status',
                          "aio-status", HELPER_SISTEMA)
-            if flatpak else ["bash", HELPER, "--status"]
+            if portable else ["bash", HELPER, "--status"]
         )
 
         # Do not rely on GIO stdout async EOF delivery on all desktops.
@@ -2499,7 +2440,7 @@ class VentanaPrincipal(Gtk.Window):
                 )
             except (OSError, subprocess.SubprocessError) as exc:
                 codigo, salida, error = -1, "", str(exc)
-            if flatpak and codigo == sin_integracion:
+            if portable and codigo == sin_integracion:
                 GLib.idle_add(self._estados_sin_integracion)
             else:
                 GLib.idle_add(self._estados_terminados, codigo, salida, error)
@@ -2507,13 +2448,15 @@ class VentanaPrincipal(Gtk.Window):
         threading.Thread(target=comprobar, daemon=True).start()
 
     def _estados_sin_integracion(self):
+        if self.destruida:
+            return GLib.SOURCE_REMOVE
         self._finalizar_consulta_estados(False, mensaje=traducir(
             "Para habilitar las tareas administrativas, abre la guía de integración del anfitrión."
         ))
         return GLib.SOURCE_REMOVE
 
     def _estados_terminados(self, codigo, salida, error=""):
-        if not self.consultando_estados:
+        if self.destruida or not self.consultando_estados:
             return GLib.SOURCE_REMOVE
         self.salida_estados = (salida or "").splitlines()
         if codigo != 0:
@@ -2795,7 +2738,7 @@ class VentanaPrincipal(Gtk.Window):
         return sel
 
     def _iniciar(self, _b):
-        if self.en_curso:
+        if self.en_curso or self.programando:
             return
         pasos = self._pasos_seleccionados()
         if self.distribucion == "no-soportada":
@@ -2859,40 +2802,21 @@ class VentanaPrincipal(Gtk.Window):
             self._mensaje(Gtk.MessageType.ERROR, "No se pudo preparar el asistente", str(e))
             return
         if not helper_disponible(helper):
-            if es_flatpak():
+            if usa_integracion_portable():
                 self._abrir_guia_integracion()
-                return
-            self._mensaje(Gtk.MessageType.ERROR, "Falta el asistente",
-                          (
-                              "El Flatpak incluye el asistente, pero todavía no está instalado "
-                              "en el sistema anfitrión. Para habilitar las tareas administrativas, "
-                              "consulta la sección «Flatpak» del README oficial y sigue los pasos "
-                              "de integración manual con Polkit. Flatseal no puede instalarlo."
-                              if es_flatpak() else
-                              traducir("No se encuentra %s.\nReinstala el paquete aio-debian-gui.") % helper
-                          ))
+            else:
+                self._mensaje(Gtk.MessageType.ERROR, "Falta el asistente",
+                              traducir("No se encuentra %s.\nReinstala el paquete aio-debian-gui.") % helper)
             return
 
-        if es_flatpak() or os.environ.get("SNAP"):
-            try:
-                comprobacion = subprocess.run(
-                    comando_host(HELPER_SISTEMA, "--version"),
-                    capture_output=True, text=True, timeout=10,
-                )
-                version_helper = comprobacion.stdout.strip() if comprobacion.returncode == 0 else ""
-            except (OSError, subprocess.SubprocessError):
-                version_helper = ""
-            if version_helper != version_app():
-                if es_flatpak():
-                    self._abrir_guia_integracion()
-                    return
-                self._mensaje(
-                    Gtk.MessageType.WARNING, "Asistente del sistema desactualizado",
-                    "El asistente privilegiado del anfitrión no corresponde a esta versión "
-                    "de AiO Debian GUI. Actualiza su integración manual con Polkit según "
-                    "el README antes de ejecutar operaciones administrativas."
-                )
-                return
+        if (usa_integracion_portable() or os.environ.get("SNAP")) and not core_host_integration.compatible_helper(
+                formato_actualizacion(), helper):
+            if usa_integracion_portable():
+                self._abrir_guia_integracion()
+            else:
+                self._mensaje(Gtk.MessageType.WARNING, "Asistente del sistema desactualizado",
+                              "La integración de mantenimiento del anfitrión necesita actualizarse.")
+            return
 
         if ("backports-kernel-mesa" in pasos and
                 not helper_admite_tarea(helper, "backports-kernel-mesa")):
@@ -3591,7 +3515,7 @@ def main():
     aplicar_tema(preferencias["tema"])
     win.handler_cierre = win.connect("destroy", Gtk.main_quit)
     win.show_all()
-    win._consultar_estados_tareas(inicial=True)
+    win._preparar_anfitrion_al_iniciar()
     if aviso_reinicio_programado:
         GLib.idle_add(win._preguntar_reinicio)
     if error_preferencias:

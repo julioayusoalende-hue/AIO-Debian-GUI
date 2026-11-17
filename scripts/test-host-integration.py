@@ -88,6 +88,17 @@ with tempfile.TemporaryDirectory() as tmp:
             assert "half-configured" in str(exc)
         else:
             raise AssertionError("La instalación incompleta no se comunicó")
+    stage_root = root / "stage"
+    stage_runtime = stage_root / str(os.getuid())
+    stage_runtime.mkdir(parents=True)
+    stage = integration._STAGE_PROGRAM.replace("Path('/run/user')", f"Path({str(stage_root)!r})")
+    for version in ("2.10.20", "2.10.19"):
+        manifest = json.dumps({"version": version}).encode()
+        envelope = json.dumps({"data": base64.b64encode(manifest).decode()})
+        subprocess.run([sys.executable, "-I", "-c", stage], input=envelope, text=True, check=True)
+    staged = json.loads((stage_runtime / "aio-portable-update").read_text())
+    assert json.loads(base64.b64decode(staged["data"]))["version"] == "2.10.20"
+
     bin_dir = root / "bin"
     bin_dir.mkdir()
     (bin_dir / "flatpak").write_text('#!/bin/sh\nprintf "contenido de %s\\n" "$4"\n')
@@ -259,26 +270,19 @@ esac
                             f'os.open({str(sandbox)!r}, os.O_RDONLY | os.O_DIRECTORY | NOFOLLOW)')
         code = code.replace('("/etc/aio-debian-gui", "/var/lib/aio-debian-gui")',
                             repr((str(sandbox / "etc/aio-debian-gui"), str(sandbox / "var/lib/aio-debian-gui"))))
-        for path in ("/etc/systemd/system", "/run/systemd/system",
-                     "/usr/local/lib/systemd/system", "/usr/lib/systemd/system"):
-            code = code.replace('"' + path + '"', repr(str(sandbox) + path))
-        code = code.replace(f"units = directory({str(sandbox / 'etc/systemd/system')!r})",
-                            'units = directory("/etc/systemd/system")')
-        code = code.replace("basefd = directory(base)",
-                            "basefd = directory(base.removeprefix(" + repr(str(sandbox)) + "))")
         for path in ("/var/lib/dpkg/lock-frontend", "/var/lib/dpkg/lock", "/run/aio-debian-gui/maintenance.lock"):
             code = code.replace('lock_file("' + path + '"', "lock_file(" + repr(str(sandbox) + path))
         code = code.replace('dir="/run/aio-debian-gui"', 'dir=' + repr(str(sandbox / "run/aio-debian-gui")))
-        code = code.replace('os.path.lexists("/etc/aio-debian-gui")',
-                            f'os.path.lexists({str(sandbox / "etc/aio-debian-gui")!r})')
-        code = code.replace('dir="/var/backups"', f'dir={str(sandbox / "var/backups")!r}')
         namespace = {}
         exec(compile(code, "<fixed-root-program-test>", "exec"), namespace)
         commands = []
         recovering = mode.startswith("recover-")
         if recovering:
-            namespace["RECOVER_FLATPAK"] = True
             namespace["PORTABLE"] = True
+            repair = mode == "recover-portable"
+            if repair:
+                namespace["RESOURCES"] = (namespace["RESOURCES"][:-1] + integration._PORTABLE_EXTRAS
+                                          + namespace["RESOURCES"][-1:])
             config = {"enabled": mode != "recover-paused", "frequency": "daily",
                       "weekday": 6, "hour": 9, "minute": 0,
                       "tasks": ["upgrade", "autoclean", "flatpak-update", "rebootcheck"],
@@ -302,10 +306,24 @@ esac
             timer = sandbox / "etc/systemd/system" / timer_name
             timer.parent.mkdir(parents=True)
             timer.write_text(scheduler["timer_text"](1000, config))
+            if mode == "recover-missing-unit":
+                timer.unlink()
             if mode == "recover-edited":
                 timer.write_text(timer.read_text() + "OnBootSec=1s\n")
-            (sandbox / "var/backups").mkdir()
 
+
+            if repair:
+                (state_file.parent.parent / "portable-version").write_text("2.10.15\n")
+                link = timer.parent / "timers.target.wants" / timer_name
+                link.parent.mkdir()
+                link.symlink_to("../" + timer_name)
+                updater = sandbox / "usr/lib/aio-debian-gui/aio-portable-update"
+                updater.parent.mkdir(parents=True)
+                updater.write_text("previous updater")
+                update_timer = sandbox / "usr/lib/systemd/system/aio-portable-update.timer"
+                update_timer.parent.mkdir(parents=True)
+                update_timer.write_text("previous timer")
+                update_timer.with_name("aio-debian-gui-maintenance@.service").write_text("previous service")
 
         def fake_command(args):
             commands.append(args)
@@ -320,14 +338,21 @@ esac
                 return SimpleNamespace(returncode=1, stdout="",
                                        stderr="dpkg-query: no path found matching pattern " + args[-1])
             if recovering and args[1] == "show":
-                active = "active" if mode == "recover-active" else "inactive"
+                active = "active" if mode == "recover-active" or repair else "inactive"
+                enabled = "enabled" if repair else "disabled"
                 return SimpleNamespace(returncode=0, stderr="", stdout=(
-                    f"ActiveState={active}\nUnitFileState=disabled\nDropInPaths=\n"
+                    f"ActiveState={active}\nUnitFileState={enabled}\nDropInPaths=\n"
                     f"FragmentPath=/etc/systemd/system/{timer_name}\n"))
-            if recovering and args[1] == "list-unit-files":
-                return SimpleNamespace(returncode=0, stdout=f"{timer_name} disabled enabled\n", stderr="")
+            if recovering and timer.exists() and args[1] == "list-unit-files":
+                status = "enabled" if repair else "disabled"
+                units = f"{timer_name} {status} enabled\n"
+                if repair:
+                    units += "aio-debian-gui-maintenance@.service static -\n"
+                return SimpleNamespace(returncode=0, stdout=units, stderr="")
             if mode == "recover-activation-error" and args[1:] == ["enable", "--now", timer_name]:
                 return SimpleNamespace(returncode=1, stdout="", stderr="activation failed")
+            if recovering and repair and args[1] == "list-units":
+                return SimpleNamespace(returncode=0, stdout=f"{timer_name} loaded active waiting\n", stderr="")
             if mode == "unit" and args[1] == "list-units":
                 return SimpleNamespace(returncode=0, stdout="aio-debian-gui-maintenance-1000.timer loaded active", stderr="")
             if mode == "foreign-timer" and "--type=timer" in args:
@@ -383,8 +408,13 @@ esac
         if recovering:
             payload["scheduler.py"] = {"data": base64.b64encode(scheduler_data).decode(),
                                        "sha256": hashlib.sha256(scheduler_data).hexdigest()}
-        success = mode in ("ok", "missing-lock", "recover-enabled", "recover-paused",
-                           "recover-flatpak", "recover-appimage")
+            if repair:
+                for name, _, _ in integration._PORTABLE_EXTRAS:
+                    value = b"2.10.16\n" if name == "portable-version" else name.encode()
+                    payload[name] = {"data": base64.b64encode(value).decode(),
+                                     "sha256": hashlib.sha256(value).hexdigest()}
+        success = mode in ("ok", "missing-lock", "recover-enabled", "recover-paused", "recover-portable",
+                           "recover-flatpak", "recover-appimage", "recover-missing-unit")
         stdin = io.TextIOWrapper(io.BytesIO(json.dumps(payload).encode()))
         real_fstat = os.fstat
 
@@ -440,19 +470,17 @@ esac
 
         if recovering:
             assert state_file.read_text() == '{"status": "success"}'
-            backups = list((sandbox / "var/backups").glob("*.json"))
+            assert config_file.read_text() == original
             if success:
-                assert json.loads(config_file.read_text()) == {**config, "launcher": {"format": "flatpak", "path": ""}}
-                assert len(backups) == 1 and backups[0].read_text() == original
-                assert (["/usr/bin/systemctl", "enable", "--now", timer_name] in commands) == config["enabled"]
+                assert timer.exists()
+                assert (["/usr/bin/systemctl", "enable", "--now", timer_name] in commands) == (config["enabled"] and not repair)
             else:
-                assert config_file.read_text() == original and not backups
                 if mode == "recover-activation-error":
                     assert ["/usr/bin/systemctl", "disable", "--now", timer_name] in commands
                     assert ["/usr/bin/systemctl", "disable", "--now", "aio-portable-update.timer"] in commands
 
     for mode in ("recover-enabled", "recover-paused", "recover-flatpak", "recover-appimage",
-                 "recover-activation-error", "recover-active", "recover-edited",
+                 "recover-portable", "recover-missing-unit", "recover-activation-error", "recover-active", "recover-edited",
                  "ok", "deb", "owned", "dpkg-error", "unit", "foreign-timer", "residual", "timer-file", "existing",
                  "symlink", "parent-symlink", "hash", "stage-hash", "unsafe", "maintenance",
                  "missing-lock", "reload-error", "link-error"):

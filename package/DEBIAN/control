@@ -1,11 +1,11 @@
 Package: aio-debian-gui
-Version: 2.10.15
+Version: 2.11.0
 Section: admin
 Priority: optional
 Architecture: all
 Depends: bash, apt, coreutils, diffutils, grep, sed, util-linux, libnotify-bin, needrestart, python3, python3-gi, gir1.2-gtk-3.0, gir1.2-vte-2.91, librsvg2-common, pkexec | policykit-1
-Conflicts: aio-debian (= 1.1.0), aio-debian (= 1.1.1)
-Replaces: aio-debian (= 1.1.0), aio-debian (= 1.1.1)
+Conflicts: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
+Replaces: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
 Maintainer: Julio Ayuso <epdc@msn.com>
 Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
 Description: Interfaz gráfica de mantenimiento y configuración para Debian y Ubuntu LTS

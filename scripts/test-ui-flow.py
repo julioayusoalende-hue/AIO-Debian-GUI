@@ -31,17 +31,23 @@ def settle():
 
 for formato in ('appimage', 'flatpak', 'deb'):
     with patch.object(app, 'formato_actualizacion', return_value=formato), \
-         patch.object(app, 'version_app', return_value='2.10.8'), \
+         patch.object(app, 'version_app', return_value='2.10.15'), \
          patch.object(app.threading, 'Thread') as worker, \
-         patch.object(app.core_host_integration, 'request_host_update') as request:
+         patch.object(app.core_host_integration, 'prepare_host') as prepare:
         window = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
-        if formato == 'deb':
-            worker.assert_not_called()
-            request.assert_not_called()
-        else:
-            worker.assert_called_once()
-            worker.call_args.kwargs['target']()
-            request.assert_called_once_with(formato, '2.10.8')
+        window.distribucion = 'ubuntu'
+        with patch.object(window, '_consultar_estados_tareas') as status:
+            window._preparar_anfitrion_al_iniciar()
+            if formato == 'deb':
+                worker.assert_not_called()
+                prepare.assert_not_called()
+                status.assert_called_once_with(inicial=True)
+            else:
+                worker.assert_called_once()
+                worker.call_args.kwargs['target']()
+                prepare.assert_called_once_with(formato, '2.10.15', os.environ.get('APPIMAGE'))
+                settle()
+                status.assert_called_once_with(inicial=True)
         window.destroy()
 
 for language in ('es', 'en', 'fr', 'zh'):
@@ -520,51 +526,39 @@ for refresh_error in (None, 'Autorización cancelada'):
         settle()
 w.destroy()
 
-# La guía conserva los comandos manuales y solicita confirmación para automatizar.
+# La guía ofrece una instalación gráfica con confirmación.
 with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
     w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
     w.show_all()
     settle()
-    with patch.object(app.core_host_integration, 'commands',
-                      return_value=('EXTRACCION', 'INSTALACION')) as generate:
-        w._abrir_guia_integracion()
-        settle()
-        dialogs = [d for d in Gtk.Window.list_toplevels()
-                   if isinstance(d, Gtk.Dialog) and d.get_title() == 'Guía de integración del anfitrión']
-        assert len(dialogs) == 1
-        dialog = dialogs[0]
-        def children(widget):
-            yield widget
-            if isinstance(widget, Gtk.Container):
-                for child in widget.get_children():
-                    yield from children(child)
-        widgets = list(children(dialog))
-        views = [widget for widget in widgets if isinstance(widget, Gtk.TextView)]
-        assert len(views) == 2 and all(not view.get_editable() for view in views)
-        texts = [view.get_buffer().get_text(*view.get_buffer().get_bounds(), True) for view in views]
-        assert texts == ['EXTRACCION', 'INSTALACION']
-        buttons = {widget.get_label(): widget for widget in widgets if isinstance(widget, Gtk.Button)}
-        buttons['Copiar extracción'].clicked()
-        assert Gtk.Clipboard.get(app.Gdk.SELECTION_CLIPBOARD).wait_for_text() == 'EXTRACCION'
-        buttons['Copiar instalación'].clicked()
-        assert Gtk.Clipboard.get(app.Gdk.SELECTION_CLIPBOARD).wait_for_text() == 'INSTALACION'
-        with patch.object(app.core_host_integration, 'install_host', create=True) as install, \
-             patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.CANCEL):
-            buttons['Instalar integración automáticamente'].clicked()
-            install.assert_not_called()
-            assert not w.programando
-        with patch.object(app.core_host_integration, 'install_host', create=True) as install, \
-             patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK):
-            buttons['Instalar integración automáticamente'].clicked()
-            deadline = time.monotonic() + 5
-            while w.programando and time.monotonic() < deadline:
-                settle()
-            assert not w.programando
-            install.assert_called_once_with('flatpak', os.environ.get('APPIMAGE'))
-        generate.assert_called_once()
-    with patch.object(app.core_host_integration, 'commands',
-                      return_value=('EXTRACCION', 'INSTALACION')), \
-         patch.object(app.core_host_integration, 'install_host', create=True,
+    w._abrir_guia_integracion()
+    settle()
+    dialogs = [d for d in Gtk.Window.list_toplevels()
+               if isinstance(d, Gtk.Dialog) and d.get_title() == 'Guía de integración del anfitrión']
+    assert len(dialogs) == 1
+    dialog = dialogs[0]
+    def children(widget):
+        yield widget
+        if isinstance(widget, Gtk.Container):
+            for child in widget.get_children():
+                yield from children(child)
+    widgets = list(children(dialog))
+    assert not any(isinstance(widget, Gtk.TextView) for widget in widgets)
+    buttons = {widget.get_label(): widget for widget in widgets if isinstance(widget, Gtk.Button)}
+    with patch.object(app.core_host_integration, 'install_host', create=True) as install, \
+         patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.CANCEL):
+        buttons['Instalar integración automáticamente'].clicked()
+        install.assert_not_called()
+        assert not w.programando
+    with patch.object(app.core_host_integration, 'install_host', create=True) as install, \
+         patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK):
+        buttons['Instalar integración automáticamente'].clicked()
+        deadline = time.monotonic() + 5
+        while w.programando and time.monotonic() < deadline:
+            settle()
+        assert not w.programando
+        install.assert_called_once_with('flatpak', os.environ.get('APPIMAGE'))
+    with patch.object(app.core_host_integration, 'install_host', create=True,
                       side_effect=RuntimeError('autorización rechazada')), \
          patch.object(w, '_integracion_instalada', wraps=w._integracion_instalada) as finish, \
          patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK):

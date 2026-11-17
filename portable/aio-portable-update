@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import stat
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path('/usr/lib/aio-debian-gui')
@@ -71,28 +72,62 @@ def atomic(path, data, mode):
 
 def apply(envelope):
     release, resources = verify(envelope)
-    if version(release) <= version(STATE.read_text().strip()):
+    installed = version(STATE.read_text().strip())
+    if version(release) < installed:
         return
-    # Refuse package-managed installations; migration must explicitly remove their owner.
+    # The package manager takes priority whenever it owns any shared resource.
     for target in FILES.values():
         result = subprocess.run(['/usr/bin/dpkg-query', '-S', '--', target],
-                                capture_output=True, text=True, env={'PATH': '/usr/bin:/bin', 'LC_ALL': 'C'})
+                                capture_output=True, text=True, timeout=10,
+                                env={'PATH': '/usr/bin:/bin', 'LC_ALL': 'C'})
+        if result.returncode == 0:
+            return
         if result.returncode != 1 or result.stdout or result.stderr.strip() != 'dpkg-query: no path found matching pattern ' + target:
             raise RuntimeError('Destination may be owned by dpkg: ' + target)
-    previous = {}
-    for name, target in FILES.items():
-        info = os.lstat(target)
-        if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
-            raise RuntimeError('Unsafe destination: ' + target)
-        previous[name] = (Path(target).read_bytes(), stat.S_IMODE(info.st_mode))
+
+    changes = []
+    for name, filename in FILES.items():
+        path = Path(filename)
+        mode = 0o755 if name == 'aio-debian-gui-helper' else 0o644
+        try:
+            info = os.lstat(path)
+        except FileNotFoundError:
+            previous = None
+        else:
+            if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022 or info.st_nlink != 1:
+                raise RuntimeError('Unsafe destination: ' + filename)
+            previous = (path.read_bytes(), stat.S_IMODE(info.st_mode))
+        if previous != (resources[name], mode):
+            changes.append((path, resources[name], mode, previous))
+
+    if not changes and version(release) == installed:
+        return
+    written = []
+    directories = []
     try:
-        for name, target in FILES.items():
-            atomic(target, resources[name], 0o755 if name == 'aio-debian-gui-helper' else 0o644)
+        for path, content, mode, previous in changes:
+            # dpkg can remove aio_core when handing the files back to the portable updater.
+            if path.parent == ROOT / 'aio_core' and not path.parent.exists():
+                info = os.lstat(ROOT)
+                if not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
+                    raise RuntimeError('Unsafe directory: ' + str(ROOT))
+                path.parent.mkdir(mode=0o755)
+                directories.append(path.parent)
+            info = os.lstat(path.parent)
+            if not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
+                raise RuntimeError('Unsafe directory: ' + str(path.parent))
+            atomic(path, content, mode)
+            written.append((path, previous))
         subprocess.run(['/usr/bin/systemctl', 'daemon-reload'], check=True, timeout=30)
         atomic(STATE, (release + '\n').encode(), 0o644)
     except BaseException:
-        for name, target in FILES.items():
-            atomic(target, *previous[name])
+        for path, previous in reversed(written):
+            if previous is None:
+                path.unlink(missing_ok=True)
+            else:
+                atomic(path, *previous)
+        for directory in reversed(directories):
+            directory.rmdir()
         subprocess.run(['/usr/bin/systemctl', 'daemon-reload'], check=True, timeout=30)
         raise
 
@@ -143,4 +178,6 @@ def main():
 
 
 if __name__ == '__main__':
+    if sys.argv[1:] == ['--supports-repair']:
+        sys.exit(0)
     main()

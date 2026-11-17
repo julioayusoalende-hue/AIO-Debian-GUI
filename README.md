@@ -127,21 +127,17 @@ sha256sum -c --ignore-missing SHA256SUMS
 
 ## Programación y permisos
 
-En la instalación DEB, la integración del programador se instala automáticamente. AppImage y Flatpak necesitan una integración persistente en el sistema anfitrión para programar tareas con AiO cerrado; sigue los pasos de la sección [Integración del programador](#integración-del-programador-para-appimage-y-flatpak).
+Las ediciones DEB, Flatpak y AppImage usan el mismo asistente y programador del anfitrión. AiO comprueba la integración al abrirse y reutiliza una instalación compatible, independientemente de la versión de la interfaz.
 
-Programar, pausar o eliminar un horario requiere autorización de administrador. Instalar o actualizar AiO no activa horarios por sí solo. Los temporizadores usan systemd y no encienden un equipo apagado. Para AppImage y Flatpak también se necesita `libnotify-bin` en el anfitrión para las notificaciones y `needrestart` para comprobar si hace falta reiniciar.
+Programar, pausar o eliminar un horario requiere autorización de administrador. Los temporizadores de systemd conservan sus horarios durante las actualizaciones. Si AiO recupera un horario existente, respeta si estaba activado o pausado.
 
 Antes de cambiar kernel, Mesa, repositorios o controladores, haz una copia de seguridad y revisa las advertencias de la tarea. La vuelta de kernel y Mesa desde Backports no cambia por sí sola el kernel de arranque; NVIDIA puede quedar bloqueado cuando la compatibilidad no se pueda verificar. La opción de Polkit sin contraseña es opcional, está desactivada inicialmente y reduce la protección de la cuenta.
 
 ### Integración del programador para AppImage y Flatpak
 
-En la versión actual, abre **Menú → Guía de integración del anfitrión → Instalar integración automáticamente** y confirma la autorización administrativa. Se instala `aio-debian-gui-host` desde el repositorio firmado y aislado del proyecto. Contiene el asistente privilegiado, la política Polkit y el programador systemd; no instala la interfaz DEB.
+Flatpak y AppImage preparan la integración al abrirse. Si falta el asistente del anfitrión y hay que instalarlo o repararlo, Ubuntu o Debian muestran la autorización de administrador. Puedes reintentar desde **Menú → Guía de integración del anfitrión**.
 
-Su servicio con temporizador actualiza la integración a la versión solicitada por la aplicación. Espera a que no haya mantenimiento ni otra actualización en curso y rechaza retrocesos y paquetes retenidos. Esta actualización es independiente de APT para la interfaz DEB y del origen Flatpak para la interfaz portable.
-
-El paquete `aio-debian-gui-host` entra en conflicto con `aio-debian-gui`: si ya tienes el DEB, actualízalo con APT y no intentes instalar encima la integración portable. Si conservas una integración manual antigua o aparece un conflicto de archivos, sigue las indicaciones de la guía integrada; no sobrescribas archivos gestionados por paquetes.
-
-Si el repositorio no responde, el instalador puede recurrir a la integración inicial incluida en la aplicación. Esa alternativa no equivale a tener instalado el paquete con actualización automática; revisa el resultado en la guía. No es necesario copiar manualmente los archivos del programador en una instalación nueva normal.
+Si el asistente lo proporciona un DEB, APT se encarga de actualizarlo. Si se instaló desde Flatpak o AppImage, systemd aplica las actualizaciones firmadas cuando no hay mantenimiento ni operaciones de paquetes en curso. Los horarios se guardan en el anfitrión y se comparten entre los formatos.
 
 ## Desarrollo
 

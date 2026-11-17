@@ -13,12 +13,23 @@ import subprocess
 import sys
 import tempfile
 
-VERSION = '2.10.15'
+VERSION = '2.11.0'
+
+
+HOST_PROTOCOL = 1
+_LEGACY_VERSIONS = frozenset(f'2.10.{patch}' for patch in range(12, 16))
 
 
 def compatible_version(value):
-    # 2.10.11 only changes integration discovery; the 2.10.10 protocol is identical.
-    return value == VERSION or (VERSION == '2.10.11' and value == '2.10.10')
+    """Recognize hosts released before the protocol was explicitly advertised."""
+    return isinstance(value, str) and (value == VERSION or value in _LEGACY_VERSIONS)
+
+
+def compatible_host(report):
+    if 'protocol' in report:
+        return type(report['protocol']) is int and report['protocol'] == HOST_PROTOCOL
+    return compatible_version(report.get('version'))
+
 
 CONFIG_DIR = Path('/etc/aio-debian-gui/schedules')
 STATE_DIR = Path('/var/lib/aio-debian-gui/schedules')
@@ -238,7 +249,8 @@ def status(uid):
     if config is not None:
         config = validate_config(config)
     last = _read(STATE_DIR / (uid + '.json'))
-    result = {'version': VERSION, 'available': available(), 'config': config, 'last_result': last,
+    result = {'version': VERSION, 'protocol': HOST_PROTOCOL, 'available': available(),
+              'config': config, 'last_result': last,
               'next_run': '', 'timer_active': False}
     if config and result['available']:
         try:
@@ -293,43 +305,40 @@ def _launch_for_reboot(uid, launcher):
     runtime = USER_RUNTIME_DIR / uid
     bus = runtime / 'bus'
     runuser = shutil.which('runuser')
-    if launcher is None:
-        if os.access('/usr/bin/aio-debian-gui', os.X_OK):
-            launcher = {'format': 'deb', 'path': ''}
-        elif shutil.which('flatpak'):
-            launcher = {'format': 'flatpak', 'path': ''}
     if not runtime.is_dir() or not bus.is_socket():
         print('No hay una sesión de usuario activa para abrir AiO.', file=sys.stderr)
         return
-    if not runuser or launcher is None:
-        print('No se pudo abrir AiO: falta runuser o la configuración del lanzador.', file=sys.stderr)
+    if not runuser:
+        print('No se pudo abrir AiO: falta runuser.', file=sys.stderr)
         return
     try:
         username = pwd.getpwuid(int(uid)).pw_name
     except KeyError:
         print(f'No se pudo abrir AiO: no existe el usuario con UID {uid}.', file=sys.stderr)
         return
-    if launcher['format'] == 'deb':
-        application = '/usr/bin/aio-debian-gui'
-        if not os.access(application, os.X_OK):
-            print('No se pudo abrir AiO: no está disponible el ejecutable DEB.', file=sys.stderr)
-            return
-        command = [application]
-    elif launcher['format'] == 'flatpak':
-        flatpak = shutil.which('flatpak')
-        if not flatpak:
-            print('No se pudo abrir AiO: Flatpak no está instalado.', file=sys.stderr)
-            return
-        command = [flatpak, 'run', 'io.github.julioayusoalende_hue.aio_debian_gui']
-    else:
-        application = launcher['path']
-        if not os.access(application, os.X_OK):
-            print('No se pudo abrir AiO: el AppImage configurado ya no está disponible.', file=sys.stderr)
-            return
-        command = [application]
     env = [f'XDG_RUNTIME_DIR={runtime}',
            f'DBUS_SESSION_BUS_ADDRESS=unix:path={bus}']
     try:
+        deb = '/usr/bin/aio-debian-gui'
+        flatpak = shutil.which('flatpak')
+        app_id = 'io.github.julioayusoalende_hue.aio_debian_gui'
+        preferred = launcher['format'] if launcher else 'deb'
+        if preferred == 'appimage' and os.access(launcher['path'], os.X_OK):
+            command = [launcher['path']]
+        elif preferred == 'deb' and os.access(deb, os.X_OK):
+            command = [deb]
+        else:
+            installed = flatpak and subprocess.run(
+                [runuser, '-u', username, '--', flatpak, 'info', app_id],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10,
+            ).returncode == 0
+            if installed:
+                command = [flatpak, 'run', app_id]
+            elif os.access(deb, os.X_OK):
+                command = [deb]
+            else:
+                print('No se encontró una edición instalada de AiO para avisar del reinicio.', file=sys.stderr)
+                return
         session_env = subprocess.run(
             [runuser, '-u', username, '--', '/usr/bin/env',
              f'XDG_RUNTIME_DIR={runtime}', f'DBUS_SESSION_BUS_ADDRESS=unix:path={bus}',

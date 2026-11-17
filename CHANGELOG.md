@@ -1,5 +1,11 @@
 # Cambios
 
+## 2.11.0
+
+- DEB, Flatpak y AppImage comparten el asistente y el programador del anfitrión. La interfaz usa el protocolo del asistente para comprobar la compatibilidad entre versiones.
+- Flatpak y AppImage preparan la integración al abrirse. La recuperación conserva los horarios, las pausas y el historial, y reconstruye temporizadores ausentes.
+- APT conserva el control de los archivos del DEB. El actualizador portable verifica las firmas, evita retrocesos y puede reparar archivos ausentes de una instalación portable.
+
 ## 2.10.15
 
 - La recuperación automática de la integración Flatpak acepta también horarios compatibles guardados desde Flatpak o AppImage. Conserva sus tareas, su estado y el historial.

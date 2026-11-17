@@ -33,7 +33,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 LISTAS_ACTUALIZADAS=0
 UPGRADE_PLAN=""
 REINICIO_REQUERIDO=0
-HELPER_VERSION=2.10.15
+HELPER_VERSION=2.11.0
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -1311,6 +1311,10 @@ mostrar_estados() {
 main() {
     if [ "${1:-}" = "--version" ] && [ "$#" -eq 1 ]; then
         printf '%s\n' "$HELPER_VERSION"
+        return 0
+    fi
+    if [ "${1:-}" = "--maintenance-api" ] && [ "$#" -eq 1 ]; then
+        printf '%s\n' 1
         return 0
     fi
     # Actualizar exclusivamente Flatpak del usuario sin elevar privilegios.

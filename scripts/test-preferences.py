@@ -3,7 +3,6 @@ import importlib.machinery
 import importlib.util
 import os
 import pathlib
-import subprocess
 import sys
 import tempfile
 import time
@@ -25,27 +24,11 @@ os.environ["APPDIR"] = "/tmp/appimage-mount"
 helper_sistema_original = app.HELPER_SISTEMA
 app.HELPER_SISTEMA = "/usr/lib/aio-debian-gui/no-installed-helper"
 helper = app.helper_mantenimiento()
-assert helper != app.HELPER
-assert helper.startswith("/tmp/aio-debian-gui-")
-assert pathlib.Path(helper).read_bytes() == pathlib.Path(app.HELPER).read_bytes()
-assert pathlib.Path(helper).stat().st_mode & 0o111
-assert pathlib.Path(helper).parents[2].joinpath(
-    "share/polkit-1/actions/es.aiodebian.gui.policy"
-).is_file()
-assert app.helper_mantenimiento() == helper
+assert helper == app.HELPER_SISTEMA
+assert not app.helper_disponible(helper)
 assert app.comando_pkexec(helper, "es_ES.UTF-8", "upgrade") == [
-    "pkexec", "/bin/bash", helper, "--lang", "es_ES.UTF-8", "upgrade"
+    "pkexec", helper, "--lang", "es_ES.UTF-8", "upgrade"
 ]
-resultado = subprocess.run(
-    ["/bin/bash", helper, "--status"],
-    capture_output=True, text=True, timeout=10,
-)
-assert resultado.returncode == 0, resultado.stderr
-assert "##STATUS:repos:" in resultado.stdout
-for directorio in app._directorios_helper_appimage:
-    directorio.cleanup()
-app._directorios_helper_appimage.clear()
-app._helper_appimage_temporal = None
 app.HELPER_SISTEMA = helper_sistema_original
 if appdir_original is None:
     os.environ.pop("APPDIR", None)

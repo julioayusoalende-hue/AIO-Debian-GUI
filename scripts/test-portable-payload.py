@@ -55,8 +55,20 @@ with tempfile.TemporaryDirectory() as tmp:
             u.apply(envelope)
             assert state.read_text() == '2.10.10\n'
             assert all(Path(target).read_bytes().startswith(b'new ') for target in targets.values())
-            u.apply(envelope)  # Same version is a no-op.
+            u.apply(envelope)  # Same version with intact files is a no-op.
+            helper = Path(targets['aio-debian-gui-helper'])
+            helper.unlink()
+            u.apply(envelope)
+            assert helper.read_bytes() == b'new aio-debian-gui-helper'
+            assert helper.stat().st_mode & 0o111
+            owner = subprocess.CompletedProcess([], 0, 'aio-debian-gui: ' + str(helper), '')
+            with mock.patch.object(u.subprocess, 'run', return_value=owner):
+                helper.write_bytes(b'deb-owned')
+                u.apply(envelope)
+                assert helper.read_bytes() == b'deb-owned'
             state.write_text('2.10.9\n')
+            for target in targets.values():
+                Path(target).write_bytes(b'old')
             before = {name: Path(target).read_bytes() for name, target in targets.items()}
             original = u.atomic
             calls = [0]

@@ -13,7 +13,10 @@ report = {'available': True, 'version': scheduler.VERSION, 'config': dict(schedu
 def result(data, code=0):
     return subprocess.CompletedProcess([], code, json.dumps(data), '')
 
-assert scheduler.compatible_version('2.10.10') == (scheduler.VERSION == '2.10.11')
+assert not scheduler.compatible_version('2.10.10')
+assert scheduler.compatible_version('2.10.12')
+assert scheduler.compatible_host({'protocol': 1, 'version': '99.0.0'})
+assert not scheduler.compatible_host({'protocol': 2, 'version': scheduler.VERSION})
 assert scheduler.compatible_version(scheduler.VERSION)
 assert not scheduler.compatible_version('2.10.9')
 assert not scheduler.compatible_version(None)
@@ -40,3 +43,33 @@ print('✔ Compatible host scheduler reused; missing, obsolete and invalid repor
 with mock.patch.object(integration.subprocess, 'run', return_value=result({**report, 'version': scheduler.VERSION})), mock.patch.object(integration, '_resources') as resources:
     integration.install_host('appimage')
     resources.assert_not_called()
+
+with mock.patch.object(integration, 'existing_scheduler', return_value=True), \
+     mock.patch.object(integration, 'request_host_update') as update, \
+     mock.patch.object(integration, 'install_host') as install:
+    integration.prepare_host('flatpak', '2.10.15')
+    update.assert_called_once_with('flatpak', '2.10.15')
+    install.assert_not_called()
+
+with mock.patch.object(integration, 'existing_scheduler', return_value=False), \
+     mock.patch.object(integration, '_portable_repair_ready', return_value=False), \
+     mock.patch.object(integration, 'request_host_update') as update, \
+     mock.patch.object(integration, 'install_host') as install:
+    integration.prepare_host('appimage', '2.10.15', '/tmp/AiO.AppImage')
+    update.assert_not_called()
+    install.assert_called_once_with('appimage', '/tmp/AiO.AppImage')
+
+
+with mock.patch.object(integration, 'existing_scheduler', side_effect=[False, True]), \
+     mock.patch.object(integration, '_portable_repair_ready', return_value=True), \
+     mock.patch.object(integration, 'request_host_update', return_value=True) as update, \
+     mock.patch.object(integration.time, 'sleep'), \
+     mock.patch.object(integration, 'install_host') as install:
+    integration.prepare_host('flatpak', '2.10.15')
+    update.assert_called_once_with('flatpak', '2.10.15')
+    install.assert_not_called()
+
+native = subprocess.CompletedProcess([], 0, 'aio-debian-gui: /usr/lib/aio-debian-gui/aio-debian-gui-helper\n', '')
+with mock.patch.object(integration.subprocess, 'run', return_value=native) as run:
+    assert integration.request_host_update('appimage', '2.10.15') is False
+    run.assert_called_once()

@@ -64,7 +64,7 @@ def make_version(deb, version, destination):
     return output
 
 
-def conflict(existing, incoming):
+def ownership_transition(existing, incoming, *, allowed):
     root = WORK / ("dpkg-" + existing)
     database = root / "var/lib/dpkg"
     database.mkdir(parents=True)
@@ -75,7 +75,10 @@ def conflict(existing, incoming):
         f"Maintainer: fixture\nDescription: fixture\n{conflicts}\n")
     result = run("dpkg", "--root=" + str(root), "--force-not-root", "--force-depends",
                  "--no-act", "--unpack", str(incoming), check=False, text=True)
-    assert result.returncode != 0 and "conflict" in result.stderr.lower(), result.stderr
+    if allowed:
+        assert result.returncode == 0, result.stderr
+    else:
+        assert result.returncode != 0 and "conflict" in result.stderr.lower(), result.stderr
 
 
 def start_agent():
@@ -326,8 +329,8 @@ try:
         "daemon-reload", "start aio-debian-gui-host-update.timer", "daemon-reload", "daemon-reload"]
     assert all(path.read_text() == "unchanged\n" for path in state.rglob("*") if path.is_file())
     assert link.is_symlink() and os.readlink(link) == "../aio-debian-gui-maintenance-1000.timer"
-    conflict("aio-debian-gui", host)
-    conflict("aio-debian-gui-host", main)
+    ownership_transition("aio-debian-gui", host, allowed=False)
+    ownership_transition("aio-debian-gui-host", main, allowed=True)
 
     failed_builder = binaries / "dpkg-deb"
     failed_builder.write_text('#!/bin/sh\nfor arg do last="$arg"; done\nprintf partial > "$last"\nexit 1\n')

@@ -28,7 +28,6 @@ RESOURCES = (
 )
 LIMIT = 2 * 1024 * 1024
 PORTABLE = False
-RECOVER_FLATPAK = False
 NOFOLLOW = os.O_NOFOLLOW | os.O_CLOEXEC
 created = []
 directories = []
@@ -78,70 +77,112 @@ def absent(parent, name):
         return
     fail("Ya existe un destino de integración: " + name)
 
-def read_existing(parent, name):
+def read_existing(parent, name, limit=32768):
     fd = os.open(name, os.O_RDONLY | os.O_NONBLOCK | NOFOLLOW, dir_fd=parent)
     with os.fdopen(fd, "rb") as stream:
         info = os.fstat(stream.fileno())
         if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0
                 or info.st_mode & 0o022 or info.st_nlink != 1):
             fail("Archivo de programación inseguro: " + name)
-        data = stream.read(32769)
-        if len(data) > 32768:
+        data = stream.read(limit + 1)
+        if len(data) > limit:
             fail("Archivo de programación demasiado grande: " + name)
         return data
 
-def legacy_schedule(decoded):
-    if not RECOVER_FLATPAK or not os.path.lexists("/etc/aio-debian-gui"):
+def retained_schedules(decoded, portable_state):
+    """Read only known, root-owned data left by an earlier AiO installation."""
+    if not PORTABLE:
         return None
-    uid = os.environ.get("PKEXEC_UID", "")
-    if not re.fullmatch(r"[1-9][0-9]{0,9}", uid):
-        fail("No se pudo determinar el usuario autorizado.")
-    from pwd import getpwuid
-    try:
-        getpwuid(int(uid))
-    except (KeyError, OverflowError):
-        fail("No se encontró el usuario de la programación.")
-    name = uid + ".json"
     config_root = directory("/etc/aio-debian-gui")
+    state = directory("/var/lib/aio-debian-gui")
+    if config_root is None and state is None:
+        return None
+    if config_root is not None:
+        entries = set(os.listdir(config_root))
+        if entries - {"schedules", "host-users"}:
+            fail("La integración anterior contiene archivos que no se pueden atribuir al programador.")
+        if "host-users" in entries:
+            users = read_existing(config_root, "host-users").decode().splitlines()
+            if any(not re.fullmatch(r"[1-9][0-9]{0,9}", user) for user in users):
+                fail("La lista antigua de usuarios de AiO no es válida.")
+    if state is not None:
+        allowed = {"schedules", "portable-version"} if portable_state else {"schedules"}
+        if set(os.listdir(state)) - allowed:
+            fail("El estado anterior contiene archivos que no se pueden atribuir al programador.")
     configs = directory("/etc/aio-debian-gui/schedules")
-    if configs is None or set(os.listdir(config_root)) != {"schedules"} or set(os.listdir(configs)) != {name}:
-        fail("La configuración anterior contiene datos que requieren revisión.")
-    raw = read_existing(configs, name)
+    history = directory("/var/lib/aio-debian-gui/schedules")
+    for parent in (configs, history):
+        if parent is None:
+            continue
+        for name in os.listdir(parent):
+            if not re.fullmatch(r"[1-9][0-9]{0,9}\.json", name):
+                fail("Archivo de programación anterior no reconocido: " + name)
+            if not isinstance(json.loads(read_existing(parent, name)), dict):
+                fail("Archivo de programación anterior no válido: " + name)
+    if configs is None:
+        return {}
     scheduler = {"__name__": "_aio_recovery_scheduler"}
     exec(compile(decoded["scheduler.py"], "<scheduler>", "exec"), scheduler)
-    config = scheduler["validate_config"](json.loads(raw))
-    timer = scheduler["timer_name"](uid)
     units = directory("/etc/systemd/system")
-    if units is None or read_existing(units, timer).decode() != scheduler["timer_text"](uid, config):
-        fail("El temporizador anterior no coincide con la programación guardada.")
-    state = directory("/var/lib/aio-debian-gui")
-    if state is not None:
-        if set(os.listdir(state)) - {"schedules"}:
-            fail("El estado anterior contiene datos que requieren revisión.")
-        history = directory("/var/lib/aio-debian-gui/schedules")
-        if history is not None:
-            files = set(os.listdir(history))
-            if files - {name}:
-                fail("Hay resultados de mantenimiento de otros usuarios.")
-            if name in files and not isinstance(json.loads(read_existing(history, name)), dict):
-                fail("El resultado de mantenimiento anterior no es válido.")
-    p = command(["/usr/bin/systemctl", "show", timer, "--property=ActiveState,UnitFileState,FragmentPath,DropInPaths"])
-    fields = dict(line.split("=", 1) for line in p.stdout.splitlines() if "=" in line)
-    if p.returncode or fields != {"ActiveState": "inactive", "UnitFileState": "disabled", "DropInPaths": "",
-                                 "FragmentPath": "/etc/systemd/system/" + timer}:
-        fail("Solo se puede recuperar automáticamente un temporizador de AiO inactivo y deshabilitado.")
-    config["launcher"] = {"format": "flatpak", "path": ""}
-    return configs, name, raw, json.dumps(config).encode() + b"\n", timer, config["enabled"]
+    schedules = {}
+    from pwd import getpwuid
+    for name in sorted(os.listdir(configs)):
+        uid = scheduler["validate_uid"](name.removesuffix(".json"))
+        config = scheduler["validate_config"](json.loads(read_existing(configs, name)))
+        timer = scheduler["timer_name"](uid)
+        definition = scheduler["timer_text"](uid, config)
+        try:
+            getpwuid(int(uid))
+            enabled = config["enabled"]
+        except KeyError:
+            enabled = False
+        try:
+            existing = read_existing(units, timer).decode() if units is not None else None
+        except FileNotFoundError:
+            existing = None
+        already_active = False
+        if existing is not None:
+            if existing != definition:
+                fail("El temporizador anterior tiene cambios locales: " + timer)
+            p = command(["/usr/bin/systemctl", "show", timer,
+                         "--property=ActiveState,UnitFileState,FragmentPath,DropInPaths"])
+            fields = dict(line.split("=", 1) for line in p.stdout.splitlines() if "=" in line)
+            active_state = fields.pop("ActiveState", "")
+            file_state = fields.pop("UnitFileState", "")
+            already_active = portable_state and enabled and (active_state, file_state) == ("active", "enabled")
+            if (p.returncode or fields != {"DropInPaths": "", "FragmentPath": "/etc/systemd/system/" + timer}
+                    or not (already_active or (active_state, file_state) == ("inactive", "disabled"))):
+                fail("El estado del temporizador anterior requiere revisión: " + timer)
+        schedules[timer] = (existing is not None, definition, enabled, already_active)
+    return schedules
 
-def replace_schedule(parent, name, data):
-    temporary = ".aio-recovery-" + os.urandom(16).hex()
-    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | NOFOLLOW, 0o644, dir_fd=parent)
+def portable_repair(decoded):
+    if not PORTABLE:
+        return False
+    parent = directory("/var/lib/aio-debian-gui")
+    if parent is None:
+        return False
     try:
-        with os.fdopen(fd, "wb") as stream:
-            os.fchmod(stream.fileno(), 0o644)
-            stream.write(data)
-            stream.flush()
-            os.fsync(stream.fileno())
+        previous = read_existing(parent, "portable-version").decode().strip()
+    except FileNotFoundError:
+        return False
+    release = decoded["portable-version"].decode().strip()
+    if any(not re.fullmatch(r"[0-9]{1,6}\.[0-9]{1,6}\.[0-9]{1,6}", value)
+           for value in (previous, release)):
+        fail("No se pudo verificar la versión de la integración portable.")
+    if tuple(map(int, release.split("."))) < tuple(map(int, previous.split("."))):
+        fail("Abre la versión más reciente de AiO para reparar la integración.")
+    return True
+
+def replace_resource(parent, name, content, mode):
+    temporary = ".aio-integration-" + os.urandom(16).hex()
+    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | NOFOLLOW, mode, dir_fd=parent)
+    try:
+        with os.fdopen(fd, "wb") as target:
+            os.fchmod(target.fileno(), mode)
+            target.write(content)
+            target.flush()
+            os.fsync(target.fileno())
         os.replace(temporary, name, src_dir_fd=parent, dst_dir_fd=parent)
     finally:
         try:
@@ -149,12 +190,12 @@ def replace_schedule(parent, name, data):
         except FileNotFoundError:
             pass
 
-def check_residual(recovery=None):
-    legacy_timer = recovery[4] if recovery else None
+def check_residual(schedules=None, repair=False):
+    legacy_timers = {name: active for name, (exists, _, _, active) in (schedules or {}).items() if exists}
     directory("/etc")
     directory("/var/lib")
     for path in ("/etc/aio-debian-gui", "/var/lib/aio-debian-gui"):
-        if not recovery and os.path.lexists(path):
+        if schedules is None and os.path.lexists(path):
             fail("Existe configuración o estado anterior: " + path)
     # Incluye unidades no cargadas, enlaces rotos, overrides y dependencias.
     for base in ("/etc/systemd/system", "/run/systemd/system", "/usr/local/lib/systemd/system",
@@ -165,7 +206,9 @@ def check_residual(recovery=None):
         with os.scandir(basefd) as entries:
             for entry in entries:
                 if entry.name.startswith(("aio-debian-gui-maintenance@", "aio-debian-gui-maintenance-")):
-                    if base != "/etc/systemd/system" or entry.name != legacy_timer:
+                    if not ((base == "/etc/systemd/system" and entry.name in legacy_timers)
+                            or (repair and base == "/usr/lib/systemd/system"
+                                and entry.name == "aio-debian-gui-maintenance@.service")):
                         fail("Existe una unidad o configuración anterior: " + base + "/" + entry.name)
                 if entry.name.endswith((".wants", ".requires")):
                     if entry.is_symlink():
@@ -178,6 +221,11 @@ def check_residual(recovery=None):
                     with os.scandir(childfd) as children:
                         for child in children:
                             if child.name.startswith(("aio-debian-gui-maintenance@", "aio-debian-gui-maintenance-")):
+                                if (base == "/etc/systemd/system" and entry.name == "timers.target.wants"
+                                        and legacy_timers.get(child.name) and child.is_symlink()
+                                        and os.readlink(child.name, dir_fd=childfd)
+                                        in ("/etc/systemd/system/" + child.name, "../" + child.name)):
+                                    continue
                                 fail("Existe una dependencia anterior: " + base + "/" + entry.name + "/" + child.name)
     for subcommand in ("list-units", "list-unit-files"):
         p = command(["/usr/bin/systemctl", subcommand, "--all", "--plain", "--no-legend",
@@ -187,10 +235,14 @@ def check_residual(recovery=None):
         for line in p.stdout.splitlines():
             fields = line.split()
             if fields and fields[0].startswith(("aio-debian-gui-maintenance@", "aio-debian-gui-maintenance-")):
-                permitted = (fields[0] == legacy_timer and
-                             (fields[1:2] == ["disabled"] if subcommand == "list-unit-files"
-                              else fields[2:3] == ["inactive"]))
-                if not permitted:
+                if (repair and subcommand == "list-unit-files"
+                        and fields[:2] == ["aio-debian-gui-maintenance@.service", "static"]):
+                    continue
+                active = legacy_timers.get(fields[0])
+                expected = (["enabled" if active else "disabled"] if subcommand == "list-unit-files"
+                            else ["active" if active else "inactive"])
+                actual = fields[1:2] if subcommand == "list-unit-files" else fields[2:3]
+                if active is None or actual != expected:
                     fail("Existen unidades o temporizadores de AiO en systemd.")
     p = command(["/usr/bin/systemctl", "list-units", "--all", "--plain", "--no-legend",
                  "--no-pager", "--type=timer"])
@@ -201,7 +253,7 @@ def check_residual(recovery=None):
         fields = line.split()
         if not fields or not fields[0].endswith(".timer"):
             fail("Respuesta de systemd no válida al enumerar temporizadores.")
-        if fields[0] != legacy_timer:
+        if fields[0] not in legacy_timers:
             timers.append(fields[0])
     if timers:
         p = command(["/usr/bin/systemctl", "show", "--all", "--property=Id",
@@ -274,18 +326,28 @@ def main():
     lock_file("/var/lib/dpkg/lock-frontend", True)
     lock_file("/var/lib/dpkg/lock", True)
     check_packages()
-    recovery = legacy_schedule(decoded)
-    check_residual(recovery)
+    repair = portable_repair(decoded)
+    schedules = retained_schedules(decoded, repair)
+    check_residual(schedules, repair)
+    previous = {}
     for _, path, _ in RESOURCES:
-        absent(directory(os.path.dirname(path)), os.path.basename(path))
+        parent, name = directory(os.path.dirname(path)), os.path.basename(path)
+        if repair and parent is not None:
+            try:
+                content = read_existing(parent, name, LIMIT)
+            except FileNotFoundError:
+                continue
+            mode = stat.S_IMODE(os.stat(name, dir_fd=parent, follow_symlinks=False).st_mode)
+            previous[path] = (content, mode)
+        else:
+            absent(parent, name)
     directory("/run/aio-debian-gui", True)
     lock_file("/run/aio-debian-gui/maintenance.lock", create=True)
-    check_residual(recovery)
+    check_residual(schedules, repair)
     directories.clear()
 
-    backup = None
-    restore_schedule = False
     activated = []
+    replaced = []
     try:
         with tempfile.TemporaryDirectory(prefix=".aio-integration-", dir="/run/aio-debian-gui") as stage:
             for name, _, _ in RESOURCES:
@@ -315,6 +377,11 @@ def main():
 
             for name, path, mode in RESOURCES[:-1]:
                 parent = directory(os.path.dirname(path), True)
+                name = os.path.basename(path)
+                if path in previous:
+                    replaced.append((parent, name, previous[path]))
+                    replace_resource(parent, name, decoded[name], mode)
+                    continue
                 fd = os.open(os.path.basename(path), os.O_WRONLY | os.O_CREAT | os.O_EXCL | NOFOLLOW,
                              mode, dir_fd=parent)
                 created.append((parent, os.path.basename(path)))
@@ -327,31 +394,36 @@ def main():
                 with os.fdopen(fd, "rb") as target:
                     if hashlib.sha256(target.read()).hexdigest() != obj[name]["sha256"]:
                         fail("La verificación del destino falló: " + name)
+        for timer, (exists, definition, _, _) in (schedules or {}).items():
+            if not exists:
+                parent = directory("/etc/systemd/system")
+                fd = os.open(timer, os.O_WRONLY | os.O_CREAT | os.O_EXCL | NOFOLLOW, 0o644, dir_fd=parent)
+                created.append((parent, timer))
+                with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                    os.fchmod(stream.fileno(), 0o644)
+                    stream.write(definition)
+                    stream.flush()
+                    os.fsync(stream.fileno())
         # La integración no está disponible hasta publicar el helper completo.
         p = command(["/usr/bin/systemctl", "daemon-reload"])
         if p.returncode:
             fail("No se pudo recargar systemd: " + (p.stderr or p.stdout).strip()[-600:])
         old_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM, signal.SIGINT})
         try:
-            os.link("/proc/self/fd/" + str(helper_fd), os.path.basename(helper_path),
-                    dst_dir_fd=helper_parent, follow_symlinks=True)
-            created.append((helper_parent, os.path.basename(helper_path)))
+            helper_name = os.path.basename(helper_path)
+            if helper_path in previous:
+                replaced.append((helper_parent, helper_name, previous[helper_path]))
+                replace_resource(helper_parent, helper_name, helper_data, helper_mode)
+            else:
+                os.link("/proc/self/fd/" + str(helper_fd), helper_name,
+                        dst_dir_fd=helper_parent, follow_symlinks=True)
+                created.append((helper_parent, helper_name))
         finally:
             signal.pthread_sigmask(signal.SIG_SETMASK, old_mask)
-        if recovery:
-            parent, name, raw, migrated, timer, enabled = recovery
-            directory("/var/backups")
-            with tempfile.NamedTemporaryFile(prefix="aio-debian-gui-schedule-", suffix=".json",
-                                             dir="/var/backups", delete=False) as stream:
-                backup = stream.name
-                stream.write(raw)
-                stream.flush()
-                os.fsync(stream.fileno())
-            restore_schedule = True
-            replace_schedule(parent, name, migrated)
-        timers_to_start = ["aio-portable-update.timer"] if PORTABLE else []
-        if recovery and enabled:
-            timers_to_start.append(timer)
+        update_timer = "/usr/lib/systemd/system/aio-portable-update.timer"
+        timers_to_start = ["aio-portable-update.timer"] if PORTABLE and update_timer not in previous else []
+        timers_to_start.extend(name for name, (_, _, enabled, active) in (schedules or {}).items()
+                               if enabled and not active)
         for unit in timers_to_start:
             activated.append(unit)
             p = command(["/usr/bin/systemctl", "enable", "--now", unit])
@@ -366,14 +438,9 @@ def main():
                     errors.append("No se pudo desactivar " + unit)
             except (OSError, subprocess.SubprocessError) as exc:
                 errors.append(str(exc))
-        if restore_schedule:
+        for parent, name, (content, mode) in reversed(replaced):
             try:
-                replace_schedule(parent, name, raw)
-            except OSError as exc:
-                errors.append(str(exc))
-        if backup and not errors:
-            try:
-                os.unlink(backup)
+                replace_resource(parent, name, content, mode)
             except OSError as exc:
                 errors.append(str(exc))
         for parent, name in reversed(created):
@@ -386,7 +453,7 @@ def main():
                 os.rmdir(name, dir_fd=parent)
             except OSError as exc:
                 errors.append(str(exc))
-        if created:
+        if created or replaced:
             try:
                 p = command(["/usr/bin/systemctl", "daemon-reload"])
                 if p.returncode:
@@ -746,23 +813,71 @@ _PORTABLE_EXTRAS = (
 )
 
 
+def compatible_helper(formato, helper):
+    from .scheduler import HOST_PROTOCOL, compatible_version
+    prefix = ["flatpak-spawn", "--host"] if formato == "flatpak" else []
+    try:
+        probe = subprocess.run([*prefix, helper, "--maintenance-api"],
+                               capture_output=True, text=True, timeout=10)
+        if probe.returncode == 0:
+            return probe.stdout.strip() == str(HOST_PROTOCOL)
+        legacy = subprocess.run([*prefix, helper, "--version"],
+                                capture_output=True, text=True, timeout=10)
+        return legacy.returncode == 0 and compatible_version(legacy.stdout.strip())
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def _portable_repair_ready(formato):
+    prefix = ["flatpak-spawn", "--host"] if formato == "flatpak" else []
+    options = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL, "timeout": 10}
+    try:
+        timer = subprocess.run([*prefix, "/usr/bin/systemctl", "is-active", "--quiet",
+                                "aio-portable-update.timer"], **options)
+        if timer.returncode:
+            return False
+        updater = subprocess.run([*prefix, "/usr/bin/python3", "-I",
+                                  "/usr/lib/aio-debian-gui/aio-portable-update",
+                                  "--supports-repair"], **options)
+        return updater.returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def prepare_host(formato, version, appimage=None):
+    """Select the shared host integration or enroll a portable install once."""
+    if formato not in ("appimage", "flatpak"):
+        raise ValueError("Formato de integración no compatible.")
+    if existing_scheduler(formato):
+        request_host_update(formato, version)
+        return
+    if _portable_repair_ready(formato) and request_host_update(formato, version):
+        deadline = time.monotonic() + 75
+        while time.monotonic() < deadline:
+            time.sleep(3)
+            if existing_scheduler(formato):
+                return
+        raise RuntimeError("La reparación automática sigue pendiente. Vuelve a abrir AiO para comprobarla.")
+    install_host(formato, appimage)
+
+
 def existing_scheduler(formato):
     """Reuse a compatible host installation without replacing package-owned files."""
     if formato not in ('appimage', 'flatpak'):
         raise ValueError('Formato de integración no compatible.')
-    from .scheduler import compatible_version, validate_config
+    from .scheduler import compatible_host, validate_config
     prefix = ['flatpak-spawn', '--host'] if formato == 'flatpak' else []
     try:
         result = subprocess.run(
             [*prefix, '/usr/lib/aio-debian-gui/aio-debian-gui-helper', '--schedule-status'],
             capture_output=True, text=True, timeout=20)
-    except FileNotFoundError:
+    except (OSError, subprocess.SubprocessError):
         return False
     if result.returncode:
         return False
     try:
         report = json.loads(result.stdout)
-        if not isinstance(report, dict) or report.get('available') is not True or not compatible_version(report.get('version')):
+        if not isinstance(report, dict) or report.get('available') is not True or not compatible_host(report):
             return False
         if report.get('config') is not None:
             validate_config(report['config'])
@@ -805,9 +920,50 @@ print(json.dumps({'version': release, 'files': {name: base64.b64encode(data).dec
     program = _ROOT_PROGRAM.replace('LIMIT = 2 * 1024 * 1024',
         'RESOURCES = RESOURCES[:-1] + ' + repr(_PORTABLE_EXTRAS) + ' + RESOURCES[-1:]\nLIMIT = 2 * 1024 * 1024', 1)
     program = program.replace("PORTABLE = False", "PORTABLE = True", 1)
-    if formato == "flatpak":
-        program = program.replace("RECOVER_FLATPAK = False", "RECOVER_FLATPAK = True", 1)
-    _privileged(formato, program, json.dumps(resources).encode())
+    try:
+        _privileged(formato, program, json.dumps(resources).encode())
+    except RuntimeError:
+        if not existing_scheduler(formato):
+            raise
+
+
+_STAGE_PROGRAM = r'''import base64, fcntl, json, os, re, sys, tempfile
+from pathlib import Path
+
+MAXIMUM = 8 * 1024 * 1024
+runtime = Path('/run/user') / str(os.getuid())
+destination = runtime / 'aio-portable-update'
+
+def version(data):
+    if len(data) > MAXIMUM:
+        raise ValueError('Paquete de integración demasiado grande.')
+    manifest = json.loads(base64.b64decode(json.loads(data)['data'], validate=True))
+    value = manifest['version']
+    if not re.fullmatch(r'[0-9]{1,6}\.[0-9]{1,6}\.[0-9]{1,6}', value):
+        raise ValueError('Versión de integración no válida.')
+    return tuple(map(int, value.split('.')))
+
+data = sys.stdin.buffer.read(MAXIMUM + 1)
+candidate = version(data)
+fd = os.open(runtime / 'aio-portable-submit.lock', os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+with os.fdopen(fd, 'wb') as lock:
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    try:
+        fd = os.open(destination, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(fd, 'rb') as staged:
+            if version(staged.read(MAXIMUM + 1)) > candidate:
+                sys.exit(0)
+    except (OSError, KeyError, TypeError, ValueError):
+        pass
+    fd, name = tempfile.mkstemp(prefix='.aio-portable-', dir=runtime)
+    try:
+        with os.fdopen(fd, 'wb') as stream:
+            stream.write(data)
+        os.replace(name, destination)
+    finally:
+        if os.path.exists(name):
+            os.unlink(name)
+'''
 
 
 def request_host_update(formato, version):
@@ -815,24 +971,26 @@ def request_host_update(formato, version):
     if formato not in ('flatpak', 'appimage'):
         raise ValueError('Formato de integración no compatible.')
     prefix = ['flatpak-spawn', '--host'] if formato == 'flatpak' else []
-    exists = subprocess.run([*prefix, '/usr/bin/test', '-f', '/var/lib/aio-debian-gui/portable-version'])
+    # dpkg owns the shared helper whenever a native package provides it.
+    query_prefix = [*prefix, '--env=LC_ALL=C'] if prefix else []
+    ownership = subprocess.run([*query_prefix, '/usr/bin/dpkg-query', '-S', '--',
+                                '/usr/lib/aio-debian-gui/aio-debian-gui-helper'],
+                               capture_output=True, text=True, timeout=10,
+                               env={**os.environ, 'LC_ALL': 'C'})
+    if ownership.returncode == 0:
+        if any(line.startswith('aio-debian-gui-host: ') for line in ownership.stdout.splitlines()):
+            return _request_legacy_host_update(formato, version)
+        return False
+    expected = 'dpkg-query: no path found matching pattern /usr/lib/aio-debian-gui/aio-debian-gui-helper'
+    if ownership.returncode != 1 or ownership.stderr.strip() != expected:
+        raise RuntimeError("No se pudo determinar quién actualiza la integración del anfitrión.")
+    exists = subprocess.run([*prefix, '/usr/bin/test', '-f', '/var/lib/aio-debian-gui/portable-version'],
+                            timeout=10)
     if exists.returncode:
         return _request_legacy_host_update(formato, version)
     payload = (_portable_directory(formato) / 'payload.json').read_bytes()
-    program = r'''
-import os, sys, tempfile
-from pathlib import Path
-runtime = Path('/run/user') / str(os.getuid())
-fd, name = tempfile.mkstemp(prefix='.aio-portable-', dir=runtime)
-try:
-    with os.fdopen(fd, 'wb') as stream:
-        stream.write(sys.stdin.buffer.read(8 * 1024 * 1024 + 1))
-    os.replace(name, runtime / 'aio-portable-update')
-finally:
-    if os.path.exists(name):
-        os.unlink(name)
-'''
-    subprocess.run([*prefix, '/usr/bin/python3', '-I', '-c', program], input=payload, check=True, timeout=30)
+    subprocess.run([*prefix, '/usr/bin/python3', '-I', '-c', _STAGE_PROGRAM],
+                   input=payload, check=True, timeout=30)
     return True
 
 
