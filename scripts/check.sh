@@ -202,4 +202,8 @@ fi
 
 python3 scripts/test-existing-scheduler.py && bien "reutilización del programador existente" || fallo "programador existente"
 
+bash scripts/test-snap-maintenance.sh && bien "mantenimiento Snap" || fallo "mantenimiento Snap"
+
+python3 scripts/test-snap-maintenance.py && bien "detección y programación Snap" || fallo "detección Snap"
+
 exit $fallos

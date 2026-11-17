@@ -33,7 +33,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 LISTAS_ACTUALIZADAS=0
 UPGRADE_PLAN=""
 REINICIO_REQUERIDO=0
-HELPER_VERSION=2.10.11
+HELPER_VERSION=2.10.12
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -1056,6 +1056,46 @@ paso_flatpak_update() {
     [ "$fallos" -eq 0 ] || return 1
     ok "Comprobación de instalaciones Flatpak finalizada."
 }
+# Only snapd owns its revisions. Never remove files directly from /var/lib/snapd.
+paso_snap_update() {
+    if ! paquete_instalado snapd || ! command -v snap >/dev/null 2>&1; then
+        info "snapd no está instalado; se omite el mantenimiento Snap."
+        return 0
+    fi
+    info "Actualizando aplicaciones Snap..."
+    if ! snap refresh; then
+        err "No se pudieron actualizar los snaps; no se realizará la limpieza."
+        return 1
+    fi
+    local listado nombre version revision tracking publisher notas resto
+    local fallos=0
+    local -A conservar=()
+    if ! listado=$(LC_ALL=C snap list --all); then
+        err "No se pudieron consultar las revisiones Snap; no se realizará la limpieza."
+        return 1
+    fi
+    # Keep the newest disabled revision of each snap as a rollback candidate.
+    while read -r nombre version revision tracking publisher notas resto; do
+        [[ ",$notas," == *,disabled,* ]] || continue
+        [[ "$nombre" =~ ^[a-z0-9][a-z0-9_-]*$ && "$revision" =~ ^[1-9][0-9]{0,9}$ ]] || continue
+        if [ "$revision" -gt "${conservar[$nombre]:-0}" ]; then
+            conservar[$nombre]=$revision
+        fi
+    done <<< "$listado"
+    while read -r nombre version revision tracking publisher notas resto; do
+        [[ ",$notas," == *,disabled,* ]] || continue
+        [[ "$nombre" =~ ^[a-z0-9][a-z0-9_-]*$ && "$revision" =~ ^[1-9][0-9]{0,9}$ ]] || continue
+        [ "$revision" = "${conservar[$nombre]}" ] && continue
+        info "Eliminando revisión Snap deshabilitada: $nombre ($revision)..."
+        if ! snap remove "$nombre" --revision="$revision"; then
+            err "No se pudo eliminar una revisión Snap deshabilitada."
+            fallos=1
+        fi
+    done <<< "$listado"
+    [ "$fallos" -eq 0 ] || return 1
+    ok "Snap actualizado; se conserva una revisión anterior por aplicación y sus datos."
+}
+
 paso_rebootcheck() {
     local necesita="$REINICIO_REQUERIDO" salida=""
 
@@ -1233,6 +1273,7 @@ declare -A TITULOS=(
     [upgrade]="Actualizar paquetes del sistema"
     [autoremove]="Eliminar dependencias huérfanas"
     [autoclean]="Limpiar caché de paquetes"
+    [snap-update]="Actualizar y limpiar Snap"
     [flatpak-update]="Actualizar aplicaciones Flatpak"
     [rebootcheck]="Comprobar si hace falta reiniciar"
 )

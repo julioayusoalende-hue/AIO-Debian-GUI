@@ -66,7 +66,7 @@ def _apt_locks():
 
 
 def check(tasks):
-    if tasks == ["flatpak-update"]:
+    if tasks and set(tasks) <= {"flatpak-update", "snap-update"}:
         return Report(False, [])
     if os.environ.get("FLATPAK_ID") or Path("/.flatpak-info").exists():
         return _check_host(tasks)
@@ -107,7 +107,7 @@ def _check_host(tasks):
 
 def _check_local(tasks):
     """Bloquear errores conocidos; avisar de comprobaciones no concluyentes."""
-    if tasks == ["flatpak-update"]:
+    if tasks and set(tasks) <= {"flatpak-update", "snap-update"}:
         return Report(False, [])
     messages = []
     preview = []

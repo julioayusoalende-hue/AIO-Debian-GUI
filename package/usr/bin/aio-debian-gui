@@ -76,6 +76,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.10.12": "Detecta snapd y permite actualizar Snap y limpiar revisiones antiguas desde el mantenimiento manual y programado.",
     "2.10.11": "AppImage y Flatpak reutilizan el programador compatible del anfitrión y evitan el error al instalar sobre archivos del DEB.",
     "2.10.10": "Programador incluido en Flatpak y AppImage con actualizaciones firmadas automáticas sin paquetes DEB adicionales en instalaciones nuevas.",
     "2.10.9": "La terminal de Flatpak inicia Bash con terminal de control, sin los errores de control de trabajos.",
@@ -722,6 +723,8 @@ PASOS = [
      "apt-get autoclean.", True, "apt"),
     ("flatpak-setup", "Instalar soporte Flatpak y añadir Flathub",
      "Flatpak no está instalado en este sistema.", False, "flatpak"),
+    ("snap-update", "Actualizar y limpiar Snap",
+     "Actualiza los snaps y elimina revisiones deshabilitadas antiguas, conservando una revisión anterior por aplicación.", True, "snap"),
     ("flatpak-update", "Actualizar aplicaciones Flatpak",
      "flatpak update y eliminación de runtimes sin uso.", True, "flatpak"),
     ("gnome-plugin", "Plugin Flatpak para GNOME Software",
@@ -809,6 +812,7 @@ class VentanaPrincipal(Gtk.Window):
         self.estado_diagnostico = "No comprobado"
 
         self.distribucion = distribucion_anfitrion()
+        self.snapd_presente = paquete_instalado("snapd")
         self.flatpak_presente = es_flatpak() or shutil.which("flatpak") is not None
         self.gnome_presente = paquete_instalado("gnome-shell")
 
@@ -2409,7 +2413,7 @@ class VentanaPrincipal(Gtk.Window):
         tarjeta.pack_start(autorizacion, False, False, 0)
         grupos = (
             ("Mantenimiento habitual", {"clock", "upgrade", "autoremove", "autoclean", "rebootcheck"}, True),
-            ("Aplicaciones y repositorios", {"repos", "tools", "flatpak-setup", "flatpak-update", "gnome-plugin", "ext-manager"}, True),
+            ("Aplicaciones y repositorios", {"repos", "tools", "snap-update", "flatpak-setup", "flatpak-update", "gnome-plugin", "ext-manager"}, True),
             ("Kernel y controladores · Avanzado", {"backports-kernel-mesa", "revertir-backports", "nvidia-driver", "ubuntu-hwe"}, False),
         )
         self.grupos_tareas = []
@@ -2621,6 +2625,8 @@ class VentanaPrincipal(Gtk.Window):
                                 and not self.recommended_installed.get(clave, False))
 
     def _visible(self, pid):
+        if pid == "snap-update":
+            return self.snapd_presente
         if pid in ("backports-kernel-mesa", "revertir-backports"):
             return self.distribucion == "debian"
         if pid == "nvidia-driver":

@@ -162,3 +162,7 @@ programación en `package/usr/lib/aio-debian-gui/aio_core/gtk_scheduler.py`.
 ## Licencia
 
 GNU GPL v3 o posterior. Consulta [LICENSE](LICENSE). Sin ninguna garantía.
+
+### Mantenimiento de Snap
+
+Si `snapd` está instalado en el anfitrión, aparece **Actualizar y limpiar Snap**, seleccionada en el mantenimiento completo y disponible como tarea opcional del programador. Ejecuta `snap refresh` y, si termina correctamente, elimina mediante `snap remove --revision` las revisiones numéricas deshabilitadas más antiguas. Conserva la revisión activa y una revisión deshabilitada por aplicación para poder volver atrás. No borra datos, instantáneas ni archivos de la caché directamente, y no instala snapd. Si snapd se desinstala después de guardar un horario, la tarea se omite sin interrumpir las demás. Las programaciones existentes mantienen su selección de tareas.

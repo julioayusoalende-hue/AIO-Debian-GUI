@@ -13,7 +13,7 @@ report = {'available': True, 'version': scheduler.VERSION, 'config': dict(schedu
 def result(data, code=0):
     return subprocess.CompletedProcess([], code, json.dumps(data), '')
 
-assert scheduler.compatible_version('2.10.10')
+assert scheduler.compatible_version('2.10.10') == (scheduler.VERSION == '2.10.11')
 assert scheduler.compatible_version(scheduler.VERSION)
 assert not scheduler.compatible_version('2.10.9')
 assert not scheduler.compatible_version(None)
@@ -37,6 +37,6 @@ for formato in ('appimage', 'flatpak'):
         assert not integration.existing_scheduler(formato)
 print('✔ Compatible host scheduler reused; missing, obsolete and invalid reports rejected')
 
-with mock.patch.object(integration.subprocess, 'run', return_value=result({**report, 'version': '2.10.10'})), mock.patch.object(integration, '_resources') as resources:
+with mock.patch.object(integration.subprocess, 'run', return_value=result({**report, 'version': scheduler.VERSION})), mock.patch.object(integration, '_resources') as resources:
     integration.install_host('appimage')
     resources.assert_not_called()

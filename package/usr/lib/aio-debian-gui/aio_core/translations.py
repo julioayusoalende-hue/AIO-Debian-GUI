@@ -2,6 +2,9 @@
 
 TRADUCCIONES = {
     "en": {
+        "Actualizar y limpiar Snap": "Update and clean Snap",
+        "Actualiza los snaps y elimina revisiones deshabilitadas antiguas, conservando una revisión anterior por aplicación.": "Update snaps and remove old disabled revisions, keeping one previous revision per application.",
+
         "Comprobando estado del sistema…": "Checking system status…",
         "Resumen de salud sin modificar paquetes": "Read-only system health summary",
         "Detalle de la simulación APT:": "APT simulation details:",
@@ -139,6 +142,9 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Authorization wait cancelled.",
     },
     "fr": {
+        "Actualizar y limpiar Snap": "Mettre à jour et nettoyer Snap",
+        "Actualiza los snaps y elimina revisiones deshabilitadas antiguas, conservando una revisión anterior por aplicación.": "Met à jour les snaps et supprime les anciennes révisions désactivées, en conservant une révision précédente par application.",
+
         "Comprobando estado del sistema…": "Vérification du système…",
         "Resumen de salud sin modificar paquetes": "Résumé de santé du système en lecture seule",
         "Detalle de la simulación APT:": "Détails de la simulation APT :",
@@ -275,6 +281,9 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Attente d’autorisation annulée.",
     },
     "zh": {
+        "Actualizar y limpiar Snap": "更新并清理 Snap",
+        "Actualiza los snaps y elimina revisiones deshabilitadas antiguas, conservando una revisión anterior por aplicación.": "更新 Snap 并删除较旧的已禁用修订版本，为每个应用保留一个先前版本。",
+
         "Comprobando estado del sistema…": "正在检查系统状态…",
         "Resumen de salud sin modificar paquetes": "只读系统健康摘要",
         "Detalle de la simulación APT:": "APT 模拟详情：",
