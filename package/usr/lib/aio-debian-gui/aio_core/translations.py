@@ -2,6 +2,9 @@
 
 TRADUCCIONES = {
     "en": {
+        "Navegador web con bloqueo de anuncios y rastreadores integrado.": "Web browser with built-in ad and tracker blocking.",
+        "Organiza e integra aplicaciones AppImage en el menú del escritorio y gestiona sus actualizaciones.": "Organize and integrate AppImage applications into the desktop menu and manage their updates.",
+
         "Actualizar y limpiar Snap": "Update and clean Snap",
         "Actualiza los snaps y elimina revisiones deshabilitadas antiguas, conservando una revisión anterior por aplicación.": "Update snaps and remove old disabled revisions, keeping one previous revision per application.",
 
@@ -142,6 +145,9 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Authorization wait cancelled.",
     },
     "fr": {
+        "Navegador web con bloqueo de anuncios y rastreadores integrado.": "Navigateur web avec blocage intégré des publicités et des traqueurs.",
+        "Organiza e integra aplicaciones AppImage en el menú del escritorio y gestiona sus actualizaciones.": "Organise et intègre les applications AppImage au menu du bureau et gère leurs mises à jour.",
+
         "Actualizar y limpiar Snap": "Mettre à jour et nettoyer Snap",
         "Actualiza los snaps y elimina revisiones deshabilitadas antiguas, conservando una revisión anterior por aplicación.": "Met à jour les snaps et supprime les anciennes révisions désactivées, en conservant une révision précédente par application.",
 
@@ -281,6 +287,9 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Attente d’autorisation annulée.",
     },
     "zh": {
+        "Navegador web con bloqueo de anuncios y rastreadores integrado.": "内置广告和跟踪器拦截功能的网页浏览器。",
+        "Organiza e integra aplicaciones AppImage en el menú del escritorio y gestiona sus actualizaciones.": "整理 AppImage 应用，将其集成到桌面菜单并管理更新。",
+
         "Actualizar y limpiar Snap": "更新并清理 Snap",
         "Actualiza los snaps y elimina revisiones deshabilitadas antiguas, conservando una revisión anterior por aplicación.": "更新 Snap 并删除较旧的已禁用修订版本，为每个应用保留一个先前版本。",
 

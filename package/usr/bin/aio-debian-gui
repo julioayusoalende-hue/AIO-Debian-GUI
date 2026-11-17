@@ -76,7 +76,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
-    "2.10.12": "Detecta snapd y permite actualizar Snap y limpiar revisiones antiguas desde el mantenimiento manual y programado.",
+    "2.10.12": "Añade Brave y Gear Lever a las aplicaciones recomendadas, y detecta snapd para actualizar y limpiar Snap en el mantenimiento manual y programado.",
     "2.10.11": "AppImage y Flatpak reutilizan el programador compatible del anfitrión y evitan el error al instalar sobre archivos del DEB.",
     "2.10.10": "Programador incluido en Flatpak y AppImage con actualizaciones firmadas automáticas sin paquetes DEB adicionales en instalaciones nuevas.",
     "2.10.9": "La terminal de Flatpak inicia Bash con terminal de control, sin los errores de control de trabajos.",
@@ -316,6 +316,16 @@ APLICACIONES_BACKUP = {
 }
 APPS_RECOMENDADAS = [
     {
+        "id": "brave", "name": "Brave",
+        "icon": "com.brave.Browser", "bundled_icon": "brave.png",
+        "fallback_icon": "web-browser",
+        "description": "Navegador web con bloqueo de anuncios y rastreadores integrado.",
+        "channels": [
+            {"type": "deb-download", "package": "brave-browser", "uri": "https://brave.com/linux/"},
+            {"type": "flatpak", "app_id": "com.brave.Browser"},
+        ],
+    },
+    {
         "id": "celluloid", "name": "Celluloid",
         "icon": "io.github.celluloid_player.Celluloid",
         "bundled_icon": "celluloid.png",
@@ -335,6 +345,15 @@ APPS_RECOMENDADAS = [
         "channels": [
             {"type": "deb-download", "package": "feishin", "uri": "https://github.com/jeffvli/feishin/releases/latest"},
             {"type": "flatpak", "app_id": "org.jeffvli.feishin"},
+        ],
+    },
+    {
+        "id": "gearlever", "name": "Gear Lever",
+        "icon": "it.mijorus.gearlever", "bundled_icon": "gearlever.png",
+        "fallback_icon": "application-x-executable",
+        "description": "Organiza e integra aplicaciones AppImage en el menú del escritorio y gestiona sus actualizaciones.",
+        "channels": [
+            {"type": "flatpak", "app_id": "it.mijorus.gearlever"},
         ],
     },
     {
