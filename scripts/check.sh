@@ -200,4 +200,6 @@ else
     fallo "actualización portable firmada"
 fi
 
+python3 scripts/test-existing-scheduler.py && bien "reutilización del programador existente" || fallo "programador existente"
+
 exit $fallos

@@ -630,8 +630,35 @@ _PORTABLE_EXTRAS = (
 )
 
 
+def existing_scheduler(formato):
+    """Reuse a compatible host installation without replacing package-owned files."""
+    if formato not in ('appimage', 'flatpak'):
+        raise ValueError('Formato de integración no compatible.')
+    from .scheduler import VERSION, validate_config
+    prefix = ['flatpak-spawn', '--host'] if formato == 'flatpak' else []
+    try:
+        result = subprocess.run(
+            [*prefix, '/usr/lib/aio-debian-gui/aio-debian-gui-helper', '--schedule-status'],
+            capture_output=True, text=True, timeout=20)
+    except FileNotFoundError:
+        return False
+    if result.returncode:
+        return False
+    try:
+        report = json.loads(result.stdout)
+        if not isinstance(report, dict) or report.get('available') is not True or report.get('version') != VERSION:
+            return False
+        if report.get('config') is not None:
+            validate_config(report['config'])
+    except (ValueError, TypeError):
+        return False
+    return True
+
+
 def install_host(formato, appimage=None):
     """Install the bundled scheduler without installing a DEB or using a repository."""
+    if existing_scheduler(formato):
+        return  # Already usable: never try to reinstall over dpkg's files.
     resources = _resources(formato, appimage)
     shared = _portable_directory(formato)
     # Verify the release payload before registering an automatic root updater.
