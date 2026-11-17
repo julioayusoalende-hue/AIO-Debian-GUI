@@ -63,12 +63,15 @@ with tempfile.TemporaryDirectory() as tmp:
     with mock.patch.object(subprocess, "run", side_effect=[installed, done]) as spawned:
         assert integration._request_legacy_host_update("flatpak", "2.10.8")
         query, command = (call.args[0] for call in spawned.call_args_list)
-        assert query[:2] == command[:2] == ["flatpak-spawn", "--host"]
+        assert query[:3] == ["flatpak-spawn", "--host", "--env=LC_ALL=C"]
+        assert query[3] == "/usr/bin/dpkg-query"
+        assert command[:2] == ["flatpak-spawn", "--host"]
         assert command[2:] == ["/usr/bin/python3", "-I", "-c", integration._REQUEST_PROGRAM, "2.10.8"]
     missing = SimpleNamespace(returncode=1, stdout="", stderr="dpkg-query: no packages found matching aio-debian-gui-host")
     with mock.patch.object(subprocess, "run", return_value=missing) as spawned:
-        assert not integration._request_legacy_host_update("appimage", "2.10.8")
-        assert spawned.call_count == 1
+        for formato in ("appimage", "flatpak"):
+            assert not integration._request_legacy_host_update(formato, "2.10.8")
+        assert spawned.call_count == 2
     with mock.patch.object(subprocess, "run", return_value=SimpleNamespace(
             returncode=2, stdout="", stderr="dpkg database failed")):
         try:

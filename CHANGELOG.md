@@ -1,5 +1,10 @@
 # Cambios
 
+## 2.10.13
+
+- Flatpak reconoce la ausencia del paquete de integración antiguo aunque el anfitrión use otro idioma.
+- Cuando falta el asistente del anfitrión, la aplicación indica cómo abrir la guía de integración. Vuelve a comprobar las tareas tras una instalación correcta y registra los fallos del instalador en la consola.
+
 ## 2.10.12
 
 - Añade Brave y Gear Lever a las aplicaciones recomendadas, con los iconos aportados por el usuario. Brave ofrece su página oficial de instalación y Flatpak; Gear Lever se instala como Flatpak.

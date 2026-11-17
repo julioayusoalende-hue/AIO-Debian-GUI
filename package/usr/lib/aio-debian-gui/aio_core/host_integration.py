@@ -480,8 +480,10 @@ def _request_legacy_host_update(formato, version):
     if not isinstance(version, str) or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version) or len(version) > 40:
         raise ValueError("Versión de AiO no válida.")
     prefix = ["flatpak-spawn", "--host"] if formato == "flatpak" else []
+    # HostCommand uses the host session environment unless explicitly overridden.
+    query_prefix = [*prefix, "--env=LC_ALL=C"] if prefix else []
     query = subprocess.run(
-        [*prefix, "/usr/bin/dpkg-query", "-W", "-f=${db:Status-Status}", "aio-debian-gui-host"],
+        [*query_prefix, "/usr/bin/dpkg-query", "-W", "-f=${db:Status-Status}", "aio-debian-gui-host"],
         capture_output=True, text=True, timeout=15, env={**os.environ, "LC_ALL": "C"},
     )
     if query.returncode:

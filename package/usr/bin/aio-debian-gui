@@ -76,6 +76,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.10.13": "Mejora la detección de la integración del anfitrión en Flatpak y comprueba el estado de las tareas después de instalarla.",
     "2.10.12": "Añade Brave y Gear Lever a las aplicaciones recomendadas, y detecta snapd para actualizar y limpiar Snap en el mantenimiento manual y programado.",
     "2.10.11": "AppImage y Flatpak reutilizan el programador compatible del anfitrión y evitan el error al instalar sobre archivos del DEB.",
     "2.10.10": "Programador incluido en Flatpak y AppImage con actualizaciones firmadas automáticas sin paquetes DEB adicionales en instalaciones nuevas.",
@@ -1019,6 +1020,12 @@ class VentanaPrincipal(Gtk.Window):
             buttons=Gtk.ButtonsType.CLOSE,
             text=traducir("No se pudo instalar la integración." if error else "Integración instalada"),
         )
+        if error:
+            self._escribir("[!] %s %s\n" % (
+                traducir("No se pudo instalar la integración."), error,
+            ), "aviso")
+        else:
+            self._consultar_estados_tareas(inicial=True)
         dialogo.format_secondary_text(error if error else traducir(
             "La integración se ha instalado. Comprueba el estado de la programación."
         ))
@@ -2460,9 +2467,12 @@ class VentanaPrincipal(Gtk.Window):
         if inicial:
             self.estado.set_text(traducir("Comprobando tareas ya instaladas…"))
         self._actualizar_sensibilidad()
+        flatpak = es_flatpak()
+        sin_integracion = 42
         comando_estado = (
-            ["flatpak-spawn", "--host", HELPER_SISTEMA, "--status"]
-            if es_flatpak() else ["bash", HELPER, "--status"]
+            comando_host("/bin/sh", "-c", f'[ -e "$1" ] || exit {sin_integracion}; exec "$1" --status',
+                         "aio-status", HELPER_SISTEMA)
+            if flatpak else ["bash", HELPER, "--status"]
         )
 
         # Do not rely on GIO stdout async EOF delivery on all desktops.
@@ -2482,9 +2492,18 @@ class VentanaPrincipal(Gtk.Window):
                 )
             except (OSError, subprocess.SubprocessError) as exc:
                 codigo, salida, error = -1, "", str(exc)
-            GLib.idle_add(self._estados_terminados, codigo, salida, error)
+            if flatpak and codigo == sin_integracion:
+                GLib.idle_add(self._estados_sin_integracion)
+            else:
+                GLib.idle_add(self._estados_terminados, codigo, salida, error)
 
         threading.Thread(target=comprobar, daemon=True).start()
+
+    def _estados_sin_integracion(self):
+        self._finalizar_consulta_estados(False, mensaje=traducir(
+            "Para habilitar las tareas administrativas, abre la guía de integración del anfitrión."
+        ))
+        return GLib.SOURCE_REMOVE
 
     def _estados_terminados(self, codigo, salida, error=""):
         if not self.consultando_estados:
@@ -2573,7 +2592,7 @@ class VentanaPrincipal(Gtk.Window):
                 indicador.hide()
         self._finalizar_consulta_estados(True)
 
-    def _finalizar_consulta_estados(self, correcta, detalle=""):
+    def _finalizar_consulta_estados(self, correcta, detalle="", *, mensaje=None):
         inicial = self.consulta_inicial
         if self.timeout_estados_id is not None:
             GLib.source_remove(self.timeout_estados_id)
@@ -2592,9 +2611,10 @@ class VentanaPrincipal(Gtk.Window):
                     traducir("Selecciona las tareas que quieres ejecutar.")
                 )
             return
-        mensaje = traducir(
-            "No se pudo comprobar el estado de las tareas; siguen disponibles."
-        )
+        if mensaje is None:
+            mensaje = traducir(
+                "No se pudo comprobar el estado de las tareas; siguen disponibles."
+            )
         if detalle:
             mensaje += " " + detalle
         if inicial:
