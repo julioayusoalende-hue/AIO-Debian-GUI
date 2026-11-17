@@ -55,6 +55,18 @@ jobs:
           sudo env PYTHONDONTWRITEBYTECODE=1 python3 scripts/test-scheduler.py
           bash scripts/test-scheduler-systemd.sh
 
+      - name: Sign bundled scheduler
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          export GNUPGHOME="$RUNNER_TEMP/portable-gnupg"
+          mkdir -m 0700 -p "$GNUPGHOME"
+          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          python3 scripts/build-portable-payload.py
+
       - name: Build AppImage
         run: ./scripts/build-appimage.sh
 

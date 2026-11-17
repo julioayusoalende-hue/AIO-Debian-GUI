@@ -11,7 +11,7 @@ finish-args:
   - --socket=fallback-x11
   - --talk-name=org.freedesktop.Flatpak
   # Required only for flatpak-spawn --host; does not grant root privileges.
-  - --env=AIO_DEBIAN_GUI_VERSION=2.10.9
+  - --env=AIO_DEBIAN_GUI_VERSION=2.10.10
 modules:
   - name: vte-gtk3
     buildsystem: meson
@@ -29,6 +29,11 @@ modules:
   - name: aio-debian-gui
     buildsystem: simple
     build-commands:
+      - mkdir -p /app/share/aio-debian-gui/portable
+      - cp portable/aio-portable-update* /app/share/aio-debian-gui/portable/
+      - cp host-package/usr/lib/aio-debian-gui/aio-host-scheduler /app/share/aio-debian-gui/portable/
+      - cp package/usr/share/keyrings/aio-debian-gui.gpg /app/share/aio-debian-gui/portable/aio-debian-gui-portable.gpg
+      - if test -f portable/payload.json; then cp portable/payload.json /app/share/aio-debian-gui/portable/; fi
       - install -D -m 755 package/usr/bin/aio-debian-gui /app/bin/aio-debian-gui
       - mkdir -p /app/lib/aio-debian-gui
       - cp -a package/usr/lib/aio-debian-gui/aio_core /app/lib/aio-debian-gui/aio_core

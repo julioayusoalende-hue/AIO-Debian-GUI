@@ -61,18 +61,18 @@ with tempfile.TemporaryDirectory() as tmp:
     installed = SimpleNamespace(returncode=0, stdout="installed", stderr="")
     done = SimpleNamespace(returncode=0, stdout="", stderr="")
     with mock.patch.object(subprocess, "run", side_effect=[installed, done]) as spawned:
-        assert integration.request_host_update("flatpak", "2.10.8")
+        assert integration._request_legacy_host_update("flatpak", "2.10.8")
         query, command = (call.args[0] for call in spawned.call_args_list)
         assert query[:2] == command[:2] == ["flatpak-spawn", "--host"]
         assert command[2:] == ["/usr/bin/python3", "-I", "-c", integration._REQUEST_PROGRAM, "2.10.8"]
     missing = SimpleNamespace(returncode=1, stdout="", stderr="dpkg-query: no packages found matching aio-debian-gui-host")
     with mock.patch.object(subprocess, "run", return_value=missing) as spawned:
-        assert not integration.request_host_update("appimage", "2.10.8")
+        assert not integration._request_legacy_host_update("appimage", "2.10.8")
         assert spawned.call_count == 1
     with mock.patch.object(subprocess, "run", return_value=SimpleNamespace(
             returncode=2, stdout="", stderr="dpkg database failed")):
         try:
-            integration.request_host_update("appimage", "2.10.8")
+            integration._request_legacy_host_update("appimage", "2.10.8")
         except RuntimeError as exc:
             assert "dpkg database failed" in str(exc)
         else:
@@ -80,7 +80,7 @@ with tempfile.TemporaryDirectory() as tmp:
     with mock.patch.object(subprocess, "run", return_value=SimpleNamespace(
             returncode=0, stdout="half-configured", stderr="")):
         try:
-            integration.request_host_update("appimage", "2.10.8")
+            integration._request_legacy_host_update("appimage", "2.10.8")
         except RuntimeError as exc:
             assert "half-configured" in str(exc)
         else:
@@ -462,13 +462,13 @@ esac
     with mock.patch.object(integration, "_package_payload", return_value=b"{}"), \
          mock.patch.object(integration, "_privileged", side_effect=integration.RepositoryUnavailable("sin red")), \
          mock.patch.object(integration, "install") as legacy:
-        integration.install_host("flatpak")
+        integration._install_legacy_host("flatpak")
     legacy.assert_called_once_with("flatpak", None)
     with mock.patch.object(integration, "_package_payload", return_value=b"{}"), \
          mock.patch.object(integration, "_privileged", side_effect=RuntimeError("DEB")), \
          mock.patch.object(integration, "install") as legacy:
         try:
-            integration.install_host("flatpak")
+            integration._install_legacy_host("flatpak")
         except RuntimeError:
             legacy.assert_not_called()
         else:

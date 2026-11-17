@@ -75,6 +75,7 @@ jobs:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           cd source
+          python3 scripts/build-portable-payload.py
           bash scripts/publish-flatpak-repo.sh ../site
 
       - name: Preserve APT content and deploy only Flatpak files

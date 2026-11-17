@@ -1,5 +1,12 @@
 # Cambios
 
+## 2.10.10
+
+- Flatpak y AppImage incluyen el programador y su contenido firmado; las instalaciones nuevas no necesitan ningún paquete DEB para programar mantenimiento.
+- Al abrir una versión nueva, su programador se actualiza automáticamente en el anfitrión sin solicitar otra contraseña, conservando horarios y registros.
+- Las actualizaciones verifican la firma, rechazan retrocesos y esperan a que finalicen el mantenimiento y las operaciones de dpkg.
+- Las instalaciones anteriores conservan su mecanismo de actualización; no se sobrescriben archivos gestionados por dpkg.
+
 ## 2.10.9
 
 - La terminal de Flatpak inicia Bash con terminal de control, sin los errores de control de trabajos.

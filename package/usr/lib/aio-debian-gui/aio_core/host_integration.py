@@ -473,7 +473,7 @@ finally:
 '''
 
 
-def request_host_update(formato, version):
+def _request_legacy_host_update(formato, version):
     """Solicita una versión al servicio del anfitrión, sin elevar privilegios."""
     if formato not in ("appimage", "flatpak"):
         raise ValueError("Formato de integración no compatible.")
@@ -600,7 +600,7 @@ def _package_payload():
     }).encode("ascii")
 
 
-def install_host(formato, appimage=None):
+def _install_legacy_host(formato, appimage=None):
     """Instala el paquete del anfitrión con actualizaciones; si el repositorio no responde, usa la copia inicial."""
     if formato not in ("appimage", "flatpak"):
         raise ValueError("Formato de integración no compatible.")
@@ -612,6 +612,83 @@ def install_host(formato, appimage=None):
         _privileged(formato, _PACKAGE_PROGRAM, payload)
     except RepositoryUnavailable:
         install(formato, appimage)
+
+
+
+def _portable_directory(formato):
+    return (Path('/app/share/aio-debian-gui/portable') if formato == 'flatpak' else
+            Path(os.environ['APPDIR']) / 'usr/share/aio-debian-gui/portable')
+
+
+_PORTABLE_EXTRAS = (
+    ('aio-portable-update', '/usr/lib/aio-debian-gui/aio-portable-update', 0o644),
+    ('aio-host-scheduler', '/usr/lib/aio-debian-gui/aio-host-scheduler', 0o755),
+    ('aio-portable-update.service', '/usr/lib/systemd/system/aio-portable-update.service', 0o644),
+    ('aio-portable-update.timer', '/usr/lib/systemd/system/aio-portable-update.timer', 0o644),
+    ('aio-debian-gui-portable.gpg', '/usr/share/keyrings/aio-debian-gui-portable.gpg', 0o644),
+    ('portable-version', '/var/lib/aio-debian-gui/portable-version', 0o644),
+)
+
+
+def install_host(formato, appimage=None):
+    """Install the bundled scheduler without installing a DEB or using a repository."""
+    resources = _resources(formato, appimage)
+    shared = _portable_directory(formato)
+    # Verify the release payload before registering an automatic root updater.
+    verifier = (shared / 'aio-portable-update').read_text().split("if __name__ == '__main__':", 1)[0]
+    verifier += r"""
+import sys
+request = json.loads(sys.stdin.buffer.read(9 * 1024 * 1024))
+with tempfile.TemporaryDirectory() as tmp:
+    key = Path(tmp) / 'keyring.gpg'
+    key.write_bytes(base64.b64decode(request['key'], validate=True))
+    release, resources = verify(base64.b64decode(request['payload'], validate=True), key)
+print(json.dumps({'version': release, 'files': {name: base64.b64encode(data).decode() for name, data in resources.items()}}))
+"""
+    prefix = ['flatpak-spawn', '--host'] if formato == 'flatpak' else []
+    request = json.dumps({'key': base64.b64encode((shared / 'aio-debian-gui-portable.gpg').read_bytes()).decode(),
+                          'payload': base64.b64encode((shared / 'payload.json').read_bytes()).decode()})
+    result = subprocess.run([*prefix, '/usr/bin/python3', '-I', '-c', verifier],
+                            input=request, capture_output=True, text=True, check=True, timeout=45)
+    manifest = json.loads(result.stdout)
+    release = manifest['version']
+    decoded = {name: base64.b64decode(data, validate=True) for name, data in manifest['files'].items()}
+    for name, content in decoded.items():
+        resources[name] = {'data': base64.b64encode(content).decode(), 'sha256': hashlib.sha256(content).hexdigest()}
+    for name, _, _ in _PORTABLE_EXTRAS:
+        content = (release + '\n').encode() if name == 'portable-version' else (shared / name).read_bytes()
+        resources[name] = {'data': base64.b64encode(content).decode(), 'sha256': hashlib.sha256(content).hexdigest()}
+    # Keep the helper last: the installer publishes it only after all resources exist.
+    program = _ROOT_PROGRAM.replace('LIMIT = 2 * 1024 * 1024',
+        'RESOURCES = RESOURCES[:-1] + ' + repr(_PORTABLE_EXTRAS) + ' + RESOURCES[-1:]\nLIMIT = 2 * 1024 * 1024', 1)
+    program = program.replace('    main()\nexcept', "    main()\n    p = command(['/usr/bin/systemctl', 'enable', '--now', 'aio-portable-update.timer'])\n    if p.returncode: fail('No se pudo activar el actualizador automático.')\nexcept", 1)
+    _privileged(formato, program, json.dumps(resources).encode())
+
+
+def request_host_update(formato, version):
+    """Stage the signed payload for the root timer, without prompting or networking."""
+    if formato not in ('flatpak', 'appimage'):
+        raise ValueError('Formato de integración no compatible.')
+    prefix = ['flatpak-spawn', '--host'] if formato == 'flatpak' else []
+    exists = subprocess.run([*prefix, '/usr/bin/test', '-f', '/var/lib/aio-debian-gui/portable-version'])
+    if exists.returncode:
+        return _request_legacy_host_update(formato, version)
+    payload = (_portable_directory(formato) / 'payload.json').read_bytes()
+    program = r'''
+import os, sys, tempfile
+from pathlib import Path
+runtime = Path('/run/user') / str(os.getuid())
+fd, name = tempfile.mkstemp(prefix='.aio-portable-', dir=runtime)
+try:
+    with os.fdopen(fd, 'wb') as stream:
+        stream.write(sys.stdin.buffer.read(8 * 1024 * 1024 + 1))
+    os.replace(name, runtime / 'aio-portable-update')
+finally:
+    if os.path.exists(name):
+        os.unlink(name)
+'''
+    subprocess.run([*prefix, '/usr/bin/python3', '-I', '-c', program], input=payload, check=True, timeout=30)
+    return True
 
 
 def _privileged(formato, program, payload):
