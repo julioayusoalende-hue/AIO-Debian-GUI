@@ -1,15 +1,15 @@
 Package: aio-debian-gui
-Version: 2.10.14
+Version: 2.10.15
 Architecture: all
 Maintainer: Julio Ayuso <epdc@msn.com>
 Depends: bash, apt, coreutils, diffutils, grep, sed, util-linux, libnotify-bin, needrestart, python3, python3-gi, gir1.2-gtk-3.0, gir1.2-vte-2.91, librsvg2-common, pkexec | policykit-1
 Conflicts: aio-debian (= 1.1.0), aio-debian (= 1.1.1)
 Replaces: aio-debian (= 1.1.0), aio-debian (= 1.1.1)
-Filename: pool/main/a/aio-debian-gui/aio-debian-gui_2.10.14_all.deb
-Size: 816340
-MD5sum: 28a2d1b546ae36844742c944d31f9dcf
-SHA1: 818453a0de210b8751151c87dd04128b2f8bb666
-SHA256: 847e7910f8517e8015e4bf28b10b8dfbbde8d090821dcfedd779c0ceac8fe015
+Filename: pool/main/a/aio-debian-gui/aio-debian-gui_2.10.15_all.deb
+Size: 816280
+MD5sum: a815357c84553137cf754874e934aab8
+SHA1: df973adb63ba79ff03198715887f0f4c6a5e0b05
+SHA256: 6f70c4634703e17d11a505bf3793d3c74a5a1b79feaaa0441b9a35aa33b70059
 Section: admin
 Priority: optional
 Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
