@@ -1,14 +1,14 @@
 # AiO Debian GUI
 
-**Mantenimiento, diagnóstico y configuración de Debian desde una interfaz gráfica.**
+**Mantenimiento, diagnóstico y configuración de Debian y Ubuntu LTS desde una interfaz gráfica GTK.**
 
-[![Última versión](https://img.shields.io/github/v/release/julioayusoalende-hue/AIO-Debian-GUI?label=versi%C3%B3n)](../../releases/latest)
+[![Última versión](https://img.shields.io/github/v/release/julioayusoalende-hue/AIO-Debian-GUI?label=versi%C3%B3n)](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)
 [![Licencia GPL-3.0](https://img.shields.io/badge/licencia-GPL--3.0-blue)](LICENSE)
-[![Descargas](https://img.shields.io/badge/descargas-Releases-red)](../../releases/latest)
+[![Descargas](https://img.shields.io/badge/descargas-Releases-red)](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)
 
 AiO Debian GUI reúne tareas habituales de administración en una aplicación GTK. Antes de las operaciones delicadas presenta comprobaciones y pide confirmación. Es un proyecto independiente del script de consola [aio-debian](https://github.com/julioayusoalende-hue/aio-debian).
 
-**Descarga la última versión estable desde [Releases](../../releases/latest).** Allí encontrarás los paquetes disponibles y el archivo `SHA256SUMS`. Las versiones anteriores se conservan en el [historial de releases](../../releases).
+**Descarga la última versión estable desde [Releases](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest).** Allí encontrarás los paquetes disponibles y el archivo `SHA256SUMS`. Las versiones anteriores se conservan en el [historial de releases](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases).
 
 ## Funciones
 
@@ -25,59 +25,72 @@ La aplicación es compatible con Debian 12 o superior y Ubuntu 24.04/26.04 LTS. 
 
 El diagnóstico solicita autorización para renovar los índices APT antes de comprobar las actualizaciones del sistema y de AiO. Si se rechaza la autorización o falla la actualización, informa del error y no presenta las lecturas APT como actualizadas. Flatpak necesita el asistente de la misma versión instalado en el anfitrión para renovar los índices.
 
-## Novedades recientes
+## Releases publicadas
 
-- **2.10.9:** La terminal de Flatpak inicia Bash con terminal de control, sin los errores de control de trabajos.
-- **2.10.8:** el programador de AppImage y Flatpak se actualiza solo con cada versión mediante el paquete firmado `aio-debian-gui-host`; el DEB no cambia.
-- **2.10.7:** las eliminaciones previstas por `autoremove` y `dist-upgrade` se muestran como aviso y permiten continuar.
-- **2.10.6:** la terminal ya no ejecuta Fastfetch al iniciar; su acceso manual sigue disponible.
-- **2.10.5:** `autoremove` vuelve a estar activado por defecto y conserva las dependencias de la programación en AppImage y Flatpak.
-- **2.10.4:** `autoremove` conserva `libnotify-bin` y `needrestart`, necesarios para la programación en AppImage y Flatpak.
-- **2.10.3:** instalación automática inicial de la integración del programador para AppImage y Flatpak, con autorización de administrador.
-- **2.10.2:** modulariza traducciones, apariencia GTK y programación; comprobada en Debian 13 con AppImage y Flatpak.
-- **2.10.1:** iconos propios para Timeshift y Déjà Dup, y para las seis aplicaciones recomendadas restantes, incluso sin instalarlas.
-- **2.10.0:** salida de mantenimiento en la terminal, accesos a `clear`, Fastfetch y Nautilus como administrador, y Enter limitado a la pestaña de mantenimiento.
-- **2.9.0:** terminal interactiva con Fastfetch al iniciar cuando está instalado.
-- **2.8.3:** incorpora iconos para Celluloid, GIMP, Spotify y VLC en «Apps recomendadas».
-- **2.8.2:** corrige la instalación de Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.
-- **2.8.1:** mejora los iconos de aplicaciones recomendadas cuando sus logos no están disponibles en el sistema.
-- **2.8.0:** catálogo alfabético de diez apps recomendadas, con canales DEB y Flatpak disponibles y selección explícita del formato.
-- **2.7.10:** corrige la inicialización de la pestaña Backup y conserva la consola y los controles habituales.
-- **2.7.9:** pestaña Backup con Timeshift y Respaldos (Déjà Dup), e instalación opcional autorizada.
-- **2.7.8:** guía integrada para instalar o actualizar el asistente del anfitrión en Flatpak y AppImage, con revisión de archivos y autorización explícita.
-- **2.7.7:** actualización autorizada de los índices APT antes del diagnóstico, con aviso si falla.
-- **2.7.6:** diagnóstico más completo de paquetes actualizables y aviso sobre los índices APT locales que pueden ocultar actualizaciones.
-- **2.7.5:** el paquete DEB instala `needrestart`; si la comprobación de reinicio no está disponible o falla, AiO informa del error en lugar de indicar que no hace falta reiniciar. Para AppImage y Flatpak, instala `needrestart` en el anfitrión si quieres usar esa comprobación.
-- **2.7.4:** correcciones para las notificaciones de escritorio y el aviso de reinicio del mantenimiento programado.
-- **2.7.3:** si el mantenimiento recomienda reiniciar, AiO abre el aviso en la sesión gráfica; nunca reinicia el equipo automáticamente.
-- **2.7.1–2.7.0:** programación de tareas con temporizadores de systemd, recuperación de ejecuciones pendientes al encender el equipo y resultados visibles aunque AiO esté cerrado. En AppImage y Flatpak se requiere instalar una integración administrativa en el anfitrión.
+Inventario comprobado el **17 de noviembre de 2026**. Solo se enlazan publicaciones que siguen disponibles; las versiones históricas no incluyen necesariamente todas las funciones actuales.
 
-Consulta las notas completas en [Releases](../../releases).
+| Versión | Estado | Archivos publicados |
+|---|---|---|
+| [v2.10.9](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.10.9) | Estable actual | DEB · AppImage · Flatpak · SHA256SUMS |
+| [v2.10.8](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.10.8) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
+| [v2.10.7](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.10.7) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
+| [v2.10.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.10.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
+| [v2.8.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.8.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
+| [v2.7.5](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.7.5) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
+| [v2.7.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.7.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
+| [v2.6.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.6.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
+| [v2.4.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.4.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
+| [v2.3.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.3.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
+| [v2.2.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.2.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
+| [v2.1.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.1.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
+| [v2.0.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.0.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
+| [v1.2.4](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v1.2.4) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
+
+La **2.10.9** corrige el control de trabajos de Bash en Flatpak. La **2.10.8** incorpora la actualización de la integración portable mediante el paquete firmado `aio-debian-gui-host`; la **2.10.7** permite revisar y confirmar las eliminaciones previstas por APT. El historial de cambios, incluidas versiones sin release conservada, está en [CHANGELOG.md](CHANGELOG.md).
+
+Para nuevas instalaciones utiliza siempre la [última release estable](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest). Los ejemplos siguientes corresponden a **2.10.9**; al publicarse otra versión, usa el nombre del archivo de esa release.
 
 ## Instalación
 
-En cada release, descarga el archivo correspondiente y sustituye `X.Y.Z` por su versión.
+En cada release, descarga el archivo correspondiente y sustituye `2.10.9` por su versión.
 
 ### DEB (recomendado)
 
-Descarga `aio-debian-gui_X.Y.Z_all.deb` e instálalo:
+Descarga `aio-debian-gui_2.10.9_all.deb` e instálalo:
 
 ```bash
-sudo apt install ./aio-debian-gui_X.Y.Z_all.deb
+sudo apt install ./aio-debian-gui_2.10.9_all.deb
 ```
 
-El paquete configura el repositorio APT del proyecto para recibir futuras actualizaciones con APT.
+El paquete instala las dependencias y configura el repositorio APT firmado del proyecto. Abre AiO desde el menú de aplicaciones o ejecuta `aio-debian-gui` sin sudo.
+
+Para actualizar únicamente AiO:
+
+```bash
+sudo apt update
+sudo apt install --only-upgrade aio-debian-gui
+```
+
+También puedes usar **Menú → Buscar actualizaciones**. Cierra y vuelve a abrir la aplicación después de actualizarla; si se ofrece reiniciar AiO, puedes aceptar.
 
 ### AppImage
 
-Descarga `aio-debian-gui_X.Y.Z_x86_64.AppImage` y ejecútalo:
+Descarga `aio-debian-gui_2.10.9_x86_64.AppImage` y ejecútalo:
 
 ```bash
-chmod +x aio-debian-gui_X.Y.Z_x86_64.AppImage
-./aio-debian-gui_X.Y.Z_x86_64.AppImage
+chmod +x aio-debian-gui_2.10.9_x86_64.AppImage
+./aio-debian-gui_2.10.9_x86_64.AppImage
 ```
 
-Requiere arquitectura `x86_64`, Python 3, GTK 3, `gir1.2-vte-2.91`, Polkit y FUSE 2 (`libfuse2` en Debian 12 o `libfuse2t64` en Debian 13). Instala `fastfetch` para usar su acceso en la terminal. La aplicación no necesita que instales el paquete DEB.
+Antes de abrirlo, instala sus dependencias del anfitrión:
+
+```bash
+sudo apt install python3 python3-gi gir1.2-gtk-3.0 gir1.2-vte-2.91 librsvg2-common pkexec
+```
+
+Requiere arquitectura `x86_64` y FUSE 2 (`libfuse2` en Debian 12 o `libfuse2t64` en Debian 13). Instala `fastfetch` para usar su acceso en la terminal. La aplicación no necesita que instales el paquete DEB.
+
+Para actualizar, usa **Menú → Buscar actualizaciones**: consulta GitHub Releases y descarga el nuevo AppImage tras verificar SHA-256, sin sustituir el ejecutable activo. Cierra AiO y abre el archivo nuevo; actualiza también cualquier acceso directo que apunte al anterior. Si usas programación, vuelve a guardar el horario con el nuevo AppImage antes de retirar el archivo antiguo.
 
 ### Flatpak
 
@@ -88,7 +101,21 @@ sudo apt install flatpak
 flatpak install --user https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.flatpakref
 ```
 
-La release estable vigente también incluye `aio-debian-gui_X.Y.Z_x86_64.flatpak`, que se puede instalar con `flatpak install --user ./aio-debian-gui_X.Y.Z_x86_64.flatpak`. Este bundle por sí solo no configura el repositorio de actualizaciones; para recibirlas, usa el `.flatpakref`. Consulta la [guía de actualizaciones Flatpak](docs/flatpak-actualizaciones.md).
+La release estable vigente también incluye `aio-debian-gui_2.10.9_x86_64.flatpak`, que se puede instalar con `flatpak install --user ./aio-debian-gui_2.10.9_x86_64.flatpak`. Este bundle por sí solo no configura el repositorio de actualizaciones; para recibirlas, usa el `.flatpakref`. Consulta la [guía de actualizaciones Flatpak](docs/flatpak-actualizaciones.md).
+
+Para abrirla:
+
+```bash
+flatpak run io.github.julioayusoalende_hue.aio_debian_gui
+```
+
+Para actualizar únicamente AiO desde su origen configurado:
+
+```bash
+flatpak update --user io.github.julioayusoalende_hue.aio_debian_gui
+```
+
+También puedes usar **Menú → Buscar actualizaciones**. Cierra y vuelve a abrir AiO para cargar la nueva versión. La interfaz se distribuye desde el repositorio propio del proyecto, independiente de Flathub; Flathub proporciona el runtime.
 
 ### Verificar las descargas
 
@@ -108,69 +135,13 @@ Antes de cambiar kernel, Mesa, repositorios o controladores, haz una copia de se
 
 ### Integración del programador para AppImage y Flatpak
 
-En AppImage o Flatpak, abre **Menú → Guía de integración del anfitrión** y selecciona **Instalar integración automáticamente**. Confirma la instalación y autorízala como administrador. Esta opción solo sirve para una instalación nueva: si ya existe algún archivo de la integración o el DEB está instalado, no sobrescribe nada. Para actualizar una integración existente, usa los bloques manuales de la guía después de pausar las programaciones de todos los usuarios y esperar a que finalice cualquier mantenimiento. La guía también está disponible desde la ventana de programación cuando la integración no está lista y desde el diagnóstico si falla la actualización APT.
+En la versión actual, abre **Menú → Guía de integración del anfitrión → Instalar integración automáticamente** y confirma la autorización administrativa. Se instala `aio-debian-gui-host` desde el repositorio firmado y aislado del proyecto. Contiene el asistente privilegiado, la política Polkit y el programador systemd; no instala la interfaz DEB.
 
-Estos pasos instalan en el anfitrión el asistente, los módulos de programación, la política Polkit y el servicio systemd incluidos en la misma versión de AiO. No los ejecutes si el paquete DEB ya gestiona esos archivos. Requiere autorización de administrador.
+Su servicio con temporizador actualiza la integración a la versión solicitada por la aplicación. Espera a que no haya mantenimiento ni otra actualización en curso y rechaza retrocesos y paquetes retenidos. Esta actualización es independiente de APT para la interfaz DEB y del origen Flatpak para la interfaz portable.
 
-Prepara un directorio temporal privado y extrae los archivos desde el formato que utilizas.
+El paquete `aio-debian-gui-host` entra en conflicto con `aio-debian-gui`: si ya tienes el DEB, actualízalo con APT y no intentes instalar encima la integración portable. Si conservas una integración manual antigua o aparece un conflicto de archivos, sigue las indicaciones de la guía integrada; no sobrescribas archivos gestionados por paquetes.
 
-Para **Flatpak**:
-
-```bash
-set -e
-INTEGRACION=$(mktemp -d "$HOME/aio-debian-gui-integracion.XXXXXXXX")
-cd "$INTEGRACION"
-APP=io.github.julioayusoalende_hue.aio_debian_gui
-for f in aio-debian-gui-helper es.aiodebian.gui.policy aio-debian-gui-maintenance@.service; do
-  flatpak run --command=cat "$APP" "/app/share/aio-debian-gui/host-integration/$f" > "$f"
-done
-for f in __init__.py scheduler.py preflight.py; do
-  flatpak run --command=cat "$APP" "/app/lib/aio-debian-gui/aio_core/$f" > "$f"
-done
-```
-
-Para **AppImage**, define `APPIMAGE` con la ruta del archivo descargado:
-
-```bash
-set -e
-INTEGRACION=$(mktemp -d "$HOME/aio-debian-gui-integracion.XXXXXXXX")
-cd "$INTEGRACION"
-APPIMAGE="$HOME/Descargas/aio-debian-gui_X.Y.Z_x86_64.AppImage"
-"$APPIMAGE" --appimage-extract
-cp squashfs-root/usr/lib/aio-debian-gui/aio-debian-gui-helper .
-cp squashfs-root/usr/lib/aio-debian-gui/aio_core/{__init__,scheduler,preflight}.py .
-cp squashfs-root/usr/lib/systemd/system/aio-debian-gui-maintenance@.service .
-cp squashfs-root/usr/share/polkit-1/actions/es.aiodebian.gui.policy .
-```
-
-Comprueba que se extrajeron los seis archivos antes de instalarlos como administrador:
-
-```bash
-set -e
-for f in aio-debian-gui-helper es.aiodebian.gui.policy aio-debian-gui-maintenance@.service __init__.py scheduler.py preflight.py; do
-  test -s "$f" || { echo "Falta $f; no se instalará la integración." >&2; exit 1; }
-done
-if dpkg-query -W -f='${db:Status-Status}' aio-debian-gui 2>/dev/null | grep -qx installed; then
-  echo "El DEB está instalado; actualízalo con APT." >&2
-  exit 1
-fi
-for f in /usr/lib/aio-debian-gui/aio-debian-gui-helper /usr/lib/aio-debian-gui/aio_core/__init__.py /usr/lib/aio-debian-gui/aio_core/scheduler.py /usr/lib/aio-debian-gui/aio_core/preflight.py /usr/share/polkit-1/actions/es.aiodebian.gui.policy /usr/lib/systemd/system/aio-debian-gui-maintenance@.service; do
-  if resultado=$(LC_ALL=C dpkg-query -S "$f" 2>&1); then
-    echo "Archivo gestionado por un paquete: $f." >&2
-    exit 1
-  elif [ "$resultado" != "dpkg-query: no path found matching pattern $f" ]; then
-    echo "No se pudo verificar el propietario de $f: $resultado" >&2
-    exit 1
-  fi
-done
-sudo install -D -o root -g root -m 0755 aio-debian-gui-helper /usr/lib/aio-debian-gui/aio-debian-gui-helper
-for f in __init__.py scheduler.py preflight.py; do
-  sudo install -D -o root -g root -m 0644 "$f" "/usr/lib/aio-debian-gui/aio_core/$f"
-done
-sudo install -D -o root -g root -m 0644 es.aiodebian.gui.policy /usr/share/polkit-1/actions/es.aiodebian.gui.policy
-sudo install -D -o root -g root -m 0644 aio-debian-gui-maintenance@.service /usr/lib/systemd/system/aio-debian-gui-maintenance@.service
-sudo systemctl daemon-reload
-```
+Si el repositorio no responde, el instalador puede recurrir a la integración inicial incluida en la aplicación. Esa alternativa no equivale a tener instalado el paquete con actualización automática; revisa el resultado en la guía. No es necesario copiar manualmente los archivos del programador en una instalación nueva normal.
 
 ## Desarrollo
 
