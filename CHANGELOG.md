@@ -1,5 +1,12 @@
 # Cambios
 
+## 2.10.12
+
+- Añade Brave y Gear Lever a las aplicaciones recomendadas, con los iconos aportados por el usuario. Brave ofrece su página oficial de instalación y Flatpak; Gear Lever se instala como Flatpak.
+
+- Detecta snapd en el anfitrión y añade actualización y limpieza Snap al mantenimiento completo y a la programación opcional. No instala snapd.
+- Tras actualizar correctamente, elimina solo revisiones numéricas deshabilitadas antiguas; conserva la revisión activa, una revisión anterior por aplicación y las instantáneas de datos. Los fallos se registran y no se limpia si falla la actualización o la consulta.
+
 ## 2.10.11
 
 - AppImage y Flatpak reutilizan el programador compatible del anfitrión y evitan el error al instalar sobre archivos del DEB.

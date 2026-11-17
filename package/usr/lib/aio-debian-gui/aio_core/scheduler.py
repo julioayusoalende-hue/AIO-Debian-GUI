@@ -13,7 +13,7 @@ import subprocess
 import sys
 import tempfile
 
-VERSION = '2.10.11'
+VERSION = '2.10.12'
 
 
 def compatible_version(value):
@@ -27,7 +27,7 @@ SERVICE = Path('/usr/lib/systemd/system/aio-debian-gui-maintenance@.service')
 HELPER = '/usr/lib/aio-debian-gui/aio-debian-gui-helper'
 LOCK = '/run/aio-debian-gui/maintenance.lock'
 USER_RUNTIME_DIR = Path('/run/user')
-TASKS = ('upgrade', 'autoclean', 'flatpak-update', 'rebootcheck')
+TASKS = ('upgrade', 'autoclean', 'flatpak-update', 'snap-update', 'rebootcheck')
 DAYS = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 DEFAULT = {'enabled': False, 'frequency': 'weekly', 'weekday': 6,
            'hour': 10, 'minute': 0, 'tasks': ['upgrade', 'autoclean', 'rebootcheck'],
@@ -394,7 +394,7 @@ def run_schedule(uid):
             return finish('skipped', 'Ya hay otro mantenimiento de AiO en curso.')
         _atomic(path, json.dumps(result) + '\n')
         from aio_core import preflight
-        if config['tasks'] != ['flatpak-update'] and preflight._apt_locks() != []:
+        if set(config['tasks']) - {'flatpak-update', 'snap-update'} and preflight._apt_locks() != []:
             return finish('skipped', 'APT/dpkg ocupado o no se pudo comprobar su bloqueo.')
         if 'flatpak-update' in config['tasks'] and not shutil.which('flatpak'):
             return finish('blocked', 'Flatpak no está instalado en el anfitrión.')

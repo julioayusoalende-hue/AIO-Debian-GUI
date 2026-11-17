@@ -79,8 +79,8 @@ for language in ('es', 'en', 'fr', 'zh'):
     settle()
     assert w.get_size()[0] <= 601, (language, w.get_size())
     assert all(button.get_mapped() for button in w.recommended_buttons.values())
-    assert len(w.recommended_grid.get_children()) == 10
-    expected_names = ['Celluloid', 'Feishin', 'GIMP', 'Google Chrome', 'HandBrake',
+    assert len(w.recommended_grid.get_children()) == 12
+    expected_names = ['Brave', 'Celluloid', 'Feishin', 'Gear Lever', 'GIMP', 'Google Chrome', 'HandBrake',
                       'Plex', 'Spotify', 'Switcheroo', 'Video Downloader', 'VLC']
     assert [item['name'] for item in app.APPS_RECOMENDADAS] == expected_names
     for index, name in enumerate(expected_names):
@@ -108,6 +108,9 @@ for language in ('es', 'en', 'fr', 'zh'):
     }
     assert ('feishin', 'flatpak') in w.recommended_buttons
     assert ('feishin', 'deb-download') in w.recommended_buttons
+    assert ('brave', 'flatpak') in w.recommended_buttons
+    assert ('brave', 'deb-download') in w.recommended_buttons
+    assert ('gearlever', 'flatpak') in w.recommended_buttons
     assert ('plex', 'flatpak') in w.recommended_buttons
     assert ('google-chrome', 'deb-download') in w.recommended_buttons
     w.notebook.set_current_page(0)

@@ -23,7 +23,7 @@ assert "GdkPixbuf.Pixbuf.new_from_file_at_scale(" in gui
 for script in ("scripts/build-appimage.sh", "flatpak/io.github.julioayusoalende_hue.aio_debian_gui.yml"):
     content = Path(script).read_text(encoding="utf-8")
     assert "ubuntu-logo.svg" in content, script
-for icon in ("celluloid", "feishin", "gimp", "google-chrome", "handbrake",
+for icon in ("brave", "gearlever", "celluloid", "feishin", "gimp", "google-chrome", "handbrake",
              "plex", "spotify", "switcheroo", "video-downloader", "vlc"):
     assert (root / "recommended-icons" / (icon + ".png")).is_file()
 for script in ("scripts/build-appimage.sh", "flatpak/io.github.julioayusoalende_hue.aio_debian_gui.yml",
