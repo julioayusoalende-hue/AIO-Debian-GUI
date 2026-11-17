@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.11.3
+
+- Flatpak y AppImage consultan el estado del programador sin permisos de administrador. Los cambios del horario siguen autorizándose con Polkit.
+
 ## 2.11.2
 
 - La instalación comprueba que el programador responde como usuario antes de confirmar el éxito.

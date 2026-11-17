@@ -14,8 +14,8 @@ release = next(line.split(': ', 1)[1] for line in (root / 'package/DEBIAN/contro
 files = {name: base64.b64encode((root / 'package' / target.lstrip('/')).read_bytes()).decode() for name, target in module.FILES.items()}
 # The portable service uses the shared update gate already used by the host package.
 files['aio-debian-gui-maintenance@.service'] = base64.b64encode((root / 'host-package/usr/lib/systemd/system/aio-debian-gui-maintenance@.service').read_bytes()).decode()
-helper = base64.b64decode(files['aio-debian-gui-helper']).replace(b'/usr/lib/aio-debian-gui/aio_core/scheduler.py', b'/usr/lib/aio-debian-gui/aio-host-scheduler')
-files['aio-debian-gui-helper'] = base64.b64encode(helper).decode()
+# The helper queries scheduler.py as the desktop user. Its administrative
+# commands already use aio-host-scheduler when that update gate is installed.
 data = json.dumps({'version': release, 'files': files}, sort_keys=True).encode()
 output = root / 'portable/payload.json'
 with tempfile.TemporaryDirectory() as tmp:

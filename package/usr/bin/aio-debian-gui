@@ -76,6 +76,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.11.3": "Corrige la consulta del estado del programador en Flatpak y AppImage.",
     "2.11.2": "La instalación comprueba que el programador responde y muestra el motivo si la programación sigue bloqueada.",
     "2.11.1": "El arranque ya no solicita autorización de administrador y la recuperación reconoce las ejecuciones anteriores de systemd.",
     "2.11.0": "DEB, Flatpak y AppImage comparten el mantenimiento del anfitrión. La app prepara la integración al abrirse y conserva los horarios y el historial.",

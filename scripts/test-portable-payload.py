@@ -4,6 +4,8 @@ import base64
 import importlib.machinery
 import json
 import os
+import shutil
+import sys
 from pathlib import Path
 import subprocess
 import tempfile
@@ -21,6 +23,36 @@ with tempfile.TemporaryDirectory() as tmp:
     gpg('--passphrase', '', '--quick-generate-key', 'Portable test <test@example.invalid>', 'ed25519', 'sign', '1d')
     key = tmp / 'key.gpg'
     key.write_bytes(gpg('--export').stdout)
+    build = tmp / 'build'
+    for directory in ('scripts', 'portable', 'package', 'host-package'):
+        (build / directory).mkdir(parents=True)
+    sources = ['scripts/build-portable-payload.py', 'portable/aio-portable-update',
+               'package/DEBIAN/control',
+               'host-package/usr/lib/systemd/system/aio-debian-gui-maintenance@.service']
+    sources.extend('package' + target for target in u.FILES.values())
+    for source in sources:
+        target = build / source
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(root / source, target)
+    keyring = build / 'package/usr/share/keyrings/aio-debian-gui.gpg'
+    keyring.parent.mkdir(parents=True)
+    shutil.copyfile(key, keyring)
+    build_env = env.copy()
+    build_env.pop('GPG_PASSPHRASE', None)
+    subprocess.run([sys.executable, str(build / 'scripts/build-portable-payload.py')],
+                   env=build_env, check=True, capture_output=True)
+    _, bundled = u.verify((build / 'portable/payload.json').read_bytes(), key)
+    helper = bundled['aio-debian-gui-helper']
+    assert helper == (root / ('package' + u.FILES['aio-debian-gui-helper'])).read_bytes()
+    # Exercise the read-only entry point of the signed helper against a local scheduler.
+    scheduler = tmp / 'scheduler.py'
+    scheduler.write_text('import sys\nprint(sys.argv[1])\n')
+    helper = helper.replace(b'/usr/lib/aio-debian-gui/aio_core/scheduler.py', os.fsencode(scheduler))
+    helper_path = tmp / 'bundled-helper'
+    helper_path.write_bytes(helper)
+    status = subprocess.run(['bash', str(helper_path), '--schedule-status'],
+                            capture_output=True, check=True)
+    assert status.stdout == b'--status\n'
     data = json.dumps({'version': '2.10.10', 'files': {name: base64.b64encode(('new ' + name).encode()).decode() for name in u.FILES}}).encode()
     payload = tmp / 'payload'
     payload.write_bytes(data)
