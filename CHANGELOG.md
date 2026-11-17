@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.10.15
+
+- La recuperación automática de la integración Flatpak acepta también horarios compatibles guardados desde Flatpak o AppImage. Conserva sus tareas, su estado y el historial.
+
 ## 2.10.14
 
 - La instalación automática de la integración Flatpak puede recuperar la programación compatible de un DEB desinstalado. Conserva el historial, guarda una copia del horario anterior y adapta el lanzador a Flatpak.

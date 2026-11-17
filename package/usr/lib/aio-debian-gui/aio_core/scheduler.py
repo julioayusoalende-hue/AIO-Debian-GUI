@@ -13,7 +13,7 @@ import subprocess
 import sys
 import tempfile
 
-VERSION = '2.10.14'
+VERSION = '2.10.15'
 
 
 def compatible_version(value):

@@ -76,6 +76,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.10.15": "La integración de Flatpak también recupera horarios compatibles guardados desde Flatpak o AppImage.",
     "2.10.14": "Flatpak recupera automáticamente horarios compatibles de instalaciones DEB anteriores y conserva su historial.",
     "2.10.13": "Mejora la detección de la integración del anfitrión en Flatpak y comprueba el estado de las tareas después de instalarla.",
     "2.10.12": "Añade Brave y Gear Lever a las aplicaciones recomendadas, y detecta snapd para actualizar y limpiar Snap en el mantenimiento manual y programado.",

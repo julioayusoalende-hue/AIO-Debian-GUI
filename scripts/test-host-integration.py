@@ -283,6 +283,10 @@ esac
                       "weekday": 6, "hour": 9, "minute": 0,
                       "tasks": ["upgrade", "autoclean", "flatpak-update", "rebootcheck"],
                       "launcher": {"format": "deb", "path": ""}}
+            if mode == "recover-flatpak":
+                config["launcher"] = {"format": "flatpak", "path": ""}
+            elif mode == "recover-appimage":
+                config["launcher"] = {"format": "appimage", "path": "/home/user/AiO.AppImage"}
             scheduler_file = module.with_name("scheduler.py")
             scheduler_data = scheduler_file.read_bytes()
             scheduler = {"__name__": "_test_scheduler"}
@@ -379,7 +383,8 @@ esac
         if recovering:
             payload["scheduler.py"] = {"data": base64.b64encode(scheduler_data).decode(),
                                        "sha256": hashlib.sha256(scheduler_data).hexdigest()}
-        success = mode in ("ok", "missing-lock", "recover-enabled", "recover-paused")
+        success = mode in ("ok", "missing-lock", "recover-enabled", "recover-paused",
+                           "recover-flatpak", "recover-appimage")
         stdin = io.TextIOWrapper(io.BytesIO(json.dumps(payload).encode()))
         real_fstat = os.fstat
 
@@ -446,7 +451,8 @@ esac
                     assert ["/usr/bin/systemctl", "disable", "--now", timer_name] in commands
                     assert ["/usr/bin/systemctl", "disable", "--now", "aio-portable-update.timer"] in commands
 
-    for mode in ("recover-enabled", "recover-paused", "recover-activation-error", "recover-active", "recover-edited",
+    for mode in ("recover-enabled", "recover-paused", "recover-flatpak", "recover-appimage",
+                 "recover-activation-error", "recover-active", "recover-edited",
                  "ok", "deb", "owned", "dpkg-error", "unit", "foreign-timer", "residual", "timer-file", "existing",
                  "symlink", "parent-symlink", "hash", "stage-hash", "unsafe", "maintenance",
                  "missing-lock", "reload-error", "link-error"):

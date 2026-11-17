@@ -110,8 +110,6 @@ def legacy_schedule(decoded):
     scheduler = {"__name__": "_aio_recovery_scheduler"}
     exec(compile(decoded["scheduler.py"], "<scheduler>", "exec"), scheduler)
     config = scheduler["validate_config"](json.loads(raw))
-    if config["launcher"] not in (None, {"format": "deb", "path": ""}):
-        fail("La programación anterior pertenece a otro formato de AiO.")
     timer = scheduler["timer_name"](uid)
     units = directory("/etc/systemd/system")
     if units is None or read_existing(units, timer).decode() != scheduler["timer_text"](uid, config):
