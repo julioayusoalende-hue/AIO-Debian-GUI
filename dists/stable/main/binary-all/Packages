@@ -6,10 +6,10 @@ Depends: bash, apt, coreutils, diffutils, grep, sed, util-linux, libnotify-bin, 
 Conflicts: aio-debian (= 1.1.0), aio-debian (= 1.1.1)
 Replaces: aio-debian (= 1.1.0), aio-debian (= 1.1.1)
 Filename: pool/main/a/aio-debian-gui/aio-debian-gui_2.10.9_all.deb
-Size: 800516
-MD5sum: 7f5d58ade0b071011d0d8a3309c0e5ea
-SHA1: 14fc28d82bf8313c9c16e076cec5a9a8bb8d92e4
-SHA256: e7363107aaa4856803ea822290b42b07fe026e0562526fd6a8e9b4e284ae45be
+Size: 800492
+MD5sum: ca7dd038dda6eab755978b46ae280bd7
+SHA1: 0bd84cf642b3be98c72ca62c62967a7a93e9ec82
+SHA256: e1c605fe60b61d36025a3b45d3a8a494791abd5d691fa6e51f31013e4c3730d0
 Section: admin
 Priority: optional
 Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
