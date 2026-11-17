@@ -1,5 +1,10 @@
 # Cambios
 
+## 2.10.11
+
+- AppImage y Flatpak reutilizan el programador compatible del anfitrión y evitan el error al instalar sobre archivos del DEB.
+- La compatibilidad con el programador 2.10.10 permite mantener horarios y usar la nueva interfaz sin reinstalar la integración.
+
 ## 2.10.10
 
 - Flatpak y AppImage incluyen el programador y su contenido firmado; las instalaciones nuevas no necesitan ningún paquete DEB para programar mantenimiento.
