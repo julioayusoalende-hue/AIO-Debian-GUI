@@ -1,31 +1,74 @@
-# Actualizaciones automáticas del Flatpak (repositorio propio)
+# Instalación y actualización de Flatpak
 
-Esta distribución es **independiente de Flathub**. Los paquetes se publican firmados en la rama `gh-pages`, bajo `flatpak-repo/`, sin eliminar el repositorio APT existente.
+AiO Debian GUI se distribuye desde un **repositorio propio firmado**, independiente de Flathub. Flathub se utiliza para el runtime. El identificador es `io.github.julioayusoalende_hue.aio_debian_gui`, rama `stable`.
 
-- Archivo de instalación que configura el origen: https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.flatpakref
-- Archivo del repositorio: https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.flatpakrepo
-
-**Instalación nueva (cuando la publicación termine con éxito):**
+## Instalación recomendada
 
 ```bash
+sudo apt install flatpak
 flatpak install --user https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.flatpakref
+flatpak run io.github.julioayusoalende_hue.aio_debian_gui
 ```
 
-**Usuarios que ya instalaron el .flatpak sin origen:** añadir el remoto firmado desde el archivo .flatpakrepo y comprobar el origen existente con `flatpak info --show-origin io.github.julioayusoalende_hue.aio_debian_gui`. Si su instalación fue sin remoto, reinstalar desde .flatpakref (guardar preferencias antes) para asociarla al repositorio. No asumir que una instalación anterior recibe actualizaciones por arte de magia.
+La referencia configura el origen firmado para recibir actualizaciones. Ejecuta los comandos Flatpak como tu usuario habitual, sin sudo.
+
+## Actualizar
+
+```bash
+flatpak update --user io.github.julioayusoalende_hue.aio_debian_gui
+```
+
+También puedes usar **Menú → Buscar actualizaciones** en AiO o un gestor como GNOME Software/Discover. Las actualizaciones en segundo plano dependen de la configuración del escritorio. Cierra y vuelve a abrir AiO para cargar la versión nueva.
+
+## Bundle descargado de Releases
+
+Las [releases publicadas](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases) incluyen un bundle `.flatpak`. Por ejemplo, para la versión 2.10.9:
+
+```bash
+flatpak install --user ./aio-debian-gui_2.10.9_x86_64.flatpak
+```
+
+Instalar el bundle no configura por sí solo el repositorio de actualizaciones. Comprueba el origen de tu instalación:
+
+```bash
+flatpak info --user --show-origin io.github.julioayusoalende_hue.aio_debian_gui
+flatpak remotes --user --show-details
+```
+
+Para configurar el remoto firmado del proyecto:
 
 ```bash
 flatpak remote-add --user --if-not-exists aio-debian-gui https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.flatpakrepo
-flatpak update --user
 ```
 
-Tras publicar nuevas versiones, se instalan mediante `flatpak update --user`, GNOME Software/Discover u otro actualizador Flatpak (la instalación en segundo plano depende de cada escritorio).
+Añadir un remoto no cambia automáticamente el origen de una aplicación ya instalada. Si el bundle quedó sin un origen actualizable, guarda tus preferencias y reinstala desde la referencia:
 
-## CI
+```bash
+flatpak install --user --reinstall https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.flatpakref
+flatpak update --user io.github.julioayusoalende_hue.aio_debian_gui
+```
 
-El workflow `.github/workflows/publish-flatpak.yml` se dispara al cambiar los archivos relevantes en `main` y admite ejecución manual. Reutiliza `secrets.GPG_PRIVATE_KEY` y `secrets.GPG_PASSPHRASE` del repositorio APT; **no subas ninguna clave privada al código**. No se crea un origen sin firmas. El primer workflow debe terminar correctamente antes de compartir enlaces del repositorio.
+Revisa las confirmaciones de Flatpak y comprueba de nuevo el origen. No necesitas borrar los datos de la aplicación.
 
-Cada ejecución utiliza como base la rama `gh-pages` existente, añade nuevas revisiones OSTree y actualiza los archivos `.flatpakref`/`.flatpakrepo`. El `.flatpakref` es la opción recomendada para asociar la instalación al repositorio firmado y recibir actualizaciones. Algunas releases también incluyen un bundle `.flatpak` descargable; instalarlo no configura automáticamente ese origen. Para cambiar una instalación de bundle al repositorio firmado, sigue los pasos indicados arriba para usuarios que ya instalaron el `.flatpak` sin origen.
+## Integración del sistema anfitrión
 
-**Limitaciones:** las actualizaciones se refieren únicamente a la interfaz Flatpak. El helper privilegiado y la política Polkit que el usuario haya instalado manualmente en Debian **no se actualizan por Flatpak**. La tarea de host debe actualizarse mediante el paquete .deb o un procedimiento administrativo explícito y verificado. Si se cambia la clave GPG, se necesita un plan de transición; no sustituirla silenciosamente.
+Flatpak actualiza la interfaz. Las operaciones administrativas y la programación con AiO cerrado necesitan además el asistente en el anfitrión. **No requieren instalar la interfaz DEB.**
 
-**Mantenimiento:** vigilar cuotas/limitaciones de GitHub Pages y el tamaño creciente del repositorio OSTree; para un repositorio grande, migrar a un hosting apto para ficheros OSTree conservando el endpoint o usando una redirección correcta. Comprobar que `flatpak remote-ls --user aio-debian-gui` y `flatpak update --user` funcionan antes de anunciarlo públicamente.
+Desde AiO, abre **Menú → Guía de integración del anfitrión → Instalar integración automáticamente**. Con autorización administrativa, la versión actual instala `aio-debian-gui-host` desde un repositorio firmado y aislado. Su temporizador actualiza la integración a la versión solicitada por AiO, esperando a que no haya mantenimiento en curso. Incluye las dependencias de notificaciones y comprobación de reinicio.
+
+El paquete de integración entra en conflicto con la interfaz `aio-debian-gui` del DEB. Si tienes el DEB, mantenlo actualizado con APT. Para integraciones manuales antiguas o conflictos de archivos, consulta la guía integrada antes de modificar el sistema. Si el repositorio no responde, la instalación puede recurrir a la copia inicial incluida; esa alternativa no proporciona por sí sola la actualización del paquete host.
+
+Consulta [Programación y permisos](../README.md#programación-y-permisos) para conocer los requisitos de systemd y autorización.
+
+## Publicación y mantenimiento
+
+El workflow [publish-flatpak.yml](../.github/workflows/publish-flatpak.yml) publica en la rama `gh-pages`, bajo `flatpak-repo/`, conservando el repositorio APT. Utiliza los secretos GPG configurados en GitHub; las claves privadas nunca se incluyen en el código.
+
+Antes de anunciar una publicación, comprueba el resultado del workflow, la referencia y el repositorio, y verifica desde un equipo con Flatpak:
+
+```bash
+flatpak remote-ls --user aio-debian-gui
+flatpak update --user io.github.julioayusoalende_hue.aio_debian_gui
+```
+
+Vigila el tamaño del repositorio OSTree y las cuotas de GitHub Pages. Los cambios de clave GPG requieren una transición explícita.
