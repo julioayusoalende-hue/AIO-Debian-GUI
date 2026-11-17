@@ -156,7 +156,7 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
         def install(*_args):
             entered.set()
             assert release.wait(5)
-        with patch.object(app.core_host_integration, 'install', side_effect=install, create=True), \
+        with patch.object(app.core_host_integration, 'install_host', side_effect=install, create=True), \
              patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK):
             w._abrir_guia_integracion(parent=dialog)
             guide = next(d for d in Gtk.Window.list_toplevels()

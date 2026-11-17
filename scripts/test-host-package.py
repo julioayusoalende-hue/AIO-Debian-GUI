@@ -86,8 +86,13 @@ def start_agent():
         "os.execvp('gpg-agent',['gpg-agent','--homedir',sys.argv[2],"
         "'--supervised','--disable-scdaemon'])"
     )
+    # gpg puede usar /run/user/<uid>/gnupg en lugar del directorio personal; se le pregunta dónde.
+    path = run("gpgconf", "--list-dirs", "agent-socket", text=True).stdout.strip()
+    Path(path).parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if os.path.lexists(path):
+        os.unlink(path)
     with socket.socket(socket.AF_UNIX) as listener:
-        listener.bind(GPG_HOME + "/S.gpg-agent")
+        listener.bind(path)
         listener.listen(16)
         return subprocess.Popen([sys.executable, "-I", "-c", launcher,
                                  str(listener.fileno()), GPG_HOME],
