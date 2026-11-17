@@ -23,43 +23,40 @@ AiO Debian GUI reúne tareas habituales de administración en una aplicación GT
 
 La aplicación es compatible con Debian 12 o superior y Ubuntu 24.04/26.04 LTS. Algunas tareas dependen de la distribución y se bloquean cuando no son compatibles.
 
-El diagnóstico solicita autorización para renovar los índices APT antes de comprobar las actualizaciones del sistema y de AiO. Si se rechaza la autorización o falla la actualización, informa del error y no presenta las lecturas APT como actualizadas. Flatpak necesita el asistente de la misma versión instalado en el anfitrión para renovar los índices.
+El diagnóstico solicita autorización para renovar los índices APT antes de comprobar las actualizaciones del sistema y de AiO. Si se rechaza la autorización o falla la actualización, informa del error y no presenta las lecturas APT como actualizadas. Flatpak necesita un asistente compatible instalado en el anfitrión para renovar los índices.
 
-## Releases publicadas
+## Releases disponibles
 
-Inventario comprobado el **17 de noviembre de 2026**. Solo se enlazan publicaciones que siguen disponibles; las versiones históricas no incluyen necesariamente todas las funciones actuales.
+Para instalar o actualizar AiO, usa la [última release estable](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest). Las versiones anteriores siguen disponibles en [GitHub Releases](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases). Cada una incluye DEB, AppImage, Flatpak y `SHA256SUMS`.
 
-| Versión | Estado | Archivos publicados |
-|---|---|---|
-| [v2.10.9](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.10.9) | Estable actual | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.10.8](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.10.8) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.10.7](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.10.7) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.10.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.10.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.8.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.8.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.7.5](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.7.5) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.7.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.7.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.6.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.6.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.4.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.4.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.3.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.3.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.2.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.2.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.1.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.1.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.0.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.0.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v1.2.4](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v1.2.4) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
+| Versión | Estado |
+|---|---|
+| [v2.11.3](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.11.3) | Última estable |
+| [v2.10.12](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.10.12) | Histórica |
+| [v2.10.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.10.0) | Histórica |
+| [v2.8.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.8.0) | Histórica |
+| [v2.7.5](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.7.5) | Histórica |
+| [v2.7.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.7.0) | Histórica |
+| [v2.6.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.6.0) | Histórica |
+| [v2.4.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.4.0) | Histórica |
+| [v2.3.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.3.0) | Histórica |
+| [v2.2.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.2.0) | Histórica |
+| [v2.1.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.1.0) | Histórica |
+| [v2.0.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.0.0) | Histórica |
+| [v1.2.4](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v1.2.4) | Histórica |
 
-La **2.10.9** corrige el control de trabajos de Bash en Flatpak. La **2.10.8** incorpora la actualización de la integración portable mediante el paquete firmado `aio-debian-gui-host`; la **2.10.7** permite revisar y confirmar las eliminaciones previstas por APT. El historial de cambios, incluidas versiones sin release conservada, está en [CHANGELOG.md](CHANGELOG.md).
-
-Para nuevas instalaciones utiliza siempre la [última release estable](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest). Los ejemplos siguientes corresponden a **2.10.9**; al publicarse otra versión, usa el nombre del archivo de esa release.
+Consulta las notas de cada versión en su página de GitHub.
 
 ## Instalación
 
-En cada release, descarga el archivo correspondiente y sustituye `2.10.9` por su versión.
+Descarga el archivo de la release que quieras instalar. En los ejemplos, sustituye `VERSION` por el número del archivo descargado.
 
 ### DEB (recomendado)
 
-Descarga `aio-debian-gui_2.10.9_all.deb` e instálalo:
+Descarga `aio-debian-gui_VERSION_all.deb` e instálalo:
 
 ```bash
-sudo apt install ./aio-debian-gui_2.10.9_all.deb
+sudo apt install ./aio-debian-gui_VERSION_all.deb
 ```
 
 El paquete instala las dependencias y configura el repositorio APT firmado del proyecto. Abre AiO desde el menú de aplicaciones o ejecuta `aio-debian-gui` sin sudo.
@@ -75,11 +72,11 @@ También puedes usar **Menú → Buscar actualizaciones**. Cierra y vuelve a abr
 
 ### AppImage
 
-Descarga `aio-debian-gui_2.10.9_x86_64.AppImage` y ejecútalo:
+Descarga `aio-debian-gui_VERSION_x86_64.AppImage` y ejecútalo:
 
 ```bash
-chmod +x aio-debian-gui_2.10.9_x86_64.AppImage
-./aio-debian-gui_2.10.9_x86_64.AppImage
+chmod +x aio-debian-gui_VERSION_x86_64.AppImage
+./aio-debian-gui_VERSION_x86_64.AppImage
 ```
 
 Antes de abrirlo, instala sus dependencias del anfitrión:
@@ -101,7 +98,7 @@ sudo apt install flatpak
 flatpak install --user https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.flatpakref
 ```
 
-La release estable vigente también incluye `aio-debian-gui_2.10.9_x86_64.flatpak`, que se puede instalar con `flatpak install --user ./aio-debian-gui_2.10.9_x86_64.flatpak`. Este bundle por sí solo no configura el repositorio de actualizaciones; para recibirlas, usa el `.flatpakref`. Consulta la [guía de actualizaciones Flatpak](docs/flatpak-actualizaciones.md).
+También puedes descargar `aio-debian-gui_VERSION_x86_64.flatpak` desde GitHub Releases e instalarlo con `flatpak install --user ./aio-debian-gui_VERSION_x86_64.flatpak`. Este bundle por sí solo no configura el repositorio de actualizaciones; para recibirlas, usa el `.flatpakref`. Consulta la [guía de actualizaciones Flatpak](docs/flatpak-actualizaciones.md).
 
 Para abrirla:
 
