@@ -262,14 +262,46 @@ esac
         for path in ("/etc/systemd/system", "/run/systemd/system",
                      "/usr/local/lib/systemd/system", "/usr/lib/systemd/system"):
             code = code.replace('"' + path + '"', repr(str(sandbox) + path))
+        code = code.replace(f"units = directory({str(sandbox / 'etc/systemd/system')!r})",
+                            'units = directory("/etc/systemd/system")')
         code = code.replace("basefd = directory(base)",
                             "basefd = directory(base.removeprefix(" + repr(str(sandbox)) + "))")
         for path in ("/var/lib/dpkg/lock-frontend", "/var/lib/dpkg/lock", "/run/aio-debian-gui/maintenance.lock"):
             code = code.replace('lock_file("' + path + '"', "lock_file(" + repr(str(sandbox) + path))
         code = code.replace('dir="/run/aio-debian-gui"', 'dir=' + repr(str(sandbox / "run/aio-debian-gui")))
+        code = code.replace('os.path.lexists("/etc/aio-debian-gui")',
+                            f'os.path.lexists({str(sandbox / "etc/aio-debian-gui")!r})')
+        code = code.replace('dir="/var/backups"', f'dir={str(sandbox / "var/backups")!r}')
         namespace = {}
         exec(compile(code, "<fixed-root-program-test>", "exec"), namespace)
         commands = []
+        recovering = mode.startswith("recover-")
+        if recovering:
+            namespace["RECOVER_FLATPAK"] = True
+            namespace["PORTABLE"] = True
+            config = {"enabled": mode != "recover-paused", "frequency": "daily",
+                      "weekday": 6, "hour": 9, "minute": 0,
+                      "tasks": ["upgrade", "autoclean", "flatpak-update", "rebootcheck"],
+                      "launcher": {"format": "deb", "path": ""}}
+            scheduler_file = module.with_name("scheduler.py")
+            scheduler_data = scheduler_file.read_bytes()
+            scheduler = {"__name__": "_test_scheduler"}
+            exec(compile(scheduler_data, str(scheduler_file), "exec"), scheduler)
+            config_file = sandbox / "etc/aio-debian-gui/schedules/1000.json"
+            config_file.parent.mkdir(parents=True)
+            original = json.dumps(config)
+            config_file.write_text(original)
+            state_file = sandbox / "var/lib/aio-debian-gui/schedules/1000.json"
+            state_file.parent.mkdir(parents=True)
+            state_file.write_text('{"status": "success"}')
+            timer_name = scheduler["timer_name"](1000)
+            timer = sandbox / "etc/systemd/system" / timer_name
+            timer.parent.mkdir(parents=True)
+            timer.write_text(scheduler["timer_text"](1000, config))
+            if mode == "recover-edited":
+                timer.write_text(timer.read_text() + "OnBootSec=1s\n")
+            (sandbox / "var/backups").mkdir()
+
 
         def fake_command(args):
             commands.append(args)
@@ -283,6 +315,15 @@ esac
                     return SimpleNamespace(returncode=0, stdout="other: " + args[-1], stderr="")
                 return SimpleNamespace(returncode=1, stdout="",
                                        stderr="dpkg-query: no path found matching pattern " + args[-1])
+            if recovering and args[1] == "show":
+                active = "active" if mode == "recover-active" else "inactive"
+                return SimpleNamespace(returncode=0, stderr="", stdout=(
+                    f"ActiveState={active}\nUnitFileState=disabled\nDropInPaths=\n"
+                    f"FragmentPath=/etc/systemd/system/{timer_name}\n"))
+            if recovering and args[1] == "list-unit-files":
+                return SimpleNamespace(returncode=0, stdout=f"{timer_name} disabled enabled\n", stderr="")
+            if mode == "recover-activation-error" and args[1:] == ["enable", "--now", timer_name]:
+                return SimpleNamespace(returncode=1, stdout="", stderr="activation failed")
             if mode == "unit" and args[1] == "list-units":
                 return SimpleNamespace(returncode=0, stdout="aio-debian-gui-maintenance-1000.timer loaded active", stderr="")
             if mode == "foreign-timer" and "--type=timer" in args:
@@ -335,6 +376,10 @@ esac
         payload = json.loads(json.dumps(resources))
         if mode == "hash":
             payload["scheduler.py"]["sha256"] = "0" * 64
+        if recovering:
+            payload["scheduler.py"] = {"data": base64.b64encode(scheduler_data).decode(),
+                                       "sha256": hashlib.sha256(scheduler_data).hexdigest()}
+        success = mode in ("ok", "missing-lock", "recover-enabled", "recover-paused")
         stdin = io.TextIOWrapper(io.BytesIO(json.dumps(payload).encode()))
         real_fstat = os.fstat
 
@@ -345,30 +390,32 @@ esac
 
         with mock.patch.object(sys, "stdin", stdin), mock.patch.object(sys, "stdout", io.StringIO()), \
              mock.patch.object(os, "geteuid", return_value=0), mock.patch.object(os, "fstat", side_effect=fake_fstat), \
-             mock.patch("signal.signal"), \
+             mock.patch("signal.signal"), mock.patch("pwd.getpwuid"), \
+             mock.patch.dict(os.environ, {"PKEXEC_UID": "1000"}), \
              (mock.patch.object(os, "link", side_effect=OSError("publicación fallida"))
               if mode == "link-error" else nullcontext()):
             try:
                 namespace["main"]()
             except (OSError, ValueError, RuntimeError) as exc:
-                if mode in ("ok", "missing-lock"):
+                if success:
                     raise
                 assert str(exc), mode
             else:
-                assert mode in ("ok", "missing-lock"), mode
+                assert success, mode
             finally:
                 for fd in reversed(namespace["handles"]):
                     os.close(fd)
                 if held:
                     held.close()
         targets = [sandbox / path.lstrip("/") for _, path, _ in namespace["RESOURCES"]]
-        if mode in ("ok", "missing-lock"):
+        if success:
             assert all(p.is_file() for p in targets)
             assert [name for _, name in namespace["created"]][-1] == "aio-debian-gui-helper"
             assert stat.S_IMODE(targets[-1].stat().st_mode) == 0o755
-            assert all(path.read_bytes() == base64.b64decode(resources[name]["data"])
+            assert all(path.read_bytes() == base64.b64decode(payload[name]["data"])
                        for (name, _, _), path in zip(namespace["RESOURCES"], targets))
-            assert commands[-1][1] == "daemon-reload"
+            if not recovering:
+                assert commands[-1][1] == "daemon-reload"
         elif mode == "existing":
             assert targets[1].read_text() == "preexisting"
             assert sum(p.exists() for p in targets) == 1
@@ -386,7 +433,21 @@ esac
                     "maintenance"):
             assert not any(c[1] == "daemon-reload" for c in commands if c[0].endswith("systemctl"))
 
-    for mode in ("ok", "deb", "owned", "dpkg-error", "unit", "foreign-timer", "residual", "timer-file", "existing",
+        if recovering:
+            assert state_file.read_text() == '{"status": "success"}'
+            backups = list((sandbox / "var/backups").glob("*.json"))
+            if success:
+                assert json.loads(config_file.read_text()) == {**config, "launcher": {"format": "flatpak", "path": ""}}
+                assert len(backups) == 1 and backups[0].read_text() == original
+                assert (["/usr/bin/systemctl", "enable", "--now", timer_name] in commands) == config["enabled"]
+            else:
+                assert config_file.read_text() == original and not backups
+                if mode == "recover-activation-error":
+                    assert ["/usr/bin/systemctl", "disable", "--now", timer_name] in commands
+                    assert ["/usr/bin/systemctl", "disable", "--now", "aio-portable-update.timer"] in commands
+
+    for mode in ("recover-enabled", "recover-paused", "recover-activation-error", "recover-active", "recover-edited",
+                 "ok", "deb", "owned", "dpkg-error", "unit", "foreign-timer", "residual", "timer-file", "existing",
                  "symlink", "parent-symlink", "hash", "stage-hash", "unsafe", "maintenance",
                  "missing-lock", "reload-error", "link-error"):
         root_test(mode)

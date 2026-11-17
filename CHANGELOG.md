@@ -1,5 +1,10 @@
 # Cambios
 
+## 2.10.14
+
+- La instalación automática de la integración Flatpak puede recuperar la programación compatible de un DEB desinstalado. Conserva el historial, guarda una copia del horario anterior y adapta el lanzador a Flatpak.
+- Los horarios pausados conservan su estado. Si falla la instalación o la activación del temporizador, se revierte la migración.
+
 ## 2.10.13
 
 - Flatpak reconoce la ausencia del paquete de integración antiguo aunque el anfitrión use otro idioma.

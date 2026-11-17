@@ -27,6 +27,8 @@ RESOURCES = (
     ("aio-debian-gui-helper", "/usr/lib/aio-debian-gui/aio-debian-gui-helper", 0o755),
 )
 LIMIT = 2 * 1024 * 1024
+PORTABLE = False
+RECOVER_FLATPAK = False
 NOFOLLOW = os.O_NOFOLLOW | os.O_CLOEXEC
 created = []
 directories = []
@@ -76,11 +78,85 @@ def absent(parent, name):
         return
     fail("Ya existe un destino de integración: " + name)
 
-def check_residual():
+def read_existing(parent, name):
+    fd = os.open(name, os.O_RDONLY | os.O_NONBLOCK | NOFOLLOW, dir_fd=parent)
+    with os.fdopen(fd, "rb") as stream:
+        info = os.fstat(stream.fileno())
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0
+                or info.st_mode & 0o022 or info.st_nlink != 1):
+            fail("Archivo de programación inseguro: " + name)
+        data = stream.read(32769)
+        if len(data) > 32768:
+            fail("Archivo de programación demasiado grande: " + name)
+        return data
+
+def legacy_schedule(decoded):
+    if not RECOVER_FLATPAK or not os.path.lexists("/etc/aio-debian-gui"):
+        return None
+    uid = os.environ.get("PKEXEC_UID", "")
+    if not re.fullmatch(r"[1-9][0-9]{0,9}", uid):
+        fail("No se pudo determinar el usuario autorizado.")
+    from pwd import getpwuid
+    try:
+        getpwuid(int(uid))
+    except (KeyError, OverflowError):
+        fail("No se encontró el usuario de la programación.")
+    name = uid + ".json"
+    config_root = directory("/etc/aio-debian-gui")
+    configs = directory("/etc/aio-debian-gui/schedules")
+    if configs is None or set(os.listdir(config_root)) != {"schedules"} or set(os.listdir(configs)) != {name}:
+        fail("La configuración anterior contiene datos que requieren revisión.")
+    raw = read_existing(configs, name)
+    scheduler = {"__name__": "_aio_recovery_scheduler"}
+    exec(compile(decoded["scheduler.py"], "<scheduler>", "exec"), scheduler)
+    config = scheduler["validate_config"](json.loads(raw))
+    if config["launcher"] not in (None, {"format": "deb", "path": ""}):
+        fail("La programación anterior pertenece a otro formato de AiO.")
+    timer = scheduler["timer_name"](uid)
+    units = directory("/etc/systemd/system")
+    if units is None or read_existing(units, timer).decode() != scheduler["timer_text"](uid, config):
+        fail("El temporizador anterior no coincide con la programación guardada.")
+    state = directory("/var/lib/aio-debian-gui")
+    if state is not None:
+        if set(os.listdir(state)) - {"schedules"}:
+            fail("El estado anterior contiene datos que requieren revisión.")
+        history = directory("/var/lib/aio-debian-gui/schedules")
+        if history is not None:
+            files = set(os.listdir(history))
+            if files - {name}:
+                fail("Hay resultados de mantenimiento de otros usuarios.")
+            if name in files and not isinstance(json.loads(read_existing(history, name)), dict):
+                fail("El resultado de mantenimiento anterior no es válido.")
+    p = command(["/usr/bin/systemctl", "show", timer, "--property=ActiveState,UnitFileState,FragmentPath,DropInPaths"])
+    fields = dict(line.split("=", 1) for line in p.stdout.splitlines() if "=" in line)
+    if p.returncode or fields != {"ActiveState": "inactive", "UnitFileState": "disabled", "DropInPaths": "",
+                                 "FragmentPath": "/etc/systemd/system/" + timer}:
+        fail("Solo se puede recuperar automáticamente un temporizador de AiO inactivo y deshabilitado.")
+    config["launcher"] = {"format": "flatpak", "path": ""}
+    return configs, name, raw, json.dumps(config).encode() + b"\n", timer, config["enabled"]
+
+def replace_schedule(parent, name, data):
+    temporary = ".aio-recovery-" + os.urandom(16).hex()
+    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | NOFOLLOW, 0o644, dir_fd=parent)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            os.fchmod(stream.fileno(), 0o644)
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, name, src_dir_fd=parent, dst_dir_fd=parent)
+    finally:
+        try:
+            os.unlink(temporary, dir_fd=parent)
+        except FileNotFoundError:
+            pass
+
+def check_residual(recovery=None):
+    legacy_timer = recovery[4] if recovery else None
     directory("/etc")
     directory("/var/lib")
     for path in ("/etc/aio-debian-gui", "/var/lib/aio-debian-gui"):
-        if os.path.lexists(path):
+        if not recovery and os.path.lexists(path):
             fail("Existe configuración o estado anterior: " + path)
     # Incluye unidades no cargadas, enlaces rotos, overrides y dependencias.
     for base in ("/etc/systemd/system", "/run/systemd/system", "/usr/local/lib/systemd/system",
@@ -91,7 +167,8 @@ def check_residual():
         with os.scandir(basefd) as entries:
             for entry in entries:
                 if entry.name.startswith(("aio-debian-gui-maintenance@", "aio-debian-gui-maintenance-")):
-                    fail("Existe una unidad o configuración anterior: " + base + "/" + entry.name)
+                    if base != "/etc/systemd/system" or entry.name != legacy_timer:
+                        fail("Existe una unidad o configuración anterior: " + base + "/" + entry.name)
                 if entry.name.endswith((".wants", ".requires")):
                     if entry.is_symlink():
                         fail("Directorio de dependencias inseguro: " + base + "/" + entry.name)
@@ -112,7 +189,11 @@ def check_residual():
         for line in p.stdout.splitlines():
             fields = line.split()
             if fields and fields[0].startswith(("aio-debian-gui-maintenance@", "aio-debian-gui-maintenance-")):
-                fail("Existen unidades o temporizadores de AiO en systemd.")
+                permitted = (fields[0] == legacy_timer and
+                             (fields[1:2] == ["disabled"] if subcommand == "list-unit-files"
+                              else fields[2:3] == ["inactive"]))
+                if not permitted:
+                    fail("Existen unidades o temporizadores de AiO en systemd.")
     p = command(["/usr/bin/systemctl", "list-units", "--all", "--plain", "--no-legend",
                  "--no-pager", "--type=timer"])
     if p.returncode:
@@ -122,7 +203,8 @@ def check_residual():
         fields = line.split()
         if not fields or not fields[0].endswith(".timer"):
             fail("Respuesta de systemd no válida al enumerar temporizadores.")
-        timers.append(fields[0])
+        if fields[0] != legacy_timer:
+            timers.append(fields[0])
     if timers:
         p = command(["/usr/bin/systemctl", "show", "--all", "--property=Id",
                      "--property=Triggers", "--", *timers])
@@ -194,15 +276,18 @@ def main():
     lock_file("/var/lib/dpkg/lock-frontend", True)
     lock_file("/var/lib/dpkg/lock", True)
     check_packages()
-    check_residual()
+    recovery = legacy_schedule(decoded)
+    check_residual(recovery)
     for _, path, _ in RESOURCES:
         absent(directory(os.path.dirname(path)), os.path.basename(path))
     directory("/run/aio-debian-gui", True)
     lock_file("/run/aio-debian-gui/maintenance.lock", create=True)
-    check_residual()
+    check_residual(recovery)
     directories.clear()
 
-    published = False
+    backup = None
+    restore_schedule = False
+    activated = []
     try:
         with tempfile.TemporaryDirectory(prefix=".aio-integration-", dir="/run/aio-debian-gui") as stage:
             for name, _, _ in RESOURCES:
@@ -252,16 +337,47 @@ def main():
         try:
             os.link("/proc/self/fd/" + str(helper_fd), os.path.basename(helper_path),
                     dst_dir_fd=helper_parent, follow_symlinks=True)
-            published = True
-            signal.signal(signal.SIGTERM, signal.SIG_IGN)
-            signal.signal(signal.SIGINT, signal.SIG_IGN)
+            created.append((helper_parent, os.path.basename(helper_path)))
         finally:
             signal.pthread_sigmask(signal.SIG_SETMASK, old_mask)
-        created.append((helper_parent, os.path.basename(helper_path)))
+        if recovery:
+            parent, name, raw, migrated, timer, enabled = recovery
+            directory("/var/backups")
+            with tempfile.NamedTemporaryFile(prefix="aio-debian-gui-schedule-", suffix=".json",
+                                             dir="/var/backups", delete=False) as stream:
+                backup = stream.name
+                stream.write(raw)
+                stream.flush()
+                os.fsync(stream.fileno())
+            restore_schedule = True
+            replace_schedule(parent, name, migrated)
+        timers_to_start = ["aio-portable-update.timer"] if PORTABLE else []
+        if recovery and enabled:
+            timers_to_start.append(timer)
+        for unit in timers_to_start:
+            activated.append(unit)
+            p = command(["/usr/bin/systemctl", "enable", "--now", unit])
+            if p.returncode:
+                fail("No se pudo activar " + unit + ": " + (p.stderr or p.stdout).strip()[-600:])
     except BaseException as original:
-        if published:
-            raise
         errors = []
+        for unit in reversed(activated):
+            try:
+                p = command(["/usr/bin/systemctl", "disable", "--now", unit])
+                if p.returncode:
+                    errors.append("No se pudo desactivar " + unit)
+            except (OSError, subprocess.SubprocessError) as exc:
+                errors.append(str(exc))
+        if restore_schedule:
+            try:
+                replace_schedule(parent, name, raw)
+            except OSError as exc:
+                errors.append(str(exc))
+        if backup and not errors:
+            try:
+                os.unlink(backup)
+            except OSError as exc:
+                errors.append(str(exc))
         for parent, name in reversed(created):
             try:
                 os.unlink(name, dir_fd=parent)
@@ -690,7 +806,9 @@ print(json.dumps({'version': release, 'files': {name: base64.b64encode(data).dec
     # Keep the helper last: the installer publishes it only after all resources exist.
     program = _ROOT_PROGRAM.replace('LIMIT = 2 * 1024 * 1024',
         'RESOURCES = RESOURCES[:-1] + ' + repr(_PORTABLE_EXTRAS) + ' + RESOURCES[-1:]\nLIMIT = 2 * 1024 * 1024', 1)
-    program = program.replace('    main()\nexcept', "    main()\n    p = command(['/usr/bin/systemctl', 'enable', '--now', 'aio-portable-update.timer'])\n    if p.returncode: fail('No se pudo activar el actualizador automático.')\nexcept", 1)
+    program = program.replace("PORTABLE = False", "PORTABLE = True", 1)
+    if formato == "flatpak":
+        program = program.replace("RECOVER_FLATPAK = False", "RECOVER_FLATPAK = True", 1)
     _privileged(formato, program, json.dumps(resources).encode())
 
 
