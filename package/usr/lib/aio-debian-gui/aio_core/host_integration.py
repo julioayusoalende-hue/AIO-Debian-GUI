@@ -149,7 +149,7 @@ def retained_schedules(decoded, portable_state):
             fields = dict(line.split("=", 1) for line in p.stdout.splitlines() if "=" in line)
             active_state = fields.pop("ActiveState", "")
             file_state = fields.pop("UnitFileState", "")
-            already_active = portable_state and enabled and (active_state, file_state) == ("active", "enabled")
+            already_active = enabled and (active_state, file_state) == ("active", "enabled")
             if (p.returncode or fields != {"DropInPaths": "", "FragmentPath": "/etc/systemd/system/" + timer}
                     or not (already_active or (active_state, file_state) == ("inactive", "disabled"))):
                 fail("El estado del temporizador anterior requiere revisión: " + timer)
@@ -192,6 +192,10 @@ def replace_resource(parent, name, content, mode):
 
 def check_residual(schedules=None, repair=False):
     legacy_timers = {name: active for name, (exists, _, _, active) in (schedules or {}).items() if exists}
+    retained_services = {
+        "aio-debian-gui-maintenance@" + name.removeprefix("aio-debian-gui-maintenance-").removesuffix(".timer") + ".service"
+        for name in (schedules or {})
+    }
     directory("/etc")
     directory("/var/lib")
     for path in ("/etc/aio-debian-gui", "/var/lib/aio-debian-gui"):
@@ -238,12 +242,16 @@ def check_residual(schedules=None, repair=False):
                 if (repair and subcommand == "list-unit-files"
                         and fields[:2] == ["aio-debian-gui-maintenance@.service", "static"]):
                     continue
+                # systemd can keep the service instance loaded after a completed or failed run.
+                if (subcommand == "list-units" and fields[0] in retained_services
+                        and fields[2:3] in (["inactive"], ["failed"])):
+                    continue
                 active = legacy_timers.get(fields[0])
                 expected = (["enabled" if active else "disabled"] if subcommand == "list-unit-files"
                             else ["active" if active else "inactive"])
                 actual = fields[1:2] if subcommand == "list-unit-files" else fields[2:3]
                 if active is None or actual != expected:
-                    fail("Existen unidades o temporizadores de AiO en systemd.")
+                    fail("Unidad de AiO en un estado inesperado (" + subcommand + "): " + " ".join(fields[:4]))
     p = command(["/usr/bin/systemctl", "list-units", "--all", "--plain", "--no-legend",
                  "--no-pager", "--type=timer"])
     if p.returncode:
@@ -844,21 +852,12 @@ def _portable_repair_ready(formato):
         return False
 
 
-def prepare_host(formato, version, appimage=None):
-    """Select the shared host integration or enroll a portable install once."""
+def prepare_host(formato, version):
+    """Queue signed updates at startup without attempting privileged installation."""
     if formato not in ("appimage", "flatpak"):
         raise ValueError("Formato de integración no compatible.")
-    if existing_scheduler(formato):
+    if existing_scheduler(formato) or _portable_repair_ready(formato):
         request_host_update(formato, version)
-        return
-    if _portable_repair_ready(formato) and request_host_update(formato, version):
-        deadline = time.monotonic() + 75
-        while time.monotonic() < deadline:
-            time.sleep(3)
-            if existing_scheduler(formato):
-                return
-        raise RuntimeError("La reparación automática sigue pendiente. Vuelve a abrir AiO para comprobarla.")
-    install_host(formato, appimage)
 
 
 def existing_scheduler(formato):

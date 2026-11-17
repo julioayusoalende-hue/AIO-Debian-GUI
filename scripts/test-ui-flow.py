@@ -45,7 +45,7 @@ for formato in ('appimage', 'flatpak', 'deb'):
             else:
                 worker.assert_called_once()
                 worker.call_args.kwargs['target']()
-                prepare.assert_called_once_with(formato, '2.10.15', os.environ.get('APPIMAGE'))
+                prepare.assert_called_once_with(formato, '2.10.15')
                 settle()
                 status.assert_called_once_with(inicial=True)
         window.destroy()

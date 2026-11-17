@@ -23,6 +23,7 @@
     <value key="flathub::verification::website">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</value>
   </custom>
   <releases>
+    <release version="2.11.1" date="2026-11-17"><description><p>Arranque sin solicitud de administrador y recuperación de horarios con ejecuciones previas en systemd.</p></description></release>
     <release version="2.11.0" date="2026-11-17"><description><p>DEB, Flatpak y AppImage comparten el asistente de mantenimiento. Flatpak y AppImage preparan la integración al abrirse y conservan los horarios y el historial.</p></description></release>
     <release version="2.10.15" date="2026-11-17"><description><p>La integración de Flatpak también recupera horarios compatibles guardados desde Flatpak o AppImage.</p></description></release>
     <release version="2.10.14" date="2026-11-17"><description><p>Flatpak recupera automáticamente la programación de instalaciones DEB anteriores compatibles y conserva su historial de mantenimiento.</p></description></release>

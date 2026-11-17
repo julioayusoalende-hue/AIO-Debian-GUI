@@ -55,15 +55,14 @@ with mock.patch.object(integration, 'existing_scheduler', return_value=False), \
      mock.patch.object(integration, '_portable_repair_ready', return_value=False), \
      mock.patch.object(integration, 'request_host_update') as update, \
      mock.patch.object(integration, 'install_host') as install:
-    integration.prepare_host('appimage', '2.10.15', '/tmp/AiO.AppImage')
+    integration.prepare_host('appimage', '2.10.15')
     update.assert_not_called()
-    install.assert_called_once_with('appimage', '/tmp/AiO.AppImage')
+    install.assert_not_called()
 
 
-with mock.patch.object(integration, 'existing_scheduler', side_effect=[False, True]), \
+with mock.patch.object(integration, 'existing_scheduler', return_value=False), \
      mock.patch.object(integration, '_portable_repair_ready', return_value=True), \
      mock.patch.object(integration, 'request_host_update', return_value=True) as update, \
-     mock.patch.object(integration.time, 'sleep'), \
      mock.patch.object(integration, 'install_host') as install:
     integration.prepare_host('flatpak', '2.10.15')
     update.assert_called_once_with('flatpak', '2.10.15')
@@ -73,3 +72,12 @@ native = subprocess.CompletedProcess([], 0, 'aio-debian-gui: /usr/lib/aio-debian
 with mock.patch.object(integration.subprocess, 'run', return_value=native) as run:
     assert integration.request_host_update('appimage', '2.10.15') is False
     run.assert_called_once()
+
+for formato in ('appimage', 'flatpak'):
+    with mock.patch.object(integration.subprocess, 'run',
+                           return_value=subprocess.CompletedProcess([], 1, '', '')) as run, \
+         mock.patch.object(integration.subprocess, 'Popen') as spawn:
+        integration.prepare_host(formato, '2.11.0')
+        spawn.assert_not_called()
+        assert all('pkexec' not in call.args[0] for call in run.call_args_list)
+        assert run.call_count == 2

@@ -135,7 +135,7 @@ Antes de cambiar kernel, Mesa, repositorios o controladores, haz una copia de se
 
 ### Integración del programador para AppImage y Flatpak
 
-Flatpak y AppImage preparan la integración al abrirse. Si falta el asistente del anfitrión y hay que instalarlo o repararlo, Ubuntu o Debian muestran la autorización de administrador. Puedes reintentar desde **Menú → Guía de integración del anfitrión**.
+Al abrir Flatpak o AppImage, AiO comprueba la integración y deja en cola las actualizaciones o reparaciones que el servicio firmado puede aplicar. Cuando se necesita instalar la integración, puedes hacerlo desde **Menú → Guía de integración del anfitrión**. El sistema solicita la autorización de administrador al confirmar esa acción.
 
 Si el asistente lo proporciona un DEB, APT se encarga de actualizarlo. Si se instaló desde Flatpak o AppImage, systemd aplica las actualizaciones firmadas cuando no hay mantenimiento ni operaciones de paquetes en curso. Los horarios se guardan en el anfitrión y se comparten entre los formatos.
 

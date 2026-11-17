@@ -1,5 +1,10 @@
 # Cambios
 
+## 2.11.1
+
+- Abrir Flatpak o AppImage comprueba la integración y deja en cola actualizaciones firmadas sin invocar Polkit. La instalación inicial desde la app solicita autorización al confirmarla.
+- La recuperación admite instancias conocidas de mantenimiento inactivas o fallidas en systemd y muestra la unidad y su estado si detecta un conflicto.
+
 ## 2.11.0
 
 - DEB, Flatpak y AppImage comparten el asistente y el programador del anfitrión. La interfaz usa el protocolo del asistente para comprobar la compatibilidad entre versiones.

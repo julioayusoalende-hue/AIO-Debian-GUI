@@ -351,8 +351,14 @@ esac
                 return SimpleNamespace(returncode=0, stdout=units, stderr="")
             if mode == "recover-activation-error" and args[1:] == ["enable", "--now", timer_name]:
                 return SimpleNamespace(returncode=1, stdout="", stderr="activation failed")
-            if recovering and repair and args[1] == "list-units":
-                return SimpleNamespace(returncode=0, stdout=f"{timer_name} loaded active waiting\n", stderr="")
+            if recovering and args[1] == "list-units":
+                units = f"{timer_name} loaded active waiting\n" if repair else ""
+                if "--type=timer" not in args and mode in ("recover-portable", "recover-enabled",
+                                                         "recover-failed-service", "recover-running-service"):
+                    state = {"recover-failed-service": "failed failed",
+                             "recover-running-service": "active running"}.get(mode, "inactive dead")
+                    units += f"aio-debian-gui-maintenance@1000.service loaded {state} AiO\n"
+                return SimpleNamespace(returncode=0, stdout=units, stderr="")
             if mode == "unit" and args[1] == "list-units":
                 return SimpleNamespace(returncode=0, stdout="aio-debian-gui-maintenance-1000.timer loaded active", stderr="")
             if mode == "foreign-timer" and "--type=timer" in args:
@@ -414,7 +420,7 @@ esac
                     payload[name] = {"data": base64.b64encode(value).decode(),
                                      "sha256": hashlib.sha256(value).hexdigest()}
         success = mode in ("ok", "missing-lock", "recover-enabled", "recover-paused", "recover-portable",
-                           "recover-flatpak", "recover-appimage", "recover-missing-unit")
+                           "recover-flatpak", "recover-appimage", "recover-missing-unit", "recover-failed-service")
         stdin = io.TextIOWrapper(io.BytesIO(json.dumps(payload).encode()))
         real_fstat = os.fstat
 
@@ -480,7 +486,8 @@ esac
                     assert ["/usr/bin/systemctl", "disable", "--now", "aio-portable-update.timer"] in commands
 
     for mode in ("recover-enabled", "recover-paused", "recover-flatpak", "recover-appimage",
-                 "recover-portable", "recover-missing-unit", "recover-activation-error", "recover-active", "recover-edited",
+                 "recover-portable", "recover-missing-unit", "recover-failed-service", "recover-running-service",
+                 "recover-activation-error", "recover-active", "recover-edited",
                  "ok", "deb", "owned", "dpkg-error", "unit", "foreign-timer", "residual", "timer-file", "existing",
                  "symlink", "parent-symlink", "hash", "stage-hash", "unsafe", "maintenance",
                  "missing-lock", "reload-error", "link-error"):
