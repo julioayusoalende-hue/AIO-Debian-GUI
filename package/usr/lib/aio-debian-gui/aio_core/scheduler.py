@@ -13,7 +13,13 @@ import subprocess
 import sys
 import tempfile
 
-VERSION = '2.10.10'
+VERSION = '2.10.11'
+
+
+def compatible_version(value):
+    # 2.10.11 only changes integration discovery; the 2.10.10 protocol is identical.
+    return value == VERSION or (VERSION == '2.10.11' and value == '2.10.10')
+
 CONFIG_DIR = Path('/etc/aio-debian-gui/schedules')
 STATE_DIR = Path('/var/lib/aio-debian-gui/schedules')
 UNIT_DIR = Path('/etc/systemd/system')

@@ -160,7 +160,7 @@ class ControladorProgramacion:
         if self.ventana_programacion is not dialogo or self.ventana.programando:
             return GLib.SOURCE_REMOVE
         w = self.programacion_widgets
-        disponible = not error and datos.get("available", False) and datos.get("version") == core_scheduler.VERSION
+        disponible = not error and datos.get("available", False) and core_scheduler.compatible_version(datos.get("version"))
         w['disponible'] = disponible
         w['config'] = datos.get('config')
         config = datos.get('config') or core_scheduler.DEFAULT
