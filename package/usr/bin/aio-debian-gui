@@ -76,6 +76,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.10.8": "El programador del anfitrión se actualiza solo con cada versión en AppImage y Flatpak mediante un paquete firmado aislado; el DEB conserva su funcionamiento.",
     "2.10.7": "Las eliminaciones previstas por autoremove y dist-upgrade se muestran como aviso y permiten continuar.",
     "2.10.6": "La terminal inicia Bash sin ejecutar Fastfetch automáticamente; el acceso manual sigue disponible.",
     "2.10.5": "Activa autoremove por defecto y conserva libnotify-bin y needrestart, necesarios para la programación en AppImage y Flatpak.",
@@ -814,6 +815,19 @@ class VentanaPrincipal(Gtk.Window):
         self.connect("key-press-event", self._al_pulsar_tecla)
         self.connect("delete-event", self._al_cerrar)
         self.connect("focus-in-event", self._refrescar_recomendadas_al_volver)
+        formato = formato_actualizacion()
+        if formato in ("flatpak", "appimage"):
+            version = version_app()
+            def solicitar_actualizacion():
+                try:
+                    core_host_integration.request_host_update(formato, version)
+                except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+                    GLib.idle_add(
+                        self._escribir,
+                        "[!] " + traducir("No se pudo solicitar la actualización del programador.") + " " + str(error) + "\n",
+                        "aviso",
+                    )
+            threading.Thread(target=solicitar_actualizacion, daemon=True).start()
 
     # -- Construcción ----------------------------------------------------------
     def _construir_cabecera(self):
@@ -959,7 +973,7 @@ class VentanaPrincipal(Gtk.Window):
 
         def instalar():
             try:
-                core_host_integration.install(formato, appimage)
+                core_host_integration.install_host(formato, appimage)
                 error = None
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
                 error = str(exc)

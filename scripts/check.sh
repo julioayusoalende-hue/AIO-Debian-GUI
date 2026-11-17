@@ -36,6 +36,7 @@ python3 scripts/test-preflight.py && bien "modo de mantenimiento seguro" || fall
 bash scripts/test-upgrade-safety.sh && bien "actualización APT protegida" || fallo "pruebas de actualización APT segura"
 python3 scripts/test-diagnostics.py && bien "diagnóstico preventivo de solo lectura" || fallo "pruebas del diagnóstico"
 python3 scripts/test-host-integration.py && bien "guía de integración del anfitrión" || fallo "pruebas de integración del anfitrión"
+python3 scripts/test-host-updater.py && bien "actualizador del anfitrión" || fallo "pruebas del actualizador del anfitrión"
 python3 scripts/test-interface-translations.py && bien "traducciones de interfaz y diagnóstico" || fallo "traducciones incompletas"
 python3 scripts/test-app-update-diagnostic.py && bien "versiones y actualización desde diagnóstico" || fallo "pruebas de actualización desde diagnóstico"
 python3 scripts/test-install-format.py && bien "detección de formato DEB/AppImage/Flatpak" || fallo "detección de formato"

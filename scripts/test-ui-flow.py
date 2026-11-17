@@ -29,6 +29,21 @@ def settle():
             Gtk.main_iteration()
         time.sleep(.005)
 
+for formato in ('appimage', 'flatpak', 'deb'):
+    with patch.object(app, 'formato_actualizacion', return_value=formato), \
+         patch.object(app, 'version_app', return_value='2.10.8'), \
+         patch.object(app.threading, 'Thread') as worker, \
+         patch.object(app.core_host_integration, 'request_host_update') as request:
+        window = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+        if formato == 'deb':
+            worker.assert_not_called()
+            request.assert_not_called()
+        else:
+            worker.assert_called_once()
+            worker.call_args.kwargs['target']()
+            request.assert_called_once_with(formato, '2.10.8')
+        window.destroy()
+
 for language in ('es', 'en', 'fr', 'zh'):
     w = app.VentanaPrincipal({'idioma': language, 'tema': 'claro', 'modo_simple': False})
     w.show_all()

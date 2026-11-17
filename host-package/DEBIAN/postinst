@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+if [ "${1:-}" = configure ] && command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
+    systemctl daemon-reload || true
+    # En una actualización el temporizador sigue activo; solo se arranca en la primera instalación.
+    if [ -z "${2:-}" ]; then
+        systemctl start aio-debian-gui-host-update.timer || true
+    fi
+fi
+exit 0
