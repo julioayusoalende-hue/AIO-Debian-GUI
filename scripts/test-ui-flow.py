@@ -710,7 +710,7 @@ fake_window.terminal_started = False
 with patch.object(app, 'es_flatpak', return_value=True):
     app.VentanaPrincipal._iniciar_terminal(fake_window)
 argv = fake_window.terminal.spawn_async.call_args.args[2]
-assert argv == ['flatpak-spawn', '--host', '/bin/bash', '-i']
+assert argv == ['flatpak-spawn', '--host', 'script', '-qefc', '/bin/bash -i', '/dev/null']
 error = Mock(message='spawn failed')
 app.VentanaPrincipal._terminal_iniciada(fake_window, None, -1, error, None)
 assert not fake_window.terminal_started

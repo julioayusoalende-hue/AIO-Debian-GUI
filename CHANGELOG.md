@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.10.9
+
+- La terminal de Flatpak inicia Bash con terminal de control, sin los errores de control de trabajos.
+
 ## 2.10.8
 
 - AppImage y Flatpak instalan la integración del anfitrión como el paquete `aio-debian-gui-host`, descargado de un repositorio APT firmado y aislado (`/host-repo/`), y su servicio con temporizador actualiza el programador desatendidamente a la versión que solicita la app.

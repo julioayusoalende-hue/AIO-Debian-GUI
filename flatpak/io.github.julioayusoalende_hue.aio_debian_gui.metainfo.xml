@@ -23,6 +23,7 @@
     <value key="flathub::verification::website">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</value>
   </custom>
   <releases>
+    <release version="2.10.9" date="2026-11-17"><description><p>La terminal de Flatpak inicia Bash con terminal de control, sin los errores de control de trabajos.</p></description></release>
     <release version="2.10.8" date="2026-11-18"><description><p>El programador del anfitrión se actualiza solo con cada versión en AppImage y Flatpak; el DEB conserva su funcionamiento.</p></description></release>
     <release version="2.10.7" date="2026-11-17"><description><p>Las eliminaciones previstas por autoremove y dist-upgrade se muestran como aviso y permiten continuar el mantenimiento.</p></description></release>
     <release version="2.10.6" date="2026-11-16"><description><p>La terminal inicia Bash sin ejecutar Fastfetch automáticamente; el acceso manual sigue disponible.</p></description></release>
