@@ -836,28 +836,9 @@ def compatible_helper(formato, helper):
         return False
 
 
-def _portable_repair_ready(formato):
-    prefix = ["flatpak-spawn", "--host"] if formato == "flatpak" else []
-    options = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL, "timeout": 10}
-    try:
-        timer = subprocess.run([*prefix, "/usr/bin/systemctl", "is-active", "--quiet",
-                                "aio-portable-update.timer"], **options)
-        if timer.returncode:
-            return False
-        updater = subprocess.run([*prefix, "/usr/bin/python3", "-I",
-                                  "/usr/lib/aio-debian-gui/aio-portable-update",
-                                  "--supports-repair"], **options)
-        return updater.returncode == 0
-    except (OSError, subprocess.SubprocessError):
-        return False
-
-
 def prepare_host(formato, version):
-    """Queue signed updates at startup without attempting privileged installation."""
-    if formato not in ("appimage", "flatpak"):
-        raise ValueError("Formato de integración no compatible.")
-    if existing_scheduler(formato) or _portable_repair_ready(formato):
-        request_host_update(formato, version)
+    """Queue signed updates even if an older packaged scheduler is incompatible."""
+    request_host_update(formato, version)
 
 
 def read_scheduler_report(command):
@@ -903,6 +884,15 @@ def install_host(formato, appimage=None):
     """Install the bundled scheduler without installing a DEB or using a repository."""
     if existing_scheduler(formato):
         return  # Already usable: never try to reinstall over dpkg's files.
+    owners = host_package_owners(formato)
+    if owners == {"aio-debian-gui-host"}:
+        from .scheduler import VERSION
+        if _request_legacy_host_update(formato, VERSION):
+            raise RuntimeError("Se solicitó la actualización firmada del programador de Debian. "
+                               "Puede tardar hasta unos minutos. Después, pulsa «Actualizar estado».")
+    if owners:
+        raise RuntimeError("El asistente lo gestiona un paquete de Debian (" + ", ".join(sorted(owners))
+                           + "). Actualiza o repara ese paquete desde el gestor de software de Debian.")
     resources = _resources(formato, appimage)
     shared = _portable_directory(formato)
     # Verify the release payload before registering an automatic root updater.
@@ -985,28 +975,42 @@ with os.fdopen(fd, 'wb') as lock:
 '''
 
 
+def host_package_owners(formato):
+    prefix = ["flatpak-spawn", "--host", "--env=LC_ALL=C"] if formato == "flatpak" else []
+    paths = ("/usr/lib/aio-debian-gui/aio-debian-gui-helper",
+             "/usr/lib/aio-debian-gui/aio_core/__init__.py")
+    result = subprocess.run([*prefix, "/usr/bin/dpkg-query", "-S", "--", *paths],
+                            capture_output=True, text=True, timeout=10,
+                            env={**os.environ, "LC_ALL": "C"})
+    missing = {"dpkg-query: no path found matching pattern " + path for path in paths}
+    if result.returncode not in (0, 1) or set(result.stderr.splitlines()) - missing:
+        raise RuntimeError("No se pudo determinar quién actualiza la integración del anfitrión.")
+    owners = set()
+    found = set()
+    for line in result.stdout.splitlines():
+        packages, separator, path = line.partition(": ")
+        if not separator or path not in paths:
+            raise RuntimeError("No se pudo identificar el paquete de la integración.")
+        found.add(path)
+        owners.update(name.strip().split(":")[0] for name in packages.split(","))
+    if found | {path for path in paths if "dpkg-query: no path found matching pattern " + path
+                in result.stderr.splitlines()} != set(paths):
+        raise RuntimeError("No se pudo comprobar la propiedad de todos los archivos de la integración.")
+    return owners
+
+
 def request_host_update(formato, version):
     """Stage the signed payload for the root timer, without prompting or networking."""
-    if formato not in ('flatpak', 'appimage'):
-        raise ValueError('Formato de integración no compatible.')
-    prefix = ['flatpak-spawn', '--host'] if formato == 'flatpak' else []
-    # dpkg owns the shared helper whenever a native package provides it.
-    query_prefix = [*prefix, '--env=LC_ALL=C'] if prefix else []
-    ownership = subprocess.run([*query_prefix, '/usr/bin/dpkg-query', '-S', '--',
-                                '/usr/lib/aio-debian-gui/aio-debian-gui-helper'],
-                               capture_output=True, text=True, timeout=10,
-                               env={**os.environ, 'LC_ALL': 'C'})
-    if ownership.returncode == 0:
-        if any(line.startswith('aio-debian-gui-host: ') for line in ownership.stdout.splitlines()):
-            return _request_legacy_host_update(formato, version)
-        return False
-    expected = 'dpkg-query: no path found matching pattern /usr/lib/aio-debian-gui/aio-debian-gui-helper'
-    if ownership.returncode != 1 or ownership.stderr.strip() != expected:
-        raise RuntimeError("No se pudo determinar quién actualiza la integración del anfitrión.")
+    if formato not in ("flatpak", "appimage"):
+        raise ValueError("Formato de integración no compatible.")
+    prefix = ["flatpak-spawn", "--host"] if formato == "flatpak" else []
+    owners = host_package_owners(formato)
+    if owners:
+        return owners == {"aio-debian-gui-host"} and _request_legacy_host_update(formato, version)
     exists = subprocess.run([*prefix, '/usr/bin/test', '-f', '/var/lib/aio-debian-gui/portable-version'],
                             timeout=10)
     if exists.returncode:
-        return _request_legacy_host_update(formato, version)
+        return False
     payload = (_portable_directory(formato) / 'payload.json').read_bytes()
     subprocess.run([*prefix, '/usr/bin/python3', '-I', '-c', _STAGE_PROGRAM],
                    input=payload, check=True, timeout=30)

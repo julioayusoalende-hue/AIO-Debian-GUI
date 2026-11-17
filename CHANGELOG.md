@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.11.4
+
+- Flatpak y AppImage identifican el paquete que gestiona la integración del anfitrión y solicitan la actualización firmada del paquete de integración anterior cuando corresponde.
+
 ## 2.11.3
 
 - Flatpak y AppImage consultan el estado del programador sin permisos de administrador. Los cambios del horario siguen autorizándose con Polkit.

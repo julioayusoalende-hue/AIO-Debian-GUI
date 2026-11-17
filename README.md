@@ -31,7 +31,8 @@ Para instalar o actualizar AiO, usa la [última release estable](https://github.
 
 | Versión | Estado |
 |---|---|
-| [v2.11.3](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.11.3) | Última estable |
+| [v2.11.4](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.11.4) | Última estable |
+| [v2.11.3](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.11.3) | Histórica |
 | [v2.10.12](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.10.12) | Histórica |
 | [v2.10.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.10.0) | Histórica |
 | [v2.8.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.8.0) | Histórica |

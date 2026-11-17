@@ -44,40 +44,30 @@ with mock.patch.object(integration.subprocess, 'run', return_value=result({**rep
     integration.install_host('appimage')
     resources.assert_not_called()
 
-with mock.patch.object(integration, 'existing_scheduler', return_value=True), \
-     mock.patch.object(integration, 'request_host_update') as update, \
+with mock.patch.object(integration, 'request_host_update') as update, \
      mock.patch.object(integration, 'install_host') as install:
-    integration.prepare_host('flatpak', '2.10.15')
-    update.assert_called_once_with('flatpak', '2.10.15')
+    integration.prepare_host('flatpak', '2.11.3')
+    update.assert_called_once_with('flatpak', '2.11.3')
     install.assert_not_called()
 
-with mock.patch.object(integration, 'existing_scheduler', return_value=False), \
-     mock.patch.object(integration, '_portable_repair_ready', return_value=False), \
-     mock.patch.object(integration, 'request_host_update') as update, \
-     mock.patch.object(integration, 'install_host') as install:
-    integration.prepare_host('appimage', '2.10.15')
-    update.assert_not_called()
-    install.assert_not_called()
-
-
-with mock.patch.object(integration, 'existing_scheduler', return_value=False), \
-     mock.patch.object(integration, '_portable_repair_ready', return_value=True), \
-     mock.patch.object(integration, 'request_host_update', return_value=True) as update, \
-     mock.patch.object(integration, 'install_host') as install:
-    integration.prepare_host('flatpak', '2.10.15')
-    update.assert_called_once_with('flatpak', '2.10.15')
-    install.assert_not_called()
-
-native = subprocess.CompletedProcess([], 0, 'aio-debian-gui: /usr/lib/aio-debian-gui/aio-debian-gui-helper\n', '')
-with mock.patch.object(integration.subprocess, 'run', return_value=native) as run:
-    assert integration.request_host_update('appimage', '2.10.15') is False
-    run.assert_called_once()
-
-for formato in ('appimage', 'flatpak'):
-    with mock.patch.object(integration.subprocess, 'run',
-                           return_value=subprocess.CompletedProcess([], 1, '', '')) as run, \
-         mock.patch.object(integration.subprocess, 'Popen') as spawn:
-        integration.prepare_host(formato, '2.11.0')
-        spawn.assert_not_called()
-        assert all('pkexec' not in call.args[0] for call in run.call_args_list)
-        assert run.call_count == 2
+helper = '/usr/lib/aio-debian-gui/aio-debian-gui-helper'
+module = '/usr/lib/aio-debian-gui/aio_core/__init__.py'
+for package in ('aio-debian-gui', 'aio-debian-gui-host'):
+    # dpkg may own only one of the resources that blocks portable installation.
+    ownership = subprocess.CompletedProcess([], 1, f'{package}: {module}\n',
+        f'dpkg-query: no path found matching pattern {helper}\n')
+    with mock.patch.object(integration.subprocess, 'run', return_value=ownership), \
+         mock.patch.object(integration, '_request_legacy_host_update', return_value=True) as legacy:
+        assert integration.request_host_update('flatpak', '2.11.3') is (package == 'aio-debian-gui-host')
+        assert legacy.called is (package == 'aio-debian-gui-host')
+    with mock.patch.object(integration, 'existing_scheduler', return_value=False), \
+         mock.patch.object(integration.subprocess, 'run', return_value=ownership), \
+         mock.patch.object(integration, '_request_legacy_host_update', return_value=True), \
+         mock.patch.object(integration, '_privileged') as privileged:
+        try:
+            integration.install_host('flatpak')
+        except RuntimeError as exc:
+            assert ('actualización firmada' if package == 'aio-debian-gui-host' else 'gestor de software') in str(exc)
+        else:
+            raise AssertionError('A packaged scheduler must not invoke the portable installer')
+        privileged.assert_not_called()
