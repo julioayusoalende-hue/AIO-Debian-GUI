@@ -545,12 +545,12 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
         assert Gtk.Clipboard.get(app.Gdk.SELECTION_CLIPBOARD).wait_for_text() == 'EXTRACCION'
         buttons['Copiar instalación'].clicked()
         assert Gtk.Clipboard.get(app.Gdk.SELECTION_CLIPBOARD).wait_for_text() == 'INSTALACION'
-        with patch.object(app.core_host_integration, 'install', create=True) as install, \
+        with patch.object(app.core_host_integration, 'install_host', create=True) as install, \
              patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.CANCEL):
             buttons['Instalar integración automáticamente'].clicked()
             install.assert_not_called()
             assert not w.programando
-        with patch.object(app.core_host_integration, 'install', create=True) as install, \
+        with patch.object(app.core_host_integration, 'install_host', create=True) as install, \
              patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK):
             buttons['Instalar integración automáticamente'].clicked()
             deadline = time.monotonic() + 5
@@ -561,7 +561,7 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
         generate.assert_called_once()
     with patch.object(app.core_host_integration, 'commands',
                       return_value=('EXTRACCION', 'INSTALACION')), \
-         patch.object(app.core_host_integration, 'install', create=True,
+         patch.object(app.core_host_integration, 'install_host', create=True,
                       side_effect=RuntimeError('autorización rechazada')), \
          patch.object(w, '_integracion_instalada', wraps=w._integracion_instalada) as finish, \
          patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK):
