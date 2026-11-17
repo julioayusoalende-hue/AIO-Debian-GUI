@@ -30,6 +30,7 @@ GNUPG.mkdir(mode=0o700)
 GPG_HOME = f"/proc/{os.getpid()}/cwd/{WORK.name}/gnupg"
 ENV = {**os.environ, "GNUPGHOME": GPG_HOME, "LC_ALL": "C"}
 AGENT = None
+AGENT_SOCKET = None
 
 
 def run(*args, check=True, **kwargs):
@@ -87,7 +88,8 @@ def start_agent():
         "'--supervised','--disable-scdaemon'])"
     )
     # gpg puede usar /run/user/<uid>/gnupg en lugar del directorio personal; se le pregunta dónde.
-    path = run("gpgconf", "--list-dirs", "agent-socket", text=True).stdout.strip()
+    global AGENT_SOCKET
+    path = AGENT_SOCKET = run("gpgconf", "--list-dirs", "agent-socket", text=True).stdout.strip()
     Path(path).parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     if os.path.lexists(path):
         os.unlink(path)
@@ -108,7 +110,7 @@ def wait_agent(agent):
         try:
             with socket.socket(socket.AF_UNIX) as client:
                 client.settimeout(0.5)
-                client.connect(GPG_HOME + "/S.gpg-agent")
+                client.connect(AGENT_SOCKET)
                 if client.recv(128).startswith(b"OK"):
                     return
         except OSError:
