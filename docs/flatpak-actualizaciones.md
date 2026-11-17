@@ -54,9 +54,13 @@ Revisa las confirmaciones de Flatpak y comprueba de nuevo el origen. No necesita
 
 Flatpak actualiza la interfaz. Las operaciones administrativas y la programación con AiO cerrado necesitan además el asistente en el anfitrión. **No requieren instalar la interfaz DEB.**
 
-Desde AiO, abre **Menú → Guía de integración del anfitrión → Instalar integración automáticamente**. Con autorización administrativa, la versión actual instala `aio-debian-gui-host` desde un repositorio firmado y aislado. Su temporizador actualiza la integración a la versión solicitada por AiO, esperando a que no haya mantenimiento en curso. Incluye las dependencias de notificaciones y comprobación de reinicio.
+Desde AiO, abre **Menú → Guía de integración del anfitrión → Instalar integración automáticamente**. En una instalación nueva se copia el programador incluido en el propio Flatpak o AppImage, con autorización administrativa inicial. No instala la interfaz DEB ni `aio-debian-gui-host`.
 
-El paquete de integración entra en conflicto con la interfaz `aio-debian-gui` del DEB. Si tienes el DEB, mantenlo actualizado con APT. Para integraciones manuales antiguas o conflictos de archivos, consulta la guía integrada antes de modificar el sistema. Si el repositorio no responde, la instalación puede recurrir a la copia inicial incluida; esa alternativa no proporciona por sí sola la actualización del paquete host.
+Cada build de producción incluye un manifiesto de recursos firmado con la clave del proyecto. Al abrir una versión nueva, AiO entrega ese contenido al anfitrión. Un temporizador comprueba cada minuto su firma y versión antes de aplicarlo, sin red ni solicitudes adicionales de contraseña. Si hay mantenimiento o gestión de paquetes en curso, reintenta más tarde. Se conservan horarios y registros; una versión igual o anterior no se instala. La verificación se ejecuta en el anfitrión, también en Flatpak.
+
+Las instalaciones previas gestionadas por `aio-debian-gui-host`, por el DEB principal o mediante copia manual no se convierten automáticamente: el instalador rechaza destinos existentes. Conservan su mecanismo anterior hasta realizar una migración explícita. No sobrescribas sus archivos. La nueva integración necesita `python3`, `gpgv`, Polkit y systemd en el anfitrión; `libnotify-bin` y `needrestart` proporcionan avisos y comprobación de reinicio.
+
+Los builds de PR sin acceso a la clave privada no incluyen un manifiesto válido y no permiten instalar esta integración. La firma se genera antes de construir ambos formatos en `main`, incluyendo el repositorio Flatpak firmado.
 
 Consulta [Programación y permisos](../README.md#programación-y-permisos) para conocer los requisitos de systemd y autorización.
 

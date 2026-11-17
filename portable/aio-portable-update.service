@@ -1,0 +1,7 @@
+[Unit]
+Description=Update bundled AiO maintenance scheduler
+ConditionPathExists=/var/lib/aio-debian-gui/portable-version
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -I /usr/lib/aio-debian-gui/aio-portable-update
+UMask=0077

@@ -76,6 +76,14 @@ sed "s/@VERSION@/$VERSION/" scripts/appimage/AppRun > "$APPDIR/AppRun"
 chmod 755 "$APPDIR/AppRun"
 ln -s usr/share/icons/hicolor/512x512/apps/aio-debian-gui.png "$APPDIR/.DirIcon"
 
+mkdir -p "$APPDIR/usr/share/aio-debian-gui/portable"
+cp portable/aio-portable-update* "$APPDIR/usr/share/aio-debian-gui/portable/"
+cp host-package/usr/lib/aio-debian-gui/aio-host-scheduler "$APPDIR/usr/share/aio-debian-gui/portable/"
+cp package/usr/share/keyrings/aio-debian-gui.gpg "$APPDIR/usr/share/aio-debian-gui/portable/aio-debian-gui-portable.gpg"
+if [ -f portable/payload.json ]; then
+    cp portable/payload.json "$APPDIR/usr/share/aio-debian-gui/portable/"
+fi
+
 mkdir -p dist
 OUTPUT="dist/aio-debian-gui_${VERSION}_x86_64.AppImage"
 rm -f "$OUTPUT"

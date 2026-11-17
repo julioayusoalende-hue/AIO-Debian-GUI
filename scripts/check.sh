@@ -194,4 +194,10 @@ else
     fallo "estado de las opciones GNOME incorrecto"
 fi
 
+if python3 scripts/test-portable-payload.py; then
+    bien "actualización portable firmada"
+else
+    fallo "actualización portable firmada"
+fi
+
 exit $fallos
