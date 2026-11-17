@@ -40,6 +40,51 @@ for formato, path in (("appimage", None), ("appimage", "relative"), ("appimage",
 
 with tempfile.TemporaryDirectory() as tmp:
     root = Path(tmp)
+    runtime = root / str(os.getuid())
+    runtime.mkdir(mode=0o700)
+    request_program = integration._REQUEST_PROGRAM.replace(
+        '"/run/user/"', repr(str(root) + "/"))
+    subprocess.run([sys.executable, "-I", "-c", request_program, "2.10.8"],
+                   capture_output=True, check=True)
+    request = runtime / "aio-debian-gui-host-version"
+    assert request.read_text() == "2.10.8\n"
+    assert stat.S_IMODE(request.stat().st_mode) == 0o600
+    result = subprocess.run([sys.executable, "-I", "-c", request_program, "../../bad"],
+                            capture_output=True)
+    assert result.returncode and request.read_text() == "2.10.8\n"
+    runtime.chmod(0o777)
+    result = subprocess.run([sys.executable, "-I", "-c", request_program, "2.10.9"],
+                            capture_output=True)
+    assert result.returncode and request.read_text() == "2.10.8\n"
+    runtime.chmod(0o700)
+
+    installed = SimpleNamespace(returncode=0, stdout="installed", stderr="")
+    done = SimpleNamespace(returncode=0, stdout="", stderr="")
+    with mock.patch.object(subprocess, "run", side_effect=[installed, done]) as spawned:
+        assert integration.request_host_update("flatpak", "2.10.8")
+        query, command = (call.args[0] for call in spawned.call_args_list)
+        assert query[:2] == command[:2] == ["flatpak-spawn", "--host"]
+        assert command[2:] == ["/usr/bin/python3", "-I", "-c", integration._REQUEST_PROGRAM, "2.10.8"]
+    missing = SimpleNamespace(returncode=1, stdout="", stderr="dpkg-query: no packages found matching aio-debian-gui-host")
+    with mock.patch.object(subprocess, "run", return_value=missing) as spawned:
+        assert not integration.request_host_update("appimage", "2.10.8")
+        assert spawned.call_count == 1
+    with mock.patch.object(subprocess, "run", return_value=SimpleNamespace(
+            returncode=2, stdout="", stderr="dpkg database failed")):
+        try:
+            integration.request_host_update("appimage", "2.10.8")
+        except RuntimeError as exc:
+            assert "dpkg database failed" in str(exc)
+        else:
+            raise AssertionError("El fallo de dpkg no se comunicó")
+    with mock.patch.object(subprocess, "run", return_value=SimpleNamespace(
+            returncode=0, stdout="half-configured", stderr="")):
+        try:
+            integration.request_host_update("appimage", "2.10.8")
+        except RuntimeError as exc:
+            assert "half-configured" in str(exc)
+        else:
+            raise AssertionError("La instalación incompleta no se comunicó")
     bin_dir = root / "bin"
     bin_dir.mkdir()
     (bin_dir / "flatpak").write_text('#!/bin/sh\nprintf "contenido de %s\\n" "$4"\n')
@@ -342,5 +387,91 @@ esac
                  "symlink", "parent-symlink", "hash", "stage-hash", "unsafe", "maintenance",
                  "missing-lock", "reload-error", "link-error"):
         root_test(mode)
+
+    def package_test(mode):
+        """Ejecuta el instalador del paquete host contra rutas temporales y órdenes simuladas."""
+        sandbox = root / ("package-" + mode)
+        (sandbox / "etc/aio-debian-gui/schedules").mkdir(parents=True)
+        (sandbox / "etc/systemd/system").mkdir(parents=True)
+        (sandbox / "run/systemd/system").mkdir(parents=True)
+        (sandbox / "etc/aio-debian-gui/schedules/1000.json").write_text('{"enabled": true}')
+        (sandbox / "etc/systemd/system/aio-debian-gui-maintenance-1000.timer").touch()
+        conflict = sandbox / "conflict.txt"
+        if mode == "conflict":
+            conflict.write_text("ajeno")
+        code = integration._PACKAGE_PROGRAM.rsplit("\nmain()", 1)[0]
+        for path in ("/etc/aio-debian-gui", "/etc/systemd/system", "/run/systemd/system"):
+            code = code.replace('"' + path + '"', repr(str(sandbox) + path))
+        code = code.replace('RUN = "/run/aio-debian-gui"', "RUN = " + repr(str(sandbox / "run/aio-debian-gui")))
+        namespace = {}
+        exec(compile(code, "<package-program-test>", "exec"), namespace)
+        commands = []
+        state = {"host": "not-installed"}
+
+        def fake_run(args, timeout=900):
+            commands.append(args)
+            ok = lambda out="": SimpleNamespace(returncode=0, stdout=out, stderr="")
+            if args[0].endswith("dpkg-query") and args[1] == "-W":
+                name = args[-1]
+                value = "installed" if mode == "deb" and name == "aio-debian-gui" else \
+                    state["host"] if name == "aio-debian-gui-host" else "not-installed"
+                return SimpleNamespace(returncode=0 if value != "not-installed" else 1, stdout=value, stderr="")
+            if args[0].endswith("dpkg-query"):
+                return SimpleNamespace(returncode=1, stdout="", stderr="dpkg-query: no path found matching pattern " + args[-1])
+            if args[0].endswith("apt-cache"):
+                return ok("aio-debian-gui-host:\n  Candidate: 9.9.9\n" if mode == "foreign" else "")
+            if args[0].endswith("dpkg-deb") and args[1] == "-f":
+                return ok("Package: aio-debian-gui-host\nVersion: 2.10.8\nConflicts: aio-debian-gui\n")
+            if args[0].endswith("dpkg-deb"):
+                return ok("-rw-r--r-- root/root 1 2026-01-01 00:00 ." + str(conflict) + "\n"
+                          if mode == "conflict" else "-rw-r--r-- root/root 1 2026-01-01 00:00 ./usr/new\n")
+            if args[0].endswith("dpkg") and args[1] == "--force-confold":
+                state["host"] = "installed"
+            return ok()
+        namespace["run"] = fake_run
+        repository = ("def download_package(keyring):\n"
+                      + ("    raise OSError('sin red')\n" if mode == "offline" else
+                         "    return {'version': '2.10.8'}, b'deb'\n"))
+        payload = {"repository": repository, "keyring": base64.b64encode(b"key").decode()}
+        stdin = io.TextIOWrapper(io.BytesIO(json.dumps(payload).encode()))
+        real_fstat = os.fstat
+        def fake_fstat(fd):
+            values = list(real_fstat(fd))
+            values[4] = 0
+            return os.stat_result(values)
+        outcome = None
+        with mock.patch.object(sys, "stdin", stdin), mock.patch.object(sys, "stdout", io.StringIO()), \
+             mock.patch.object(sys, "stderr", io.StringIO()), mock.patch.dict(os.environ, {"PKEXEC_UID": "1000"}), \
+             mock.patch.object(os, "geteuid", return_value=0), mock.patch.object(os, "fstat", side_effect=fake_fstat):
+            try:
+                namespace["main"]()
+            except SystemExit as exc:
+                outcome = exc.code
+        installed = any(c[1:2] == ["--force-confold"] for c in commands)
+        if mode == "ok":
+            assert outcome is None and installed
+            assert (sandbox / "etc/aio-debian-gui/host-users").read_text() == "1000\n"
+            assert ["/usr/bin/systemctl", "enable", "--now", "aio-debian-gui-maintenance-1000.timer", ] in commands
+        else:
+            assert outcome == (75 if mode == "offline" else 1) and not installed, (mode, outcome)
+            assert not (sandbox / "etc/aio-debian-gui/host-users").exists()
+
+    for mode in ("ok", "deb", "foreign", "offline", "conflict"):
+        package_test(mode)
+
+    with mock.patch.object(integration, "_package_payload", return_value=b"{}"), \
+         mock.patch.object(integration, "_privileged", side_effect=integration.RepositoryUnavailable("sin red")), \
+         mock.patch.object(integration, "install") as legacy:
+        integration.install_host("flatpak")
+    legacy.assert_called_once_with("flatpak", None)
+    with mock.patch.object(integration, "_package_payload", return_value=b"{}"), \
+         mock.patch.object(integration, "_privileged", side_effect=RuntimeError("DEB")), \
+         mock.patch.object(integration, "install") as legacy:
+        try:
+            integration.install_host("flatpak")
+        except RuntimeError:
+            legacy.assert_not_called()
+        else:
+            raise AssertionError("Error no propagado")
 
 print("✔ Integración manual y automática: extracción, seguridad y reversión simuladas")

@@ -6,7 +6,11 @@ on:
     branches: [main]
     paths:
       - 'package/**'
+      - 'host-package/**'
       - 'scripts/build-deb.sh'
+      - 'scripts/build-host-deb.sh'
+      - 'scripts/test-host-package.py'
+      - 'scripts/test-host-updater.py'
       - 'scripts/publish-apt-repo.sh'
       - 'scripts/site-index.html'
       - '.github/workflows/publish-apt.yml'
@@ -42,7 +46,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y dpkg-dev fakeroot gnupg
-      - name: Build DEB and import signing key
+      - name: Build DEBs and import signing key
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         run: |
@@ -54,21 +58,30 @@ jobs:
           echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
           cd source
           bash scripts/build-deb.sh
+          bash scripts/build-host-deb.sh
+      - name: Test host package and repository publication
+        run: |
+          cd source
+          python3 scripts/test-host-package.py
+          python3 scripts/test-host-updater.py
       - name: Publish signed APT metadata and DEB
         env:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           set -euo pipefail
           cd source
-          DEB="$(find dist -maxdepth 1 -name '*.deb' -print -quit)"
-          test -n "$DEB"
-          bash scripts/publish-apt-repo.sh "$DEB" ../site
+          VERSION="$(sed -n 's/^Version: //p' package/DEBIAN/control)"
+          DEB="dist/aio-debian-gui_${VERSION}_all.deb"
+          test -f "$DEB"
+          HOST_DEB="dist/aio-debian-gui-host_${VERSION}_all.deb"
+          test -f "$HOST_DEB"
+          bash scripts/publish-apt-repo.sh "$DEB" ../site "$HOST_DEB"
       - name: Deploy APT files (preserve Flatpak)
         run: |
           set -euo pipefail
           git -C site config user.name 'github-actions[bot]'
           git -C site config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git -C site add pool dists aio-debian-gui.gpg index.html .nojekyll
+          git -C site add pool dists host-repo aio-debian-gui.gpg index.html .nojekyll
           if git -C site diff --cached --quiet; then
             echo 'APT repository unchanged.'
           else

@@ -59,6 +59,8 @@ install -m 644 package/usr/share/aio-debian-gui/recommended-icons/*.png \
 cp -a package/usr/share/aio-debian-gui/backup-icons "$APPDIR/usr/share/aio-debian-gui/"
 install -m 644 package/usr/share/doc/aio-debian-gui/copyright \
     "$APPDIR/usr/share/doc/aio-debian-gui/copyright"
+mkdir -p "$APPDIR/usr/share/keyrings"
+install -m 644 package/usr/share/keyrings/aio-debian-gui.gpg "$APPDIR/usr/share/keyrings/aio-debian-gui.gpg"
 install -m 644 package/usr/share/polkit-1/actions/es.aiodebian.gui.policy \
     "$APPDIR/usr/share/polkit-1/actions/es.aiodebian.gui.policy"
 install -m 644 package/usr/lib/systemd/system/aio-debian-gui-maintenance@.service \

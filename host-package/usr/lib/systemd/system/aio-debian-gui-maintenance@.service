@@ -1,0 +1,15 @@
+[Unit]
+Description=AiO Debian GUI scheduled maintenance for UID %i
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/aio-debian-gui/aio-host-scheduler --run %i
+TimeoutStartSec=infinity
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+UMask=0022
+StandardOutput=journal
+StandardError=journal

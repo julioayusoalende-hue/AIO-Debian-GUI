@@ -1,0 +1,24 @@
+#!/usr/bin/python3 -I
+"""Punto de entrada del servicio de actualización del anfitrión."""
+import os
+import sys
+
+sys.path.insert(0, "/usr/lib/aio-debian-gui")
+from aio_core import host_updater  # noqa: E402
+
+
+def main():
+    if os.geteuid() != 0:
+        raise PermissionError("Se necesitan privilegios de administrador.")
+    try:
+        print(host_updater.update())
+    except host_updater.Busy as busy:
+        print("En uso (" + str(busy) + "); se reintentará.")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as error:  # el servicio debe registrar la causa y fallar
+        print(str(error), file=sys.stderr)
+        sys.exit(1)

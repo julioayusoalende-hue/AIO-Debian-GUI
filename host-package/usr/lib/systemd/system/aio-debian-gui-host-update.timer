@@ -1,0 +1,10 @@
+[Unit]
+Description=Busca solicitudes de actualización del programador de AiO Debian GUI
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=10min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

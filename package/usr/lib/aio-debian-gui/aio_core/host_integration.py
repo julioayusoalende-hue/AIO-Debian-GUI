@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import select
 import shlex
 import stat
@@ -299,6 +300,209 @@ _LIMIT = 2 * 1024 * 1024
 _NAMES = ("__init__.py", "scheduler.py", "preflight.py", "es.aiodebian.gui.policy",
           "aio-debian-gui-maintenance@.service", "aio-debian-gui-helper")
 
+# Instala el paquete aio-debian-gui-host autenticado por el repositorio firmado y aislado.
+_PACKAGE_PROGRAM = r'''
+import base64, fcntl, json, os, re, shutil, stat, subprocess, sys, tempfile, types
+from pathlib import Path
+
+LEGACY = frozenset((
+    "/usr/lib/aio-debian-gui/aio-debian-gui-helper",
+    "/usr/lib/aio-debian-gui/aio_core/__init__.py",
+    "/usr/lib/aio-debian-gui/aio_core/scheduler.py",
+    "/usr/lib/aio-debian-gui/aio_core/preflight.py",
+    "/usr/share/polkit-1/actions/es.aiodebian.gui.policy",
+    "/usr/lib/systemd/system/aio-debian-gui-maintenance@.service",
+))
+RUN = "/run/aio-debian-gui"
+CONFIG = "/etc/aio-debian-gui"
+ENV = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL": "C", "DEBIAN_FRONTEND": "noninteractive"}
+UNAVAILABLE = 75
+
+def fail(message, code=1):
+    print(message, file=sys.stderr)
+    sys.exit(code)
+
+def run(args, timeout=900):
+    return subprocess.run(args, capture_output=True, text=True, timeout=timeout, env=ENV)
+
+def lock(name):
+    os.makedirs(RUN, mode=0o755, exist_ok=True)
+    directory = os.open(RUN, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        info = os.fstat(directory)
+        if info.st_uid != 0 or info.st_mode & 0o022:
+            fail("Directorio de bloqueos inseguro.")
+        fd = os.open(name, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600, dir_fd=directory)
+    finally:
+        os.close(directory)
+    info = os.fstat(fd)
+    if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o077 or info.st_nlink != 1:
+        fail("Bloqueo inseguro: " + name)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        fail("Hay un mantenimiento o una actualización en curso; inténtalo después.")
+    return fd
+
+def status(package):
+    result = run(["/usr/bin/dpkg-query", "-W", "-f=${db:Status-Status}", package], 30)
+    return result.stdout.strip() if result.returncode == 0 else "not-installed"
+
+def owned(path):
+    result = run(["/usr/bin/dpkg-query", "-S", path], 30)
+    if result.returncode == 0:
+        return True
+    if result.stderr.strip() == "dpkg-query: no path found matching pattern " + path:
+        return False
+    fail("No se pudo verificar el propietario de " + path + ": " + result.stderr.strip())
+
+def main():
+    if os.geteuid() != 0:
+        fail("Se necesita autorización de administrador.")
+    uid = os.environ.get("PKEXEC_UID", "")
+    if not re.fullmatch(r"[1-9][0-9]{0,9}", uid):
+        fail("No se pudo determinar el usuario autorizado.")
+    print("READY", flush=True)
+    payload = json.loads(sys.stdin.buffer.read(1024 * 1024 + 1))
+    module = types.ModuleType("host_repository")
+    exec(compile(payload["repository"], "host_repository", "exec"), module.__dict__)
+    handles = [lock("host-update.lock"), lock("maintenance.lock")]
+    if status("aio-debian-gui") not in ("not-installed", "config-files"):
+        fail("El paquete DEB está instalado. Usa su programador integrado y APT; no se instaló la integración portable.")
+    if status("aio-debian-gui-host") == "installed":
+        print("La integración del anfitrión ya está instalada.")
+        users = None
+    else:
+        if status("aio-debian-gui-host") not in ("not-installed", "config-files"):
+            fail("El paquete del anfitrión está en un estado inestable; repáralo con dpkg.")
+        policy = run(["/usr/bin/apt-cache", "policy", "aio-debian-gui-host"], 60)
+        candidates = re.findall(r"^\s*Candidate: (.*)$", policy.stdout, re.M)
+        if policy.returncode or any(value.strip() != "(none)" for value in candidates):
+            fail("Otra fuente APT anuncia aio-debian-gui-host; no se instalará.")
+        keyring = base64.b64decode(payload["keyring"], validate=True)
+        if not keyring or len(keyring) > 65536:
+            fail("Clave de verificación no válida.")
+        directory = Path(tempfile.mkdtemp(prefix="bootstrap-", dir=RUN))
+        try:
+            directory.chmod(0o700)
+            key = directory / "keyring.gpg"
+            key.write_bytes(keyring)
+            try:
+                metadata, data = module.download_package(str(key))
+            except (OSError, ValueError, subprocess.SubprocessError) as exc:
+                fail("Repositorio del anfitrión no disponible: " + str(exc), UNAVAILABLE)
+            deb = directory / "host.deb"
+            deb.write_bytes(data)
+            deb.chmod(0o600)
+            fields = run(["/usr/bin/dpkg-deb", "-f", str(deb), "Package", "Version", "Conflicts"], 60)
+            if fields.returncode or fields.stdout.split()[:4] != ["Package:", "aio-debian-gui-host", "Version:", metadata["version"]]:
+                fail("El paquete descargado no coincide con los metadatos firmados.")
+            listing = run(["/usr/bin/dpkg-deb", "-c", str(deb)], 60)
+            if listing.returncode:
+                fail("No se pudo leer el contenido del paquete.")
+            for line in listing.stdout.splitlines():
+                if not line.startswith("-"):
+                    continue
+                path = line.split(" ./", 1)[-1].split(" -> ")[0]
+                path = "/" + path.removeprefix("./").lstrip("/")
+                if os.path.lexists(path) and path not in LEGACY and not owned(path):
+                    fail("El archivo ya existe y no es de la integración anterior: " + path)
+                if os.path.lexists(path) and path in LEGACY and owned(path):
+                    fail("Archivo gestionado por otro paquete: " + path)
+            result = run(["/usr/bin/dpkg", "--force-confold", "-i", str(deb)])
+            if result.returncode:
+                run(["/usr/bin/dpkg", "--configure", "aio-debian-gui-host"])
+                fail("No se pudo instalar el paquete del anfitrión: " + (result.stderr or result.stdout).strip()[-1000:])
+        finally:
+            shutil.rmtree(directory, ignore_errors=True)
+        if status("aio-debian-gui-host") != "installed":
+            fail("La integración del anfitrión no quedó instalada.")
+    os.makedirs(CONFIG, mode=0o755, exist_ok=True)
+    path = Path(CONFIG) / "host-users"
+    current = []
+    if path.exists():
+        current = [line for line in path.read_text("ascii").splitlines() if re.fullmatch(r"[1-9][0-9]{0,9}", line)]
+    if uid not in current:
+        temporary = path.with_name(".host-users.tmp")
+        temporary.write_text("\n".join([*current, uid]) + "\n", "ascii")
+        temporary.chmod(0o644)
+        os.replace(temporary, path)
+    # El prerm del DEB desactiva los temporizadores; se restauran los horarios activos.
+    schedules = Path(CONFIG) / "schedules"
+    if os.path.isdir("/run/systemd/system") and schedules.is_dir():
+        for config in sorted(schedules.glob("[0-9]*.json")):
+            try:
+                enabled = json.loads(config.read_text("utf-8")).get("enabled") is True
+            except (OSError, ValueError):
+                continue
+            timer = "aio-debian-gui-maintenance-" + config.stem + ".timer"
+            if enabled and re.fullmatch(r"[0-9]+", config.stem) and (Path("/etc/systemd/system") / timer).is_file():
+                run(["/usr/bin/systemctl", "enable", "--now", timer], 60)
+    for handle in handles:
+        os.close(handle)
+    print("Integración del anfitrión instalada.")
+
+main()
+'''
+
+_REQUEST_PROGRAM = r'''
+import os, re, secrets, stat, sys
+version = sys.argv[1]
+if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version) or len(version) > 40:
+    raise ValueError("Versión de AiO no válida.")
+uid = os.getuid()
+fd = os.open("/run/user/" + str(uid), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+try:
+    info = os.fstat(fd)
+    if info.st_uid != uid or info.st_mode & 0o077:
+        raise RuntimeError("Directorio de sesión inseguro.")
+    temporary = ".aio-host-version-" + secrets.token_hex(16)
+    out = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                  0o600, dir_fd=fd)
+    try:
+        with os.fdopen(out, "w", encoding="ascii") as stream:
+            stream.write(version + "\n")
+        os.replace(temporary, "aio-debian-gui-host-version", src_dir_fd=fd, dst_dir_fd=fd)
+    finally:
+        try:
+            os.unlink(temporary, dir_fd=fd)
+        except FileNotFoundError:
+            pass
+finally:
+    os.close(fd)
+'''
+
+
+def request_host_update(formato, version):
+    """Solicita una versión al servicio del anfitrión, sin elevar privilegios."""
+    if formato not in ("appimage", "flatpak"):
+        raise ValueError("Formato de integración no compatible.")
+    if not isinstance(version, str) or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version) or len(version) > 40:
+        raise ValueError("Versión de AiO no válida.")
+    prefix = ["flatpak-spawn", "--host"] if formato == "flatpak" else []
+    query = subprocess.run(
+        [*prefix, "/usr/bin/dpkg-query", "-W", "-f=${db:Status-Status}", "aio-debian-gui-host"],
+        capture_output=True, text=True, timeout=15, env={**os.environ, "LC_ALL": "C"},
+    )
+    if query.returncode:
+        if query.returncode == 1 and "no packages found matching" in query.stderr:
+            return False
+        raise RuntimeError("No se pudo consultar la integración del anfitrión: " +
+                           (query.stderr or query.stdout).strip())
+    status = query.stdout.strip()
+    if status in ("not-installed", "config-files"):
+        return False
+    if status != "installed":
+        raise RuntimeError("La integración del anfitrión no está configurada: " + status)
+    result = subprocess.run(
+        [*prefix, "/usr/bin/python3", "-I", "-c", _REQUEST_PROGRAM, version],
+        capture_output=True, text=True, timeout=15,
+    )
+    if result.returncode:
+        raise RuntimeError("No se pudo solicitar la actualización del programador: " +
+                           (result.stderr or result.stdout).strip())
+    return True
+
 
 def _read_resource(prefix, path):
     parts = path.relative_to(prefix).parts
@@ -371,12 +575,49 @@ def _stop_process(proc):
                 stream.close()
 
 
+class RepositoryUnavailable(RuntimeError):
+    """El repositorio firmado del anfitrión no respondió; no se modificó el sistema."""
+
+
 def install(formato, appimage=None):
     """Instala solo una integración inicial; lanza RuntimeError si falla."""
-    proc = None
     try:
         payload = json.dumps(_resources(formato, appimage)).encode("ascii")
-        cmd = ["/usr/bin/pkexec", "/usr/bin/python3", "-I", "-c", _ROOT_PROGRAM]
+    except (OSError, ValueError) as exc:
+        raise RuntimeError("No se pudo preparar la integración: " + str(exc)) from exc
+    _privileged(formato, _ROOT_PROGRAM, payload)
+
+
+def _package_payload():
+    here = Path(__file__).resolve().parent
+    keyrings = [here.parents[2] / "share/keyrings/aio-debian-gui.gpg", Path("/app/share/keyrings/aio-debian-gui.gpg")]
+    keyring = next((path for path in keyrings if path.is_file()), None)
+    if keyring is None:
+        raise RuntimeError("No se encontró la clave de verificación del repositorio.")
+    return json.dumps({
+        "repository": (here / "host_repository.py").read_text("utf-8"),
+        "keyring": base64.b64encode(keyring.read_bytes()).decode("ascii"),
+    }).encode("ascii")
+
+
+def install_host(formato, appimage=None):
+    """Instala el paquete del anfitrión con actualizaciones; si el repositorio no responde, usa la copia inicial."""
+    if formato not in ("appimage", "flatpak"):
+        raise ValueError("Formato de integración no compatible.")
+    try:
+        payload = _package_payload()
+    except (OSError, ValueError) as exc:
+        raise RuntimeError("No se pudo preparar la integración: " + str(exc)) from exc
+    try:
+        _privileged(formato, _PACKAGE_PROGRAM, payload)
+    except RepositoryUnavailable:
+        install(formato, appimage)
+
+
+def _privileged(formato, program, payload):
+    proc = None
+    try:
+        cmd = ["/usr/bin/pkexec", "/usr/bin/python3", "-I", "-c", program]
         if formato == "flatpak":
             cmd = ["flatpak-spawn", "--host", *cmd]
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -414,6 +655,8 @@ def install(formato, appimage=None):
             raise RuntimeError("Tiempo de instalación agotado; comprueba el estado antes de reintentar.") from exc
         if proc.returncode:
             detail = (stderr + err + out).decode("utf-8", "replace").strip()
+            if proc.returncode == 75:
+                raise RepositoryUnavailable(detail)
             raise RuntimeError("No se pudo instalar la integración: " + (detail or str(proc.returncode)))
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
         raise RuntimeError("No se pudo preparar la integración: " + str(exc)) from exc

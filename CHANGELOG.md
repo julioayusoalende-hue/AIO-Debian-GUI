@@ -1,5 +1,12 @@
 # Cambios
 
+## 2.10.8
+
+- AppImage y Flatpak instalan la integración del anfitrión como el paquete `aio-debian-gui-host`, descargado de un repositorio APT firmado y aislado (`/host-repo/`), y su servicio con temporizador actualiza el programador desatendidamente a la versión que solicita la app.
+- La actualización rechaza versiones anteriores, paquetes retenidos (`hold`), usa `dpkg --force-confold` y espera a que no haya mantenimiento ni otra actualización en curso (bloqueos compartidos/exclusivos).
+- El paquete `aio-debian-gui-host` entra en conflicto con `aio-debian-gui`: el DEB conserva su funcionamiento y no se instala la integración portable si está presente. Los horarios no se pierden al pasar del DEB a la integración portable: se restauran los temporizadores activos.
+- Si el repositorio del anfitrión no responde, se usa la integración inicial anterior.
+
 ## 2.10.7
 
 - Las eliminaciones previstas por `autoremove` y `dist-upgrade` se muestran en la comprobación de seguridad y permiten continuar tras confirmar el aviso.
