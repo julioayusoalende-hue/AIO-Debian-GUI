@@ -11,6 +11,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
 
+from aio_core import host_integration as core_host_integration
 from aio_core import scheduler as core_scheduler
 
 
@@ -142,17 +143,10 @@ class ControladorProgramacion:
             w[nombre].set_sensitive(False)
         def consultar():
             try:
-                proc = subprocess.run(comando_host(HELPER_SISTEMA, "--schedule-status"),
-                    capture_output=True, text=True, timeout=20)
-                if proc.returncode:
-                    raise RuntimeError((proc.stderr or proc.stdout)[-500:])
-                datos = json.loads(proc.stdout)
-                if not isinstance(datos, dict):
-                    raise ValueError("invalid report")
-                if datos.get('config') is not None:
-                    core_scheduler.validate_config(datos['config'])
-                error = None
-            except (OSError, ValueError, subprocess.SubprocessError, RuntimeError) as exc:
+                datos = core_host_integration.read_scheduler_report(
+                    comando_host(HELPER_SISTEMA, "--schedule-status"))
+                error = core_host_integration.scheduler_problem(datos)
+            except (OSError, ValueError, TypeError, subprocess.SubprocessError, RuntimeError) as exc:
                 datos, error = {}, str(exc)
             GLib.idle_add(self._programacion_cargada, dialogo, datos, error, cargar_formulario)
         threading.Thread(target=consultar, daemon=True).start()
@@ -163,7 +157,7 @@ class ControladorProgramacion:
         if self.ventana_programacion is not dialogo or self.ventana.programando:
             return GLib.SOURCE_REMOVE
         w = self.programacion_widgets
-        disponible = not error and datos.get("available", False) and core_scheduler.compatible_host(datos)
+        disponible = not error and datos.get("available") is True and core_scheduler.compatible_host(datos)
         w['disponible'] = disponible
         w['config'] = datos.get('config')
         config = datos.get('config') or core_scheduler.DEFAULT
@@ -182,7 +176,9 @@ class ControladorProgramacion:
         w['actualizar'].set_sensitive(True)
         w['integracion'].set_sensitive(not disponible)
         if not disponible:
-            texto = traducir("Instala o actualiza la integración de AiO en el anfitrión y utiliza systemd para habilitar la programación. Consulta el README.")
+            texto = traducir("Programación no disponible")
+            if error:
+                texto += "\n" + error
         elif datos.get('timer_active'):
             texto = traducir("Programación activa") + " · " + traducir("Próxima ejecución: %s") % (datos.get('next_run') or traducir("No disponible"))
         else:

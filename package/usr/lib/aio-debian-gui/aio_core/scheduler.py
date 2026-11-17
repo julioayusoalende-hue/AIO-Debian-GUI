@@ -13,7 +13,7 @@ import subprocess
 import sys
 import tempfile
 
-VERSION = '2.11.1'
+VERSION = '2.11.2'
 
 
 HOST_PROTOCOL = 1
@@ -149,11 +149,20 @@ def host_supported():
         return False
 
 
-def available():
+def availability_error():
+    if not host_supported():
+        return 'El sistema del anfitrión no es compatible con el programador.'
+    if not shutil.which('systemctl') or not Path('/run/systemd/system').is_dir():
+        return 'El anfitrión no tiene systemd disponible.'
     modules = Path(HELPER).parent / 'aio_core'
-    return bool(host_supported() and shutil.which('systemctl') and Path('/run/systemd/system').is_dir()
-                and SERVICE.is_file() and Path(HELPER).is_file()
-                and all((modules / name).is_file() for name in ('__init__.py', 'scheduler.py', 'preflight.py')))
+    for path in (SERVICE, Path(HELPER), *(modules / name for name in ('__init__.py', 'scheduler.py', 'preflight.py'))):
+        if not path.is_file() or not os.access(path, os.R_OK):
+            return 'No se puede leer el archivo del programador: ' + str(path)
+    return None
+
+
+def available():
+    return availability_error() is None
 
 
 def _require_root():
@@ -252,6 +261,8 @@ def status(uid):
     result = {'version': VERSION, 'protocol': HOST_PROTOCOL, 'available': available(),
               'config': config, 'last_result': last,
               'next_run': '', 'timer_active': False}
+    if not result['available']:
+        result['availability_error'] = availability_error()
     if config and result['available']:
         try:
             result['timer_active'] = _systemctl('show', timer_name(uid), '--property=ActiveState', '--value') == 'active'

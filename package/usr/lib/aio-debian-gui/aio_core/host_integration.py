@@ -860,29 +860,43 @@ def prepare_host(formato, version):
         request_host_update(formato, version)
 
 
+def read_scheduler_report(command):
+    from .scheduler import validate_config
+    result = subprocess.run(command, capture_output=True, text=True, timeout=20)
+    if result.returncode:
+        detail = (result.stderr or result.stdout).strip()[-500:]
+        raise RuntimeError(detail or f"El programador terminó con código {result.returncode}.")
+    report = json.loads(result.stdout)
+    if not isinstance(report, dict):
+        raise ValueError("La respuesta del programador no es válida.")
+    if report.get("config") is not None:
+        report["config"] = validate_config(report["config"])
+    return report
+
+
+def scheduler_problem(report):
+    from .scheduler import compatible_host
+    if report.get("available") is not True:
+        return report.get("availability_error") or "El asistente del anfitrión informa de que la programación no está disponible."
+    if not compatible_host(report):
+        version = report.get("version") or "desconocida"
+        return "El protocolo del programador del anfitrión no es compatible. Versión: " + str(version)
+    return None
+
+
+def host_scheduler_report(formato):
+    prefix = ["flatpak-spawn", "--host"] if formato == "flatpak" else []
+    return read_scheduler_report([*prefix, "/usr/lib/aio-debian-gui/aio-debian-gui-helper", "--schedule-status"])
+
+
 def existing_scheduler(formato):
     """Reuse a compatible host installation without replacing package-owned files."""
-    if formato not in ('appimage', 'flatpak'):
-        raise ValueError('Formato de integración no compatible.')
-    from .scheduler import compatible_host, validate_config
-    prefix = ['flatpak-spawn', '--host'] if formato == 'flatpak' else []
+    if formato not in ("appimage", "flatpak"):
+        raise ValueError("Formato de integración no compatible.")
     try:
-        result = subprocess.run(
-            [*prefix, '/usr/lib/aio-debian-gui/aio-debian-gui-helper', '--schedule-status'],
-            capture_output=True, text=True, timeout=20)
-    except (OSError, subprocess.SubprocessError):
+        return scheduler_problem(host_scheduler_report(formato)) is None
+    except (OSError, ValueError, TypeError, RuntimeError, subprocess.SubprocessError):
         return False
-    if result.returncode:
-        return False
-    try:
-        report = json.loads(result.stdout)
-        if not isinstance(report, dict) or report.get('available') is not True or not compatible_host(report):
-            return False
-        if report.get('config') is not None:
-            validate_config(report['config'])
-    except (ValueError, TypeError):
-        return False
-    return True
 
 
 def install_host(formato, appimage=None):
@@ -924,6 +938,12 @@ print(json.dumps({'version': release, 'files': {name: base64.b64encode(data).dec
     except RuntimeError:
         if not existing_scheduler(formato):
             raise
+    try:
+        problem = scheduler_problem(host_scheduler_report(formato))
+    except (OSError, ValueError, TypeError, RuntimeError, subprocess.SubprocessError) as exc:
+        problem = str(exc)
+    if problem:
+        raise RuntimeError("Se instalaron los archivos, pero el programador aún no responde correctamente. " + problem)
 
 
 _STAGE_PROGRAM = r'''import base64, fcntl, json, os, re, sys, tempfile

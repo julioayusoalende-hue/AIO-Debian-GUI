@@ -1,5 +1,10 @@
 # Cambios
 
+## 2.11.2
+
+- La instalación comprueba que el programador responde como usuario antes de confirmar el éxito.
+- La ventana de programación indica el motivo si faltan componentes o si el asistente devuelve un error o un protocolo incompatible.
+
 ## 2.11.1
 
 - Abrir Flatpak o AppImage comprueba la integración y deja en cola actualizaciones firmadas sin invocar Polkit. La instalación inicial desde la app solicita autorización al confirmarla.
