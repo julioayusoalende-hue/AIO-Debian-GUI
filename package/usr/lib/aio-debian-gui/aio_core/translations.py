@@ -1579,3 +1579,189 @@ TRADUCCIONES["zh"].update({
     "Se restauró el diseño anterior de Fastfetch.": "已恢复之前的 Fastfetch 布局。",
     "El diseño de AiO no está activo o se ha modificado.": "AiO 布局未启用或已被修改。"
 })
+
+TRADUCCIONES["en"].update({
+    "<b>Repositorios APT</b>": "<b>APT repositories</b>",
+    "Copiar repositorios APT": "Back up APT repositories",
+    "Restaurar repositorios APT": "Restore APT repositories",
+    "Cambiar carpeta de copia": "Change backup folder",
+    "Carpeta de copia: %s": "Backup folder: %s",
+    "Elige una carpeta para guardar y recuperar la copia.": "Choose a folder to save and recover the backup.",
+    "Carpeta de copia de repositorios": "Repository backup folder",
+    "No se encontró la copia de repositorios.": "The repository backup was not found.",
+    "¿Restaurar los repositorios APT?": "Restore APT repositories?",
+    "¿Reemplazar la copia de repositorios?": "Replace the repository backup?",
+    "La copia sustituirá las fuentes APT actuales. Continúa solo si confías en su contenido.": "The backup will replace the current APT sources. Continue only if you trust its contents.",
+    "La copia nueva sustituirá el archivo existente.": "The new backup will replace the existing file.",
+    "Se solicitará autorización de administrador…": "Administrator authorization will be requested…",
+    "Instala o actualiza la integración del anfitrión para gestionar las copias APT.": "Install or update the host integration to manage APT backups.",
+    "La copia de repositorios supera el tamaño permitido.": "The repository backup exceeds the size limit.",
+    "No se completó la autorización o la operación.": "Authorization or the operation did not complete.",
+    "La copia de repositorios está vacía.": "The repository backup is empty.",
+    "No se pudo completar la operación de repositorios.": "Could not complete the repository operation.",
+    "Repositorios restaurados. Actualiza los índices APT desde Mantenimiento.": "Repositories restored. Refresh the APT indexes from Maintenance.",
+    "Copia de repositorios guardada en %s": "Repository backup saved to %s",
+})
+
+TRADUCCIONES["fr"].update({
+    "<b>Repositorios APT</b>": "<b>Dépôts APT</b>",
+    "Copiar repositorios APT": "Sauvegarder les dépôts APT",
+    "Restaurar repositorios APT": "Restaurer les dépôts APT",
+    "Cambiar carpeta de copia": "Changer le dossier de sauvegarde",
+    "Carpeta de copia: %s": "Dossier de sauvegarde : %s",
+    "Elige una carpeta para guardar y recuperar la copia.": "Choisissez un dossier pour enregistrer et récupérer la sauvegarde.",
+    "Carpeta de copia de repositorios": "Dossier de sauvegarde des dépôts",
+    "No se encontró la copia de repositorios.": "La sauvegarde des dépôts est introuvable.",
+    "¿Restaurar los repositorios APT?": "Restaurer les dépôts APT ?",
+    "¿Reemplazar la copia de repositorios?": "Remplacer la sauvegarde des dépôts ?",
+    "La copia sustituirá las fuentes APT actuales. Continúa solo si confías en su contenido.": "La sauvegarde remplacera les sources APT actuelles. Continuez uniquement si vous faites confiance à son contenu.",
+    "La copia nueva sustituirá el archivo existente.": "La nouvelle sauvegarde remplacera le fichier existant.",
+    "Se solicitará autorización de administrador…": "Une autorisation administrateur sera demandée…",
+    "Instala o actualiza la integración del anfitrión para gestionar las copias APT.": "Installez ou mettez à jour l’intégration de l’hôte pour gérer les sauvegardes APT.",
+    "La copia de repositorios supera el tamaño permitido.": "La sauvegarde des dépôts dépasse la taille autorisée.",
+    "No se completó la autorización o la operación.": "L’autorisation ou l’opération a échoué.",
+    "La copia de repositorios está vacía.": "La sauvegarde des dépôts est vide.",
+    "No se pudo completar la operación de repositorios.": "Impossible de terminer l’opération sur les dépôts.",
+    "Repositorios restaurados. Actualiza los índices APT desde Mantenimiento.": "Dépôts restaurés. Actualisez les index APT depuis Maintenance.",
+    "Copia de repositorios guardada en %s": "Sauvegarde des dépôts enregistrée dans %s",
+})
+
+TRADUCCIONES["zh"].update({
+    "<b>Repositorios APT</b>": "<b>APT 软件源</b>",
+    "Copiar repositorios APT": "备份 APT 软件源",
+    "Restaurar repositorios APT": "恢复 APT 软件源",
+    "Cambiar carpeta de copia": "更改备份文件夹",
+    "Carpeta de copia: %s": "备份文件夹：%s",
+    "Elige una carpeta para guardar y recuperar la copia.": "选择用于保存和恢复备份的文件夹。",
+    "Carpeta de copia de repositorios": "软件源备份文件夹",
+    "No se encontró la copia de repositorios.": "找不到软件源备份。",
+    "¿Restaurar los repositorios APT?": "恢复 APT 软件源？",
+    "¿Reemplazar la copia de repositorios?": "替换软件源备份？",
+    "La copia sustituirá las fuentes APT actuales. Continúa solo si confías en su contenido.": "备份将替换当前的 APT 软件源。仅在信任其内容时继续。",
+    "La copia nueva sustituirá el archivo existente.": "新备份将替换现有文件。",
+    "Se solicitará autorización de administrador…": "将请求管理员授权…",
+    "Instala o actualiza la integración del anfitrión para gestionar las copias APT.": "安装或更新主机集成以管理 APT 备份。",
+    "La copia de repositorios supera el tamaño permitido.": "软件源备份超出大小限制。",
+    "No se completó la autorización o la operación.": "授权或操作未完成。",
+    "La copia de repositorios está vacía.": "软件源备份为空。",
+    "No se pudo completar la operación de repositorios.": "无法完成软件源操作。",
+    "Repositorios restaurados. Actualiza los índices APT desde Mantenimiento.": "软件源已恢复。请在维护选项卡中刷新 APT 索引。",
+    "Copia de repositorios guardada en %s": "软件源备份已保存到 %s",
+})
+
+TRADUCCIONES["en"].update({
+    "<b>Ajustes del escritorio</b>": "<b>Desktop settings</b>",
+    "Ajustes del escritorio": "Desktop settings",
+    "Carpeta de copia": "Backup folder",
+    "Copiar ajustes del escritorio": "Back up desktop settings",
+    "Restaurar ajustes del escritorio": "Restore desktop settings",
+    "Abre AiO desde una sesión de GNOME o KDE Plasma.": "Open AiO from a GNOME or KDE Plasma session.",
+    "¿Reemplazar la copia del escritorio?": "Replace the desktop backup?",
+    "Preparando la copia del escritorio…": "Preparing the desktop backup…",
+    "Ajustes restaurados. Cierra sesión y vuelve a entrar. Copia anterior: %s": "Settings restored. Sign out and sign back in. Previous settings: %s",
+    "Copia del escritorio guardada en %s": "Desktop backup saved to %s",
+    "Copia de %s · %s\nSesión actual: %s": "%s backup · %s\nCurrent session: %s",
+    "Las versiones son distintas. Algunas extensiones o widgets podrían ser incompatibles.": "The versions differ. Some extensions or widgets may be incompatible.",
+    "Se guardará una copia de los ajustes actuales. Continúa solo si confías en las extensiones y widgets de esta copia.": "Your current settings will be backed up. Continue only if you trust the extensions and widgets in this backup.",
+    "¿Restaurar los ajustes del escritorio?": "Restore desktop settings?",
+    "Restaurando los ajustes del escritorio…": "Restoring desktop settings…",
+    "No se pudo completar la copia o restauración del escritorio.": "Could not complete the desktop backup or restore.",
+})
+
+TRADUCCIONES["fr"].update({
+    "<b>Ajustes del escritorio</b>": "<b>Paramètres du bureau</b>",
+    "Ajustes del escritorio": "Paramètres du bureau",
+    "Carpeta de copia": "Dossier de sauvegarde",
+    "Copiar ajustes del escritorio": "Sauvegarder les paramètres du bureau",
+    "Restaurar ajustes del escritorio": "Restaurer les paramètres du bureau",
+    "Abre AiO desde una sesión de GNOME o KDE Plasma.": "Ouvrez AiO depuis une session GNOME ou KDE Plasma.",
+    "¿Reemplazar la copia del escritorio?": "Remplacer la sauvegarde du bureau ?",
+    "Preparando la copia del escritorio…": "Préparation de la sauvegarde du bureau…",
+    "Ajustes restaurados. Cierra sesión y vuelve a entrar. Copia anterior: %s": "Paramètres restaurés. Déconnectez-vous puis reconnectez-vous. Sauvegarde précédente : %s",
+    "Copia del escritorio guardada en %s": "Sauvegarde du bureau enregistrée dans %s",
+    "Copia de %s · %s\nSesión actual: %s": "Sauvegarde de %s · %s\nSession actuelle : %s",
+    "Las versiones son distintas. Algunas extensiones o widgets podrían ser incompatibles.": "Les versions diffèrent. Certaines extensions ou certains widgets peuvent être incompatibles.",
+    "Se guardará una copia de los ajustes actuales. Continúa solo si confías en las extensiones y widgets de esta copia.": "Vos paramètres actuels seront sauvegardés. Continuez uniquement si vous faites confiance aux extensions et aux widgets de cette sauvegarde.",
+    "¿Restaurar los ajustes del escritorio?": "Restaurer les paramètres du bureau ?",
+    "Restaurando los ajustes del escritorio…": "Restauration des paramètres du bureau…",
+    "No se pudo completar la copia o restauración del escritorio.": "Impossible de terminer la sauvegarde ou la restauration du bureau.",
+})
+
+TRADUCCIONES["zh"].update({
+    "<b>Ajustes del escritorio</b>": "<b>桌面设置</b>",
+    "Ajustes del escritorio": "桌面设置",
+    "Carpeta de copia": "备份文件夹",
+    "Copiar ajustes del escritorio": "备份桌面设置",
+    "Restaurar ajustes del escritorio": "恢复桌面设置",
+    "Abre AiO desde una sesión de GNOME o KDE Plasma.": "请在 GNOME 或 KDE Plasma 会话中打开 AiO。",
+    "¿Reemplazar la copia del escritorio?": "替换桌面备份？",
+    "Preparando la copia del escritorio…": "正在准备桌面备份…",
+    "Ajustes restaurados. Cierra sesión y vuelve a entrar. Copia anterior: %s": "设置已恢复。请注销后重新登录。原设置备份：%s",
+    "Copia del escritorio guardada en %s": "桌面备份已保存到 %s",
+    "Copia de %s · %s\nSesión actual: %s": "%s 备份 · %s\n当前会话：%s",
+    "Las versiones son distintas. Algunas extensiones o widgets podrían ser incompatibles.": "版本不同。部分扩展或小部件可能不兼容。",
+    "Se guardará una copia de los ajustes actuales. Continúa solo si confías en las extensiones y widgets de esta copia.": "将备份当前设置。仅在信任备份中的扩展和小部件时继续。",
+    "¿Restaurar los ajustes del escritorio?": "恢复桌面设置？",
+    "Restaurando los ajustes del escritorio…": "正在恢复桌面设置…",
+    "No se pudo completar la copia o restauración del escritorio.": "无法完成桌面备份或恢复。",
+})
+
+TRADUCCIONES["en"].update({
+    "Arquitectura": "Architecture",
+    "Procesador": "Processor",
+    "Procesadores lógicos": "Logical processors",
+    "Memoria RAM total": "Total RAM",
+    "Memoria RAM disponible": "Available RAM",
+    "Entorno de escritorio": "Desktop environment",
+    "Tipo de sesión": "Session type",
+    "Tiempo encendido": "Uptime",
+    "%d d · %d h · %d min": "%d d · %d h · %d min",
+})
+
+TRADUCCIONES["fr"].update({
+    "Arquitectura": "Architecture",
+    "Procesador": "Processeur",
+    "Procesadores lógicos": "Processeurs logiques",
+    "Memoria RAM total": "Mémoire vive totale",
+    "Memoria RAM disponible": "Mémoire vive disponible",
+    "Entorno de escritorio": "Environnement de bureau",
+    "Tipo de sesión": "Type de session",
+    "Tiempo encendido": "Temps de fonctionnement",
+    "%d d · %d h · %d min": "%d j · %d h · %d min",
+})
+
+TRADUCCIONES["zh"].update({
+    "Arquitectura": "架构",
+    "Procesador": "处理器",
+    "Procesadores lógicos": "逻辑处理器",
+    "Memoria RAM total": "总内存",
+    "Memoria RAM disponible": "可用内存",
+    "Entorno de escritorio": "桌面环境",
+    "Tipo de sesión": "会话类型",
+    "Tiempo encendido": "运行时间",
+    "%d d · %d h · %d min": "%d 天 · %d 小时 · %d 分钟",
+})
+
+TRADUCCIONES["en"].update({
+    "GPU": "GPU",
+    "Controlador gráfico activo": "Active graphics driver",
+    "Versión del módulo NVIDIA instalado": "Installed NVIDIA module version",
+    "Paquete del controlador NVIDIA": "NVIDIA driver package",
+    "Versión del módulo NVIDIA cargado": "Loaded NVIDIA module version",
+})
+
+TRADUCCIONES["fr"].update({
+    "GPU": "GPU",
+    "Controlador gráfico activo": "Pilote graphique actif",
+    "Versión del módulo NVIDIA instalado": "Version du module NVIDIA installé",
+    "Paquete del controlador NVIDIA": "Paquet du pilote NVIDIA",
+    "Versión del módulo NVIDIA cargado": "Version du module NVIDIA chargé",
+})
+
+TRADUCCIONES["zh"].update({
+    "GPU": "GPU",
+    "Controlador gráfico activo": "当前显卡驱动",
+    "Versión del módulo NVIDIA instalado": "已安装的 NVIDIA 模块版本",
+    "Paquete del controlador NVIDIA": "NVIDIA 驱动软件包",
+    "Versión del módulo NVIDIA cargado": "已加载的 NVIDIA 模块版本",
+})

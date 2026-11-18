@@ -65,6 +65,36 @@ for distro, version, texto in (('debian', '13', 'Debian 13'), ('ubuntu', '26.04'
         logo, etiqueta_sistema = sistema.get_children()
         assert logo.get_storage_type() == Gtk.ImageType.PIXBUF
         assert etiqueta_sistema.get_text() == texto
+
+        ventana.show_all()
+        settle()
+        ventana.btn_detalles_sistema.clicked()
+        settle()
+        dialogo = ventana.ventana_detalles_sistema
+        assert dialogo.get_visible() and dialogo.get_transient_for() == ventana
+        assert dialogo.get_size()[0] == ventana.get_size()[0]
+        scroll = next(widget for widget in dialogo.get_content_area().get_children()
+                      if isinstance(widget, Gtk.ScrolledWindow))
+        detalles = scroll.get_child().get_child()
+        logo_detalles, grid, *extras = detalles.get_children()
+        assert logo_detalles.get_storage_type() == Gtk.ImageType.PIXBUF
+        assert logo_detalles.get_accessible().get_name() == app.logo_distribucion(distro)[1]
+        filas, _ = app.informacion_sistema()
+        assert len(grid.get_children()) == 2 * len(filas)
+        assert all(grid.get_child_at(1, i).get_selectable() for i in range(len(filas)))
+        assert extras == ([ventana.nvidia_info_label] if distro == 'debian' else [])
+
+        dialogo.close()
+        settle()
+        assert not dialogo.get_visible()
+        ventana.resize(ventana.get_size()[0] + 80, ventana.get_size()[1])
+        settle()
+        ventana.btn_detalles_sistema.clicked()
+        settle()
+        assert ventana.ventana_detalles_sistema == dialogo
+        assert dialogo.get_size()[0] == ventana.get_size()[0]
+        dialogo.response(Gtk.ResponseType.CLOSE)
+        assert not dialogo.get_visible()
         ventana.destroy()
 
 with patch.object(app.Vte.Terminal, 'copy_clipboard_format') as copiar, \
@@ -157,9 +187,15 @@ for language in ('es', 'en', 'fr', 'zh'):
         app.traducir('Apps recomendadas')
     assert w.notebook.get_tab_label_text(w.notebook.get_nth_page(3)) == \
         app.traducir('Terminal')
-    assert set(w.backup_buttons) == {'timeshift', 'deja-dup'}
-    assert all(button.get_image() is not None for button in w.backup_buttons.values())
-    for app_id, button in w.backup_buttons.items():
+    assert set(w.backup_buttons) == {
+        'timeshift', 'deja-dup', 'backup', 'restore', 'folder',
+        'desktop-backup', 'desktop-restore',
+    }
+    assert w.backup_buttons['backup'].get_label() == app.traducir('Copiar repositorios APT')
+    assert w.backup_buttons['restore'].get_label() == app.traducir('Restaurar repositorios APT')
+    for app_id in app.APLICACIONES_BACKUP:
+        button = w.backup_buttons[app_id]
+        assert button.get_image() is not None
         image = button.get_image()
         assert image.get_storage_type() == Gtk.ImageType.PIXBUF
         pixbuf = image.get_pixbuf()
@@ -224,7 +260,7 @@ for language in ('es', 'en', 'fr', 'zh'):
     settle()
     if language != 'es':
         assert app.traducir('Operación en curso') != 'Operación en curso'
-    assert not w.detalles_sistema.get_expanded()
+    assert w.ventana_detalles_sistema is None
     assert not w.expansor_consola.get_expanded()
     w.expansor_consola.set_expanded(True)
     settle()

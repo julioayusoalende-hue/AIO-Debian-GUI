@@ -33,7 +33,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 LISTAS_ACTUALIZADAS=0
 UPGRADE_PLAN=""
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.0.6
+HELPER_VERSION=1.0.7
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -1198,6 +1198,7 @@ nvidia_gpu_count() {
 }
 nvidia_presente() { [ "$(nvidia_gpu_count 0x10de)" -gt 0 ]; }
 nvidia_hibrida() {
+    # La combinación de fabricantes no demuestra una topología Optimus.
     nvidia_presente && [ "$(nvidia_gpu_count integrada)" -gt 0 ]
 }
 nvidia_secure_boot() {
@@ -1211,13 +1212,41 @@ nvidia_secure_boot() {
         *) echo desconocido ;;
     esac
 }
+# Un paquete instalado no garantiza que exista un módulo para el kernel activo.
+nvidia_modulo_listo() {
+    paquete_instalado nvidia-driver || return 1
+    local version modulo
+    version=$(dpkg-query -W -f='${Version}' nvidia-driver 2>/dev/null) || return 1
+    version=${version#*:}; version=${version%%-*}
+    modulo=$(modinfo -k "$(uname -r)" -F version nvidia 2>/dev/null) || return 1
+    [ "$modulo" = "$version" ] || return 1
+    LC_ALL=C dkms status 2>/dev/null | awk -F", " -v v="$version" -v k="$(uname -r)" '
+        $1 ~ /^nvidia[^/]*\// && substr($1, index($1, "/") + 1) == v && $2 == k && $3 ~ /: installed$/ { found=1 }
+        END { exit !found }'
+}
+
+# Se consulta la lista de GPU del paquete candidato autenticado por APT.
+# No se usa nvidia-detect, cuya base puede pertenecer a otra rama.
+nvidia_elegir_modulo() {
+    local version="$1" temporal resultado estado
+    temporal=$(mktemp -d) || return 1
+    if ! (cd "$temporal" && apt-get download "nvidia-driver=$version" >&2); then
+        rm -rf -- "$temporal"; return 1
+    fi
+    resultado=$(python3 "$(dirname "${BASH_SOURCE[0]}")/aio_core/nvidia.py"         "$temporal" "$version" "$(nvidia_pci_root)")
+    estado=$?
+    rm -rf -- "$temporal"
+    [ "$estado" -eq 0 ] || return "$estado"
+    printf '%s\n' "$resultado"
+}
+
 nvidia_report() {
     local p=0 h=0 installed=0 candidate=no-disponible
     if nvidia_presente; then
         p=1
         nvidia_hibrida && h=1
-        paquete_instalado nvidia-driver && installed=1
-        candidate=$(apt-cache policy nvidia-driver 2>/dev/null | awk '/Candidate:/ {print $2; exit}')
+        nvidia_modulo_listo && installed=1
+        candidate=$(LC_ALL=C apt-cache policy nvidia-driver 2>/dev/null | awk '/Candidate:/ {print $2; exit}')
         [ -n "$candidate" ] || candidate=no-disponible
     fi
     printf '##NVIDIA:present:%s\n' "$p"
@@ -1228,11 +1257,11 @@ nvidia_report() {
     printf '##NVIDIA:kernel:%s\n' "$(uname -r)"
 }
 paso_nvidia_driver() {
-    local candidate major kernel headers output simulation
+    local candidate kernel headers modulo simulation metadata limite
     [ "$(leer_distribucion)" = debian ] || { err "NVIDIA automático solo en Debian."; return 1; }
     nvidia_presente || { err "No se detectó una GPU NVIDIA PCI."; return 1; }
-    if paquete_instalado nvidia-driver; then
-        ok "El controlador NVIDIA Debian ya está instalado."
+    if nvidia_modulo_listo; then
+        ok "El controlador NVIDIA tiene un módulo DKMS instalado para el kernel activo."
         return 0
     fi
     if [ "$(nvidia_secure_boot)" != desactivado ]; then
@@ -1244,54 +1273,52 @@ paso_nvidia_driver() {
         return 1
     fi
     asegurar_listas || return 1
-    candidate=$(apt-cache policy nvidia-driver | awk '/Candidate:/ {print $2; exit}')
+    candidate=$(LC_ALL=C apt-cache policy nvidia-driver | awk '/Candidate:/ {print $2; exit}')
     [ -n "$candidate" ] && [ "$candidate" != "(none)" ] || {
         err "Falta nvidia-driver en APT. Habilita contrib, non-free y non-free-firmware."
         return 1
     }
-    major=$(printf '%s' "$candidate" | sed 's/.*://;s/\..*//')
-    [[ "$major" =~ ^[0-9]+$ ]] || { err "Versión NVIDIA no reconocida."; return 1; }
     kernel=$(uname -r)
-    if dpkg --compare-versions "$(printf '%s' "$kernel" | cut -d- -f1)" ge 6.16 &&
-       [ "$major" -lt 580 ]; then
-        err "Kernel de Backports incompatible con NVIDIA $candidate. No se mezclan ramas."
+    modulo=$(nvidia_elegir_modulo "$candidate") || {
+        err "No se pudo verificar soporte para todas las GPU en el paquete candidato. Revisión manual necesaria."
+        return 1
+    }
+    case "$modulo" in nvidia-kernel-dkms|nvidia-open-kernel-dkms) ;; *) return 1 ;; esac
+    metadata=$(LC_ALL=C apt-cache show "$modulo=$candidate") || return 1
+    limite=$(sed -nE 's/.*tested up to Linux ([0-9]+\.[0-9]+).*/\1/p' <<< "$metadata" | head -n 1)
+    if [ -z "$limite" ] || ! dpkg --compare-versions "$(cut -d. -f1,2 <<< "${kernel%%-*}")" le "$limite"; then
+        err "El paquete $modulo $candidate no acredita compatibilidad con el kernel $kernel. Revisión manual necesaria."
         return 1
     fi
     headers="linux-headers-$kernel"
     if ! paquete_instalado "$headers" &&
-       ! apt-cache policy "$headers" | grep -Eq 'Candidate:[[:space:]]+[^ (]'; then
+       ! LC_ALL=C apt-cache policy "$headers" | grep -Eq 'Candidate:[[:space:]]+[^ (]'; then
         err "No hay cabeceras disponibles para el kernel $kernel."
         return 1
     fi
-    if ! apt-cache policy nvidia-detect | grep -Eq 'Candidate:[[:space:]]+[^ (]'; then
-        err "No hay nvidia-detect: revisa los componentes non-free."
-        return 1
-    fi
-    simulation=$(apt-get -s install "$headers" nvidia-driver nvidia-kernel-dkms 2>&1) || {
-        err "No se pueden resolver las dependencias: $simulation"; return 1;
+    simulation=$(LC_ALL=C apt-get -s --no-remove install "$headers" "nvidia-driver=$candidate" "$modulo=$candidate" 2>&1) || {
+        err "No se pueden resolver las dependencias sin eliminaciones: $simulation"; return 1;
     }
-    if grep -Eq '^Remv |^The following packages will be REMOVED:' <<< "$simulation"; then
+    if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
         err "APT propone eliminar paquetes. Se cancela por seguridad."
-        return 1
-    fi
-    instalar_paquete_si_falta nvidia-detect "No se pudo instalar el detector." || return 1
-    output=$(nvidia-detect 2>&1) || { err "Falló nvidia-detect: $output"; return 1; }
-    if ! grep -Eq '^[[:space:]]*nvidia-driver[[:space:]]*$' <<< "$output"; then
-        err "Debian no recomienda nvidia-driver para esta GPU; revisión manual necesaria."
         return 1
     fi
     info "Controlador Debian $candidate para kernel $kernel."
     if nvidia_hibrida; then
-        info "Equipo híbrido: se conserva la integrada y se usa NVIDIA con PRIME Render Offload."
+        info "GPU Intel/AMD y NVIDIA presentes: no se modifica la configuración de pantallas. PRIME puede estar disponible."
         info "PRIME: __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia programa"
     fi
-    if ! apt-get "${APT_OPTS[@]}" install "$headers" nvidia-driver nvidia-kernel-dkms; then
+    if ! apt-get "${APT_OPTS[@]}" --no-remove install "$headers" "nvidia-driver=$candidate" "$modulo=$candidate"; then
         err "Fallo instalando NVIDIA. Consulta logs de DKMS y APT."
+        return 1
+    fi
+    if ! nvidia_modulo_listo; then
+        err "APT terminó, pero no se verificó el módulo DKMS para el kernel activo. Revisa DKMS antes de reiniciar."
         return 1
     fi
     REINICIO_REQUERIDO=1
     echo "##REBOOT:1"
-    ok "Reinicia y comprueba nvidia-smi."
+    ok "Módulo DKMS verificado. Reinicia y comprueba nvidia-smi; la GPU activa solo puede confirmarse después del reinicio."
 }
 
 # ------------------------------------------------------------------------------

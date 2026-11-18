@@ -29,6 +29,7 @@ bash scripts/test-polkit-escaping.sh && bien "validación de usuario Polkit" || 
 bash scripts/test-passwordless.sh && bien "reglas Polkit de AiO y Flatpak de usuario" || fallo "pruebas de autorización"
 bash scripts/test-distro.sh && bien "detección Debian/Ubuntu LTS y HWE" || fallo "pruebas de distribución"
 python3 scripts/test-updater.py && bien "actualizador AppImage: versiones y SHA-256" || fallo "pruebas de actualizador"
+python3 scripts/test-testing-release.py && bien "versionado y paquete de testing" || fallo "pruebas de testing"
 python3 scripts/test-history.py && bien "historial de mantenimiento y persistencia" || fallo "pruebas del historial"
 python3 scripts/test-scheduler.py && bien "programación automática de mantenimiento" || fallo "pruebas de programación"
 python3 scripts/test-preflight.py && bien "modo de mantenimiento seguro" || fallo "pruebas de mantenimiento seguro"
@@ -43,6 +44,8 @@ python3 scripts/test-system-logo.py && bien "logotipos dinámicos Debian/Ubuntu"
 bash scripts/test-nvidia.sh && bien "detección NVIDIA e híbrida" || fallo "pruebas NVIDIA"
 bash scripts/test-backports-rollback.sh && bien "reversión Backports segura" || fallo "pruebas de reversión Backports"
 bash scripts/test-backup-apps.sh && bien "instalación segura de aplicaciones de backup" || fallo "pruebas de aplicaciones de backup"
+python3 scripts/test-apt-sources-backup.py && bien "copia y restauración de repositorios APT" || fallo "pruebas de copias APT"
+python3 scripts/test-desktop-backup.py && bien "copia y restauración de ajustes del escritorio" || fallo "pruebas de copias del escritorio"
 bash scripts/test-recommended-apps.sh && bien "instalación segura de apps recomendadas" || fallo "pruebas de apps recomendadas"
 
 if python3 -c 'import gi; gi.require_version("Gtk", "3.0")' >/dev/null 2>&1; then

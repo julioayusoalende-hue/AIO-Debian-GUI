@@ -35,3 +35,5 @@ if paso_nvidia_driver; then
     echo 'ERROR: permite instalar sin GPU NVIDIA' >&2; exit 1
 fi
 echo '✔ NVIDIA: PCI, híbrida y bloqueo sin GPU'
+
+bash scripts/test-nvidia-install.sh

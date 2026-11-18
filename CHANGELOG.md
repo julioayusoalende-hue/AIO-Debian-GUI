@@ -1,5 +1,13 @@
 # Cambios
 
+## 1.0.7
+
+- Ajusta el tamaño inicial de «Comprobaciones de seguridad» a 680 × 526 píxeles y lo adapta al área disponible en pantallas pequeñas.
+- Verifica las GPU NVIDIA contra la lista del paquete candidato, selecciona la variante DKMS según soporte y rama, comprueba el módulo del kernel activo y prohíbe eliminaciones en la instalación. Detiene los casos sin compatibilidad verificable.
+
+- Añade copia y restauración de ajustes, extensiones y widgets del usuario en GNOME y KDE Plasma, con una copia previa antes de restaurar.
+- Añade botones en Backup para copiar y restaurar los repositorios APT desde una misma carpeta.
+
 ## 1.0.6
 
 - El aviso Comprobaciones de seguridad muestra la simulación APT completa en un panel desplazable, con Cancelar y Continuar siempre visibles.
@@ -528,7 +536,7 @@ quede indefinidamente esperando una autorización que no llega.
 Los botones «Completo» y «Solo Flatpak» resaltan el preset seleccionado. El resaltado se
 quita si se modifica una tarea individualmente.
 
-## 1.0.7
+## 1.0.7 (serie anterior)
 Añade una opción para instalar el kernel de la arquitectura y los controladores Mesa
 disponibles desde Debian Backports. La opción está desactivada por defecto y avisa
 que puede requerir reiniciar.
