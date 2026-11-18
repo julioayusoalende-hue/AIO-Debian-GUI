@@ -1,5 +1,10 @@
 # Cambios
 
+## 1.0.5
+
+- La interfaz simple deja visible solo Configuración y mantenimiento y oculta la salida de la consola, incluso cuando una tarea falla.
+- La aplicación muestra las novedades de su propio paquete a partir del historial de cambios.
+
 ## 1.0.4
 
 - Añade los iconos de Kitty y Ghostty a Apps recomendadas.
@@ -482,8 +487,8 @@ Flatpak con sandbox reducido y delegación explícita de las tareas administrati
 asistente instalado en el Debian anfitrión.
 
 
-Al publicar una versión nueva: sube `Version` en `package/DEBIAN/control`, añade la
-novedad en `NOVEDADES` (`package/usr/bin/aio-debian-gui`) y una sección `## X.Y.Z` aquí.
+Al publicar una versión nueva: sube `Version` en `package/DEBIAN/control` y añade
+una sección única `## X.Y.Z` aquí para las novedades incluidas en el paquete.
 `scripts/check.sh` lo verifica.
 
 ## 1.0.15
@@ -530,22 +535,19 @@ para el usuario actual y solo en la sesión local activa. El AppImage reutiliza 
 asistente del sistema aunque sea de otra versión; la opción nueva verifica que el
 asistente tenga esa capacidad.
 
-## 1.0.5
+## 1.0.5 (serie anterior)
 Se corrige la autenticación al ejecutar el AppImage cuando está instalado el paquete Debian.
 
-## 1.0.4
+## 1.0.4 (serie anterior)
 La aplicación también se distribuye como AppImage.
 
-## 1.0.5
-Se corrige la autenticación al ejecutar el AppImage cuando está instalado el paquete Debian.
-
-## 1.0.3
+## 1.0.3 (serie anterior)
 Las herramientas auxiliares instalan el soporte FUSE necesario para ejecutar AppImage.
 
-## 1.0.2
+## 1.0.2 (serie anterior)
 El logotipo de Debian aparece junto a la información del sistema.
 
-## 1.0.1
+## 1.0.1 (serie anterior)
 El botón principal ahora se llama «Iniciar tareas».
 
 ## 1.0.0 (serie anterior)

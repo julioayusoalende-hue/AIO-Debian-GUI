@@ -27,10 +27,10 @@ El diagnóstico solicita autorización para renovar los índices APT antes de co
 
 ## Instalar
 
-Descarga `aio-debian-gui_1.0.4_all.deb` y abre un terminal en la carpeta de descargas.
+Descarga `aio-debian-gui_1.0.5_all.deb` y abre un terminal en la carpeta de descargas.
 
 ```bash
-sudo apt install ./aio-debian-gui_1.0.4_all.deb
+sudo apt install ./aio-debian-gui_1.0.5_all.deb
 ```
 
 El paquete instala `needrestart` como dependencia para comprobar si hace falta reiniciar y configura el repositorio APT firmado de AiO Debian. Usa **Menú → Buscar actualizaciones** o el gestor de paquetes para instalar futuras versiones. APT identifica esta serie con la época `1:` para permitir la actualización desde las versiones anteriores.

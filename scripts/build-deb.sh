@@ -12,6 +12,22 @@ STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
 cp -a package/. "$STAGE/"
 
+NOTAS="$STAGE/usr/share/aio-debian-gui/release-notes.txt"
+awk -v version="$VERSION" '
+    $0 == "## " version { activo = 1; encontrados++; next }
+    /^## / { activo = 0 }
+    activo && NF {
+        if (!contenido++) print version
+        sub(/^- /, "• ")
+        gsub(/`/, "")
+        print
+    }
+    END { if (encontrados != 1 || !contenido) exit 1 }
+' CHANGELOG.md > "$NOTAS" || {
+    echo "El CHANGELOG debe contener una única sección con novedades para $VERSION." >&2
+    exit 1
+}
+
 # Permisos normalizados (git/zip no los conservan siempre)
 find "$STAGE" -type d -exec chmod 755 {} +
 find "$STAGE" -type f -exec chmod 644 {} +
