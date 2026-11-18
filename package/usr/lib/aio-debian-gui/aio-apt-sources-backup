@@ -1,0 +1,163 @@
+#!/usr/bin/python3 -I
+"""Privileged APT source backup. The interface owns the backup file."""
+import base64
+import fcntl
+import json
+import os
+from pathlib import Path
+import re
+import stat
+import sys
+import tempfile
+
+
+APT = Path("/etc/apt")
+LOCK = Path("/run/aio-debian-gui/maintenance.lock")
+LIMIT = 32 * 1024 * 1024
+FILE_TYPES = {
+    "sources.list.d": {".list", ".sources"},
+    "keyrings": {".asc", ".gpg"},
+    "trusted.gpg.d": {".asc", ".gpg"},
+}
+
+
+def managed_path(name):
+    if name in {"sources.list", "trusted.gpg"}:
+        return True
+    folder, _, filename = name.partition("/")
+    return (folder in FILE_TYPES
+            and re.fullmatch(r"[A-Za-z0-9_.-]+", filename) is not None
+            and Path(filename).suffix in FILE_TYPES[folder])
+
+
+def snapshot(root):
+    if not stat.S_ISDIR(root.lstat().st_mode):
+        raise ValueError(f"Unexpected APT directory: {root}")
+    paths = [root / name for name in ("sources.list", "trusted.gpg")]
+    for folder in FILE_TYPES:
+        directory = root / folder
+        try:
+            mode = directory.lstat().st_mode
+        except FileNotFoundError:
+            continue
+        if not stat.S_ISDIR(mode):
+            raise ValueError(f"Unexpected APT directory: {directory}")
+        paths.extend(path for path in directory.iterdir()
+                     if managed_path(str(path.relative_to(root))))
+    files = {}
+    remaining = LIMIT // 2
+    for path in sorted(paths):
+        try:
+            mode = path.lstat().st_mode
+        except FileNotFoundError:
+            continue
+        if not stat.S_ISREG(mode):
+            raise ValueError(f"Expected a regular file: {path}")
+        with path.open("rb") as stream:
+            data = stream.read(remaining + 1)
+        remaining -= len(data)
+        if remaining < 0:
+            raise ValueError("APT backup exceeds the size limit")
+        files[str(path.relative_to(root))] = (data, mode & 0o777)
+    return files
+
+
+def encode(files):
+    document = {
+        "version": 1,
+        "files": {name: [base64.b64encode(data).decode("ascii"), mode]
+                  for name, (data, mode) in files.items()},
+    }
+    encoded = json.dumps(document, indent=2).encode() + b"\n"
+    if len(encoded) > LIMIT:
+        raise ValueError("APT backup exceeds the size limit")
+    return encoded
+
+
+def decode(data):
+    if len(data) > LIMIT:
+        raise ValueError("APT backup exceeds the size limit")
+    document = json.loads(data)
+    if (not isinstance(document, dict) or document.get("version") != 1
+            or not isinstance(document.get("files"), dict)):
+        raise ValueError("Unknown APT backup format")
+    files = {}
+    for name, entry in document["files"].items():
+        if (not managed_path(name) or not isinstance(entry, list) or len(entry) != 2
+                or not isinstance(entry[0], str) or type(entry[1]) is not int
+                or not 0 <= entry[1] <= 0o777):
+            raise ValueError(f"Invalid APT backup entry: {name!r}")
+        files[name] = (base64.b64decode(entry[0], validate=True), entry[1])
+    return files
+
+
+def replace_file(path, entry):
+    data, mode = entry
+    path.parent.mkdir(mode=0o755, exist_ok=True)
+    descriptor, temporary = tempfile.mkstemp(prefix=".aio-apt-", dir=path.parent)
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(data)
+            os.fchmod(stream.fileno(), mode)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
+def restore(root, files):
+    current = snapshot(root)
+    # Restore the exact list of repositories. Keep additional signing keys
+    # installed by packages after the backup.
+    desired = {name: entry for name, entry in current.items()
+               if name != "sources.list" and not name.startswith("sources.list.d/")}
+    desired.update(files)
+    changed = []
+    try:
+        for name, entry in desired.items():
+            if entry != current.get(name):
+                replace_file(root / name, entry)
+                changed.append(name)
+        for name in current.keys() - desired.keys():
+            (root / name).unlink()
+            changed.append(name)
+    except OSError as error:
+        failed = []
+        for name in reversed(changed):
+            try:
+                if name in current:
+                    replace_file(root / name, current[name])
+                else:
+                    (root / name).unlink()
+            except OSError:
+                failed.append(name)
+        if failed:
+            raise OSError(f"{error}. Rollback failed for: {', '.join(failed)}") from error
+        raise
+
+
+def main():
+    if sys.argv[1:] not in (["backup"], ["restore"]) or os.geteuid() != 0:
+        return 2
+    try:
+        files = decode(sys.stdin.buffer.read(LIMIT + 1)) if sys.argv[1] == "restore" else None
+        LOCK.parent.mkdir(mode=0o755, exist_ok=True)
+        with LOCK.open("ab") as lock:
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError as error:
+                raise OSError("AiO maintenance is already running") from error
+            os.fchmod(lock.fileno(), 0o600)
+            if files is None:
+                sys.stdout.buffer.write(encode(snapshot(APT)))
+            else:
+                restore(APT, files)
+    except (OSError, ValueError, RecursionError) as error:
+        print(error, file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

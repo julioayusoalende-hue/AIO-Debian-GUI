@@ -16,7 +16,7 @@ AiO Debian GUI reúne tareas habituales de administración en una aplicación GT
 - **Programación:** mantenimiento diario, semanal o mensual; consulta de próximas ejecuciones y resultados. No se programan eliminaciones ni cambios de kernel, controladores o repositorios.
 - **Diagnóstico:** actualiza los índices APT con autorización de administrador y después informa sobre espacio, APT/dpkg, actualizaciones, DKMS, reinicios y servicios. No instala ni elimina paquetes.
 - **Sistema y hardware:** gestión de repositorios, kernel y Mesa de Backports; detección NVIDIA con instalación conservadora en Debian. Algunas operaciones tienen requisitos y bloqueos adicionales.
-- **Copias de seguridad:** acceso a Timeshift y Respaldos (Déjà Dup); si no están instalados, AiO ofrece instalarlos con confirmación y autorización de administrador.
+- **Copias de seguridad:** copia y restauración de repositorios APT, y acceso a Timeshift y Respaldos (Déjà Dup); si no están instalados, AiO ofrece instalarlos con confirmación y autorización de administrador.
 - **Apps recomendadas:** catálogo en dos columnas con GIMP, VLC, Celluloid, Plex, Switcheroo, Video Downloader, HandBrake, Spotify, Feishin, Google Chrome, Brave, Gear Lever, Kitty y Ghostty. Distingue DEB y Flatpak, indica qué formato está instalado y no abre las aplicaciones tras instalarlas. Las instalaciones requieren confirmación; los DEB externos se descargan e instalan manualmente.
 - **Terminal:** pestaña interactiva con Bash que recibe en directo la salida de mantenimiento. El botón «Ver en Terminal» de la consola integrada abre esta pestaña. Incluye accesos para limpiar la pantalla, ejecutar Fastfetch y abrir Nautilus en `admin:/` (puede solicitar autorización). **Editar** y el menú contextual permiten copiar, pegar y seleccionar. En **Configuración y mantenimiento**, **Aplicar diseño de Fastfetch** instala el diseño incluido para tu usuario y guarda una copia de la configuración anterior. **Restaurar diseño anterior de Fastfetch** recupera esa copia o vuelve a los valores predeterminados si no había configuración de usuario. Los accesos ejecutan procesos independientes, sin enviar texto a la sesión interactiva.
 - **Escritorio:** gestión de aplicaciones Flatpak, soporte FUSE y complementos de GNOME; interfaz en español, inglés, francés y chino, con temas claro y oscuro.
@@ -27,10 +27,10 @@ El diagnóstico solicita autorización para renovar los índices APT antes de co
 
 ## Instalar
 
-Descarga `aio-debian-gui_1.0.4_all.deb` y abre un terminal en la carpeta de descargas.
+Descarga `aio-debian-gui_1.0.6_all.deb` y abre un terminal en la carpeta de descargas.
 
 ```bash
-sudo apt install ./aio-debian-gui_1.0.4_all.deb
+sudo apt install ./aio-debian-gui_1.0.6_all.deb
 ```
 
 El paquete instala `needrestart` como dependencia para comprobar si hace falta reiniciar y configura el repositorio APT firmado de AiO Debian. Usa **Menú → Buscar actualizaciones** o el gestor de paquetes para instalar futuras versiones. APT identifica esta serie con la época `1:` para permitir la actualización desde las versiones anteriores.
@@ -42,6 +42,14 @@ Descarga `SHA256SUMS` junto con los paquetes que quieras comprobar y ejecuta:
 ```bash
 sha256sum -c --ignore-missing SHA256SUMS
 ```
+
+## Copiar y restaurar repositorios APT
+
+En **Backup**, pulsa **Copiar repositorios APT** y elige una carpeta la primera vez. AiO guarda `repositorios-apt.json` y recuerda la carpeta para **Restaurar repositorios APT**. Usa **Cambiar carpeta de copia** para elegir otra ubicación.
+
+La copia incluye `/etc/apt/sources.list`, las fuentes `.list` y `.sources` de `/etc/apt/sources.list.d` y los llaveros de APT de `/etc/apt`. Las claves instaladas por paquetes en `/usr/share/keyrings` se recuperan reinstalando sus paquetes. Guarda la copia en una ubicación privada si tus fuentes contienen credenciales.
+
+Las dos operaciones piden autorización de administrador. Al restaurar, AiO sustituye las fuentes actuales por las de la copia y conserva las claves adicionales. Después puedes renovar los índices desde **Configuración y mantenimiento**.
 
 ## Programación y permisos
 
