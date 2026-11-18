@@ -17,7 +17,7 @@ AiO Debian GUI reúne tareas habituales de administración en una aplicación GT
 - **Diagnóstico:** actualiza los índices APT con autorización de administrador y después informa sobre espacio, APT/dpkg, actualizaciones, DKMS, reinicios y servicios. No instala ni elimina paquetes.
 - **Sistema y hardware:** gestión de repositorios, kernel y Mesa de Backports; detección NVIDIA con instalación conservadora en Debian. Algunas operaciones tienen requisitos y bloqueos adicionales.
 - **Copias de seguridad:** acceso a Timeshift y Respaldos (Déjà Dup); si no están instalados, AiO ofrece instalarlos con confirmación y autorización de administrador.
-- **Apps recomendadas:** catálogo en dos columnas con GIMP, VLC, Celluloid, Plex, Switcheroo, Video Downloader, HandBrake, Spotify, Feishin, Google Chrome, Brave y Gear Lever. Distingue DEB y Flatpak, indica qué formato está instalado y no abre las aplicaciones tras instalarlas. Las instalaciones requieren confirmación; los DEB externos se descargan e instalan manualmente.
+- **Apps recomendadas:** catálogo en dos columnas con GIMP, VLC, Celluloid, Plex, Switcheroo, Video Downloader, HandBrake, Spotify, Feishin, Google Chrome, Brave, Gear Lever, Kitty y Ghostty. Distingue DEB y Flatpak, indica qué formato está instalado y no abre las aplicaciones tras instalarlas. Las instalaciones requieren confirmación; los DEB externos se descargan e instalan manualmente.
 - **Terminal:** pestaña interactiva con Bash que recibe en directo la salida de mantenimiento. El botón «Ver en Terminal» de la consola integrada abre esta pestaña. Incluye accesos para limpiar la pantalla, ejecutar Fastfetch y abrir Nautilus en `admin:/` (puede solicitar autorización). Los accesos ejecutan procesos independientes, sin enviar texto a la sesión interactiva.
 - **Escritorio:** gestión de aplicaciones Flatpak, soporte FUSE y complementos de GNOME; interfaz en español, inglés, francés y chino, con temas claro y oscuro.
 
@@ -27,13 +27,13 @@ El diagnóstico solicita autorización para renovar los índices APT antes de co
 
 ## Instalar
 
-Descarga `aio-debian-gui_1.0.1_all.deb` y abre un terminal en la carpeta de descargas.
+Descarga `aio-debian-gui_1.0.2_all.deb` y abre un terminal en la carpeta de descargas.
 
 ```bash
-sudo apt install ./aio-debian-gui_1.0.1_all.deb
+sudo apt install ./aio-debian-gui_1.0.2_all.deb
 ```
 
-El paquete configura el repositorio APT firmado de AiO Debian. Usa **Menú → Buscar actualizaciones** o el gestor de paquetes para instalar futuras versiones. APT identifica esta serie con la época `1:` para permitir la actualización desde las versiones anteriores.
+El paquete instala `needrestart` como dependencia para comprobar si hace falta reiniciar y configura el repositorio APT firmado de AiO Debian. Usa **Menú → Buscar actualizaciones** o el gestor de paquetes para instalar futuras versiones. APT identifica esta serie con la época `1:` para permitir la actualización desde las versiones anteriores.
 
 ### Verificar las descargas
 

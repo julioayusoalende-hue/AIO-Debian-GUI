@@ -68,7 +68,7 @@ if Gtk.init_check([])[0]:
         ventana = app.VentanaPrincipal(
             {"idioma": idioma, "tema": "claro", "modo_simple": False}
         )
-        assert " · " in ventana.get_titlebar().get_subtitle()
+        assert ventana.get_titlebar().get_custom_title() is not None
         ventana.show_all()
         menu = ventana.menu_popover.get_child()
         assert menu.get_visible()
@@ -239,7 +239,7 @@ if Gtk.init_check([])[0]:
         ]
         assert len(nuevas_ventanas) == 1
         nueva = nuevas_ventanas[0]
-        assert " · " in nueva.get_titlebar().get_subtitle()
+        assert nueva.get_titlebar().get_custom_title() is not None
         assert not nueva.expansor_consola.get_expanded()
         assert Gtk.Settings.get_default().get_property(
             "gtk-application-prefer-dark-theme"

@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.0.2
+
+- Muestra la versión de AiO Debian en verde y, debajo, el nombre, la versión y el logotipo del sistema operativo.
+- Mueve Kitty de Herramientas auxiliares a Apps recomendadas, con instalación mediante APT.
+- Añade Ghostty a Apps recomendadas. En Ubuntu 26.04 o posterior ofrece APT desde los repositorios oficiales. En Debian ofrece el comando comunitario. Ambas distribuciones pueden descargar la AppImage de Ghostty.
+- Mantiene needrestart como dependencia del paquete Debian y lo retira de Herramientas auxiliares.
+
 ## 1.0.1
 
 - Rediseña la pestaña principal con descripciones visibles de las tareas, selección resaltada y un botón de ejecución que indica cuántas tareas hay seleccionadas.

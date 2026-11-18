@@ -141,11 +141,17 @@ else
     fallo "estado de repositorios incorrecto"
 fi
 
+if grep -Eq '^Depends: .*[, ]needrestart([ ,]|$)' package/DEBIAN/control; then
+    bien "needrestart es una dependencia obligatoria"
+else
+    fallo "needrestart debe estar en Depends"
+fi
+
 if bash -c '
     source "$1"
     paquete_instalado() {
         case "$1" in
-            needrestart|libnotify-bin|fastfetch|kitty|synaptic|libfuse2t64) return 0 ;;
+            libnotify-bin|fastfetch|synaptic|libfuse2t64) return 0 ;;
             *) return 1 ;;
         esac
     }

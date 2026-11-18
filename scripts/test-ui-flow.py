@@ -29,6 +29,41 @@ def settle():
             Gtk.main_iteration()
         time.sleep(.005)
 
+for distro, version, expected in (
+    ('debian', '13', ['community-command', 'appimage']),
+    ('ubuntu', '24.04', ['appimage']),
+    ('ubuntu', '26.04', ['deb', 'appimage']),
+    ('ubuntu', '26.10', ['deb', 'appimage']),
+    ('ubuntu', '28.04', ['deb', 'appimage']),
+):
+    assert [canal['type'] for canal in app.canales_ghostty(
+        {'ID': distro, 'VERSION_ID': version})] == expected
+
+with patch.object(app.urllib.request, 'urlopen') as request:
+    request.return_value.__enter__.return_value.read.return_value = (
+        b'{"tag_name":"v1.4.0","assets":[{"name":"Ghostty-1.4.0-x86_64.AppImage"},'
+        b'{"name":"Ghostty-1.4.0-aarch64.AppImage"}]}'
+    )
+    for arch in ('x86_64', 'aarch64'):
+        assert app.url_appimage_ghostty(arch) == (
+            f'https://github.com/pkgforge-dev/ghostty-appimage/releases/download/v1.4.0/'
+            f'Ghostty-1.4.0-{arch}.AppImage'
+        )
+
+for distro, version, texto in (('debian', '13', 'Debian 13'), ('ubuntu', '26.04', 'Ubuntu 26.04')):
+    with patch.object(app, 'datos_distribucion_anfitrion', return_value={'ID': distro, 'VERSION_ID': version}), \
+         patch.object(app, 'version_app', return_value='1.0.2~preview3'):
+        ventana = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+        titulo, sistema = ventana.get_titlebar().get_custom_title().get_children()
+        nombre, version_app = titulo.get_children()
+        assert nombre.get_text() == 'AiO Debian'
+        assert version_app.get_text() == '1.0.2~preview3'
+        assert version_app.get_style_context().has_class('aio-header-version')
+        logo, etiqueta_sistema = sistema.get_children()
+        assert logo.get_storage_type() == Gtk.ImageType.PIXBUF
+        assert etiqueta_sistema.get_text() == texto
+        ventana.destroy()
+
 for formato in ('appimage', 'flatpak', 'deb'):
     with patch.object(app, 'formato_actualizacion', return_value=formato), \
          patch.object(app, 'version_app', return_value='2.10.15'), \
@@ -103,8 +138,8 @@ for language in ('es', 'en', 'fr', 'zh'):
     settle()
     assert w.get_size()[0] <= 601, (language, w.get_size())
     assert all(button.get_mapped() for button in w.recommended_buttons.values())
-    assert len(w.recommended_grid.get_children()) == 12
-    expected_names = ['Brave', 'Celluloid', 'Feishin', 'Gear Lever', 'GIMP', 'Google Chrome', 'HandBrake',
+    assert len(w.recommended_grid.get_children()) == 14
+    expected_names = ['Brave', 'Celluloid', 'Feishin', 'Gear Lever', 'Ghostty', 'GIMP', 'Google Chrome', 'HandBrake', 'Kitty',
                       'Plex', 'Spotify', 'Switcheroo', 'Video Downloader', 'VLC']
     assert [item['name'] for item in app.APPS_RECOMENDADAS] == expected_names
     for index, name in enumerate(expected_names):
@@ -115,9 +150,13 @@ for language in ('es', 'en', 'fr', 'zh'):
         assert isinstance(header[0], Gtk.Image)
         assert header[1].get_text() == name
         image = header[0]
-        assert image.get_storage_type() == Gtk.ImageType.PIXBUF
-        pixbuf = image.get_pixbuf()
-        assert max(pixbuf.get_width(), pixbuf.get_height()) == 48
+        if 'bundled_icon' in app.APPS_RECOMENDADAS[index]:
+            assert image.get_storage_type() == Gtk.ImageType.PIXBUF
+            pixbuf = image.get_pixbuf()
+            assert max(pixbuf.get_width(), pixbuf.get_height()) == 48
+        else:
+            assert image.get_storage_type() == Gtk.ImageType.ICON_NAME
+            assert image.get_pixel_size() == 48
         assert contents[1].get_text() == app.traducir(
             app.APPS_RECOMENDADAS[index]['description'])
         fallback_theme = type(
@@ -128,7 +167,7 @@ for language in ('es', 'en', 'fr', 'zh'):
             fallback_theme,
         ) == app.APPS_RECOMENDADAS[index]['fallback_icon']
     assert {key for key in w.recommended_buttons if key[1] == 'deb'} == {
-        ('celluloid', 'deb'), ('gimp', 'deb'), ('handbrake', 'deb'), ('vlc', 'deb')
+        ('celluloid', 'deb'), ('gimp', 'deb'), ('handbrake', 'deb'), ('kitty', 'deb'), ('vlc', 'deb')
     }
     assert ('feishin', 'flatpak') in w.recommended_buttons
     assert ('feishin', 'deb-download') in w.recommended_buttons
@@ -137,6 +176,9 @@ for language in ('es', 'en', 'fr', 'zh'):
     assert ('gearlever', 'flatpak') in w.recommended_buttons
     assert ('plex', 'flatpak') in w.recommended_buttons
     assert ('google-chrome', 'deb-download') in w.recommended_buttons
+    assert {tipo for app_id, tipo in w.recommended_buttons if app_id == 'ghostty'} == {
+        canal['type'] for canal in app.canales_ghostty(app.datos_distribucion_anfitrion())
+    }
     w.notebook.set_current_page(0)
     settle()
     if language != 'es':

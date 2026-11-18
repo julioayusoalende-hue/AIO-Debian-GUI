@@ -15,11 +15,12 @@ asegurar_listas() {
     printf '%s\n' update >> "$TEST_DIR/calls"
 }
 
-for app in celluloid gimp handbrake vlc; do
+for app in celluloid gimp handbrake kitty vlc; do
     case "$app" in
         celluloid) EXPECTED_PACKAGE=celluloid ;;
         gimp) EXPECTED_PACKAGE=gimp ;;
         handbrake) EXPECTED_PACKAGE=handbrake ;;
+        kitty) EXPECTED_PACKAGE=kitty ;;
         vlc) EXPECTED_PACKAGE=vlc ;;
     esac
     : > "$TEST_DIR/calls"
@@ -47,4 +48,30 @@ if instalar_aplicacion_recomendada arbitrary >/dev/null 2>&1; then
     exit 1
 fi
 
-echo "✔ Instalación APT recomendada limitada a Celluloid, GIMP, HandBrake y VLC"
+echo "✔ Instalación APT recomendada limitada a Celluloid, GIMP, HandBrake, Kitty y VLC"
+
+ubuntu_compatible_con_ghostty() { return 1; }
+if instalar_aplicacion_recomendada ghostty >/dev/null 2>&1; then
+    echo "ERROR: Ghostty via APT was accepted on an unsupported distribution" >&2
+    exit 1
+fi
+
+ubuntu_compatible_con_ghostty() { return 0; }
+EXPECTED_PACKAGE=ghostty
+INSTALLED=0
+apt-get() {
+    [[ " $* " == *" --no-remove install ghostty "* ]]
+    local opcion
+    for opcion in "$@"; do
+        if [[ "$opcion" == Dir::Etc::Preferences=* ]]; then
+            grep -Fxq 'Pin: release o=Ubuntu' "${opcion#*=}"
+            grep -Fxq 'Pin-Priority: -1' "${opcion#*=}"
+            touch "$TEST_DIR/installed"
+            return 0
+        fi
+    done
+    return 1
+}
+output=$(instalar_aplicacion_recomendada ghostty)
+[[ "$output" == *"##RECOMMENDED:installed:ghostty" ]]
+echo "✔ Ghostty se limita al origen de Ubuntu en APT"

@@ -79,7 +79,9 @@ TRADUCCIONES = {
         "Habilitar contrib y non-free": "Enable contrib and non-free",
         "Añade los componentes a los repositorios oficiales de Debian (con copia .bak).": "Adds these components to official Debian repositories (with a .bak backup).",
         "Instalar herramientas auxiliares": "Install auxiliary tools",
-        "needrestart, fastfetch, kitty, synaptic y soporte FUSE para AppImage, si faltan.": "needrestart, fastfetch, kitty, synaptic and FUSE support for AppImage, if missing.",
+        "Terminal con aceleración por GPU, pestañas y paneles divididos.": "GPU-accelerated terminal with tabs and split panes.",
+        "Terminal con aceleración por GPU, atajos configurables y soporte para imágenes.": "GPU-accelerated terminal with configurable shortcuts and image support.",
+        "Fastfetch, Synaptic y soporte FUSE para AppImage, si faltan.": "Fastfetch, Synaptic and FUSE support for AppImage, if missing.",
         "Instalar kernel y Mesa desde Backports": "Install kernel and Mesa from Backports",
         "Instala el kernel y los controladores gráficos Mesa de Debian Backports; puede requerir reinicio.": "Installs the kernel and Mesa graphics drivers from Debian Backports; may require a restart.",
         "Actualizar los paquetes del sistema": "Upgrade system packages",
@@ -221,7 +223,9 @@ TRADUCCIONES = {
         "Habilitar contrib y non-free": "Activer contrib et non-free",
         "Añade los componentes a los repositorios oficiales de Debian (con copia .bak).": "Ajoute ces composants aux dépôts officiels Debian (avec sauvegarde .bak).",
         "Instalar herramientas auxiliares": "Installer les outils auxiliaires",
-        "needrestart, fastfetch, kitty, synaptic y soporte FUSE para AppImage, si faltan.": "needrestart, fastfetch, kitty, synaptic et prise en charge FUSE pour AppImage, si nécessaire.",
+        "Terminal con aceleración por GPU, pestañas y paneles divididos.": "Terminal accéléré par le GPU avec onglets et volets fractionnés.",
+        "Terminal con aceleración por GPU, atajos configurables y soporte para imágenes.": "Terminal accéléré par le GPU avec raccourcis personnalisables et prise en charge des images.",
+        "Fastfetch, Synaptic y soporte FUSE para AppImage, si faltan.": "Fastfetch, Synaptic et prise en charge de FUSE pour AppImage, si nécessaire.",
         "Instalar kernel y Mesa desde Backports": "Installer le noyau et Mesa depuis Backports",
         "Instala el kernel y los controladores gráficos Mesa de Debian Backports; puede requerir reinicio.": "Installe le noyau et les pilotes graphiques Mesa de Debian Backports ; un redémarrage peut être nécessaire.",
         "Actualizar los paquetes del sistema": "Mettre à jour les paquets du système",
@@ -363,7 +367,9 @@ TRADUCCIONES = {
         "Habilitar contrib y non-free": "启用 contrib 和 non-free",
         "Añade los componentes a los repositorios oficiales de Debian (con copia .bak).": "将这些组件添加到 Debian 官方软件源（创建 .bak 备份）。",
         "Instalar herramientas auxiliares": "安装辅助工具",
-        "needrestart, fastfetch, kitty, synaptic y soporte FUSE para AppImage, si faltan.": "安装缺失的 needrestart、fastfetch、kitty、synaptic 和 AppImage FUSE 支持。",
+        "Terminal con aceleración por GPU, pestañas y paneles divididos.": "支持标签页和分屏的 GPU 加速终端。",
+        "Terminal con aceleración por GPU, atajos configurables y soporte para imágenes.": "支持自定义快捷键和图像显示的 GPU 加速终端。",
+        "Fastfetch, Synaptic y soporte FUSE para AppImage, si faltan.": "安装缺失的 Fastfetch、Synaptic 和 AppImage FUSE 支持。",
         "Instalar kernel y Mesa desde Backports": "从 Backports 安装内核和 Mesa",
         "Instala el kernel y los controladores gráficos Mesa de Debian Backports; puede requerir reinicio.": "从 Debian Backports 安装内核和 Mesa 显卡驱动；可能需要重启。",
         "Actualizar los paquetes del sistema": "升级系统软件包",
@@ -1495,3 +1501,30 @@ TRADUCCIONES["zh"].update({
     "Abre la guía de integración para instalar o actualizar el asistente del anfitrión.": "打开集成指南以安装或更新主机辅助程序。",
 })
 
+
+TRADUCCIONES["en"].update({
+    "Comando comunitario": "Community command",
+    "Descargar AppImage": "Download AppImage",
+    "Copiar comando": "Copy command",
+    "Este comando descarga y ejecuta el instalador comunitario de Ghostty. Revísalo antes de ejecutarlo.": "This command downloads and runs the Ghostty community installer. Review it before running it.",
+    "No hay AppImage de Ghostty para esta arquitectura.": "No Ghostty AppImage is available for this architecture.",
+    "No se encontró la descarga estable de Ghostty.": "The stable Ghostty download could not be found."
+})
+
+TRADUCCIONES["fr"].update({
+    "Comando comunitario": "Commande communautaire",
+    "Descargar AppImage": "Télécharger l’AppImage",
+    "Copiar comando": "Copier la commande",
+    "Este comando descarga y ejecuta el instalador comunitario de Ghostty. Revísalo antes de ejecutarlo.": "Cette commande télécharge et exécute l’installeur communautaire de Ghostty. Vérifiez-le avant de l’exécuter.",
+    "No hay AppImage de Ghostty para esta arquitectura.": "Aucune AppImage de Ghostty n’est disponible pour cette architecture.",
+    "No se encontró la descarga estable de Ghostty.": "Le téléchargement stable de Ghostty est introuvable."
+})
+
+TRADUCCIONES["zh"].update({
+    "Comando comunitario": "社区安装命令",
+    "Descargar AppImage": "下载 AppImage",
+    "Copiar comando": "复制命令",
+    "Este comando descarga y ejecuta el instalador comunitario de Ghostty. Revísalo antes de ejecutarlo.": "此命令会下载并运行 Ghostty 社区安装脚本。运行前请先检查脚本。",
+    "No hay AppImage de Ghostty para esta arquitectura.": "此架构没有可用的 Ghostty AppImage。",
+    "No se encontró la descarga estable de Ghostty.": "未找到 Ghostty 稳定版下载。"
+})

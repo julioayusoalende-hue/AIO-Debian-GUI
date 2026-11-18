@@ -25,4 +25,4 @@ for fname, flatpak, appdir, expected in [
         os.environ.pop("APPDIR", None)
     else:
         os.environ["APPDIR"] = original
-print("✔ la cabecera distingue DEB, AppImage, Flatpak y código fuente")
+print("✔ detección de DEB, AppImage, Flatpak y código fuente")
