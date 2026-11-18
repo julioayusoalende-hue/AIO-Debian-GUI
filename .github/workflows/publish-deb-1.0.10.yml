@@ -1,0 +1,133 @@
+name: Publish AiO Debian 1.0.10
+
+on:
+  push:
+    branches: [maintenance/publish-deb-1.0.10]
+    paths: [.github/workflows/publish-deb-1.0.10.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 8f7bfea0e7990d68079663524eef3738cf200d1d
+      - name: Install build and test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev python3 python3-gi gir1.2-gtk-3.0 gir1.2-vte-2.91 librsvg2-common shellcheck desktop-file-utils pkexec xvfb xauth
+      - name: Check and build the Debian package
+        run: |
+          set -euo pipefail
+          xvfb-run -a bash scripts/check.sh
+          bash scripts/build-deb.sh
+          cd dist
+          sha256sum *.deb > SHA256SUMS
+          sha256sum --check SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aio-debian-gui-deb
+          path: |
+            dist/*.deb
+            dist/SHA256SUMS
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 8f7bfea0e7990d68079663524eef3738cf200d1d
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: aio-debian-gui-deb
+          path: dist
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum --check SHA256SUMS
+          files=(aio-debian-gui_*_all.deb)
+          [[ "${#files[@]}" -eq 1 && "${files[0]}" =~ ^aio-debian-gui_([0-9]+\.[0-9]+\.[0-9]+)_all\.deb$ ]]
+          version="${BASH_REMATCH[1]}"
+          awk -v heading="## $version" '
+            $0 == heading { found=1; next }
+            found && /^## / { exit }
+            found { print }
+          ' ../CHANGELOG.md > release-notes.md
+          grep -q '[^[:space:]]' release-notes.md
+          gh release create "v$version" "${files[0]}" SHA256SUMS \
+            --target "8f7bfea0e7990d68079663524eef3738cf200d1d" --title "AiO Debian GUI $version" \
+            --notes-file release-notes.md --latest
+
+  publish_apt:
+    needs: publish
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          ref: 8f7bfea0e7990d68079663524eef3738cf200d1d
+          path: source
+          persist-credentials: false
+      - name: Checkout existing Pages repository
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: site
+          persist-credentials: true
+      - name: Verify signing key secret
+        env:
+          PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          test -n "$PRIVATE_KEY" || { echo "::error::Missing GPG_PRIVATE_KEY secret"; exit 1; }
+      - name: Install APT build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev fakeroot gnupg
+      - name: Build Debian package and import signing key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          export GNUPGHOME="$RUNNER_TEMP/apt-gnupg"
+          mkdir -m 0700 -p "$GNUPGHOME"
+          printf '%s\n' 'allow-loopback-pinentry' > "$GNUPGHOME/gpg-agent.conf"
+          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
+          cd source
+          bash scripts/build-deb.sh
+      - name: Publish signed APT metadata and DEB
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          cd source
+          VERSION="$(sed -n 's/^Version: //p' package/DEBIAN/control)"
+          DEB="dist/aio-debian-gui_${VERSION#*:}_all.deb"
+          test -f "$DEB"
+          bash scripts/publish-apt-repo.sh "$DEB" ../site
+      - name: Deploy APT files and retire the portable repositories
+        run: |
+          set -euo pipefail
+          git -C site config user.name 'github-actions[bot]'
+          git -C site config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C site add pool dists aio-debian-gui.gpg index.html .nojekyll
+          if git -C site diff --cached --quiet; then
+            echo 'APT repository unchanged.'
+          else
+            git -C site commit -m "Publish signed APT repository from ${GITHUB_SHA:0:12}"
+            git -C site push origin HEAD:gh-pages
+          fi
+
