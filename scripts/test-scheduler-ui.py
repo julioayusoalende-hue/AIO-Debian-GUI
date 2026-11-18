@@ -3,10 +3,13 @@
 import copy
 import importlib.machinery
 import importlib.util
+import json
 import os
 from pathlib import Path
 import sys
+import threading
 import time
+from types import SimpleNamespace
 from unittest.mock import patch
 import gi
 gi.require_version('Gtk', '3.0')
@@ -33,20 +36,35 @@ for language in ('es', 'en', 'fr', 'zh'):
     backend = {'version': app.core_scheduler.VERSION, 'available': True, 'config': None,
                'last_result': None, 'timer_active': False, 'next_run': ''}
     commands = []
-    def run_scheduler(formato, action, uid, config=None):
-        commands.append((formato, action, uid, config))
-        assert uid == str(os.getuid())
-        if action == '--configure':
-            app.core_scheduler.validate_config(config)
-            backend['config'] = config
-            backend['timer_active'] = config['enabled']
-        elif action == '--remove':
-            backend['config'] = None
-            backend['timer_active'] = False
-        elif action != '--status':
-            raise AssertionError(action)
-        return backend
-    with patch.object(app.core_host_integration, 'run_user_scheduler', side_effect=run_scheduler):
+    def read_status(command, **kwargs):
+        assert command[-1] == '--schedule-status'
+        return SimpleNamespace(returncode=0, stdout=json.dumps(backend), stderr='')
+    class Save:
+        def __init__(self, command, **kwargs):
+            commands.append(command)
+            assert command[0] == 'pkexec' and command[1] == app.HELPER_SISTEMA
+            if '--schedule-save' in command:
+                config = json.loads(command[-1])
+                app.core_scheduler.validate_config(config)
+                backend['config'] = config
+                backend['timer_active'] = config['enabled']
+            else:
+                assert command[-1] == '--schedule-remove'
+                backend['config'] = None
+                backend['timer_active'] = False
+            read, write = os.pipe()
+            os.write(write, b'Polkit notice\n##SCHEDULE:authorized\n')
+            os.close(write)
+            self.stdout = os.fdopen(read, 'rb', buffering=0)
+            self.returncode = None
+        def __enter__(self): return self
+        def __exit__(self, *args): self.stdout.close()
+        def poll(self): return self.returncode
+        def communicate(self):
+            self.returncode = 0
+            return b'', None
+    with patch.object(app.subprocess, 'run', side_effect=read_status), \
+         patch.object(app.subprocess, 'Popen', side_effect=Save):
         w._abrir_programacion()
         dialog = w.programacion.ventana_programacion
         wait_for(lambda: w.programacion.programacion_widgets['guardar'].get_sensitive())
@@ -100,7 +118,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         assert backend['config'] is None and not widgets['eliminar'].get_sensitive()
         dialog.destroy()
         assert w.programacion.ventana_programacion is None
-        # Si systemd --user no está disponible, los controles de escritura se bloquean.
+        # Una integración ausente o desactualizada no habilita escrituras.
         backend['available'] = False
         w._abrir_programacion()
         wait_for(lambda: w.programacion.programacion_widgets['actualizar'].get_sensitive())
@@ -119,4 +137,35 @@ for language in ('es', 'en', 'fr', 'zh'):
         w.programando = False
         w.programacion.ventana_programacion.destroy()
     w.destroy()
-print('GTK programación: carga, selección, hora, guardar, pausar, eliminar, validación y resultados en cuatro idiomas OK')
+
+# La guía es accesible desde la programación si la integración del anfitrión falla.
+with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
+    w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+    w.show_all()
+    with patch.object(app.subprocess, 'run', return_value=SimpleNamespace(
+            returncode=1, stdout='', stderr='asistente ausente')):
+        w._abrir_programacion()
+        wait_for(lambda: w.programacion.programacion_widgets['actualizar'].get_sensitive())
+        button = w.programacion.programacion_widgets['integracion']
+        assert button.get_visible() and button.get_sensitive()
+        with patch.object(w, '_abrir_guia_integracion') as guide:
+            button.clicked()
+            guide.assert_called_once_with(parent=w.programacion.ventana_programacion)
+        dialog = w.programacion.ventana_programacion
+        entered, release = threading.Event(), threading.Event()
+        def install(*_args):
+            entered.set()
+            assert release.wait(5)
+        with patch.object(app.core_host_integration, 'install_host', side_effect=install, create=True), \
+             patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK):
+            w._abrir_guia_integracion(parent=dialog)
+            guide = next(d for d in Gtk.Window.list_toplevels()
+                         if isinstance(d, Gtk.Dialog) and d.get_title() == 'Guía de integración del anfitrión')
+            w._instalar_integracion(None, guide, dialog)
+            wait_for(entered.is_set)
+            assert w.programando and not button.get_sensitive()
+            release.set()
+            wait_for(lambda: not w.programando and button.get_sensitive())
+        w.programacion.ventana_programacion.destroy()
+    w.destroy()
+print('GTK programación: carga, selección, hora, guardar, pausar, eliminar, validación, resultados e integración ausente en cuatro idiomas OK')
