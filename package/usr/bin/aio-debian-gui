@@ -1970,6 +1970,16 @@ class VentanaPrincipal(Gtk.Window):
         caja.pack_start(etiqueta(
             "APT requiere autorización de administrador. Flatpak instala para tu usuario y añade Flathub si hace falta. Para los DEB de la web oficial, usa el gestor de software."
         ), False, False, 0)
+        self.recommended_selection = {}
+        self.recommended_multi = Gtk.ToggleButton(label=traducir("Seleccionar varias"))
+        self.recommended_multi.connect("toggled", self._alternar_seleccion_recomendada)
+        self.recommended_install = Gtk.Button(label=traducir("Instalar selección"))
+        self.recommended_install.get_style_context().add_class("suggested-action")
+        self.recommended_install.connect("clicked", self._instalar_seleccion_recomendada)
+        barra = Gtk.Box(spacing=8)
+        barra.pack_start(self.recommended_multi, False, False, 0)
+        barra.pack_end(self.recommended_install, False, False, 0)
+        caja.pack_start(barra, False, False, 0)
         self.recommended_status = self._etiqueta_estado()
         caja.pack_start(self.recommended_status, False, False, 0)
         pagina.pack_start(introduccion, False, False, 0)
@@ -2557,6 +2567,63 @@ class VentanaPrincipal(Gtk.Window):
         self.recommended_indicators[clave].show()
         self._actualizar_sensibilidad()
 
+    def _alternar_seleccion_recomendada(self, boton):
+        if boton.get_active():
+            self.recommended_status.set_text(traducir(
+                "Elige DEB (APT) o Flatpak para cada aplicación que quieras instalar."))
+        else:
+            self.recommended_selection.clear()
+            self.recommended_status.set_text("")
+        self._actualizar_sensibilidad()
+
+    def _instalar_seleccion_recomendada(self, boton):
+        if not boton.get_sensitive():
+            return
+        seleccion = [
+            (app, canal)
+            for app in APPS_RECOMENDADAS if app["id"] in self.recommended_selection
+            for canal in self.canales_recomendados[app["id"]]
+            if canal["type"] == self.recommended_selection[app["id"]]
+            and not self.recommended_installed.get((app["id"], canal["type"]))
+        ]
+        if not seleccion:
+            return
+        self.recommended_scan_generation += 1
+        self.backup_action_in_progress = True
+        self.recommended_status.set_text(traducir("Instalando aplicaciones…"))
+        self._actualizar_sensibilidad()
+
+        def instalar():
+            resultados = [
+                (app, canal, self._ejecutar_instalacion_recomendada(app, canal))
+                for app, canal in seleccion
+            ]
+            GLib.idle_add(self._seleccion_recomendada_instalada, resultados)
+
+        threading.Thread(target=instalar, daemon=True).start()
+
+    def _seleccion_recomendada_instalada(self, resultados):
+        if self.destruida:
+            return GLib.SOURCE_REMOVE
+        errores = []
+        for app, canal, error in resultados:
+            if error is None:
+                self.recommended_selection.pop(app["id"], None)
+                self._marcar_recomendada_instalada(app["id"], canal["type"])
+            else:
+                errores.append(f'{app["name"]}: {error}')
+        self.backup_action_in_progress = False
+        if errores:
+            mensaje = "Algunas aplicaciones no se pudieron instalar."
+            self.recommended_status.set_text(traducir(mensaje))
+            self._actualizar_sensibilidad()
+            self._mensaje(Gtk.MessageType.ERROR, mensaje, "\n\n".join(errores))
+            return GLib.SOURCE_REMOVE
+        else:
+            self.recommended_status.set_text(traducir("Se instalaron las aplicaciones seleccionadas."))
+        self._actualizar_sensibilidad()
+        return GLib.SOURCE_REMOVE
+
     def _accion_app_recomendada(self, _boton, app_id, tipo_canal):
         app = next((item for item in APPS_RECOMENDADAS if item["id"] == app_id), None)
         if app is None:
@@ -2570,6 +2637,14 @@ class VentanaPrincipal(Gtk.Window):
             return
         if tipo_canal == "appimage":
             self._descargar_appimage_ghostty()
+            return
+        if self.recommended_multi.get_active():
+            if tipo_canal in ("deb", "flatpak"):
+                if self.recommended_selection.get(app_id) == tipo_canal:
+                    del self.recommended_selection[app_id]
+                else:
+                    self.recommended_selection[app_id] = tipo_canal
+                self._actualizar_sensibilidad()
             return
         self.recommended_scan_generation += 1
         self.backup_action_in_progress = True
@@ -2658,54 +2733,58 @@ class VentanaPrincipal(Gtk.Window):
     def _instalar_app_recomendada(self, app, canal):
         if self.backup_action_in_progress:
             return
-        tipo_canal = canal["type"]
         self.backup_action_in_progress = True
         self.recommended_status.set_text(traducir("Instalando %s…") % app["name"])
         self._actualizar_sensibilidad()
 
         def instalar():
-            error = None
-            try:
-                if tipo_canal == "deb":
-                    helper = helper_mantenimiento()
-                    if not helper_disponible(helper):
-                        raise RuntimeError("No se encuentra el asistente de mantenimiento.")
-                    if usa_integracion_portable() and not core_host_integration.compatible_helper(
-                            formato_actualizacion(), helper):
-                        raise RuntimeError(traducir(
-                            "No se encuentra el asistente actualizado en el anfitrión. Instala la integración desde su guía y vuelve a intentarlo."
-                        ))
-                    proc = subprocess.run(
-                        comando_pkexec(helper, "C.UTF-8", "--recommended-install", app["id"]),
-                        capture_output=True, text=True, timeout=600,
-                    )
-                    marcador = "##RECOMMENDED:installed:%s" % app["id"]
-                    if proc.returncode or marcador not in proc.stdout.splitlines():
-                        error = (proc.stderr or proc.stdout or
-                                 "El asistente no confirmó la instalación.").strip()[-1600:]
-                else:
-                    remote = subprocess.run(
-                        comando_host("flatpak", "remote-add", "--user", "--if-not-exists",
-                                     "flathub", "https://dl.flathub.org/repo/flathub.flatpakrepo"),
-                        capture_output=True, text=True, timeout=60,
-                    )
-                    if remote.returncode:
-                        raise RuntimeError(traducir(
-                            "No se pudo configurar Flathub para tu usuario. Comprueba que Flatpak y la conexión estén disponibles e inténtalo de nuevo."
-                        ))
-                    proc = subprocess.run(
-                        comando_host("flatpak", "install", "--user", "--noninteractive",
-                                     "--assumeyes", "flathub", canal["app_id"]),
-                        capture_output=True, text=True, timeout=600,
-                    )
-                    if proc.returncode:
-                        error = (proc.stderr or proc.stdout or
-                                 "Flatpak no confirmó la instalación.").strip()[-1600:]
-            except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
-                error = str(exc)
+            error = self._ejecutar_instalacion_recomendada(app, canal)
             GLib.idle_add(self._app_recomendada_instalada, app, canal, error)
 
         threading.Thread(target=instalar, daemon=True).start()
+
+    def _ejecutar_instalacion_recomendada(self, app, canal):
+        tipo_canal = canal["type"]
+        error = None
+        try:
+            if tipo_canal == "deb":
+                helper = helper_mantenimiento()
+                if not helper_disponible(helper):
+                    raise RuntimeError("No se encuentra el asistente de mantenimiento.")
+                if usa_integracion_portable() and not core_host_integration.compatible_helper(
+                        formato_actualizacion(), helper):
+                    raise RuntimeError(traducir(
+                        "No se encuentra el asistente actualizado en el anfitrión. Instala la integración desde su guía y vuelve a intentarlo."
+                    ))
+                proc = subprocess.run(
+                    comando_pkexec(helper, "C.UTF-8", "--recommended-install", app["id"]),
+                    capture_output=True, text=True, timeout=600,
+                )
+                marcador = "##RECOMMENDED:installed:%s" % app["id"]
+                if proc.returncode or marcador not in proc.stdout.splitlines():
+                    error = (proc.stderr or proc.stdout or
+                             "El asistente no confirmó la instalación.").strip()[-1600:]
+            else:
+                remote = subprocess.run(
+                    comando_host("flatpak", "remote-add", "--user", "--if-not-exists",
+                                 "flathub", "https://dl.flathub.org/repo/flathub.flatpakrepo"),
+                    capture_output=True, text=True, timeout=60,
+                )
+                if remote.returncode:
+                    raise RuntimeError(traducir(
+                        "No se pudo configurar Flathub para tu usuario. Comprueba que Flatpak y la conexión estén disponibles e inténtalo de nuevo."
+                    ))
+                proc = subprocess.run(
+                    comando_host("flatpak", "install", "--user", "--noninteractive",
+                                 "--assumeyes", "flathub", canal["app_id"]),
+                    capture_output=True, text=True, timeout=600,
+                )
+                if proc.returncode:
+                    error = (proc.stderr or proc.stdout or
+                             "Flatpak no confirmó la instalación.").strip()[-1600:]
+        except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
+            error = str(exc)
+        return error
 
     def _app_recomendada_instalada(self, app, canal, error):
         self.backup_action_in_progress = False
@@ -3393,12 +3472,33 @@ class VentanaPrincipal(Gtk.Window):
                                 and not self.comprobando_actualizacion
                                 and not self.diagnostico_en_curso
                                 and not self.backup_action_in_progress)
+        recomendaciones_disponibles = (not self.en_curso and not self.programando
+                                       and not self.comprobando_actualizacion
+                                       and not self.diagnostico_en_curso
+                                       and not self.backup_action_in_progress)
+        modo_multiple = self.recommended_multi.get_active()
+        self.recommended_multi.set_sensitive(recomendaciones_disponibles)
+        seleccionables = 0
         for clave, boton in self.recommended_buttons.items():
-            boton.set_sensitive(not self.en_curso and not self.programando
-                                and not self.comprobando_actualizacion
-                                and not self.diagnostico_en_curso
-                                and not self.backup_action_in_progress
-                                and not self.recommended_installed.get(clave, False))
+            app_id, tipo = clave
+            instalado = self.recommended_installed.get(clave, False)
+            seleccionado = modo_multiple and not instalado and self.recommended_selection.get(app_id) == tipo
+            estilo = boton.get_style_context()
+            if seleccionado:
+                estilo.add_class("suggested-action")
+                seleccionables += 1
+            else:
+                estilo.remove_class("suggested-action")
+            etiqueta_canal = boton.get_label().removeprefix("✓ ")
+            etiqueta_boton = f"✓ {etiqueta_canal}" if seleccionado else etiqueta_canal
+            if etiqueta_boton != boton.get_label():
+                boton.set_label(etiqueta_boton)
+            boton.set_sensitive(recomendaciones_disponibles and not instalado
+                                and (not modo_multiple or tipo in ("deb", "flatpak")))
+        texto = (traducir("Instalar selección (%d)") % seleccionables if seleccionables
+                 else traducir("Instalar selección"))
+        self.recommended_install.set_label(texto)
+        self.recommended_install.set_sensitive(recomendaciones_disponibles and seleccionables > 0)
 
     def _visible(self, pid):
         if pid == "snap-update":

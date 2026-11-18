@@ -644,6 +644,34 @@ with patch.object(w, '_cambiar_pestana_recomendadas') as refresh:
     refresh.assert_called_once_with(w.notebook, None, 2)
 w.notebook.set_current_page(0)
 
+# Selección múltiple: puede mezclar formatos, cambiar de formato y reintentar los fallos.
+w.recommended_multi.set_active(True)
+assert not w.recommended_install.get_sensitive()
+assert not w.recommended_buttons[('google-chrome', 'deb-download')].get_sensitive()
+for key in (('deluge', 'deb'), ('deluge', 'flatpak'), ('gparted', 'deb')):
+    w.recommended_buttons[key].clicked()
+assert w.recommended_selection == {'deluge': 'flatpak', 'gparted': 'deb'}
+assert w.recommended_install.get_label() == app.traducir('Instalar selección (%d)') % 2
+assert w.recommended_buttons[('deluge', 'flatpak')].get_label().startswith('✓ ')
+assert not w.recommended_buttons[('deluge', 'deb')].get_label().startswith('✓ ')
+with patch.object(app.threading, 'Thread', ImmediateThread), \
+     patch.object(w, '_ejecutar_instalacion_recomendada', side_effect=['falló Deluge', None, None]) as install, \
+     patch.object(w, '_mensaje') as message:
+    w.recommended_install.clicked()
+    settle()
+    assert [(x.args[0]['id'], x.args[1]['type']) for x in install.call_args_list] == [
+        ('deluge', 'flatpak'), ('gparted', 'deb'),
+    ]
+    assert w.recommended_selection == {'deluge': 'flatpak'}
+    assert w.recommended_indicators[('gparted', 'deb')].get_visible()
+    assert 'falló Deluge' in message.call_args.args[2]
+    w.recommended_install.clicked()
+    settle()
+    assert not w.recommended_selection
+    assert w.recommended_indicators[('deluge', 'flatpak')].get_visible()
+    assert not w.recommended_install.get_sensitive()
+w.recommended_multi.set_active(False)
+
 for app_id, definition in app.APLICACIONES_BACKUP.items():
     installed = app.subprocess.CompletedProcess([], 0, stdout='installed', stderr='')
     with patch.object(app.subprocess, 'run', return_value=installed), \
