@@ -203,12 +203,12 @@ fi
 
 python3 scripts/test-existing-scheduler.py && bien "reutilización del programador existente" || fallo "programador existente"
 
-if bash -c 'source "$1"; distribucion_soportada() { return 0; }; main --schedule-save "{}"' \
+if bash -c 'source "$1"; main --schedule-save "{}"' \
         _ "$HELPER" >/dev/null 2>&1; then
     fallo "el asistente privilegiado aún modifica la programación"
 elif [ "$?" -ne 2 ]; then
     fallo "el asistente privilegiado no rechazó guardar la programación"
-elif bash -c 'source "$1"; distribucion_soportada() { return 0; }; main --schedule-remove' \
+elif bash -c 'source "$1"; main --schedule-remove' \
         _ "$HELPER" >/dev/null 2>&1; then
     fallo "el asistente privilegiado aún modifica la programación"
 elif [ "$?" -ne 2 ]; then

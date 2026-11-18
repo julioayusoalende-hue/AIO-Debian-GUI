@@ -1308,6 +1308,12 @@ main() {
         printf '%s\n' 1
         return 0
     fi
+    case "${1:-}" in
+        --schedule-save|--schedule-remove)
+            err "La programación se modifica desde la cuenta del usuario, no desde el asistente privilegiado."
+            return 2
+            ;;
+    esac
     # Actualizar exclusivamente Flatpak del usuario sin elevar privilegios.
     # Sin --system ni instalaciones de root; no requiere polkit ni pkexec.
     if [ "${1:-}" = "--flatpak-user-update" ] && [ "$#" -eq 1 ]; then
@@ -1391,10 +1397,6 @@ main() {
             flock -n 9 || { err "Ya hay otro mantenimiento de AiO en curso."; exit 1; }
             refrescar_indices_diagnostico
             exit $?
-            ;;
-        --schedule-save|--schedule-remove)
-            err "La programación se modifica desde la cuenta del usuario, no desde el asistente privilegiado."
-            exit 2
             ;;
         --check-update-self)
             [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --check-update-self"; exit 2; }
