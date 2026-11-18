@@ -37,12 +37,10 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.0.7
+### Lo nuevo en la 1.0.8
 
-- **Copias del escritorio:** ajustes y complementos del usuario en GNOME y KDE Plasma, con copia previa antes de restaurar.
-- **Copias de repositorios APT:** guardar y restaurar las fuentes desde una carpeta que la aplicación recuerda.
-- **NVIDIA:** comprobar las GPU contra la lista del paquete candidato, elegir la variante DKMS según soporte y bloquear instalaciones sin compatibilidad verificable o que impliquen eliminaciones.
-- **Aviso de seguridad:** tamaño inicial adaptado al área de trabajo, con la simulación APT desplazable y los botones de decisión visibles.
+- **Backup:** carpeta de copia compartida y tarjetas diferenciadas para repositorios APT, ajustes del escritorio y aplicaciones de respaldo.
+- **Apps recomendadas:** catálogo de una o dos columnas según el ancho, acciones por formato e indicador de instalación más legible.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -50,7 +48,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.0.7**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.0.8**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -62,7 +60,7 @@ Las pruebas se publican por separado como preversiones de la rama [`testing`](ht
 
 **[Consultar las publicaciones testing →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases?q=testing&expanded=true)**
 
-En la revisión del **18 de noviembre de 2026** no hay preversiones publicadas. El enlace mostrará las nuevas cuando estén disponibles. Las versiones testing se descargan manualmente; no se distribuyen mediante el repositorio APT estable.
+Las versiones testing se descargan manualmente; no se distribuyen mediante el repositorio APT estable.
 
 ## Instalación
 
@@ -74,10 +72,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.0.7:
+Para la versión 1.0.8:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.0.7_all.deb
+sudo apt install ./aio-debian-gui_1.0.8_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.
@@ -151,9 +149,9 @@ Las comprobaciones gráficas requieren PyGObject, GTK 3, VTE y una pantalla disp
 <details>
 <summary><strong>Cómo se numeran las versiones testing</strong></summary>
 
-Cada cambio en `testing` que supera las comprobaciones publica una preversión sin modificar `main` ni el repositorio APT estable. Parte de la siguiente versión respecto a la última estable: por ejemplo, tras `1.0.7`, `1.0.8~testing.N.INTENTO`.
+Cada cambio en `testing` que supera las comprobaciones publica una preversión sin modificar `main` ni el repositorio APT estable. Parte de la siguiente versión respecto a la última estable: por ejemplo, tras `1.0.8`, `1.0.9~testing.N.INTENTO`.
 
-El contador se aplica al paquete construido. Debian considera esa preversión anterior a `1.0.8`. La publicación estable se realiza por separado, sin arrastrar el contador.
+El contador se aplica al paquete construido. Debian considera esa preversión anterior a `1.0.9`. La publicación estable se realiza por separado, sin arrastrar el contador.
 
 </details>
 
