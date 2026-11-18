@@ -2,15 +2,15 @@ Origin: aio-debian-gui
 Label: aio-debian-gui
 Suite: stable
 Codename: stable
-Date: Wed, 18 Nov 2026 06:39:28 UTC
+Date: Wed, 18 Nov 2026 07:12:44 UTC
 Architectures: all
 Components: main
 Description: Repositorio APT de aio-debian-gui
 MD5Sum:
- fdd8db4f41ed00aeab62f73558ae4db4             1293 main/binary-all/Packages
- bb0e02d5661648f96e0c3081d380bd3d              799 main/binary-all/Packages.gz
- de9b795df20307ae94a0870da8436a30              880 main/binary-all/Packages.xz
+ e1ebb854192ad067efae014083e75eaf             1293 main/binary-all/Packages
+ e43bd97f567f325a745d2e25ed32f4ed              797 main/binary-all/Packages.gz
+ b773515fff55f157e2a13a8fd9dd6c20              876 main/binary-all/Packages.xz
 SHA256:
- 82ae9b5a5055263decd397038dbda8b16d9b168c70fae643ee5a2258da99e4c0             1293 main/binary-all/Packages
- 6c55ea477b1e2fd25d2c218c80284a2afb62220c24062283391e51528cbf51a2              799 main/binary-all/Packages.gz
- 32396555e3fbb8595bebf08b1a9d54ba230d57ee213a552afca92814c626911a              880 main/binary-all/Packages.xz
+ ac5e6a5513739d9d9b968f3c863853876449368191411d7fe0ed69a1219a9e1d             1293 main/binary-all/Packages
+ 4ca517775f3ff2cd46e3f90730d0c67f98d65ef4b9595fab2f2a2e5c589ce789              797 main/binary-all/Packages.gz
+ 6f66e8a19cbfd5c7a93aadec442689f2e7b0edd685b183bfa895b25c073c17dc              876 main/binary-all/Packages.xz
