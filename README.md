@@ -8,7 +8,7 @@
 
 AiO Debian GUI reúne tareas habituales de administración en una aplicación GTK. Antes de las operaciones delicadas presenta comprobaciones y pide confirmación. Es un proyecto independiente del script de consola [aio-debian](https://github.com/julioayusoalende-hue/aio-debian).
 
-**Descarga la última versión estable desde [Releases](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest).** Allí encontrarás los paquetes disponibles y el archivo `SHA256SUMS`. Las versiones anteriores se conservan en el [historial de releases](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases).
+**Descarga la última versión estable desde [Releases](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest).** La distribución incluye el paquete Debian y el archivo `SHA256SUMS`.
 
 ## Funciones
 
@@ -18,104 +18,22 @@ AiO Debian GUI reúne tareas habituales de administración en una aplicación GT
 - **Sistema y hardware:** gestión de repositorios, kernel y Mesa de Backports; detección NVIDIA con instalación conservadora en Debian. Algunas operaciones tienen requisitos y bloqueos adicionales.
 - **Copias de seguridad:** acceso a Timeshift y Respaldos (Déjà Dup); si no están instalados, AiO ofrece instalarlos con confirmación y autorización de administrador.
 - **Apps recomendadas:** catálogo en dos columnas con GIMP, VLC, Celluloid, Plex, Switcheroo, Video Downloader, HandBrake, Spotify, Feishin, Google Chrome, Brave y Gear Lever. Distingue DEB y Flatpak, indica qué formato está instalado y no abre las aplicaciones tras instalarlas. Las instalaciones requieren confirmación; los DEB externos se descargan e instalan manualmente.
-- **Terminal:** pestaña interactiva con Bash que recibe en directo la salida de mantenimiento. El botón «Ver en Terminal» de la consola integrada abre esta pestaña. Incluye accesos para limpiar la pantalla, ejecutar Fastfetch y abrir Nautilus en `admin:/` (puede solicitar autorización). Los accesos ejecutan procesos independientes, sin enviar texto a la sesión interactiva. En Flatpak se ejecutan en el anfitrión; se aplican los permisos habituales del usuario.
-- **Escritorio:** integración con Flatpak, AppImage y complementos de GNOME; interfaz en español, inglés, francés y chino, con temas claro y oscuro.
+- **Terminal:** pestaña interactiva con Bash que recibe en directo la salida de mantenimiento. El botón «Ver en Terminal» de la consola integrada abre esta pestaña. Incluye accesos para limpiar la pantalla, ejecutar Fastfetch y abrir Nautilus en `admin:/` (puede solicitar autorización). Los accesos ejecutan procesos independientes, sin enviar texto a la sesión interactiva.
+- **Escritorio:** gestión de aplicaciones Flatpak, soporte FUSE y complementos de GNOME; interfaz en español, inglés, francés y chino, con temas claro y oscuro.
 
 La aplicación es compatible con Debian 12 o superior y Ubuntu 24.04/26.04 LTS. Algunas tareas dependen de la distribución y se bloquean cuando no son compatibles.
 
-El diagnóstico solicita autorización para renovar los índices APT antes de comprobar las actualizaciones del sistema y de AiO. Si se rechaza la autorización o falla la actualización, informa del error y no presenta las lecturas APT como actualizadas. Flatpak necesita el asistente de la misma versión instalado en el anfitrión para renovar los índices.
+El diagnóstico solicita autorización para renovar los índices APT antes de comprobar las actualizaciones del sistema y de AiO. Si se rechaza la autorización o falla la actualización, informa del error y no presenta las lecturas APT como actualizadas.
 
-## Releases publicadas
+## Instalar
 
-Inventario comprobado el **17 de noviembre de 2026**. Solo se enlazan publicaciones que siguen disponibles; las versiones históricas no incluyen necesariamente todas las funciones actuales.
-
-| Versión | Estado | Archivos publicados |
-|---|---|---|
-| [v2.10.9](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.10.9) | Estable actual | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.10.8](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.10.8) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.10.7](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.10.7) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.10.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.10.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.8.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.8.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.7.5](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.7.5) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.7.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.7.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.6.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.6.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.4.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.4.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.3.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.3.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.2.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.2.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.1.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.1.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v2.0.0](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v2.0.0) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-| [v1.2.4](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/tag/v1.2.4) | Histórica | DEB · AppImage · Flatpak · SHA256SUMS |
-
-La **2.10.9** corrige el control de trabajos de Bash en Flatpak. La **2.10.8** incorpora la actualización de la integración portable mediante el paquete firmado `aio-debian-gui-host`; la **2.10.7** permite revisar y confirmar las eliminaciones previstas por APT. El historial de cambios, incluidas versiones sin release conservada, está en [CHANGELOG.md](CHANGELOG.md).
-
-Para nuevas instalaciones utiliza siempre la [última release estable](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest). Los ejemplos siguientes corresponden a **2.10.9**; al publicarse otra versión, usa el nombre del archivo de esa release.
-
-## Instalación
-
-En cada release, descarga el archivo correspondiente y sustituye `2.10.9` por su versión.
-
-### DEB (recomendado)
-
-Descarga `aio-debian-gui_2.10.9_all.deb` e instálalo:
+Descarga `aio-debian-gui_1.0.0_all.deb` y abre un terminal en la carpeta de descargas.
 
 ```bash
-sudo apt install ./aio-debian-gui_2.10.9_all.deb
+sudo apt install ./aio-debian-gui_1.0.0_all.deb
 ```
 
-El paquete instala las dependencias y configura el repositorio APT firmado del proyecto. Abre AiO desde el menú de aplicaciones o ejecuta `aio-debian-gui` sin sudo.
-
-Para actualizar únicamente AiO:
-
-```bash
-sudo apt update
-sudo apt install --only-upgrade aio-debian-gui
-```
-
-También puedes usar **Menú → Buscar actualizaciones**. Cierra y vuelve a abrir la aplicación después de actualizarla; si se ofrece reiniciar AiO, puedes aceptar.
-
-### AppImage
-
-Descarga `aio-debian-gui_2.10.9_x86_64.AppImage` y ejecútalo:
-
-```bash
-chmod +x aio-debian-gui_2.10.9_x86_64.AppImage
-./aio-debian-gui_2.10.9_x86_64.AppImage
-```
-
-Antes de abrirlo, instala sus dependencias del anfitrión:
-
-```bash
-sudo apt install python3 python3-gi gir1.2-gtk-3.0 gir1.2-vte-2.91 librsvg2-common pkexec
-```
-
-Requiere arquitectura `x86_64` y FUSE 2 (`libfuse2` en Debian 12 o `libfuse2t64` en Debian 13). Instala `fastfetch` para usar su acceso en la terminal. La aplicación no necesita que instales el paquete DEB.
-
-Para actualizar, usa **Menú → Buscar actualizaciones**: consulta GitHub Releases y descarga el nuevo AppImage tras verificar SHA-256, sin sustituir el ejecutable activo. Cierra AiO y abre el archivo nuevo; actualiza también cualquier acceso directo que apunte al anterior. Si usas programación, vuelve a guardar el horario con el nuevo AppImage antes de retirar el archivo antiguo.
-
-### Flatpak
-
-Para las actualizaciones desde el repositorio firmado del proyecto, instala Flatpak y la referencia oficial:
-
-```bash
-sudo apt install flatpak
-flatpak install --user https://julioayusoalende-hue.github.io/AIO-Debian-GUI/aio-debian-gui.flatpakref
-```
-
-La release estable vigente también incluye `aio-debian-gui_2.10.9_x86_64.flatpak`, que se puede instalar con `flatpak install --user ./aio-debian-gui_2.10.9_x86_64.flatpak`. Este bundle por sí solo no configura el repositorio de actualizaciones; para recibirlas, usa el `.flatpakref`. Consulta la [guía de actualizaciones Flatpak](docs/flatpak-actualizaciones.md).
-
-Para abrirla:
-
-```bash
-flatpak run io.github.julioayusoalende_hue.aio_debian_gui
-```
-
-Para actualizar únicamente AiO desde su origen configurado:
-
-```bash
-flatpak update --user io.github.julioayusoalende_hue.aio_debian_gui
-```
-
-También puedes usar **Menú → Buscar actualizaciones**. Cierra y vuelve a abrir AiO para cargar la nueva versión. La interfaz se distribuye desde el repositorio propio del proyecto, independiente de Flathub; Flathub proporciona el runtime.
+El paquete configura el repositorio APT firmado de AiO Debian. Usa **Menú → Buscar actualizaciones** o el gestor de paquetes para instalar futuras versiones. APT identifica esta serie con la época `1:` para permitir la actualización desde las versiones anteriores.
 
 ### Verificar las descargas
 
@@ -127,17 +45,11 @@ sha256sum -c --ignore-missing SHA256SUMS
 
 ## Programación y permisos
 
-Las ediciones DEB, Flatpak y AppImage usan el mismo asistente y programador del anfitrión. AiO comprueba la integración al abrirse y reutiliza una instalación compatible, independientemente de la versión de la interfaz.
+El paquete Debian incluye el asistente y el programador de mantenimiento del anfitrión.
 
 Programar, pausar o eliminar un horario requiere autorización de administrador. Los temporizadores de systemd conservan sus horarios durante las actualizaciones. Si AiO recupera un horario existente, respeta si estaba activado o pausado.
 
 Antes de cambiar kernel, Mesa, repositorios o controladores, haz una copia de seguridad y revisa las advertencias de la tarea. La vuelta de kernel y Mesa desde Backports no cambia por sí sola el kernel de arranque; NVIDIA puede quedar bloqueado cuando la compatibilidad no se pueda verificar. La opción de Polkit sin contraseña es opcional, está desactivada inicialmente y reduce la protección de la cuenta.
-
-### Integración del programador para AppImage y Flatpak
-
-Al abrir Flatpak o AppImage, AiO comprueba la integración y deja en cola las actualizaciones o reparaciones que el servicio firmado puede aplicar. Cuando se necesita instalar la integración, puedes hacerlo desde **Menú → Guía de integración del anfitrión**. El sistema solicita la autorización de administrador al confirmar esa acción.
-
-Si el asistente lo proporciona un DEB, APT se encarga de actualizarlo. Si se instaló desde Flatpak o AppImage, systemd aplica las actualizaciones firmadas cuando no hay mantenimiento ni operaciones de paquetes en curso. Los horarios se guardan en el anfitrión y se comparten entre los formatos.
 
 ## Desarrollo
 

@@ -76,7 +76,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
-    "2.12.2": "Recupera como base la versión 2.11.3, última versión estable conocida.",
+    "1.0.0": "Distribución en paquete Debian y mantenimiento basado en 2.11.3.",
     "2.11.3": "Corrige la consulta del estado del programador en Flatpak y AppImage.",
     "2.11.2": "La instalación comprueba que el programador responde y muestra el motivo si la programación sigue bloqueada.",
     "2.11.1": "El arranque ya no solicita autorización de administrador y la recuperación reconoce las ejecuciones anteriores de systemd.",
@@ -277,7 +277,7 @@ def paquete_instalado(nombre):
     return "install ok installed" in out
 
 
-def version_app():
+def version_app(para_apt=False):
     if os.environ.get("SNAP_VERSION"):
         return os.environ["SNAP_VERSION"]
     version = os.environ.get("AIO_DEBIAN_GUI_VERSION")
@@ -290,7 +290,7 @@ def version_app():
         ).stdout
         estado, _, version = out.partition("|")
         if "install ok installed" in estado and version:
-            return version
+            return version if para_apt else version.split(":", 1)[-1]
     except (OSError, subprocess.SubprocessError):
         pass
     return "desarrollo (no instalado desde paquete)"
@@ -2220,7 +2220,7 @@ class VentanaPrincipal(Gtk.Window):
         self._actualizar_sensibilidad()
         self.btn_actualizar_diagnostico = None
         formato = formato_actualizacion()
-        version_instalada = version_app()
+        version_instalada = version_app(para_apt=True) if formato == "deb" else version_app()
 
         def analizar():
             try:

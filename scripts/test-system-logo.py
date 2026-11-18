@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verifica selección del logotipo y disponibilidad en los tres empaquetados."""
+"""Verifica selección del logotipo y disponibilidad en el paquete Debian."""
 import ast
 from pathlib import Path
 from xml.etree import ElementTree
@@ -20,18 +20,11 @@ assert env["logo_distribucion"]("no-soportada") == (None, None)
 gui = source.read_text(encoding="utf-8")
 assert "logo_distribucion(self.distribucion)" in gui
 assert "GdkPixbuf.Pixbuf.new_from_file_at_scale(" in gui
-for script in ("scripts/build-appimage.sh", "flatpak/io.github.julioayusoalende_hue.aio_debian_gui.yml"):
-    content = Path(script).read_text(encoding="utf-8")
-    assert "ubuntu-logo.svg" in content, script
 for icon in ("brave", "gearlever", "celluloid", "feishin", "gimp", "google-chrome", "handbrake",
              "plex", "spotify", "switcheroo", "video-downloader", "vlc"):
     assert (root / "recommended-icons" / (icon + ".png")).is_file()
-for script in ("scripts/build-appimage.sh", "flatpak/io.github.julioayusoalende_hue.aio_debian_gui.yml",
-               "snap/snapcraft.yaml"):
-    assert "recommended-icons/*.png" in Path(script).read_text(encoding="utf-8"), script
-    assert "package/usr/share/aio-debian-gui/backup-icons" in Path(script).read_text(encoding="utf-8"), script
 for icon in ("timeshift.png", "deja-dup.png", "NOTICE.txt", "GPL-2.txt"):
     assert (root / "backup-icons" / icon).is_file()
 control = Path("package/DEBIAN/control").read_text(encoding="utf-8")
 assert "librsvg2-common" in control
-print("✔ logos de Debian y Ubuntu, accesibilidad y recursos en DEB/AppImage/Flatpak")
+print("✔ logos de Debian y Ubuntu, accesibilidad y recursos en el paquete Debian")

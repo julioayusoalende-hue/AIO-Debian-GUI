@@ -14,7 +14,6 @@ HELPER=package/usr/lib/aio-debian-gui/aio-debian-gui-helper
 for f in "$HELPER" scripts/*.sh; do
     bash -n "$f" && bien "sintaxis bash: $f" || fallo "sintaxis bash: $f"
 done
-sh -n scripts/appimage/AppRun && bien "sintaxis AppRun" || fallo "sintaxis AppRun"
 
 python3 - "$GUI" <<'PY' && bien "sintaxis python: $GUI" || fallo "sintaxis python: $GUI"
 import ast, sys
@@ -35,7 +34,7 @@ python3 scripts/test-scheduler.py && bien "programación automática de mantenim
 python3 scripts/test-preflight.py && bien "modo de mantenimiento seguro" || fallo "pruebas de mantenimiento seguro"
 bash scripts/test-upgrade-safety.sh && bien "actualización APT protegida" || fallo "pruebas de actualización APT segura"
 python3 scripts/test-diagnostics.py && bien "diagnóstico preventivo de solo lectura" || fallo "pruebas del diagnóstico"
-python3 scripts/test-host-integration.py && bien "guía de integración del anfitrión" || fallo "pruebas de integración del anfitrión"
+(umask 022 && python3 scripts/test-host-integration.py) && bien "guía de integración del anfitrión" || fallo "pruebas de integración del anfitrión"
 python3 scripts/test-host-updater.py && bien "actualizador del anfitrión" || fallo "pruebas del actualizador del anfitrión"
 python3 scripts/test-interface-translations.py && bien "traducciones de interfaz y diagnóstico" || fallo "traducciones incompletas"
 python3 scripts/test-app-update-diagnostic.py && bien "versiones y actualización desde diagnóstico" || fallo "pruebas de actualización desde diagnóstico"
@@ -86,11 +85,10 @@ sh -n package/DEBIAN/postinst && bien "sintaxis postinst" || fallo "sintaxis pos
 
 # La versión del control debe tener su entrada de novedades en la GUI y en el CHANGELOG
 V=$(sed -n 's/^Version: //p' package/DEBIAN/control)
+V=${V#*:}
 SCHEDULER_VERSION=$(python3 -c 'import sys; sys.path.insert(0,"package/usr/lib/aio-debian-gui"); from aio_core.scheduler import VERSION; print(VERSION)')
 [ "$SCHEDULER_VERSION" = "$V" ] && bien "versión del programador coincide con el paquete" || fallo "versión del programador incompatible"
 [ -f package/usr/lib/systemd/system/aio-debian-gui-maintenance@.service ] && bien "servicio de mantenimiento incluido" || fallo "falta servicio systemd"
-grep -Fxq "  - --env=AIO_DEBIAN_GUI_VERSION=$V" flatpak/io.github.julioayusoalende_hue.aio_debian_gui.yml &&
-    bien "versión Flatpak coincide con el paquete" || fallo "versión Flatpak incompatible con el paquete"
 [ "$(bash "$HELPER" --version)" = "$V" ] &&
     bien "versión del asistente coincide con el paquete" ||
     fallo "versión del asistente incompatible con el paquete"
@@ -192,12 +190,6 @@ if bash -c '
     bien "estado GNOME comprueba plugin y Extension Manager instalados"
 else
     fallo "estado de las opciones GNOME incorrecto"
-fi
-
-if python3 scripts/test-portable-payload.py; then
-    bien "actualización portable firmada"
-else
-    fallo "actualización portable firmada"
 fi
 
 python3 scripts/test-existing-scheduler.py && bien "reutilización del programador existente" || fallo "programador existente"

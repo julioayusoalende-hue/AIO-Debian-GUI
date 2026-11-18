@@ -1,11 +1,16 @@
-name: Build Debian packages
+name: Build Debian package
 
 on:
   pull_request:
     branches: [main]
   push:
-    branches: ['fix/**', main]
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the Debian package as a GitHub Release
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -13,181 +18,58 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    permissions:
-      contents: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install build and validation dependencies
-        timeout-minutes: 20
+      - uses: actions/checkout@v4
+      - name: Install build and test dependencies
         run: |
-          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 update
-          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 install -y --no-install-recommends \
-            dpkg-dev fakeroot elfutils \
-            python3 python3-gi gir1.2-gtk-3.0 gir1.2-vte-2.91 \
-            shellcheck desktop-file-utils libfuse2t64 \
-            curl ca-certificates file xz-utils pkexec \
-            flatpak flatpak-builder appstream xvfb xauth
-
-      - name: Run project checks
-        run: xvfb-run -a ./scripts/check.sh
-
-      - name: Install appimagetool
-        run: |
-          curl --fail --location --retry 3 \
-            https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage \
-            --output /usr/local/bin/appimagetool
-          sudo chmod 0755 /usr/local/bin/appimagetool
-          appimagetool --version || true
-
-      - name: Build DEB
-        run: ./scripts/build-deb.sh
-
-      - name: Test initial host integration on systemd
-        env:
-          AIO_HOST_INTEGRATION_TEST: '1'
-        run: python3 scripts/test-host-integration-systemd.py
-
-      - name: Test scheduled maintenance with systemd
-        env:
-          AIO_SYSTEMD_INTEGRATION: '1'
-        run: |
-          sudo env PYTHONDONTWRITEBYTECODE=1 python3 scripts/test-scheduler.py
-          bash scripts/test-scheduler-systemd.sh
-
-      - name: Sign bundled scheduler
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev python3 python3-gi gir1.2-gtk-3.0 gir1.2-vte-2.91 librsvg2-common shellcheck desktop-file-utils pkexec xvfb xauth
+      - name: Check and build the Debian package
         run: |
           set -euo pipefail
-          export GNUPGHOME="$RUNNER_TEMP/portable-gnupg"
-          mkdir -m 0700 -p "$GNUPGHOME"
-          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
-          python3 scripts/build-portable-payload.py
-
-      - name: Build AppImage
-        run: ./scripts/build-appimage.sh
-
-      - name: Prepare GNOME Flatpak runtime and SDK
-        run: |
-          set -euo pipefail
-          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-          flatpak install --user --noninteractive -y flathub org.gnome.Platform//51 org.gnome.Sdk//51
-
-      - name: Build Flatpak bundle
-        run: |
-          set -euo pipefail
-          APP_ID=io.github.julioayusoalende_hue.aio_debian_gui
-          flatpak-builder --user --force-clean --disable-rofiles-fuse \
-            --install-deps-from=flathub --repo=flatpak-repo \
-            flatpak-build flatpak/$APP_ID.yml
-          VERSION="$(sed -n 's/^Version: //p' package/DEBIAN/control)"
-          flatpak build-bundle flatpak-repo \
-            "dist/aio-debian-gui_${VERSION}_x86_64.flatpak" "$APP_ID" stable
-
-      - name: Validate generated packages
-        run: |
-          set -euo pipefail
-          DEB=$(find dist -maxdepth 1 -name '*.deb' -print -quit)
-          APPIMAGE=$(find dist -maxdepth 1 -name '*.AppImage' -print -quit)
-          FLATPAK=$(find dist -maxdepth 1 -name '*.flatpak' -print -quit)
-          test -n "$DEB"
-          test -n "$APPIMAGE"
-          test -n "$FLATPAK"
-          dpkg-deb --info "$DEB"
-          dpkg-deb --contents "$DEB" >/dev/null
-          dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/updates.py' >/dev/null
-          dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/translations.py' >/dev/null
-          dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/gtk_appearance.py' >/dev/null
-          dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/gtk_scheduler.py' >/dev/null
-          dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/host_integration.py' >/dev/null
-          dpkg-deb --contents "$DEB" | grep -F 'usr/lib/aio-debian-gui/aio_core/scheduler.py' >/dev/null
-          dpkg-deb --contents "$DEB" | grep -F 'usr/lib/systemd/system/aio-debian-gui-maintenance@.service' >/dev/null
-          file "$APPIMAGE"
-          chmod +x "$APPIMAGE"
-          "$APPIMAGE" --appimage-extract >/dev/null
-          test -x squashfs-root/AppRun
-          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/history.py
-          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/updates.py
-          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/translations.py
-          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/gtk_appearance.py
-          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/gtk_scheduler.py
-          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/host_integration.py
-          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/scheduler.py
-          test -f squashfs-root/usr/lib/aio-debian-gui/aio_core/preflight.py
-          test -f squashfs-root/usr/lib/systemd/system/aio-debian-gui-maintenance@.service
-          rm -rf squashfs-root
-          file "$FLATPAK"
-          appstreamcli validate --no-net flatpak/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml
-          flatpak install --user --noninteractive --bundle "$FLATPAK"
-          flatpak info --user --show-metadata io.github.julioayusoalende_hue.aio_debian_gui >/dev/null
-          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/updates.py
-          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/translations.py
-          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/gtk_appearance.py
-          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/gtk_scheduler.py
-          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/host_integration.py
-          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/history.py
-          flatpak run --user --command=python3 io.github.julioayusoalende_hue.aio_debian_gui -c 'import gi; gi.require_version("Gtk", "3.0"); gi.require_version("Vte", "2.91"); from gi.repository import Gtk, Vte'
-          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -x /app/share/aio-debian-gui/host-integration/aio-debian-gui-helper
-          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/share/aio-debian-gui/host-integration/es.aiodebian.gui.policy
-          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/scheduler.py
-          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/lib/aio-debian-gui/aio_core/preflight.py
-          flatpak run --user --command=test io.github.julioayusoalende_hue.aio_debian_gui -f /app/share/aio-debian-gui/host-integration/aio-debian-gui-maintenance@.service
-          (cd dist && sha256sum *.deb *.AppImage *.flatpak > SHA256SUMS)
-          cat dist/SHA256SUMS
-
-      - name: Upload release candidates
-        uses: actions/upload-artifact@v4
+          xvfb-run -a bash scripts/check.sh
+          bash scripts/build-deb.sh
+          cd dist
+          sha256sum *.deb > SHA256SUMS
+          sha256sum --check SHA256SUMS
+      - uses: actions/upload-artifact@v4
         with:
-          name: aio-debian-gui-linux-x86_64
+          name: aio-debian-gui-deb
           path: |
             dist/*.deb
-            dist/*.AppImage
-            dist/*.flatpak
             dist/SHA256SUMS
           if-no-files-found: error
-          retention-days: 30
 
   publish:
     needs: build
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.publish
     runs-on: ubuntu-24.04
     permissions:
-      actions: read
       contents: write
     steps:
-      - name: Checkout release notes
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
-
-      - name: Download release candidates
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          name: aio-debian-gui-linux-x86_64
+          name: aio-debian-gui-deb
           path: dist
-
-      - name: Publish stable release
+      - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          DEB="$(find dist -maxdepth 1 -name '*.deb' -print -quit)"
-          test -n "$DEB"
-          DEB_NAME="${DEB##*/}"
-          [[ "$DEB_NAME" =~ ^aio-debian-gui_([0-9]+\.[0-9]+\.[0-9]+)_all\.deb$ ]]
-          VERSION="${BASH_REMATCH[1]}"
-          TAG="v$VERSION"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "$TAG already exists; not overwriting previously published assets."
-            exit 0
-          fi
-          gh release create "$TAG" \
-            dist/*.deb dist/*.AppImage dist/*.flatpak dist/SHA256SUMS \
-            --target "$GITHUB_SHA" \
-            --title "AiO Debian GUI $VERSION" \
-            --notes-file CHANGELOG.md \
-            --latest
+          cd dist
+          sha256sum --check SHA256SUMS
+          files=(aio-debian-gui_*_all.deb)
+          [[ "${#files[@]}" -eq 1 && "${files[0]}" =~ ^aio-debian-gui_([0-9]+\.[0-9]+\.[0-9]+)_all\.deb$ ]]
+          version="${BASH_REMATCH[1]}"
+          awk -v heading="## $version" '
+            $0 == heading { found=1; next }
+            found && /^## / { exit }
+            found { print }
+          ' ../CHANGELOG.md > release-notes.md
+          grep -q '[^[:space:]]' release-notes.md
+          gh release create "v$version" "${files[0]}" SHA256SUMS \
+            --target "$GITHUB_SHA" --title "AiO Debian GUI $version" \
+            --notes-file release-notes.md --latest

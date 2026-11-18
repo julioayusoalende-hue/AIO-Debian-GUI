@@ -5,6 +5,7 @@ cd "$(dirname "$0")/.."
 
 VERSION=$(sed -n 's/^Version: //p' package/DEBIAN/control)
 [ -n "$VERSION" ] || { echo "No se pudo leer la versión de package/DEBIAN/control" >&2; exit 1; }
+VERSION=${VERSION#*:}
 SALIDA="dist/aio-debian-gui_${VERSION}_all.deb"
 
 STAGE=$(mktemp -d)

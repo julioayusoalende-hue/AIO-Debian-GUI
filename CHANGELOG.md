@@ -1,8 +1,9 @@
 # Cambios
 
-## 2.12.2
+## 1.0.0
 
-- Usa como base el código de la versión 2.11.3, última versión estable conocida.
+- Distribución exclusiva como paquete Debian.
+- Mantiene el mantenimiento y la programación de la base 2.11.3.
 
 ## 2.11.3
 
@@ -523,7 +524,7 @@ El logotipo de Debian aparece junto a la información del sistema.
 ## 1.0.1
 El botón principal ahora se llama «Iniciar tareas».
 
-## 1.0.0
+## 1.0.0 (serie anterior)
 Primera versión independiente de la interfaz gráfica de AiO Debian: actualización con
 apt, `contrib`/`non-free`, reloj, Flatpak + Flathub, complementos de GNOME y
 comprobación de reinicio, todo desde una ventana.

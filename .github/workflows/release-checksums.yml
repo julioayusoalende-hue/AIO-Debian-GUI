@@ -26,8 +26,8 @@ jobs:
           WORK_DIR=$(mktemp -d)
           trap 'rm -rf -- "$WORK_DIR"' EXIT
           gh release download "$RELEASE_TAG" --dir "$WORK_DIR" \
-            --pattern '*.deb' --pattern '*.AppImage' --pattern '*.flatpak'
+            --pattern '*.deb'
           cd "$WORK_DIR"
-          sha256sum *.deb *.AppImage *.flatpak > SHA256SUMS
+          sha256sum *.deb > SHA256SUMS
           sha256sum --check SHA256SUMS
           gh release upload "$RELEASE_TAG" SHA256SUMS --clobber

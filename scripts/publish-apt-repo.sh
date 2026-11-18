@@ -30,8 +30,9 @@ gpg --batch --list-secret-keys "$FPR" >/dev/null 2>&1 || {
     echo "El paquete principal no es válido." >&2; exit 1;
 }
 VERSION=$(dpkg-deb -f "$DEB" Version)
-[[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] &&
-    [ "$(basename "$DEB")" = "aio-debian-gui_${VERSION}_all.deb" ] || {
+PUBLIC_VERSION=${VERSION#*:}
+[[ "$VERSION" =~ ^([0-9]+:)?[0-9]+\.[0-9]+\.[0-9]+$ ]] &&
+    [ "$(basename "$DEB")" = "aio-debian-gui_${PUBLIC_VERSION}_all.deb" ] || {
     echo "Nombre o versión del paquete principal no válidos." >&2; exit 1;
 }
 if [ -n "$HOST_DEB" ]; then
@@ -67,6 +68,14 @@ publish_repo() {
     local bin="$dist/main/binary-all"
     local files=() debs=() old
     mkdir -p "$pool" "$bin"
+    if [[ "$(dpkg-deb -f "$deb" Version)" == 1:* ]]; then
+        for old in "$pool/${package}_"*_all.deb; do
+            [ -f "$old" ] || continue
+            if [[ "$(dpkg-deb -f "$old" Version)" != 1:* ]]; then
+                rm -f -- "$old"
+            fi
+        done
+    fi
     cp -f "$deb" "$pool/"
     shopt -s nullglob
     files=("$pool/${package}_"*_all.deb)
