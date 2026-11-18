@@ -1,84 +1,140 @@
+<div align="center">
+
+<img src="package/usr/share/icons/hicolor/256x256/apps/aio-debian-gui.png" width="112" height="112" alt="Icono de AiO Debian GUI">
+
 # AiO Debian GUI
 
-**Mantenimiento, diagnóstico y configuración de Debian y Ubuntu LTS desde una interfaz gráfica GTK.**
+### Tu sistema al día. El control, en tus manos.
 
-[![Última versión](https://img.shields.io/github/v/release/julioayusoalende-hue/AIO-Debian-GUI?label=versi%C3%B3n)](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)
-[![Licencia GPL-3.0](https://img.shields.io/badge/licencia-GPL--3.0-blue)](LICENSE)
-[![Testing](https://img.shields.io/badge/descargas-testing-orange)](#versiones-testing)
+Mantenimiento, diagnóstico y copias de configuración para **Debian y Ubuntu LTS**, desde una interfaz gráfica GTK.
 
-AiO Debian GUI reúne tareas habituales de administración en una aplicación GTK. Antes de las operaciones delicadas presenta comprobaciones y pide confirmación. Es un proyecto independiente del script de consola [aio-debian](https://github.com/julioayusoalende-hue/aio-debian).
+[![Estable](https://img.shields.io/github/v/release/julioayusoalende-hue/AIO-Debian-GUI?label=estable&color=C70036)](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)
+[![Formato DEB](https://img.shields.io/badge/formato-DEB-C70036)](#instalación)
+[![Licencia](https://img.shields.io/badge/licencia-GPL--3.0-blue)](LICENSE)
 
-## Versión estable
+**[Descargar estable](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)** · **[Instalar](#instalación)** · **[Guía de uso](docs/guia-de-uso.md)** · **[Ver novedades](CHANGELOG.md)**
 
-[Descargar la última versión estable](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest). Incluye el paquete DEB y el archivo `SHA256SUMS`. Consulta las [instrucciones de instalación](#instalar).
+</div>
 
-## Versiones testing
+---
 
-[Ver las descargas de testing](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases?q=testing&expanded=true). Aquí se publican las versiones preliminares de la rama [`testing`](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/tree/testing), con su paquete DEB y el archivo `SHA256SUMS`.
+## Menos comandos repetidos. Más claridad.
 
-## Funciones
+AiO reúne las tareas habituales de administración en una sola aplicación: eliges qué hacer, revisas las comprobaciones y sigues el resultado desde la interfaz. Las operaciones administrativas se autorizan mediante Polkit.
 
-- **Mantenimiento APT:** actualizar índices y paquetes, limpiar caché y retirar dependencias innecesarias, con comprobaciones preventivas y confirmación.
-- **Programación:** mantenimiento diario, semanal o mensual; consulta de próximas ejecuciones y resultados. No se programan eliminaciones ni cambios de kernel, controladores o repositorios.
-- **Diagnóstico:** actualiza los índices APT con autorización de administrador y después informa sobre espacio, APT/dpkg, actualizaciones, DKMS, reinicios y servicios. No instala ni elimina paquetes.
-- **Sistema y hardware:** gestión de repositorios, kernel y Mesa de Backports; detección NVIDIA con instalación conservadora en Debian. Algunas operaciones tienen requisitos y bloqueos adicionales.
-- **Copias de seguridad:** copia y restauración de repositorios APT, y acceso a Timeshift y Respaldos (Déjà Dup); si no están instalados, AiO ofrece instalarlos con confirmación y autorización de administrador.
-- **Apps recomendadas:** catálogo en dos columnas con GIMP, VLC, Celluloid, Plex, Switcheroo, Video Downloader, HandBrake, Spotify, Feishin, Google Chrome, Brave, Gear Lever, Kitty y Ghostty. Distingue DEB y Flatpak, indica qué formato está instalado y no abre las aplicaciones tras instalarlas. Las instalaciones requieren confirmación; los DEB externos se descargan e instalan manualmente.
-- **Terminal:** pestaña interactiva con Bash que recibe en directo la salida de mantenimiento. El botón «Ver en Terminal» de la consola integrada abre esta pestaña. Incluye accesos para limpiar la pantalla, ejecutar Fastfetch y abrir Nautilus en `admin:/` (puede solicitar autorización). **Editar** y el menú contextual permiten copiar, pegar y seleccionar. En **Configuración y mantenimiento**, **Aplicar diseño de Fastfetch** instala el diseño incluido para tu usuario y guarda una copia de la configuración anterior. **Restaurar diseño anterior de Fastfetch** recupera esa copia o vuelve a los valores predeterminados si no había configuración de usuario. Los accesos ejecutan procesos independientes, sin enviar texto a la sesión interactiva.
-- **Escritorio:** gestión de aplicaciones Flatpak, soporte FUSE y complementos de GNOME; interfaz en español, inglés, francés y chino, con temas claro y oscuro.
+Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplicaciones y guardar la configuración de tus repositorios o de tu escritorio.
 
-La aplicación es compatible con Debian 12 o superior y Ubuntu 24.04/26.04 LTS. Algunas tareas dependen de la distribución y se bloquean cuando no son compatibles.
+## Qué puedes hacer
 
-El diagnóstico solicita autorización para renovar los índices APT antes de comprobar las actualizaciones del sistema y de AiO. Si se rechaza la autorización o falla la actualización, informa del error y no presenta las lecturas APT como actualizadas.
+| Área | Funciones |
+|---|---|
+| **Mantenimiento** | Actualizar APT, limpiar caché y retirar dependencias innecesarias. Revisar la simulación de APT antes de continuar cuando requiere confirmación. |
+| **Diagnóstico** | Consultar espacio, estado de APT/dpkg, actualizaciones, DKMS, servicios y necesidad de reinicio. Informa cuando una comprobación queda incompleta. |
+| **Programación** | Ejecutar mantenimiento diario, semanal o mensual mediante systemd y consultar próximas ejecuciones y resultados, incluso con AiO cerrado. |
+| **Backup** | Copiar y restaurar repositorios APT y ajustes de GNOME o KDE Plasma. Acceder a Timeshift y Respaldos (Déjà Dup), con instalación opcional. |
+| **Kernel y hardware** | Gestionar Backports de kernel/Mesa en Debian, volver a Stable y comprobar la instalación NVIDIA. Las tareas disponibles dependen de la distribución y la compatibilidad. |
+| **Aplicaciones** | Instalar aplicaciones recomendadas en los formatos disponibles para cada una. Actualizar Flatpak y, si está instalado, Snap. |
+| **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
+| **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-## Instalar
+### Lo nuevo en la 1.0.7
 
-Descarga `aio-debian-gui_1.0.7_all.deb` y abre un terminal en la carpeta de descargas.
+- **Copias del escritorio:** ajustes y complementos del usuario en GNOME y KDE Plasma, con copia previa antes de restaurar.
+- **Copias de repositorios APT:** guardar y restaurar las fuentes desde una carpeta que la aplicación recuerda.
+- **NVIDIA:** comprobar las GPU contra la lista del paquete candidato, elegir la variante DKMS según soporte y bloquear instalaciones sin compatibilidad verificable o que impliquen eliminaciones.
+- **Aviso de seguridad:** tamaño inicial adaptado al área de trabajo, con la simulación APT desplazable y los botones de decisión visibles.
+
+[Consultar el historial completo →](CHANGELOG.md)
+
+## Descargas
+
+### Versión estable
+
+**Recomendada para el uso habitual.** La última estable publicada es **1.0.7**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+
+**[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
+
+La serie actual se distribuye exclusivamente como DEB. El soporte para gestionar aplicaciones Flatpak, Snap o AppImage no significa que AiO se distribuya en esos formatos.
+
+### Versiones testing
+
+Las pruebas se publican por separado como preversiones de la rama [`testing`](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/tree/testing). Incluyen los cambios en desarrollo y pueden contener errores.
+
+**[Consultar las publicaciones testing →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases?q=testing&expanded=true)**
+
+En la revisión del **18 de noviembre de 2026** no hay preversiones publicadas. El enlace mostrará las nuevas cuando estén disponibles. Las versiones testing se descargan manualmente; no se distribuyen mediante el repositorio APT estable.
+
+## Instalación
+
+Compatible con **Debian 12 o superior** y **Ubuntu 24.04/26.04 LTS**. Necesita una sesión gráfica; la programación utiliza systemd. Algunas tareas son específicas de cada distribución.
+
+### 1. Descarga el DEB
+
+Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest) y descarga el archivo `.deb`. Abre un terminal en la carpeta donde lo guardaste.
+
+### 2. Instala el paquete
+
+Para la versión 1.0.7:
 
 ```bash
 sudo apt install ./aio-debian-gui_1.0.7_all.deb
 ```
 
-El paquete instala `needrestart` como dependencia para comprobar si hace falta reiniciar y configura el repositorio APT firmado de AiO Debian. Usa **Menú → Buscar actualizaciones** o el gestor de paquetes para instalar futuras versiones. APT identifica esta serie con la época `1:` para permitir la actualización desde las versiones anteriores.
+APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.
 
-### Verificar las descargas
+### 3. Abre AiO
 
-Descarga `SHA256SUMS` junto con los paquetes que quieras comprobar y ejecuta:
+Búscalo en el menú de aplicaciones o ejecuta, como tu usuario habitual:
+
+```bash
+aio-debian-gui
+```
+
+Las tareas que lo necesitan solicitan autorización administrativa desde la aplicación.
+
+<details>
+<summary><strong>Comprobar la integridad de la descarga</strong></summary>
+
+Descarga `SHA256SUMS` de la misma release y colócalo junto al DEB. Desde esa carpeta:
 
 ```bash
 sha256sum -c --ignore-missing SHA256SUMS
 ```
 
-## Copiar y restaurar repositorios APT
+Comprueba que el archivo descargado aparece con resultado correcto antes de instalarlo.
 
-En **Backup**, pulsa **Copiar repositorios APT** y elige una carpeta la primera vez. AiO guarda `repositorios-apt.json` y recuerda la carpeta para **Restaurar repositorios APT**. Usa **Cambiar carpeta de copia** para elegir otra ubicación.
+</details>
 
-La copia incluye `/etc/apt/sources.list`, las fuentes `.list` y `.sources` de `/etc/apt/sources.list.d` y los llaveros de APT de `/etc/apt`. Las claves instaladas por paquetes en `/usr/share/keyrings` se recuperan reinstalando sus paquetes. Guarda la copia en una ubicación privada si tus fuentes contienen credenciales.
+## Actualizaciones
 
-Las dos operaciones piden autorización de administrador. Al restaurar, AiO sustituye las fuentes actuales por las de la copia y conserva las claves adicionales. Después puedes renovar los índices desde **Configuración y mantenimiento**.
+Usa **Menú → Buscar actualizaciones**, tu gestor de paquetes o estos comandos para actualizar únicamente AiO:
 
-## Copiar y restaurar ajustes del escritorio
+```bash
+sudo apt update
+sudo apt install --only-upgrade aio-debian-gui
+```
 
-En **Backup**, usa **Copiar ajustes del escritorio** y **Restaurar ajustes del escritorio** desde tu sesión de GNOME o KDE Plasma. AiO guarda un ZIP por escritorio en la misma carpeta que las copias APT.
+Cierra y vuelve a abrir la aplicación para cargar la versión nueva. El paquete utiliza la época Debian `1:` para permitir la actualización desde la numeración anterior; no necesitas añadirla al nombre del archivo descargado.
 
-- **GNOME** guarda preferencias de GNOME Shell, favoritos del dock, atajos, ajustes de Mutter y las extensiones instaladas en tu cuenta. La posición de cada archivo en el escritorio depende de la extensión que lo gestione.
-- **KDE Plasma** guarda paneles, lanzadores, disposición de widgets, atajos, apariencia y ajustes de KWin. Incluye los applets instalados en tu cuenta. Para aplicar la disposición, AiO detiene y reinicia el servicio de usuario de Plasma Shell.
+## Antes de empezar
 
-Las extensiones y widgets instalados para todo el sistema se recuperan instalando sus paquetes. La restauración se ejecuta con los permisos de tu cuenta, muestra las versiones y complementa los archivos y ajustes existentes. Cierra sesión y vuelve a entrar para aplicar los cambios. Los paneles y widgets pueden quedar en posiciones distintas si cambian las pantallas.
+- **Revisa la selección y las advertencias.** Los cambios de kernel, Mesa, repositorios o controladores merecen una copia de seguridad previa.
+- **La programación tiene límites.** No programa eliminaciones ni cambios de kernel, controladores o repositorios; no enciende un equipo apagado ni reinicia automáticamente.
+- **NVIDIA se instala solo cuando se puede verificar la compatibilidad.** La comprobación del módulo DKMS no sustituye la prueba de funcionamiento después de reiniciar. Secure Boot activo o desconocido requiere preparación manual de la firma DKMS/MOK.
+- **La autorización sin contraseña es opcional.** Está desactivada inicialmente y reduce la protección de la cuenta si se habilita.
 
-AiO guarda la configuración previa en `$XDG_STATE_HOME/aio-debian-gui/desktop-backups/` (por defecto, bajo `~/.local/state`). Para volver a esa configuración, copia el ZIP a tu carpeta de copias con el nombre `escritorio-gnome.zip` o `escritorio-plasma.zip` y usa el botón de restauración.
+El diagnóstico puede pedir autorización para renovar los índices APT. Si se cancela o falla esa actualización, lo indica y no presenta las lecturas como actualizadas.
 
-## Programación y permisos
+## Guías
 
-El paquete Debian incluye el asistente y el programador de mantenimiento del anfitrión.
+| Necesitas… | Consulta |
+|---|---|
+| Guardar y restaurar fuentes y claves APT | [Copias de repositorios](docs/guia-de-uso.md#copiar-y-restaurar-repositorios-apt) |
+| Conservar ajustes, extensiones, paneles y widgets | [Copias de GNOME y KDE Plasma](docs/guia-de-uso.md#copiar-y-restaurar-ajustes-del-escritorio) |
+| Entender horarios y permisos | [Programación y permisos](docs/guia-de-uso.md#programación-y-permisos) |
+| Saber qué limpia la tarea de Snap | [Mantenimiento de Snap](docs/guia-de-uso.md#mantenimiento-de-snap) |
 
-Programar, pausar o eliminar un horario requiere autorización de administrador. Los temporizadores de systemd conservan sus horarios durante las actualizaciones. Si AiO recupera un horario existente, respeta si estaba activado o pausado.
-
-Antes de cambiar kernel, Mesa, repositorios o controladores, haz una copia de seguridad y revisa las advertencias de la tarea. La vuelta de kernel y Mesa desde Backports no cambia por sí sola el kernel de arranque; NVIDIA puede quedar bloqueado cuando la compatibilidad no se pueda verificar. La opción de Polkit sin contraseña es opcional, está desactivada inicialmente y reduce la protección de la cuenta.
-
-## Desarrollo
-
-Para clonar el proyecto, ejecutar las comprobaciones y consultar la estructura de paquetes:
+## Desarrollo y colaboración
 
 ```bash
 git clone https://github.com/julioayusoalende-hue/AIO-Debian-GUI.git
@@ -86,30 +142,23 @@ cd AIO-Debian-GUI
 ./scripts/check.sh
 ```
 
-### Versiones de prueba
+Las comprobaciones gráficas requieren PyGObject, GTK 3, VTE y una pantalla disponible o virtual. El entorno de CI está definido en los [workflows](.github/workflows).
 
-Cada cambio en `testing` que supere las comprobaciones publica una preversión
-en GitHub Releases, sin modificar `main` ni el repositorio APT estable. Por
-ejemplo, si la última versión estable es `1.0.3`, el paquete de prueba se
-numera `1.0.4~testing.N.INTENTO`. El número aumenta con cada ejecución y
-Debian lo considera anterior a `1.0.4`. Si se publica otra versión estable,
-las siguientes pruebas parten de la siguiente versión de esa publicación.
+- [Comunicar un problema](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/issues): incluye versión de AiO, distribución, escritorio y pasos para reproducirlo. Retira credenciales de los registros antes de compartirlos.
+- [Consultar el código de testing](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/tree/testing).
+- [Historial de cambios](CHANGELOG.md).
 
-El número de prueba solo se aplica al paquete construido, no a los archivos
-de versión del código. Al integrar los cambios en `main`, se asigna y publica
-manualmente la versión estable que corresponda; no se arrastra el contador de
-pruebas. Las preversiones se descargan desde Releases, no mediante APT.
+<details>
+<summary><strong>Cómo se numeran las versiones testing</strong></summary>
 
-El catálogo de traducciones de la interfaz está en
-`package/usr/lib/aio-debian-gui/aio_core/translations.py`; la selección del
-idioma sigue gestionándose en la interfaz. El seguimiento del tema GTK está en
-`package/usr/lib/aio-debian-gui/aio_core/gtk_appearance.py` y el diálogo de
-programación en `package/usr/lib/aio-debian-gui/aio_core/gtk_scheduler.py`.
+Cada cambio en `testing` que supera las comprobaciones publica una preversión sin modificar `main` ni el repositorio APT estable. Parte de la siguiente versión respecto a la última estable: por ejemplo, tras `1.0.7`, `1.0.8~testing.N.INTENTO`.
 
-## Licencia
+El contador se aplica al paquete construido. Debian considera esa preversión anterior a `1.0.8`. La publicación estable se realiza por separado, sin arrastrar el contador.
 
-GNU GPL v3 o posterior. Consulta [LICENSE](LICENSE). Sin ninguna garantía.
+</details>
 
-### Mantenimiento de Snap
+---
 
-Si `snapd` está instalado en el anfitrión, aparece **Actualizar y limpiar Snap**, seleccionada en el mantenimiento completo y disponible como tarea opcional del programador. Ejecuta `snap refresh` y, si termina correctamente, elimina mediante `snap remove --revision` las revisiones numéricas deshabilitadas más antiguas. Conserva la revisión activa y una revisión deshabilitada por aplicación para poder volver atrás. No borra datos, instantáneas ni archivos de la caché directamente, y no instala snapd. Si snapd se desinstala después de guardar un horario, la tarea se omite sin interrumpir las demás. Las programaciones existentes mantienen su selección de tareas.
+Desarrollado por **Julio Ayuso** · [GNU GPL v3 o posterior](LICENSE) · Sin garantía.
+
+Proyecto independiente del script de consola [aio-debian](https://github.com/julioayusoalende-hue/aio-debian).
