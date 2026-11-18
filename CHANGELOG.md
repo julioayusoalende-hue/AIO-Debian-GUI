@@ -2,6 +2,8 @@
 
 ## 1.0.7
 
+- Verifica las GPU NVIDIA contra la lista del paquete candidato, selecciona la variante DKMS según soporte y rama, comprueba el módulo del kernel activo y prohíbe eliminaciones en la instalación. Detiene los casos sin compatibilidad verificable.
+
 - Añade copia y restauración de ajustes, extensiones y widgets del usuario en GNOME y KDE Plasma, con una copia previa antes de restaurar.
 - Añade botones en Backup para copiar y restaurar los repositorios APT desde una misma carpeta.
 

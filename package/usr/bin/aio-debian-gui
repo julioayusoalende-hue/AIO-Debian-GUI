@@ -3124,7 +3124,7 @@ class VentanaPrincipal(Gtk.Window):
             if fila_nvidia is not None:
                 fila_nvidia.set_visible(self.nvidia_presente)
             if self.nvidia_presente:
-                modo = traducir("Híbrida (integrada + NVIDIA)") if self.nvidia_hibrida else traducir("NVIDIA dedicada")
+                modo = traducir("GPU Intel/AMD + NVIDIA") if self.nvidia_hibrida else traducir("NVIDIA dedicada")
                 estado = traducir("instalado") if self.nvidia_instalada else traducir("no instalado")
                 self.nvidia_info_label.set_text(
                     traducir("GPU: %s · driver %s · candidato APT: %s · Secure Boot: %s")
@@ -3561,7 +3561,7 @@ class VentanaPrincipal(Gtk.Window):
                 return
             hibrida = "##NVIDIA:hybrid:1" in report.stdout
             advertencia = (
-                "GPU híbrida: se mantendrá Intel/AMD para el escritorio y NVIDIA se usará mediante PRIME Render Offload. "
+                "GPU Intel/AMD y NVIDIA presentes. Se conservará la configuración de pantallas; la combinación no confirma por sí sola un equipo híbrido. "
                 if hibrida else "GPU NVIDIA dedicada detectada. "
             )
             advertencia += (
