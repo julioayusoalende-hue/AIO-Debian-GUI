@@ -76,6 +76,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "2.12.1": "Corrige la compatibilidad del asistente del anfitrión para que las tareas de mantenimiento no pidan instalar la integración repetidamente.",
     "2.12.0": "La programación se instala y gestiona sin privilegios de administrador desde el usuario en los tres formatos.",
     "2.11.4": "Detecta la integración gestionada por paquetes de Debian y utiliza su vía de actualización.",
     "2.11.3": "Corrige la consulta del estado del programador en Flatpak y AppImage.",

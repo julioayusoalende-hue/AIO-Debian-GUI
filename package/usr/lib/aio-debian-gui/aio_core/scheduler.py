@@ -14,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 
-VERSION = '2.12.0'
+VERSION = '2.12.1'
 HOST_PROTOCOL = 2
 _LEGACY_VERSIONS = frozenset(f'2.10.{patch}' for patch in range(12, 16))
 

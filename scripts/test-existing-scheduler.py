@@ -10,6 +10,10 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'package/usr/lib/aio-debian-gui'))
 from aio_core import host_integration as integration, scheduler
 
+helper = Path(__file__).resolve().parents[1] / 'package/usr/lib/aio-debian-gui/aio-debian-gui-helper'
+assert integration.compatible_helper('appimage', str(helper)), \
+    'The packaged maintenance helper must advertise the scheduler host protocol.'
+
 report = {'available': True, 'version': scheduler.VERSION, 'protocol': scheduler.HOST_PROTOCOL,
           'config': dict(scheduler.DEFAULT), 'timer_active': False, 'last_result': None}
 
