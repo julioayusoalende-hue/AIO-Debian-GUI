@@ -397,8 +397,9 @@ for language in ('es', 'en', 'fr', 'zh'):
         def comprobar_scroll(dialogo):
             dialogo.show_all()
             settle()
-            scroll = next(widget for widget in dialogo.get_message_area().get_children()
+            scroll = next(widget for widget in dialogo.get_content_area().get_children()
                           if isinstance(widget, Gtk.ScrolledWindow))
+            assert scroll.get_allocated_height() > dialogo.get_allocated_height() // 2
             ajuste = scroll.get_vadjustment()
             assert ajuste.get_upper() > ajuste.get_page_size()
             ajuste.set_value(ajuste.get_upper() - ajuste.get_page_size())

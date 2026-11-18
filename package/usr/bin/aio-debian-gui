@@ -3561,7 +3561,11 @@ class VentanaPrincipal(Gtk.Window):
             alto = min(526, area.height * 4 // 5) if area else 526
             dialogo_seguro.set_default_size(ancho, alto)
             scroll.add(detalle)
-            dialogo_seguro.get_message_area().pack_start(scroll, True, True, 0)
+            contenido = dialogo_seguro.get_content_area()
+            contenido.pack_start(scroll, True, True, 0)
+            scroll.set_margin_start(12)
+            scroll.set_margin_end(12)
+            scroll.set_margin_bottom(12)
             scroll.show_all()
             aceptado = dialogo_seguro.run() == Gtk.ResponseType.OK
             dialogo_seguro.destroy()

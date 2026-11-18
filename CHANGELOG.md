@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.0.10
+
+- Amplía el área desplazable de «Comprobaciones de seguridad» para leer el informe de APT con los botones Cancelar y Continuar siempre visibles.
+
 ## 1.0.9
 
 - Muestra la tarea de instalación del controlador cuando se detecta una GPU NVIDIA en Debian.
@@ -532,7 +536,7 @@ Corrige la visualización de la consola en modo completo y al desactivar el modo
 ## 1.0.11
 Corrige la visualización del menú de preferencias.
 
-## 1.0.10
+## 1.0.10 (serie anterior)
 Añade preferencias de idioma (español, inglés, francés y chino), tema claro u oscuro e
 interfaz simple sin salida detallada de consola.
 
