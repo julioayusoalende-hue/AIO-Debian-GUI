@@ -44,8 +44,8 @@ TRADUCCIONES = {
         "Apariencia": "Appearance",
         "Claro": "Light",
         "Oscuro": "Dark",
-        "Interfaz simple (sin salida de consola)": "Simple interface (hide task output)",
-        "El modo simple oculta la salida detallada de las tareas.": "Simple mode hides detailed task output.",
+        "Interfaz simple": "Simple interface",
+        "Muestra solo Configuración y mantenimiento y oculta la salida de la consola.": "Shows only Settings and maintenance and hides console output.",
         "Guardar": "Save",
         "Cancelar": "Cancel",
         "Aceptar": "OK",
@@ -189,8 +189,8 @@ TRADUCCIONES = {
         "Apariencia": "Apparence",
         "Claro": "Clair",
         "Oscuro": "Sombre",
-        "Interfaz simple (sin salida de consola)": "Interface simple (sans sortie console)",
-        "El modo simple oculta la salida detallada de las tareas.": "Le mode simple masque la sortie détaillée des tâches.",
+        "Interfaz simple": "Interface simple",
+        "Muestra solo Configuración y mantenimiento y oculta la salida de la consola.": "Affiche uniquement Configuration et maintenance et masque la sortie de la console.",
         "Guardar": "Enregistrer",
         "Cancelar": "Annuler",
         "Aceptar": "OK",
@@ -333,8 +333,8 @@ TRADUCCIONES = {
         "Apariencia": "外观",
         "Claro": "浅色",
         "Oscuro": "深色",
-        "Interfaz simple (sin salida de consola)": "简洁界面（隐藏控制台输出）",
-        "El modo simple oculta la salida detallada de las tareas.": "简洁模式会隐藏任务的详细输出。",
+        "Interfaz simple": "简洁界面",
+        "Muestra solo Configuración y mantenimiento y oculta la salida de la consola.": "仅显示配置与维护，并隐藏控制台输出。",
         "Guardar": "保存",
         "Cancelar": "取消",
         "Aceptar": "确定",
@@ -1557,4 +1557,25 @@ TRADUCCIONES["zh"].update({
     "No se pudo aplicar el diseño de Fastfetch.": "无法应用 Fastfetch 布局。",
     "El diseño de Fastfetch está activo.": "Fastfetch 布局已启用。",
     "Copia de la configuración anterior: %s": "原有配置的备份：%s"
+})
+
+TRADUCCIONES["en"].update({
+    "Restaurar diseño anterior de Fastfetch": "Restore previous Fastfetch layout",
+    "No se pudo restaurar el diseño de Fastfetch.": "Could not restore the Fastfetch layout.",
+    "Se restauró el diseño anterior de Fastfetch.": "The previous Fastfetch layout was restored.",
+    "El diseño de AiO no está activo o se ha modificado.": "The AiO layout is inactive or has been modified."
+})
+
+TRADUCCIONES["fr"].update({
+    "Restaurar diseño anterior de Fastfetch": "Restaurer la disposition Fastfetch précédente",
+    "No se pudo restaurar el diseño de Fastfetch.": "Impossible de restaurer la disposition Fastfetch.",
+    "Se restauró el diseño anterior de Fastfetch.": "La disposition Fastfetch précédente a été restaurée.",
+    "El diseño de AiO no está activo o se ha modificado.": "La disposition AiO est inactive ou a été modifiée."
+})
+
+TRADUCCIONES["zh"].update({
+    "Restaurar diseño anterior de Fastfetch": "恢复之前的 Fastfetch 布局",
+    "No se pudo restaurar el diseño de Fastfetch.": "无法恢复 Fastfetch 布局。",
+    "Se restauró el diseño anterior de Fastfetch.": "已恢复之前的 Fastfetch 布局。",
+    "El diseño de AiO no está activo o se ha modificado.": "AiO 布局未启用或已被修改。"
 })

@@ -38,7 +38,7 @@ CORE_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file_
 if CORE_DIR not in sys.path:
     sys.path.insert(0, CORE_DIR)
 from aio_core import history as core_history, preferences as core_preferences, updates as core_updates, diagnostics as core_diagnostics, preflight as core_preflight, scheduler as core_scheduler, host_integration as core_host_integration  # noqa: E402
-from aio_core.fastfetch import instalar_layout  # noqa: E402
+from aio_core.fastfetch import instalar_layout, restaurar_layout  # noqa: E402
 from aio_core.gtk_appearance import aplicar_tema  # noqa: E402
 from aio_core.gtk_scheduler import ControladorProgramacion  # noqa: E402
 from aio_core.translations import TRADUCCIONES  # noqa: E402
@@ -59,6 +59,9 @@ UBUNTU_LOGO = os.path.normpath(
 FASTFETCH_LAYOUT = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/fastfetch-layout.jsonc")
 )
+NOTAS_VERSION = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/release-notes.txt")
+)
 RECOMMENDED_ICON_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/recommended-icons")
 )
@@ -78,99 +81,6 @@ FOTO_INSPIRACION = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/adri-y-lu.jpg")
 )
 ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
-
-# Novedades por versión (añade aquí una entrada al publicar una versión nueva)
-NOVEDADES = {
-    "1.0.3": "Edición en la terminal y diseño de Fastfetch aplicable desde mantenimiento.",
-    "1.0.2": "Nueva cabecera y opciones para instalar Kitty y Ghostty desde Apps recomendadas.",
-    "1.0.1": "Renueva la pestaña de mantenimiento y amplía la consola de salida.",
-    "1.0.0": "Distribución en paquete Debian y mantenimiento basado en 2.11.3.",
-    "2.11.3": "Corrige la consulta del estado del programador en Flatpak y AppImage.",
-    "2.11.2": "La instalación comprueba que el programador responde y muestra el motivo si la programación sigue bloqueada.",
-    "2.11.1": "El arranque ya no solicita autorización de administrador y la recuperación reconoce las ejecuciones anteriores de systemd.",
-    "2.11.0": "DEB, Flatpak y AppImage comparten el mantenimiento del anfitrión. La app prepara la integración al abrirse y conserva los horarios y el historial.",
-    "2.10.15": "La integración de Flatpak también recupera horarios compatibles guardados desde Flatpak o AppImage.",
-    "2.10.14": "Flatpak recupera automáticamente horarios compatibles de instalaciones DEB anteriores y conserva su historial.",
-    "2.10.13": "Mejora la detección de la integración del anfitrión en Flatpak y comprueba el estado de las tareas después de instalarla.",
-    "2.10.12": "Añade Brave y Gear Lever a las aplicaciones recomendadas, y detecta snapd para actualizar y limpiar Snap en el mantenimiento manual y programado.",
-    "2.10.11": "AppImage y Flatpak reutilizan el programador compatible del anfitrión y evitan el error al instalar sobre archivos del DEB.",
-    "2.10.10": "Programador incluido en Flatpak y AppImage con actualizaciones firmadas automáticas sin paquetes DEB adicionales en instalaciones nuevas.",
-    "2.10.9": "La terminal de Flatpak inicia Bash con terminal de control, sin los errores de control de trabajos.",
-    "2.10.8": "El programador del anfitrión se actualiza solo con cada versión en AppImage y Flatpak mediante un paquete firmado aislado; el DEB conserva su funcionamiento.",
-    "2.10.7": "Las eliminaciones previstas por autoremove y dist-upgrade se muestran como aviso y permiten continuar.",
-    "2.10.6": "La terminal inicia Bash sin ejecutar Fastfetch automáticamente; el acceso manual sigue disponible.",
-    "2.10.5": "Activa autoremove por defecto y conserva libnotify-bin y needrestart, necesarios para la programación en AppImage y Flatpak.",
-    "2.10.4": "Mantiene libnotify-bin y needrestart al eliminar dependencias huérfanas, necesarios para la programación en AppImage y Flatpak.",
-    "2.10.3": "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.",
-    "2.10.2": "Modulariza traducciones, apariencia GTK y programación; conserva los flujos existentes.",
-    "2.10.1": "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.",
-    "2.10.0": "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.",
-    "2.9.0": "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.",
-    "2.8.3": "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.",
-    "2.8.2": "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.",
-    "2.8.1": "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.",
-    "2.8.0": "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.",
-    "2.7.10": "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.",
-    "2.7.9": "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.",
-    "2.7.8": "Guía integrada para instalar o actualizar el asistente del anfitrión.",
-    "2.7.7": "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.",
-    "2.7.6": "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.",
-    "2.7.5": "Comprobación de reinicio más fiable con needrestart.",
-    "2.7.4": "Corregido el envío de notificaciones y avisos programados a sesiones de usuario.",
-    "2.7.3": "Abre AiO y muestra el aviso habitual cuando el mantenimiento programado recomienda reiniciar.",
-    "2.7.2": "Notificación de escritorio al completar correctamente el mantenimiento programado.",
-    "2.7.1": "Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB.",
-    "2.7.0": "Mantenimientos automáticos programables con selección de tareas, horario, pausa y resultados.",
-    "2.6.0": "Paneles adaptables, selección clara de tareas, diagnóstico resumido y consola plegable con resultados por tarea.",
-    "2.5.7": "Paneles principales del mismo ancho con el separador vertical centrado al redimensionar la ventana.",
-    "2.5.6": "Protecciones APT corregidas, validación del plan de actualización y comprobaciones del anfitrión desde Flatpak.",
-    "2.5.5": "Corregido el inicio en GTK 3 con GDK 3 explícito.",
-    "2.5.4": "Enter inicia tareas; Diagnosticar sustituye al estado redundante.",
-    "2.5.3": "Mantenimiento simplificado sin integración de instantáneas y mejoras del registro.",
-    "2.5.2": "Detección de Timeshift y Snapper, instantáneas opcionales.",
-    "2.5.1": "Vista previa detallada APT, salud asíncrona y accesibilidad.",
-    "2.5.0": "Panel de salud, Snapper opcional y traducciones mejoradas.",
-    "2.4.0": "Protección contra ejecuciones simultáneas y verificaciones APT/dpkg más estrictas.",
-    "2.3.0": "Comprobaciones asíncronas, bloqueos APT y vista previa ampliada.",
-    "2.2.0": "Modo de mantenimiento seguro: comprobaciones previas de APT, dpkg, espacio, DKMS y simulaciones conservadoras.",
-    "2.1.0": "Nueva opción de preparación del retorno a kernel y Mesa Stable desde Backports, con simulación segura.",
-    "2.0.9": "2.0.9 — Traducciones completas para los paneles y el diagnóstico preventivo.",
-    "2.0.8": "La comprobación de actualizaciones de AiO funciona también con APT en español.",
-    "2.0.7": "Diagnosticar comprueba la versión de AiO, ofrece actualizar y permite reiniciar automáticamente al terminar.",
-    "2.0.6": "Diagnóstico APT sin privilegios: evita falsos avisos críticos por bloqueo de dpkg.",
-    "2.0.5": "Diagnóstico preventivo de APT, paquetes, espacio, DKMS y servicios antes del mantenimiento.",
-    "2.0.4": "La salida de consola puede abrirse en una ventana independiente, ampliable y sincronizada en tiempo real.",
-    "2.0.3": "Menú unificado: Preferencias, Historial, Buscar actualizaciones y Acerca de en ese orden.",
-    "2.0.2": "Dos paneles lado a lado: sistema y tareas, sin duplicar Preferencias y con desplazamiento independiente.",
-    "2.0.1": "Interfaz más clara con secciones horizontales, tareas a todo el ancho y controles de ejecución mejor distribuidos.",
-    "2.0.0": "Detección NVIDIA en Debian, instalación supervisada del controlador compatible y soporte PRIME para equipos híbridos.",
-    "1.2.4": "Icono original en rojo Debian y visualización directa en Acerca de en todos los formatos.",
-    "1.2.3": "Actualiza Flatpak de usuario sin contraseña y recupera la autorización opcional y reversible de Polkit para las tareas de AiO.",
-    "1.2.2": "Sigue el tema claro u oscuro del sistema con cambios en directo, sin perder la selección manual.",
-    "1.2.1": "Muestra el logotipo de Debian o Ubuntu según el sistema anfitrión en la información inicial.",
-    "1.2.0": "Añade compatibilidad controlada con Ubuntu 24.04 y 26.04 LTS, repositorios oficiales y kernel HWE.",
-    "1.1.0": "Separa lógica de actualizaciones, preferencias e historial en módulos probables y amplía pruebas.",
-    "1.0.20": "Añade vista previa de tareas, historial local de mantenimiento y exportación de resultados.",
-    "1.0.19": "Endurece Polkit, comprueba nuevas versiones antes de actualizar y valida el asistente Flatpak.",
-    "1.0.18": "Identifica DEB, AppImage y Flatpak en la cabecera y permite actualizar la edición DEB desde APT.",
-    "1.0.17": "Añade un botón de actualización para AppImage y Flatpak con verificación de descargas.",
-    "1.0.16": "Corrige APT y Deb822, separa Flatpak de usuario y sistema y añade distribución Flatpak con asistente anfitrión.",
-    "1.0.15": "Corrige la autorización del asistente incluido en AppImage.",
-    "1.0.14": "Mantiene disponibles las opciones mientras comprueba su estado en segundo plano.",
-    "1.0.13": "Añade una dedicatoria personal enlazada en la ventana «Acerca de».",
-    "1.0.12": "Corrige la visualización de la salida de consola en modo completo.",
-    "1.0.11": "Corrige la visualización del menú de preferencias.",
-    "1.0.10": "Añade preferencias de idioma, tema claro u oscuro e interfaz simple.",
-    "1.0.9": "Los botones de preset resaltan la selección y se desmarcan al cambiar tareas.",
-    "1.0.8": "Detecta tareas ya configuradas y permite cancelar una espera de autorización.",
-    "1.0.7": "Permite instalar el kernel y los controladores Mesa desde Debian Backports.",
-    "1.0.6": "Permite configurar autorización sin contraseña para este usuario.",
-    "1.0.5": "Corrige la autenticación al ejecutar AppImage con el paquete Debian instalado.",
-    "1.0.4": "La aplicación también se distribuye como AppImage.",
-    "1.0.3": "Las herramientas auxiliares instalan el soporte FUSE necesario para AppImage.",
-    "1.0.2": "El logotipo de Debian aparece junto a la información del sistema.",
-    "1.0.1": "El botón principal ahora se llama «Iniciar tareas».",
-}
 
 IDIOMA_ACTUAL = "es"
 PREFERENCIAS_DEFECTO = {
@@ -284,6 +194,16 @@ def paquete_instalado(nombre):
     return "install ok installed" in out
 
 
+def novedades_version(version):
+    try:
+        with open(NOTAS_VERSION, encoding="utf-8") as archivo:
+            if archivo.readline().strip() == version:
+                return archivo.read().strip()
+    except (OSError, UnicodeError):
+        pass
+    return ""
+
+
 def version_app(para_apt=False):
     if os.environ.get("SNAP_VERSION"):
         return os.environ["SNAP_VERSION"]
@@ -373,7 +293,8 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "ghostty", "name": "Ghostty",
-        "icon": "com.mitchellh.ghostty", "fallback_icon": "utilities-terminal",
+        "icon": "com.mitchellh.ghostty", "bundled_icon": "ghostty.svg",
+        "fallback_icon": "utilities-terminal",
         "description": "Terminal con aceleración por GPU, pestañas y paneles divididos.",
         "channels": [],
     },
@@ -411,7 +332,8 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "kitty", "name": "Kitty",
-        "icon": "kitty", "fallback_icon": "utilities-terminal",
+        "icon": "kitty", "bundled_icon": "kitty.svg",
+        "fallback_icon": "utilities-terminal",
         "description": "Terminal con aceleración por GPU, atajos configurables y soporte para imágenes.",
         "channels": [
             {"type": "deb", "package": "kitty", "command": "kitty"},
@@ -1478,12 +1400,12 @@ class VentanaPrincipal(Gtk.Window):
         grid.attach(combo_tema, 1, 1, 1, 1)
 
         simple = Gtk.CheckButton(
-            label=traducir("Interfaz simple (sin salida de consola)")
+            label=traducir("Interfaz simple")
         )
         simple.set_active(self.preferencias["modo_simple"])
         grid.attach(simple, 0, 2, 2, 1)
         grid.attach(
-            etiqueta("El modo simple oculta la salida detallada de las tareas.", dim=True),
+            etiqueta("Muestra solo Configuración y mantenimiento y oculta la salida de la consola.", dim=True),
             0, 3, 2, 1,
         )
         dialogo.show_all()
@@ -1515,9 +1437,22 @@ class VentanaPrincipal(Gtk.Window):
         if idioma_cambiado:
             self._reiniciar_interfaz()
             return
+        self._aplicar_modo_simple()
+
+    def _aplicar_modo_simple(self):
+        simple = self.preferencias["modo_simple"]
+        if simple:
+            self.notebook.set_current_page(0)
+        for numero in range(1, self.notebook.get_n_pages()):
+            pagina = self.notebook.get_nth_page(numero)
+            pagina.set_no_show_all(simple)
+            if simple:
+                pagina.hide()
+            else:
+                pagina.show_all()
         self.expansor_consola.set_expanded(False)
-        self.expansor_consola.set_no_show_all(nuevas["modo_simple"])
-        self.expansor_consola.set_visible(not nuevas["modo_simple"])
+        self.expansor_consola.set_no_show_all(simple)
+        self.expansor_consola.set_visible(not simple)
 
     def _reiniciar_interfaz(self):
         ancho, alto = self.get_size()
@@ -1742,7 +1677,6 @@ class VentanaPrincipal(Gtk.Window):
         inf.pack_start(self.scroll_resultados, False, False, 0)
         self.expansor_consola = Gtk.Expander(label=traducir("Salida de la consola"))
         self.expansor_consola.set_expanded(False)
-        self.expansor_consola.set_no_show_all(self.preferencias["modo_simple"])
         contenido_consola = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self.expansor_consola.add(contenido_consola)
         inf.pack_start(self.expansor_consola, False, False, 0)
@@ -1791,6 +1725,8 @@ class VentanaPrincipal(Gtk.Window):
         contenido_consola.pack_start(marco, False, True, 0)
         contenido_consola.show_all()
         self.expansor_consola.connect("notify::expanded", self._ajustar_consola)
+        if self.preferencias["modo_simple"]:
+            self._aplicar_modo_simple()
 
     @staticmethod
     def _icono_aplicacion_backup(app):
@@ -2377,12 +2313,13 @@ class VentanaPrincipal(Gtk.Window):
         simbolos = {"Pendiente": "○", "En curso": "▶", "Completada": "✓", "Error": "!", "No ejecutada": "–"}
         linea.set_text(simbolos[estado] + " " + nombres[tarea] + " · " + traducir(estado))
         self.resultados_tareas[tarea] = (linea, estado)
-        if estado == "Error":
+        if estado == "Error" and not self.preferencias["modo_simple"]:
             self.expansor_consola.show()
             self.expansor_consola.set_expanded(True)
 
     def _abrir_terminal(self, _boton=None):
-        self.notebook.set_current_page(3)
+        if not self.preferencias["modo_simple"]:
+            self.notebook.set_current_page(3)
 
     def _desplazar_consola(self, vista):
         marca = self.buf.create_mark(None, self.buf.get_end_iter(), False)
@@ -2435,6 +2372,12 @@ class VentanaPrincipal(Gtk.Window):
         fastfetch.set_halign(Gtk.Align.START)
         fastfetch.connect("clicked", self._aplicar_diseno_fastfetch)
         caja.pack_start(fastfetch, False, False, 0)
+        restaurar = Gtk.Button(label=traducir("Restaurar diseño anterior de Fastfetch"))
+        restaurar.set_halign(Gtk.Align.START)
+        restaurar.get_child().set_line_wrap(True)
+        restaurar.get_child().set_max_width_chars(26)
+        restaurar.connect("clicked", self._restaurar_diseno_fastfetch)
+        caja.pack_start(restaurar, False, False, 0)
 
         ruta_logo, nombre_logo = logo_distribucion(self.distribucion)
         if ruta_logo and os.path.isfile(ruta_logo):
@@ -2449,7 +2392,7 @@ class VentanaPrincipal(Gtk.Window):
             except GLib.Error:
                 pass
 
-        nov = NOVEDADES.get(version)
+        nov = novedades_version(version)
         if nov:
             caja.pack_start(etiqueta("<b>Novedades de esta versión:</b>",
                                      markup=True), False, False, 4)
@@ -2474,6 +2417,18 @@ class VentanaPrincipal(Gtk.Window):
         if copia:
             mensaje += "\n" + traducir("Copia de la configuración anterior: %s") % copia
         self._mensaje(Gtk.MessageType.INFO, titulo, mensaje)
+
+    def _restaurar_diseno_fastfetch(self, _boton):
+        titulo = traducir("Diseño de Fastfetch")
+        try:
+            restaurado = restaurar_layout(FASTFETCH_LAYOUT, GLib.get_user_config_dir())
+        except (OSError, RuntimeError, ValueError) as error:
+            self._mensaje(Gtk.MessageType.ERROR, titulo,
+                          traducir("No se pudo restaurar el diseño de Fastfetch.") + "\n" + str(error))
+            return
+        mensaje = ("Se restauró el diseño anterior de Fastfetch." if restaurado
+                   else "El diseño de AiO no está activo o se ha modificado.")
+        self._mensaje(Gtk.MessageType.INFO, titulo, traducir(mensaje))
 
     def _tarjeta_seleccion(self):
         marco, caja = tarjeta_mantenimiento(8)
@@ -3553,7 +3508,7 @@ class VentanaPrincipal(Gtk.Window):
         self._escribir(linea + "\n", tag)
 
     def _escribir(self, texto, tag=None):
-        if tag == "error":
+        if tag == "error" and not self.preferencias["modo_simple"]:
             self.expansor_consola.show()
             self.expansor_consola.set_expanded(True)
         fin = self.buf.get_end_iter()

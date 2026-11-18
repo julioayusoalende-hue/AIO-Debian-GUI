@@ -92,6 +92,17 @@ with patch.object(app.Vte.Terminal, 'copy_clipboard_format') as copiar, \
         assert str(copia) in mensaje.call_args.args[-1]
         ventana._aplicar_diseno_fastfetch(None)
         assert list(config.parent.glob('*.bak')) == [copia]
+        ventana._restaurar_diseno_fastfetch(None)
+        assert config.read_text(encoding='utf-8') == '// Configuración anterior\n'
+        assert copia.exists()
+        config.unlink()
+        ventana._aplicar_diseno_fastfetch(None)
+        ventana._restaurar_diseno_fastfetch(None)
+        assert not config.exists()
+        ventana._aplicar_diseno_fastfetch(None)
+        config.write_text('// Diseño editado\n', encoding='utf-8')
+        ventana._restaurar_diseno_fastfetch(None)
+        assert config.read_text(encoding='utf-8') == '// Diseño editado\n'
     ventana.destroy()
 
 for formato in ('appimage', 'flatpak', 'deb'):
@@ -573,12 +584,12 @@ w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': True})
 w.show_all()
 settle()
 assert not w.expansor_consola.get_visible()
-w._escribir('error visible en modo simple', 'error')
+w._escribir('error registrado en modo simple', 'error')
 settle()
-assert w.expansor_consola.get_visible() and w.expansor_consola.get_expanded()
-assert w.log.get_mapped()
+assert not w.expansor_consola.get_visible() and not w.expansor_consola.get_expanded()
+assert not w.log.get_mapped()
 inicio, fin = w.buf.get_bounds()
-assert 'error visible en modo simple' in w.buf.get_text(inicio, fin, True)
+assert 'error registrado en modo simple' in w.buf.get_text(inicio, fin, True)
 w.destroy()
 
 # El refresco precede al diagnóstico y un fallo no se presenta como lectura actual.

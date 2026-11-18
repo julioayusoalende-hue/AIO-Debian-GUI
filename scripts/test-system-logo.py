@@ -23,6 +23,8 @@ assert "GdkPixbuf.Pixbuf.new_from_file_at_scale(" in gui
 for icon in ("brave", "gearlever", "celluloid", "feishin", "gimp", "google-chrome", "handbrake",
              "plex", "spotify", "switcheroo", "video-downloader", "vlc"):
     assert (root / "recommended-icons" / (icon + ".png")).is_file()
+for icon in ("ghostty.svg", "kitty.svg"):
+    assert ElementTree.parse(root / "recommended-icons" / icon).getroot().tag.endswith("svg")
 for icon in ("timeshift.png", "deja-dup.png", "NOTICE.txt", "GPL-2.txt"):
     assert (root / "backup-icons" / icon).is_file()
 control = Path("package/DEBIAN/control").read_text(encoding="utf-8")

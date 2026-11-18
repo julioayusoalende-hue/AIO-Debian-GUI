@@ -40,7 +40,6 @@ jobs:
           git check-ref-format "refs/tags/$testing_tag"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=$testing_tag" >> "$GITHUB_OUTPUT"
-          echo "stable=$tag" >> "$GITHUB_OUTPUT"
       - name: Build and verify testing package
         env:
           VERSION: ${{ steps.version.outputs.version }}
@@ -51,14 +50,17 @@ jobs:
           mv "aio-debian-gui_${VERSION}_all.deb" "aio-debian-gui_${VERSION/\~/-}_all.deb"
           sha256sum "aio-debian-gui_${VERSION/\~/-}_all.deb" > SHA256SUMS
           sha256sum --check SHA256SUMS
+          dpkg-deb --fsys-tarfile "aio-debian-gui_${VERSION/\~/-}_all.deb" |
+            tar -xOf - ./usr/share/aio-debian-gui/release-notes.txt |
+            tail -n +2 > testing-notes.md
+          test -s testing-notes.md
       - name: Publish prerelease
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
           TAG: ${{ steps.version.outputs.tag }}
-          STABLE: ${{ steps.version.outputs.stable }}
         run: |
           set -euo pipefail
           gh release create "$TAG" "dist/aio-debian-gui_${VERSION/\~/-}_all.deb" dist/SHA256SUMS \
             --target "$GITHUB_SHA" --prerelease --title "AiO Debian GUI $VERSION (testing)" \
-            --notes "Versión de prueba basada en la última publicación estable $STABLE. No se publica en el repositorio APT estable."
+            --notes-file dist/testing-notes.md

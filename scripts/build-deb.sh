@@ -47,6 +47,22 @@ for name, original, replacement in files:
 PY
 fi
 
+NOTAS="$STAGE/usr/share/aio-debian-gui/release-notes.txt"
+awk -v version="${PUBLIC_VERSION}" -v seccion="${PUBLIC_VERSION%%~*}" '
+    $0 == "## " seccion { activo = 1; encontrados++; next }
+    /^## / { activo = 0 }
+    activo && NF {
+        if (!contenido++) print version
+        sub(/^- /, "• ")
+        gsub(/`/, "")
+        print
+    }
+    END { if (encontrados != 1 || !contenido) exit 1 }
+' CHANGELOG.md > "$NOTAS" || {
+    echo "El CHANGELOG debe contener una única sección con novedades para ${PUBLIC_VERSION%%~*}." >&2
+    exit 1
+}
+
 # Permisos normalizados (git/zip no los conservan siempre)
 find "$STAGE" -type d -exec chmod 755 {} +
 find "$STAGE" -type f -exec chmod 644 {} +

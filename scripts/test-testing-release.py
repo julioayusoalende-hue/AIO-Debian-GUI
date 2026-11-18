@@ -32,6 +32,10 @@ with tempfile.TemporaryDirectory() as directory:
         if text.count(old) != 1:
             raise RuntimeError(f"Versión incompatible en {path}")
         path.write_text(text.replace(old, new))
+    (work / "CHANGELOG.md").write_text(
+        "## 1.0.4\n\n- Novedades testing\n\n## 1.0.3\n\n- Novedades estables\n",
+        encoding="utf-8",
+    )
     (work / "scripts").mkdir()
     for name in ("build-deb.sh", "testing-version.sh"):
         shutil.copy(root / "scripts" / name, work / "scripts" / name)
@@ -56,6 +60,8 @@ with tempfile.TemporaryDirectory() as directory:
     run("dpkg", "--compare-versions", "1:1.0.4~testing.1.1", "lt", "1:1.0.4~testing.2.1", cwd=work)
     run("dpkg", "--compare-versions", "1:1.0.4~testing.1.1", "lt", "1:1.0.4", cwd=work)
     run("dpkg-deb", "-x", str(deb), str(work / "extracted"), cwd=work)
+    notes = work / "extracted/usr/share/aio-debian-gui/release-notes.txt"
+    assert notes.read_text(encoding="utf-8") == "1.0.4~testing.1.1\n• Novedades testing\n"
     core = work / "extracted/usr/lib/aio-debian-gui"
     assert "VERSION = '1.0.4~testing.1.1'" in (core / "aio_core/scheduler.py").read_text()
     assert "HELPER_VERSION=1.0.4~testing.1.1" in (core / "aio-debian-gui-helper").read_text()

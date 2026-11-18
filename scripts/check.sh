@@ -84,7 +84,7 @@ fi
 sh -n package/DEBIAN/prerm && bien "sintaxis prerm" || fallo "sintaxis prerm"
 sh -n package/DEBIAN/postinst && bien "sintaxis postinst" || fallo "sintaxis postinst"
 
-# La versión del control debe tener su entrada de novedades en la GUI y en el CHANGELOG
+# La versión del control debe tener una entrada única en el CHANGELOG.
 V=$(sed -n 's/^Version: //p' package/DEBIAN/control)
 V=${V#*:}
 SCHEDULER_VERSION=$(python3 -c 'import sys; sys.path.insert(0,"package/usr/lib/aio-debian-gui"); from aio_core.scheduler import VERSION; print(VERSION)')
@@ -96,8 +96,9 @@ SCHEDULER_VERSION=$(python3 -c 'import sys; sys.path.insert(0,"package/usr/lib/a
 grep -Fq -- '--check-update-self)' "$HELPER" &&
     bien "actualizador APT con comprobación previa" ||
     fallo "falta comprobación previa APT"
-grep -q "\"$V\":" "$GUI"   && bien "novedad $V en la GUI"      || fallo "falta la novedad $V en $GUI (NOVEDADES)"
-grep -q "^## $V" CHANGELOG.md && bien "entrada $V en CHANGELOG.md" || fallo "falta '## $V' en CHANGELOG.md"
+[ "$(grep -Fxc "## $V" CHANGELOG.md)" -eq 1 ] &&
+    bien "entrada única de $V en CHANGELOG.md" ||
+    fallo "se requiere una única sección '## $V' en CHANGELOG.md"
 
 if grep -Fq '("backports-kernel-mesa",' "$GUI" &&
    grep -Fq 'helper_admite_tarea(helper, "backports-kernel-mesa")' "$GUI" &&
