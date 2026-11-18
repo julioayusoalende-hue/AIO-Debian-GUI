@@ -1,14 +1,14 @@
 Package: aio-debian-gui-host
-Version: 2.12.0
+Version: 2.12.1
 Architecture: all
 Maintainer: Julio Ayuso <epdc@msn.com>
 Depends: bash, apt, ca-certificates, coreutils, diffutils, gpgv, grep, sed, util-linux, libnotify-bin, needrestart, python3, systemd, pkexec | policykit-1
 Conflicts: aio-debian-gui
-Filename: pool/main/a/aio-debian-gui/aio-debian-gui-host_2.12.0_all.deb
-Size: 28860
-MD5sum: 632b74dfcb8fb520a6b4521f63e651d3
-SHA1: 8d43dba4a5267bedff26c0b4de522a16c714e47e
-SHA256: ce346a9b9551a727148756528f468360f6bc7c106574b3638077c410d9605c7f
+Filename: pool/main/a/aio-debian-gui/aio-debian-gui-host_2.12.1_all.deb
+Size: 28884
+MD5sum: 3843139c14b59c11ea197e2997af473d
+SHA1: 091cff50e3fdbf3aabf2f6de508b7aac75c3fd2d
+SHA256: d23eae0d8e0c10f7b3d55905f164313fcf4ce6462b5e292a5bbfd11980fbeb0a
 Section: admin
 Priority: optional
 Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
