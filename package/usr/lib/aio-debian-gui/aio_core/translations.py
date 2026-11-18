@@ -1558,3 +1558,24 @@ TRADUCCIONES["zh"].update({
     "El diseño de Fastfetch está activo.": "Fastfetch 布局已启用。",
     "Copia de la configuración anterior: %s": "原有配置的备份：%s"
 })
+
+TRADUCCIONES["en"].update({
+    "Restaurar diseño anterior de Fastfetch": "Restore previous Fastfetch layout",
+    "No se pudo restaurar el diseño de Fastfetch.": "Could not restore the Fastfetch layout.",
+    "Se restauró el diseño anterior de Fastfetch.": "The previous Fastfetch layout was restored.",
+    "El diseño de AiO no está activo o se ha modificado.": "The AiO layout is inactive or has been modified."
+})
+
+TRADUCCIONES["fr"].update({
+    "Restaurar diseño anterior de Fastfetch": "Restaurer la disposition Fastfetch précédente",
+    "No se pudo restaurar el diseño de Fastfetch.": "Impossible de restaurer la disposition Fastfetch.",
+    "Se restauró el diseño anterior de Fastfetch.": "La disposition Fastfetch précédente a été restaurée.",
+    "El diseño de AiO no está activo o se ha modificado.": "La disposition AiO est inactive ou a été modifiée."
+})
+
+TRADUCCIONES["zh"].update({
+    "Restaurar diseño anterior de Fastfetch": "恢复之前的 Fastfetch 布局",
+    "No se pudo restaurar el diseño de Fastfetch.": "无法恢复 Fastfetch 布局。",
+    "Se restauró el diseño anterior de Fastfetch.": "已恢复之前的 Fastfetch 布局。",
+    "El diseño de AiO no está activo o se ha modificado.": "AiO 布局未启用或已被修改。"
+})

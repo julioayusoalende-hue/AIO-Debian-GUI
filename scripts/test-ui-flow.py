@@ -92,6 +92,17 @@ with patch.object(app.Vte.Terminal, 'copy_clipboard_format') as copiar, \
         assert str(copia) in mensaje.call_args.args[-1]
         ventana._aplicar_diseno_fastfetch(None)
         assert list(config.parent.glob('*.bak')) == [copia]
+        ventana._restaurar_diseno_fastfetch(None)
+        assert config.read_text(encoding='utf-8') == '// Configuración anterior\n'
+        assert copia.exists()
+        config.unlink()
+        ventana._aplicar_diseno_fastfetch(None)
+        ventana._restaurar_diseno_fastfetch(None)
+        assert not config.exists()
+        ventana._aplicar_diseno_fastfetch(None)
+        config.write_text('// Diseño editado\n', encoding='utf-8')
+        ventana._restaurar_diseno_fastfetch(None)
+        assert config.read_text(encoding='utf-8') == '// Diseño editado\n'
     ventana.destroy()
 
 for formato in ('appimage', 'flatpak', 'deb'):

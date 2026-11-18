@@ -38,7 +38,7 @@ CORE_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file_
 if CORE_DIR not in sys.path:
     sys.path.insert(0, CORE_DIR)
 from aio_core import history as core_history, preferences as core_preferences, updates as core_updates, diagnostics as core_diagnostics, preflight as core_preflight, scheduler as core_scheduler, host_integration as core_host_integration  # noqa: E402
-from aio_core.fastfetch import instalar_layout  # noqa: E402
+from aio_core.fastfetch import instalar_layout, restaurar_layout  # noqa: E402
 from aio_core.gtk_appearance import aplicar_tema  # noqa: E402
 from aio_core.gtk_scheduler import ControladorProgramacion  # noqa: E402
 from aio_core.translations import TRADUCCIONES  # noqa: E402
@@ -81,6 +81,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.0.4": "Restaura el diseño anterior de Fastfetch e incluye los iconos de Kitty y Ghostty.",
     "1.0.3": "Edición en la terminal y diseño de Fastfetch aplicable desde mantenimiento.",
     "1.0.2": "Nueva cabecera y opciones para instalar Kitty y Ghostty desde Apps recomendadas.",
     "1.0.1": "Renueva la pestaña de mantenimiento y amplía la consola de salida.",
@@ -373,7 +374,8 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "ghostty", "name": "Ghostty",
-        "icon": "com.mitchellh.ghostty", "fallback_icon": "utilities-terminal",
+        "icon": "com.mitchellh.ghostty", "bundled_icon": "ghostty.svg",
+        "fallback_icon": "utilities-terminal",
         "description": "Terminal con aceleración por GPU, pestañas y paneles divididos.",
         "channels": [],
     },
@@ -411,7 +413,8 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "kitty", "name": "Kitty",
-        "icon": "kitty", "fallback_icon": "utilities-terminal",
+        "icon": "kitty", "bundled_icon": "kitty.svg",
+        "fallback_icon": "utilities-terminal",
         "description": "Terminal con aceleración por GPU, atajos configurables y soporte para imágenes.",
         "channels": [
             {"type": "deb", "package": "kitty", "command": "kitty"},
@@ -2435,6 +2438,12 @@ class VentanaPrincipal(Gtk.Window):
         fastfetch.set_halign(Gtk.Align.START)
         fastfetch.connect("clicked", self._aplicar_diseno_fastfetch)
         caja.pack_start(fastfetch, False, False, 0)
+        restaurar = Gtk.Button(label=traducir("Restaurar diseño anterior de Fastfetch"))
+        restaurar.set_halign(Gtk.Align.START)
+        restaurar.get_child().set_line_wrap(True)
+        restaurar.get_child().set_max_width_chars(26)
+        restaurar.connect("clicked", self._restaurar_diseno_fastfetch)
+        caja.pack_start(restaurar, False, False, 0)
 
         ruta_logo, nombre_logo = logo_distribucion(self.distribucion)
         if ruta_logo and os.path.isfile(ruta_logo):
@@ -2474,6 +2483,18 @@ class VentanaPrincipal(Gtk.Window):
         if copia:
             mensaje += "\n" + traducir("Copia de la configuración anterior: %s") % copia
         self._mensaje(Gtk.MessageType.INFO, titulo, mensaje)
+
+    def _restaurar_diseno_fastfetch(self, _boton):
+        titulo = traducir("Diseño de Fastfetch")
+        try:
+            restaurado = restaurar_layout(FASTFETCH_LAYOUT, GLib.get_user_config_dir())
+        except (OSError, RuntimeError, ValueError) as error:
+            self._mensaje(Gtk.MessageType.ERROR, titulo,
+                          traducir("No se pudo restaurar el diseño de Fastfetch.") + "\n" + str(error))
+            return
+        mensaje = ("Se restauró el diseño anterior de Fastfetch." if restaurado
+                   else "El diseño de AiO no está activo o se ha modificado.")
+        self._mensaje(Gtk.MessageType.INFO, titulo, traducir(mensaje))
 
     def _tarjeta_seleccion(self):
         marco, caja = tarjeta_mantenimiento(8)

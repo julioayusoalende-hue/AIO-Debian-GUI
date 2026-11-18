@@ -1,5 +1,10 @@
 # Cambios
 
+## 1.0.4
+
+- Añade los iconos de Kitty y Ghostty a Apps recomendadas.
+- Permite restaurar el diseño anterior de Fastfetch desde Configuración y mantenimiento. Recupera la copia guardada, o vuelve al diseño predeterminado si antes no había configuración personal.
+
 ## 1.0.3
 
 - Añade un menú de edición y atajos para copiar, pegar y seleccionar texto en la terminal integrada.
