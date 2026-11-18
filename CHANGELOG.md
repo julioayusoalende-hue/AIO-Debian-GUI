@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.0.6
+
+- El aviso Comprobaciones de seguridad muestra la simulación APT completa en un panel desplazable, con Cancelar y Continuar siempre visibles.
+
 ## 1.0.5
 
 - La interfaz simple deja visible solo Configuración y mantenimiento y oculta la salida de la consola, incluso cuando una tarea falla.
@@ -529,7 +533,7 @@ Añade una opción para instalar el kernel de la arquitectura y los controladore
 disponibles desde Debian Backports. La opción está desactivada por defecto y avisa
 que puede requerir reiniciar.
 
-## 1.0.6
+## 1.0.6 (serie anterior)
 Añade una opción para permitir, tras una autorización inicial, tareas sin contraseña
 para el usuario actual y solo en la sesión local activa. El AppImage reutiliza el
 asistente del sistema aunque sea de otra versión; la opción nueva verifica que el

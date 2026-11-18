@@ -334,6 +334,28 @@ for language in ('es', 'en', 'fr', 'zh'):
         w._terminar_preflight(['upgrade'], app.core_preflight.Report(True, [warning]), None)
     blocked_message.assert_called_once()
     continue_maintenance.assert_not_called()
+    if language == 'es':
+        def comprobar_scroll(dialogo):
+            dialogo.show_all()
+            settle()
+            scroll = next(widget for widget in dialogo.get_message_area().get_children()
+                          if isinstance(widget, Gtk.ScrolledWindow))
+            ajuste = scroll.get_vadjustment()
+            assert ajuste.get_upper() > ajuste.get_page_size()
+            ajuste.set_value(ajuste.get_upper() - ajuste.get_page_size())
+            assert ajuste.get_value() > 0
+            buf = scroll.get_child().get_buffer()
+            assert buf.get_text(*buf.get_bounds(), True).endswith('Paquete 261')
+            for respuesta in (Gtk.ResponseType.CANCEL, Gtk.ResponseType.OK):
+                assert dialogo.get_widget_for_response(respuesta).get_mapped()
+            return Gtk.ResponseType.CANCEL
+
+        w.en_curso = True
+        informe = app.core_preflight.Report(False, ['Resultado de la simulación'],
+                                           [f'Paquete {n}' for n in range(1, 262)])
+        with patch.object(Gtk.MessageDialog, 'run', comprobar_scroll):
+            w._terminar_preflight(['upgrade'], informe, None)
+        assert not w.en_curso
     w.en_curso = False
 
     for width in (1160, 700, 600, 1161, 1400):

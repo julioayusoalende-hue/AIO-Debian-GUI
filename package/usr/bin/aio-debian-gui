@@ -3060,7 +3060,30 @@ class VentanaPrincipal(Gtk.Window):
             dialogo_seguro.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
             dialogo_seguro.add_button(traducir("Continuar"), Gtk.ResponseType.OK)
             dialogo_seguro.set_default_response(Gtk.ResponseType.CANCEL)
-            dialogo_seguro.format_secondary_text("\n".join(informe.messages + ([traducir("Detalle de la simulación APT:")] + informe.preview[:100] if informe.preview else [])))
+            lineas = list(informe.messages)
+            if informe.preview:
+                lineas.append(traducir("Detalle de la simulación APT:"))
+                lineas.extend(informe.preview)
+            detalle = Gtk.TextView(editable=False, cursor_visible=False)
+            detalle.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+            detalle.set_left_margin(8)
+            detalle.set_right_margin(8)
+            detalle.set_top_margin(6)
+            detalle.set_bottom_margin(6)
+            detalle.get_buffer().set_text("\n".join(lineas))
+
+            scroll = Gtk.ScrolledWindow()
+            scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+            scroll.set_overlay_scrolling(False)
+            scroll.set_shadow_type(Gtk.ShadowType.IN)
+            ventana = self.get_window()
+            monitor = self.get_display().get_monitor_at_window(ventana) if ventana else None
+            area = monitor.get_workarea() if monitor else None
+            scroll.set_min_content_width(min(540, area.width * 4 // 5) if area else 540)
+            scroll.set_min_content_height(min(380, area.height * 2 // 5) if area else 320)
+            scroll.add(detalle)
+            dialogo_seguro.get_message_area().pack_start(scroll, True, True, 0)
+            scroll.show_all()
             aceptado = dialogo_seguro.run() == Gtk.ResponseType.OK
             dialogo_seguro.destroy()
             if not aceptado:
