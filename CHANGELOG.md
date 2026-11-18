@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.0.11
+
+- Añade Deluge, qBittorrent, btop y htop a Apps recomendadas con instalación vía APT.
+
 ## 1.0.10
 
 - Amplía el área desplazable de «Comprobaciones de seguridad» para leer el informe de APT con los botones Cancelar y Continuar siempre visibles.
@@ -533,7 +537,7 @@ personal.
 ## 1.0.12
 Corrige la visualización de la consola en modo completo y al desactivar el modo simple.
 
-## 1.0.11
+## 1.0.11 (serie anterior)
 Corrige la visualización del menú de preferencias.
 
 ## 1.0.10 (serie anterior)

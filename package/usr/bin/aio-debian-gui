@@ -268,6 +268,15 @@ APPS_RECOMENDADAS = [
         ],
     },
     {
+        "id": "btop", "name": "btop",
+        "icon": "btop", "bundled_icon": "btop.png",
+        "fallback_icon": "utilities-system-monitor",
+        "description": "Monitor de recursos en terminal con gráficos de CPU, memoria, disco y red.",
+        "channels": [
+            {"type": "deb", "package": "btop", "command": "btop"},
+        ],
+    },
+    {
         "id": "celluloid", "name": "Celluloid",
         "icon": "io.github.celluloid_player.Celluloid",
         "bundled_icon": "celluloid.png",
@@ -276,6 +285,15 @@ APPS_RECOMENDADAS = [
         "channels": [
             {"type": "deb", "package": "celluloid", "command": "celluloid"},
             {"type": "flatpak", "app_id": "io.github.celluloid_player.Celluloid"},
+        ],
+    },
+    {
+        "id": "deluge", "name": "Deluge",
+        "icon": "deluge", "bundled_icon": "deluge.png",
+        "fallback_icon": "folder-download",
+        "description": "Cliente BitTorrent con complementos y gestión remota.",
+        "channels": [
+            {"type": "deb", "package": "deluge", "command": "deluge"},
         ],
     },
     {
@@ -339,6 +357,15 @@ APPS_RECOMENDADAS = [
         ],
     },
     {
+        "id": "htop", "name": "htop",
+        "icon": "htop", "bundled_icon": "htop.png",
+        "fallback_icon": "utilities-system-monitor",
+        "description": "Visor interactivo de procesos y del uso de CPU y memoria en terminal.",
+        "channels": [
+            {"type": "deb", "package": "htop", "command": "htop"},
+        ],
+    },
+    {
         "id": "kitty", "name": "Kitty",
         "icon": "kitty", "bundled_icon": "kitty.svg",
         "fallback_icon": "utilities-terminal",
@@ -355,6 +382,15 @@ APPS_RECOMENDADAS = [
         "description": "Cliente de escritorio para reproducir contenido de tu biblioteca Plex.",
         "channels": [
             {"type": "flatpak", "app_id": "tv.plex.PlexDesktop"},
+        ],
+    },
+    {
+        "id": "qbittorrent", "name": "qBittorrent",
+        "icon": "qbittorrent", "bundled_icon": "qbittorrent.png",
+        "fallback_icon": "folder-download",
+        "description": "Cliente BitTorrent con gestión de colas y límites de velocidad.",
+        "channels": [
+            {"type": "deb", "package": "qbittorrent", "command": "qbittorrent"},
         ],
     },
     {

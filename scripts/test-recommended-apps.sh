@@ -15,14 +15,8 @@ asegurar_listas() {
     printf '%s\n' update >> "$TEST_DIR/calls"
 }
 
-for app in celluloid gimp handbrake kitty vlc; do
-    case "$app" in
-        celluloid) EXPECTED_PACKAGE=celluloid ;;
-        gimp) EXPECTED_PACKAGE=gimp ;;
-        handbrake) EXPECTED_PACKAGE=handbrake ;;
-        kitty) EXPECTED_PACKAGE=kitty ;;
-        vlc) EXPECTED_PACKAGE=vlc ;;
-    esac
+for app in btop celluloid deluge gimp handbrake htop kitty qbittorrent vlc; do
+    EXPECTED_PACKAGE="$app"
     : > "$TEST_DIR/calls"
     INSTALLED=1
     output=$(instalar_aplicacion_recomendada "$app")
@@ -48,7 +42,7 @@ if instalar_aplicacion_recomendada arbitrary >/dev/null 2>&1; then
     exit 1
 fi
 
-echo "✔ Instalación APT recomendada limitada a Celluloid, GIMP, HandBrake, Kitty y VLC"
+echo "✔ Instalación APT recomendada limitada a los paquetes autorizados"
 
 ubuntu_compatible_con_ghostty() { return 1; }
 if instalar_aplicacion_recomendada ghostty >/dev/null 2>&1; then
