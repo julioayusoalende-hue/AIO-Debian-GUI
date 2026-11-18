@@ -23,9 +23,7 @@
     <value key="flathub::verification::website">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</value>
   </custom>
   <releases>
-    <release version="2.12.1" date="2026-11-18"><description><p>Corrige la compatibilidad del asistente del anfitrión para que las tareas de mantenimiento no pidan instalar la integración repetidamente.</p></description></release>
-    <release version="2.12.0" date="2026-11-17"><description><p>El programador usa servicios systemd del usuario y no requiere privilegios para instalarse o cambiar horarios en DEB, Flatpak y AppImage.</p></description></release>
-    <release version="2.11.4" date="2026-11-17"><description><p>Detecta la integración gestionada por paquetes de Debian y utiliza su vía de actualización.</p></description></release>
+    <release version="2.12.2" date="2026-11-18"><description><p>Recupera como base la versión 2.11.3, última versión estable conocida.</p></description></release>
     <release version="2.11.3" date="2026-11-17"><description><p>Corrige la consulta del estado del programador en Flatpak y AppImage.</p></description></release>
     <release version="2.11.2" date="2026-11-17"><description><p>Verificación del programador tras instalar la integración y diagnóstico visible si la programación sigue bloqueada.</p></description></release>
     <release version="2.11.1" date="2026-11-17"><description><p>Arranque sin solicitud de administrador y recuperación de horarios con ejecuciones previas en systemd.</p></description></release>

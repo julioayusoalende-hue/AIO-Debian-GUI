@@ -33,7 +33,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 LISTAS_ACTUALIZADAS=0
 UPGRADE_PLAN=""
 REINICIO_REQUERIDO=0
-HELPER_VERSION=2.12.1
+HELPER_VERSION=2.12.2
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -173,6 +173,15 @@ pkexec_username() {
         return 1
     fi
     printf '%s\n' "$username"
+}
+
+ejecutar_programador() {
+    local host_scheduler=/usr/lib/aio-debian-gui/aio-host-scheduler
+    if [ -x "$host_scheduler" ]; then
+        "$host_scheduler" "$@"
+    else
+        /usr/bin/python3 -I "$SCHEDULER_MODULE" "$@"
+    fi
 }
 
 instalar_componentes_polkit() {
@@ -1305,15 +1314,9 @@ main() {
         return 0
     fi
     if [ "${1:-}" = "--maintenance-api" ] && [ "$#" -eq 1 ]; then
-        printf '%s\n' 2
+        printf '%s\n' 1
         return 0
     fi
-    case "${1:-}" in
-        --schedule-save|--schedule-remove)
-            err "La programación se modifica desde la cuenta del usuario, no desde el asistente privilegiado."
-            return 2
-            ;;
-    esac
     # Actualizar exclusivamente Flatpak del usuario sin elevar privilegios.
     # Sin --system ni instalaciones de root; no requiere polkit ni pkexec.
     if [ "${1:-}" = "--flatpak-user-update" ] && [ "$#" -eq 1 ]; then
@@ -1396,6 +1399,24 @@ main() {
             chmod 0600 "$MAINTENANCE_LOCK" || exit 1
             flock -n 9 || { err "Ya hay otro mantenimiento de AiO en curso."; exit 1; }
             refrescar_indices_diagnostico
+            exit $?
+            ;;
+        --schedule-save)
+            [ "$#" -eq 2 ] || { err "Configuración de programación no válida."; exit 2; }
+            [ -r "$SCHEDULER_MODULE" ] || { err "Instala la integración de programación de AiO en el anfitrión."; exit 1; }
+            local schedule_uid
+            schedule_uid=$(pkexec_uid) || exit 1
+            echo "##SCHEDULE:authorized"
+            ejecutar_programador --configure "$schedule_uid" "$2"
+            exit $?
+            ;;
+        --schedule-remove)
+            [ "$#" -eq 1 ] || { err "Argumentos de programación no válidos."; exit 2; }
+            [ -r "$SCHEDULER_MODULE" ] || { err "Instala la integración de programación de AiO en el anfitrión."; exit 1; }
+            local schedule_uid
+            schedule_uid=$(pkexec_uid) || exit 1
+            echo "##SCHEDULE:authorized"
+            ejecutar_programador --remove "$schedule_uid"
             exit $?
             ;;
         --check-update-self)

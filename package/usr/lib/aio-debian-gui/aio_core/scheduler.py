@@ -1,4 +1,4 @@
-"""Programación systemd por usuario, sin instalar componentes privilegiados."""
+"""Programación systemd con configuración validada y persistencia exclusiva de root."""
 import argparse
 from contextlib import contextmanager, suppress
 from datetime import datetime, timezone
@@ -9,17 +9,19 @@ from pathlib import Path
 import pwd
 import re
 import shutil
-import stat
 import subprocess
 import sys
 import tempfile
 
-VERSION = '2.12.1'
-HOST_PROTOCOL = 2
+VERSION = '2.12.2'
+
+
+HOST_PROTOCOL = 1
 _LEGACY_VERSIONS = frozenset(f'2.10.{patch}' for patch in range(12, 16))
 
 
 def compatible_version(value):
+    """Recognize hosts released before the protocol was explicitly advertised."""
     return isinstance(value, str) and (value == VERSION or value in _LEGACY_VERSIONS)
 
 
@@ -29,24 +31,13 @@ def compatible_host(report):
     return compatible_version(report.get('version'))
 
 
-HOME = Path.home()
-CONFIG_HOME = Path(os.environ.get('XDG_CONFIG_HOME', HOME / '.config'))
-STATE_HOME = Path(os.environ.get('XDG_STATE_HOME', HOME / '.local/state'))
-CONFIG_DIR = CONFIG_HOME / 'aio-debian-gui'
-STATE_DIR = STATE_HOME / 'aio-debian-gui'
-UNIT_DIR = CONFIG_HOME / 'systemd/user'
-SERVICE = UNIT_DIR / 'aio-debian-gui-maintenance.service'
-TIMER = UNIT_DIR / 'aio-debian-gui-maintenance.timer'
-LOCK = STATE_DIR / 'maintenance.lock'
-LEGACY_CONFIG_DIR = Path('/etc/aio-debian-gui/schedules')
-LEGACY_STATE_DIR = Path('/var/lib/aio-debian-gui/schedules')
-LEGACY_LOCK = Path('/run/aio-debian-gui/maintenance.lock')
-SERVICE_NAME = 'aio-debian-gui-maintenance.service'
-TIMER_NAME = 'aio-debian-gui-maintenance.timer'
-PKEXEC = '/usr/bin/pkexec'
-APT_GET = '/usr/bin/apt-get'
-SNAP = '/usr/bin/snap'
-NEEDRESTART = '/usr/sbin/needrestart'
+CONFIG_DIR = Path('/etc/aio-debian-gui/schedules')
+STATE_DIR = Path('/var/lib/aio-debian-gui/schedules')
+UNIT_DIR = Path('/etc/systemd/system')
+SERVICE = Path('/usr/lib/systemd/system/aio-debian-gui-maintenance@.service')
+HELPER = '/usr/lib/aio-debian-gui/aio-debian-gui-helper'
+LOCK = '/run/aio-debian-gui/maintenance.lock'
+USER_RUNTIME_DIR = Path('/run/user')
 TASKS = ('upgrade', 'autoclean', 'flatpak-update', 'snap-update', 'rebootcheck')
 DAYS = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 DEFAULT = {'enabled': False, 'frequency': 'weekly', 'weekday': 6,
@@ -59,37 +50,6 @@ def validate_uid(uid):
     if not re.fullmatch(r'[1-9][0-9]{0,9}', value) or int(value) >= 2**32 - 1:
         raise ValueError('UID no válido.')
     return value
-
-
-def _require_owner(uid):
-    if int(validate_uid(uid)) != os.getuid():
-        raise PermissionError('Solo puedes modificar tu propia programación.')
-
-
-def _legacy_marker(uid):
-    try:
-        home = Path(pwd.getpwuid(int(validate_uid(uid))).pw_dir)
-    except KeyError:
-        raise ValueError('No se encontró la cuenta propietaria de la programación.')
-    return home / '.config/aio-debian-gui/legacy-disabled'
-
-
-def _legacy_disabled(uid):
-    try:
-        fd = os.open(_legacy_marker(uid), os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-    except FileNotFoundError:
-        return False
-    try:
-        info = os.fstat(fd)
-        return (stat.S_ISREG(info.st_mode) and info.st_uid == int(validate_uid(uid))
-                and info.st_mode & 0o077 == 0
-                and os.read(fd, 16) == b'disabled\n')
-    finally:
-        os.close(fd)
-
-
-def _disable_legacy(uid):
-    _atomic(_legacy_marker(uid), 'disabled\n')
 
 
 def validate_config(config):
@@ -135,30 +95,13 @@ def timer_name(uid):
     return f'aio-debian-gui-maintenance-{validate_uid(uid)}.timer'
 
 
-def timer_text(config, legacy_config=None):
-    if legacy_config is not None:
-        uid = validate_uid(config)
-        config = validate_config(legacy_config)
-        return ('[Unit]\nDescription=AiO Debian GUI scheduled maintenance\n\n'
-                '[Timer]\n' + f'OnCalendar={calendar(config)}\n'
-                f'Unit=aio-debian-gui-maintenance@{uid}.service\n'
-                'Persistent=true\nAccuracySec=1min\nWakeSystem=false\n\n'
-                '[Install]\nWantedBy=timers.target\n')
+def timer_text(uid, config):
+    uid = validate_uid(uid)
     return ('[Unit]\nDescription=AiO Debian GUI scheduled maintenance\n\n'
             '[Timer]\n' + f'OnCalendar={calendar(config)}\n'
-            f'Unit={SERVICE_NAME}\n'
+            f'Unit=aio-debian-gui-maintenance@{uid}.service\n'
             'Persistent=true\nAccuracySec=1min\nWakeSystem=false\n\n'
             '[Install]\nWantedBy=timers.target\n')
-
-
-def service_text():
-    script = '%h/.local/share/aio-debian-gui/scheduler/aio_core/scheduler.py'
-    return ('[Unit]\nDescription=AiO Debian GUI scheduled maintenance\n'
-            'After=graphical-session.target\n\n'
-            '[Service]\nType=oneshot\n'
-            f'ExecStart=/usr/bin/python3 -I {script} --run %U\n'
-            'TimeoutStartSec=2h\nNice=10\nUMask=0077\n'
-            'StandardOutput=journal\nStandardError=journal\n')
 
 
 def _read(path):
@@ -173,14 +116,14 @@ def _read(path):
 
 
 def _atomic(path, text):
-    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    path.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix='.aio-', dir=path.parent)
     try:
         with os.fdopen(fd, 'w', encoding='utf-8') as stream:
             stream.write(text)
             stream.flush()
             os.fsync(stream.fileno())
-        os.chmod(temporary, 0o600)
+        os.chmod(temporary, 0o644)
         os.replace(temporary, path)
     finally:
         if os.path.exists(temporary):
@@ -188,10 +131,10 @@ def _atomic(path, text):
 
 
 def _systemctl(*args):
-    result = subprocess.run(['systemctl', '--user', *args], capture_output=True, text=True,
+    result = subprocess.run(['systemctl', *args], capture_output=True, text=True,
                             timeout=25, env={**os.environ, 'LC_ALL': 'C'})
     if result.returncode:
-        raise RuntimeError((result.stderr or result.stdout or 'systemctl --user falló.').strip()[-600:])
+        raise RuntimeError((result.stderr or result.stdout or 'systemctl falló.').strip()[-600:])
     return result.stdout.strip()
 
 
@@ -201,8 +144,7 @@ def host_supported():
         for line in Path('/etc/os-release').read_text().splitlines():
             key, _, value = line.partition('=')
             values[key] = value.strip().strip('"').strip("'")
-        return values.get('ID') == 'debian' or (
-            values.get('ID') == 'ubuntu' and values.get('VERSION_ID') in ('24.04', '26.04'))
+        return values.get('ID') == 'debian' or (values.get('ID') == 'ubuntu' and values.get('VERSION_ID') in ('24.04', '26.04'))
     except OSError:
         return False
 
@@ -210,12 +152,12 @@ def host_supported():
 def availability_error():
     if not host_supported():
         return 'El sistema del anfitrión no es compatible con el programador.'
-    if not shutil.which('systemctl'):
-        return 'El anfitrión no tiene systemctl disponible.'
-    try:
-        _systemctl('show-environment')
-    except (OSError, RuntimeError, subprocess.SubprocessError):
-        return 'La sesión del usuario no tiene un gestor systemd activo.'
+    if not shutil.which('systemctl') or not Path('/run/systemd/system').is_dir():
+        return 'El anfitrión no tiene systemd disponible.'
+    modules = Path(HELPER).parent / 'aio_core'
+    for path in (SERVICE, Path(HELPER), *(modules / name for name in ('__init__.py', 'scheduler.py', 'preflight.py'))):
+        if not path.is_file() or not os.access(path, os.R_OK):
+            return 'No se puede leer el archivo del programador: ' + str(path)
     return None
 
 
@@ -223,11 +165,17 @@ def available():
     return availability_error() is None
 
 
+def _require_root():
+    if os.geteuid() != 0:
+        raise PermissionError('Se necesita autorización de administrador.')
+
+
 @contextmanager
 def _settings_lock(uid):
-    _require_owner(uid)
-    STATE_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
-    fd = os.open(STATE_DIR / 'schedule.lock', os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    directory = Path(LOCK).parent
+    directory.mkdir(mode=0o755, parents=True, exist_ok=True)
+    fd = os.open(directory / ('schedule-' + validate_uid(uid) + '.lock'),
+                 os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
         yield
@@ -236,88 +184,80 @@ def _settings_lock(uid):
 
 
 def configure(uid, config):
+    _require_root()
     uid = validate_uid(uid)
-    _require_owner(uid)
     config = validate_config(config)
     with _settings_lock(uid):
-        _disable_legacy(uid)
         _configure(uid, config)
 
 
 def _configure(uid, config):
-    _require_owner(uid)
+    _require_root()
+    uid = validate_uid(uid)
+    pwd.getpwuid(int(uid))
     config = validate_config(config)
     if not available():
-        raise RuntimeError(availability_error() or 'systemd --user no está disponible.')
+        raise RuntimeError('La programación requiere systemd y la integración de AiO en el anfitrión.')
     if config['enabled'] and 'flatpak-update' in config['tasks'] and not shutil.which('flatpak'):
-        raise RuntimeError('Flatpak no está instalado en este usuario.')
-    path = CONFIG_DIR / 'schedule.json'
+        raise RuntimeError('Flatpak no está instalado en el anfitrión.')
+    path, unit = CONFIG_DIR / (uid + '.json'), UNIT_DIR / timer_name(uid)
     old_config = _read(path)
     if old_config is not None:
         old_config = validate_config(old_config)
-    old_timer = TIMER.read_text() if TIMER.exists() else None
-    old_service = SERVICE.read_text() if SERVICE.exists() else None
+    old_unit = unit.read_text() if unit.exists() else None
     try:
         _atomic(path, json.dumps(config) + '\n')
-        _atomic(SERVICE, service_text())
-        _atomic(TIMER, timer_text(config))
+        _atomic(unit, timer_text(uid, config))
         _systemctl('daemon-reload')
         if config['enabled']:
-            _systemctl('enable', '--now', TIMER_NAME)
-            _systemctl('restart', TIMER_NAME)
+            _systemctl('enable', '--now', timer_name(uid))
+            # Reiniciar el temporizador aplica una nueva hora incluso si ya estaba activo.
+            _systemctl('restart', timer_name(uid))
         else:
-            _systemctl('disable', '--now', TIMER_NAME)
+            _systemctl('disable', '--now', timer_name(uid))
     except (OSError, RuntimeError, subprocess.SubprocessError):
+        # Detener el temporizador nuevo mientras su definición sigue disponible.
         with suppress(OSError, RuntimeError, subprocess.SubprocessError):
-            _systemctl('disable', '--now', TIMER_NAME)
+            _systemctl('disable', '--now', timer_name(uid))
         if old_config is None:
             path.unlink(missing_ok=True)
         else:
             _atomic(path, json.dumps(old_config) + '\n')
-        if old_timer is None:
-            TIMER.unlink(missing_ok=True)
+        if old_unit is None:
+            unit.unlink(missing_ok=True)
         else:
-            _atomic(TIMER, old_timer)
-        if old_service is None:
-            SERVICE.unlink(missing_ok=True)
-        else:
-            _atomic(SERVICE, old_service)
+            _atomic(unit, old_unit)
         _systemctl('daemon-reload')
         if old_config and old_config['enabled']:
-            _systemctl('enable', '--now', TIMER_NAME)
-            _systemctl('restart', TIMER_NAME)
+            _systemctl('enable', '--now', timer_name(uid))
+            _systemctl('restart', timer_name(uid))
         raise
 
 
 def remove(uid):
+    _require_root()
     uid = validate_uid(uid)
-    _require_owner(uid)
     with _settings_lock(uid):
-        _disable_legacy(uid)
-        if TIMER.exists():
-            _systemctl('disable', '--now', TIMER_NAME)
-        (CONFIG_DIR / 'schedule.json').unlink(missing_ok=True)
-        (STATE_DIR / 'schedule.json').unlink(missing_ok=True)
-        SERVICE.unlink(missing_ok=True)
-        TIMER.unlink(missing_ok=True)
-        _systemctl('daemon-reload')
+        _remove(uid)
+
+
+def _remove(uid):
+    _require_root()
+    uid = validate_uid(uid)
+    unit = UNIT_DIR / timer_name(uid)
+    if unit.exists():
+        _systemctl('disable', '--now', timer_name(uid))
+    (CONFIG_DIR / (uid + '.json')).unlink(missing_ok=True)
+    unit.unlink(missing_ok=True)
+    _systemctl('daemon-reload')
 
 
 def status(uid):
     uid = validate_uid(uid)
-    _require_owner(uid)
-    config = _read(CONFIG_DIR / 'schedule.json')
-    if config is None and not _legacy_disabled(uid):
-        legacy = _read(LEGACY_CONFIG_DIR / (uid + '.json'))
-        if legacy is not None:
-            config = validate_config(legacy)
-            configure(uid, config)
-            old_result = _read(LEGACY_STATE_DIR / (uid + '.json'))
-            if old_result is not None:
-                _atomic(STATE_DIR / 'schedule.json', json.dumps(old_result) + '\n')
+    config = _read(CONFIG_DIR / (uid + '.json'))
     if config is not None:
         config = validate_config(config)
-    last = _read(STATE_DIR / 'schedule.json')
+    last = _read(STATE_DIR / (uid + '.json'))
     result = {'version': VERSION, 'protocol': HOST_PROTOCOL, 'available': available(),
               'config': config, 'last_result': last,
               'next_run': '', 'timer_active': False}
@@ -325,12 +265,10 @@ def status(uid):
         result['availability_error'] = availability_error()
     if config and result['available']:
         try:
-            result['timer_active'] = _systemctl(
-                'show', TIMER_NAME, '--property=ActiveState', '--value') == 'active'
-            result['next_run'] = _systemctl(
-                'show', TIMER_NAME, '--property=NextElapseUSecRealtime', '--value')
+            result['timer_active'] = _systemctl('show', timer_name(uid), '--property=ActiveState', '--value') == 'active'
+            result['next_run'] = _systemctl('show', timer_name(uid), '--property=NextElapseUSecRealtime', '--value')
             if last and last.get('status') == 'running':
-                active = _systemctl('show', SERVICE_NAME, '--property=ActiveState', '--value')
+                active = _systemctl('show', f'aio-debian-gui-maintenance@{uid}.service', '--property=ActiveState', '--value')
                 if active not in ('active', 'activating'):
                     result['last_result'] = {**last, 'status': 'interrupted'}
         except (OSError, RuntimeError, subprocess.SubprocessError):
@@ -338,127 +276,143 @@ def status(uid):
     return result
 
 
-def _run_admin(command):
-    if not _trusted_system_command(PKEXEC):
-        raise RuntimeError('No se encuentra pkexec para autorizar esta tarea del sistema.')
-    result = subprocess.run([PKEXEC, *command], capture_output=True, text=True,
-                            timeout=3600, check=False)
-    output = (result.stdout or '') + (result.stderr or '')
-    if output:
-        print(output, end='' if output.endswith('\n') else '\n', flush=True)
-    if result.returncode:
-        raise RuntimeError((output.strip() or 'La tarea requiere autorización de administrador.')[-1200:])
-    return output
-
-
-def _trusted_system_command(path):
-    try:
-        info = os.stat(path)
-        return (stat.S_ISREG(info.st_mode) and info.st_uid == 0
-                and info.st_mode & 0o022 == 0 and os.access(path, os.X_OK))
-    except OSError:
-        return False
-
-
-def _run_task(task):
-    if task == 'upgrade':
-        _run_admin([APT_GET, '-o', 'APT::Update::Error-Mode=any', 'update'])
-        _run_admin(['/usr/bin/env', 'DEBIAN_FRONTEND=noninteractive',
-                    'APT_LISTCHANGES_FRONTEND=none', 'NEEDRESTART_MODE=l',
-                    APT_GET, '-y', '-o', 'Dpkg::Use-Pty=0',
-                    '-o', 'DPkg::options::=--force-confdef',
-                    '-o', 'DPkg::options::=--force-confold', 'upgrade'])
-    elif task == 'autoclean':
-        _run_admin([APT_GET, 'autoclean'])
-    elif task == 'flatpak-update':
-        flatpak = shutil.which('flatpak')
-        if not flatpak:
-            raise RuntimeError('Flatpak no está instalado en este usuario.')
-        for operation in (['update', '-y'], ['uninstall', '--unused', '-y']):
-            result = subprocess.run([flatpak, '--user', *operation],
-                                    capture_output=True, text=True, timeout=3600, check=False)
-            output = result.stdout + result.stderr
-            if output:
-                print(output, end='' if output.endswith('\n') else '\n', flush=True)
-            if result.returncode:
-                raise RuntimeError((output.strip() or 'No se pudieron actualizar las aplicaciones Flatpak.')[-1200:])
-    elif task == 'snap-update':
-        if not _trusted_system_command(SNAP):
-            raise RuntimeError('Snap no está instalado en el anfitrión.')
-        _run_admin([SNAP, 'refresh'])
-        listing = subprocess.run([SNAP, 'list', '--all'], capture_output=True,
-                                 text=True, timeout=30, check=False)
-        if listing.returncode:
-            raise RuntimeError((listing.stderr or listing.stdout or 'No se pudieron consultar las revisiones Snap.')[-1200:])
-        revisions = {}
-        rows = []
-        for line in listing.stdout.splitlines()[1:]:
-            fields = line.split()
-            if len(fields) < 6:
-                continue
-            name, _version, revision = fields[:3]
-            notes = fields[5:]
-            if 'disabled' not in notes or not re.fullmatch(r'[a-z0-9][a-z0-9_-]*', name):
-                continue
-            if not re.fullmatch(r'[1-9][0-9]{0,9}', revision):
-                continue
-            revision_number = int(revision)
-            revisions[name] = max(revisions.get(name, 0), revision_number)
-            rows.append((name, revision, revision_number))
-        for name, revision, number in rows:
-            if number != revisions[name]:
-                _run_admin([SNAP, 'remove', name, f'--revision={revision}'])
-    elif task == 'rebootcheck':
-        if not _trusted_system_command(NEEDRESTART):
-            raise RuntimeError('needrestart no está instalado en el anfitrión.')
-        output = _run_admin([NEEDRESTART, '-b'])
-        if not output.strip():
-            raise RuntimeError('needrestart no devolvió resultados.')
-        if re.search(r'^NEEDRESTART-KSTA: [23]$', output, re.MULTILINE):
-            return True
-        if re.search(r'^NEEDRESTART-SVC: (dbus|dbus-broker|gdm|gdm3|lightdm|sddm|systemd-logind|systemd-udevd)\.service$',
-                     output, re.MULTILINE):
-            return True
-        return Path('/var/run/reboot-required').is_file()
-    return False
-
-
-def _notify(title, body):
+def _notify_success(uid):
+    uid = validate_uid(uid)
+    runtime = USER_RUNTIME_DIR / uid
+    bus = runtime / 'bus'
     notify_send = shutil.which('notify-send')
-    if not notify_send:
+    runuser = shutil.which('runuser')
+    if not runtime.is_dir() or not bus.is_socket():
+        print('No hay una sesión de usuario activa para notificar el mantenimiento.', file=sys.stderr)
+        return
+    if not notify_send or not runuser:
+        print('No se pudo notificar el mantenimiento: faltan notify-send o runuser.', file=sys.stderr)
         return
     try:
-        subprocess.run([notify_send, '--app-name=AiO Debian GUI',
-                        '--urgency=normal', '--expire-time=10000', title, body],
-                       capture_output=True, text=True, timeout=15, check=False)
+        username = pwd.getpwuid(int(uid)).pw_name
+    except KeyError:
+        print(f'No se pudo notificar el mantenimiento: no existe el usuario con UID {uid}.', file=sys.stderr)
+        return
+    command = [
+        runuser, '-u', username, '--', '/usr/bin/env',
+        f'XDG_RUNTIME_DIR={runtime}',
+        f'DBUS_SESSION_BUS_ADDRESS=unix:path={bus}',
+        notify_send, '--app-name=AiO Debian GUI', '--urgency=normal',
+        '--expire-time=10000', 'Mantenimiento programado completado',
+        'El mantenimiento programado se ha realizado correctamente.',
+    ]
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=15, check=False)
     except (OSError, subprocess.SubprocessError) as exc:
-        print(f'No se pudo enviar la notificación: {str(exc)[:300]}', file=sys.stderr)
+        print(f'No se pudo notificar el mantenimiento: {str(exc)[:300]}', file=sys.stderr)
+        return
+    if result.returncode:
+        detail = (result.stderr or result.stdout or 'notify-send falló.').strip()[-300:]
+        print(f'No se pudo notificar el mantenimiento: {detail}', file=sys.stderr)
 
 
-def _run_legacy_schedule(uid):
-    config = _read(LEGACY_CONFIG_DIR / (uid + '.json'))
+def _launch_for_reboot(uid, launcher):
+    uid = validate_uid(uid)
+    runtime = USER_RUNTIME_DIR / uid
+    bus = runtime / 'bus'
+    runuser = shutil.which('runuser')
+    if not runtime.is_dir() or not bus.is_socket():
+        print('No hay una sesión de usuario activa para abrir AiO.', file=sys.stderr)
+        return
+    if not runuser:
+        print('No se pudo abrir AiO: falta runuser.', file=sys.stderr)
+        return
+    try:
+        username = pwd.getpwuid(int(uid)).pw_name
+    except KeyError:
+        print(f'No se pudo abrir AiO: no existe el usuario con UID {uid}.', file=sys.stderr)
+        return
+    env = [f'XDG_RUNTIME_DIR={runtime}',
+           f'DBUS_SESSION_BUS_ADDRESS=unix:path={bus}']
+    try:
+        deb = '/usr/bin/aio-debian-gui'
+        flatpak = shutil.which('flatpak')
+        app_id = 'io.github.julioayusoalende_hue.aio_debian_gui'
+        preferred = launcher['format'] if launcher else 'deb'
+        if preferred == 'appimage' and os.access(launcher['path'], os.X_OK):
+            command = [launcher['path']]
+        elif preferred == 'deb' and os.access(deb, os.X_OK):
+            command = [deb]
+        else:
+            installed = flatpak and subprocess.run(
+                [runuser, '-u', username, '--', flatpak, 'info', app_id],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10,
+            ).returncode == 0
+            if installed:
+                command = [flatpak, 'run', app_id]
+            elif os.access(deb, os.X_OK):
+                command = [deb]
+            else:
+                print('No se encontró una edición instalada de AiO para avisar del reinicio.', file=sys.stderr)
+                return
+        session_env = subprocess.run(
+            [runuser, '-u', username, '--', '/usr/bin/env',
+             f'XDG_RUNTIME_DIR={runtime}', f'DBUS_SESSION_BUS_ADDRESS=unix:path={bus}',
+             'systemctl', '--user', 'show-environment'],
+            capture_output=True, text=True, timeout=10, check=False)
+        if session_env.returncode == 0:
+            for line in session_env.stdout.splitlines():
+                key, separator, value = line.partition('=')
+                if separator and key in ('DISPLAY', 'WAYLAND_DISPLAY', 'XAUTHORITY',
+                                         'XDG_CURRENT_DESKTOP', 'XDG_SESSION_TYPE',
+                                         'XDG_DATA_DIRS'):
+                    env.append(f'{key}={value}')
+        if not any(value.startswith(('DISPLAY=', 'WAYLAND_DISPLAY=')) for value in env):
+            print('No hay una sesión gráfica disponible para abrir AiO.', file=sys.stderr)
+            return
+        systemd_run = shutil.which('systemd-run')
+        if not systemd_run:
+            print('No se pudo abrir AiO: falta systemd-run.', file=sys.stderr)
+            return
+        launch = [runuser, '-u', username, '--', '/usr/bin/env', *env,
+                  systemd_run, '--user', '--no-block', '--collect']
+        launch.extend('--setenv=' + value for value in env[2:])
+        launch.extend(['--', *command, '--scheduled-reboot-required'])
+        result = subprocess.run(launch, capture_output=True, text=True, timeout=15, check=False)
+        if result.returncode:
+            detail = (result.stderr or result.stdout or 'systemd-run falló.').strip()[-300:]
+            print(f'No se pudo abrir AiO para avisar del reinicio: {detail}', file=sys.stderr)
+    except (OSError, subprocess.SubprocessError) as exc:
+        print(f'No se pudo abrir AiO para avisar del reinicio: {str(exc)[:300]}', file=sys.stderr)
+
+
+def run_schedule(uid):
+    _require_root()
+    uid = validate_uid(uid)
+    config = _read(CONFIG_DIR / (uid + '.json'))
     if config is None or not validate_config(config)['enabled']:
         return 0
+    pwd.getpwuid(int(uid))
     config = validate_config(config)
-    state_path = LEGACY_STATE_DIR / (uid + '.json')
     result = {'started': datetime.now(timezone.utc).isoformat(), 'finished': None,
-              'status': 'running', 'detail': '', 'reboot_required': False,
-              'tasks': {task: 'not-run' for task in config['tasks']}}
+              'status': 'running', 'detail': '', 'reboot_required': False, 'tasks': {t: 'not-run' for t in config['tasks']}}
+    path = STATE_DIR / (uid + '.json')
 
     def finish(state, detail):
         result.update(status=state, detail=detail, finished=datetime.now(timezone.utc).isoformat())
-        _atomic(state_path, json.dumps(result) + '\n')
+        _atomic(path, json.dumps(result) + '\n')
+        if state == 'success':
+            _notify_success(uid)
+        if result['reboot_required']:
+            _launch_for_reboot(uid, config.get('launcher'))
         return 0 if state in ('success', 'skipped') else 1
 
     if not host_supported():
         return finish('blocked', 'Sistema no compatible.')
-    LEGACY_LOCK.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
-    fd = os.open(LEGACY_LOCK, os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    Path(LOCK).parent.mkdir(mode=0o755, parents=True, exist_ok=True)
+    fd = os.open(LOCK, os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     try:
+        os.fchmod(fd, 0o600)
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             return finish('skipped', 'Ya hay otro mantenimiento de AiO en curso.')
+        _atomic(path, json.dumps(result) + '\n')
         from aio_core import preflight
         if set(config['tasks']) - {'flatpak-update', 'snap-update'} and preflight._apt_locks() != []:
             return finish('skipped', 'APT/dpkg ocupado o no se pudo comprobar su bloqueo.')
@@ -467,15 +421,13 @@ def _run_legacy_schedule(uid):
         if shutil.disk_usage('/').free < 1024**3:
             return finish('blocked', 'Espacio insuficiente en /: menos de 1 GiB disponible.')
         if 'upgrade' in config['tasks']:
-            update = subprocess.run(
-                ['/usr/bin/apt-get', '-o', 'APT::Update::Error-Mode=any', 'update'], check=False)
+            update = subprocess.run(['apt-get', '-o', 'APT::Update::Error-Mode=any', 'update'], check=False)
             if update.returncode:
                 return finish('blocked', 'No se pudieron actualizar los índices APT.')
         report = preflight._check_local(config['tasks'])
         if report.blocked:
             return finish('blocked', '\n'.join(report.messages)[:2000])
-        command = ['/usr/lib/aio-debian-gui/aio-debian-gui-helper',
-                   '--lang', 'C.UTF-8', '--lock-fd', str(fd)]
+        command = [HELPER, '--lang', 'C.UTF-8', '--lock-fd', str(fd)]
         if report.upgrade_plan:
             command += ['--upgrade-plan', report.upgrade_plan]
         command += config['tasks']
@@ -489,9 +441,9 @@ def _run_legacy_schedule(uid):
                 match = re.fullmatch(r'##RESULT:([a-z-]+):([01])\n?', line)
                 if match and match[1] in result['tasks']:
                     result['tasks'][match[1]] = 'success' if match[2] == '0' else 'error'
-                    _atomic(state_path, json.dumps(result) + '\n')
+                    _atomic(path, json.dumps(result) + '\n')
             code = process.wait()
-        if code == 0 and all(value == 'success' for value in result['tasks'].values()):
+        if code == 0 and all(v == 'success' for v in result['tasks'].values()):
             return finish('success', 'Mantenimiento completado.')
         if result['tasks'].get('rebootcheck') == 'error':
             return finish('error', 'No se pudo comprobar si hace falta reiniciar; revisa needrestart y el journal.')
@@ -502,76 +454,11 @@ def _run_legacy_schedule(uid):
         os.close(fd)
 
 
-def run_schedule(uid):
-    uid = validate_uid(uid)
-    if os.geteuid() == 0:
-        if _legacy_disabled(uid):
-            return 0
-        return _run_legacy_schedule(uid)
-    _require_owner(uid)
-    config = _read(CONFIG_DIR / 'schedule.json')
-    if config is None or not validate_config(config)['enabled']:
-        return 0
-    config = validate_config(config)
-    result = {'started': datetime.now(timezone.utc).isoformat(), 'finished': None,
-              'status': 'running', 'detail': '', 'reboot_required': False,
-              'tasks': {task: 'not-run' for task in config['tasks']}}
-    path = STATE_DIR / 'schedule.json'
-
-    def finish(state, detail):
-        result.update(status=state, detail=detail, finished=datetime.now(timezone.utc).isoformat())
-        _atomic(path, json.dumps(result) + '\n')
-        if state == 'success':
-            _notify('Mantenimiento programado completado',
-                    'El mantenimiento programado se ha realizado correctamente.')
-        if result['reboot_required']:
-            _notify('Se recomienda reiniciar',
-                    'El mantenimiento ha detectado cambios que requieren reiniciar el equipo.')
-        return 0 if state in ('success', 'skipped') else 1
-
-    if not host_supported():
-        return finish('blocked', 'Sistema no compatible.')
-    STATE_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
-    fd = os.open(LOCK, os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
-    try:
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            return finish('skipped', 'Ya hay otro mantenimiento programado en curso.')
-        _atomic(path, json.dumps(result) + '\n')
-        from aio_core import preflight
-        if set(config['tasks']) & {'upgrade', 'autoclean'} and preflight._apt_locks() != []:
-            return finish('skipped', 'APT/dpkg ocupado o no se pudo comprobar su bloqueo.')
-        if (set(config['tasks']) & {'upgrade', 'autoclean', 'snap-update'}
-                and shutil.disk_usage('/').free < 1024**3):
-            return finish('blocked', 'Espacio insuficiente en /: menos de 1 GiB disponible.')
-        report = preflight._check_local(config['tasks'])
-        if report.blocked:
-            return finish('blocked', '\n'.join(report.messages)[:2000])
-        for task in config['tasks']:
-            try:
-                reboot_required = _run_task(task)
-                result['tasks'][task] = 'success'
-                result['reboot_required'] |= bool(reboot_required)
-            except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
-                result['tasks'][task] = 'error'
-                result['detail'] = f'{task}: {str(exc)[:600]}'
-            _atomic(path, json.dumps(result) + '\n')
-        if all(value == 'success' for value in result['tasks'].values()):
-            return finish('success', 'Mantenimiento completado.')
-        if result['tasks'].get('rebootcheck') == 'error':
-            return finish('error', 'No se pudo comprobar si hace falta reiniciar; revisa needrestart y el journal.')
-        return finish('error', result['detail'] or 'El mantenimiento terminó con errores.')
-    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
-        return finish('error', str(exc)[:600])
-    finally:
-        os.close(fd)
-
-
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('action', choices=('--status', '--configure', '--remove', '--run'))
-    parser.add_argument('uid', nargs='?', default=str(os.getuid()))
+    # Acciones con prefijo -- se analizan después de un separador de opciones.
+    parser.add_argument('uid')
     parser.add_argument('config', nargs='?')
     args = parser.parse_args(['--', *(sys.argv[1:] if argv is None else argv)])
     if args.action == '--status':
@@ -586,6 +473,7 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
+    # La ejecución aislada desde systemd no importa código del directorio actual.
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     try:
         sys.exit(main())
