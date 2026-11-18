@@ -32,7 +32,7 @@ awk -v version="$VERSION" '
 find "$STAGE" -type d -exec chmod 755 {} +
 find "$STAGE" -type f -exec chmod 644 {} +
 chmod 755 "$STAGE/DEBIAN/postinst" "$STAGE/DEBIAN/prerm" "$STAGE/usr/bin/aio-debian-gui" \
-          "$STAGE/usr/lib/aio-debian-gui/aio-debian-gui-helper"
+          "$STAGE/usr/lib/aio-debian-gui/"{aio-debian-gui-helper,aio-apt-sources-backup}
 
 # Fecha fija = fecha del último commit (o la actual si no hay git)
 export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git log -1 --format=%ct 2>/dev/null || date +%s)}"
