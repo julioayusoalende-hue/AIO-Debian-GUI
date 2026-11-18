@@ -1,5 +1,11 @@
 # Cambios
 
+## 1.0.1
+
+- Rediseña la pestaña principal con descripciones visibles de las tareas, selección resaltada y un botón de ejecución que indica cuántas tareas hay seleccionadas.
+- Sitúa las actualizaciones de Flatpak y Snap en «Mantenimiento habitual». Cada tarea aparece al abrir la aplicación si su gestor está instalado.
+- Amplía la consola desplegada según el tamaño de la ventana y mejora el espaciado entre líneas.
+
 ## 1.0.0
 
 - Distribución exclusiva como paquete Debian.

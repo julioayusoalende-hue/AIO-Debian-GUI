@@ -50,8 +50,26 @@ for formato in ('appimage', 'flatpak', 'deb'):
                 status.assert_called_once_with(inicial=True)
         window.destroy()
 
+preferencias = {'idioma': 'es', 'tema': 'claro', 'modo_simple': False}
+paquete_instalado = app.paquete_instalado
+for flatpak, snap in ((False, False), (True, False), (False, True), (True, True)):
+    with patch.object(app, 'es_flatpak', return_value=False), \
+         patch.object(app.shutil, 'which', return_value='/usr/bin/flatpak' if flatpak else None), \
+         patch.object(app, 'paquete_instalado',
+                      side_effect=lambda nombre: snap if nombre == 'snapd' else paquete_instalado(nombre)):
+        ventana = app.VentanaPrincipal(preferencias)
+        ventana.show_all()
+        for tarea, instalada in (('flatpak-update', flatpak), ('snap-update', snap)):
+            assert (tarea in ventana.switches) is instalada
+            if instalada:
+                assert ventana.filas[tarea].get_parent() is ventana.grupos_tareas[0].get_child()
+        assert ventana.botones_preset[1].get_visible() is flatpak
+        assert ('flatpak-setup' in ventana.switches) is not flatpak
+        ventana.destroy()
+
 for language in ('es', 'en', 'fr', 'zh'):
-    w = app.VentanaPrincipal({'idioma': language, 'tema': 'claro', 'modo_simple': False})
+    with patch.object(app.shutil, 'which', return_value='/usr/bin/flatpak'):
+        w = app.VentanaPrincipal({'idioma': language, 'tema': 'claro', 'modo_simple': False})
     w.show_all()
     settle()
     assert w.notebook.get_n_pages() == 4
@@ -125,6 +143,11 @@ for language in ('es', 'en', 'fr', 'zh'):
         assert app.traducir('Operación en curso') != 'Operación en curso'
     assert not w.detalles_sistema.get_expanded()
     assert not w.expansor_consola.get_expanded()
+    w.expansor_consola.set_expanded(True)
+    settle()
+    assert w.marco_consola.get_allocated_height() >= 200
+    assert w.btn_iniciar.get_mapped()
+    w.expansor_consola.set_expanded(False)
     assert not w.grupos_tareas[-1].get_expanded()
     assert all(isinstance(check, Gtk.CheckButton) for check, _ in w.switches.values())
     assert isinstance(w.chk_sin_contrasena, Gtk.Switch)
@@ -242,11 +265,12 @@ for language in ('es', 'en', 'fr', 'zh'):
         else:
             assert panels.get_orientation() == Gtk.Orientation.HORIZONTAL, (language, width, actual)
             left, right = w.panel_izquierdo, w.panel_derecho
-            assert abs(left.get_allocated_width() - right.get_allocated_width()) <= 1
-            px = panels.translate_coordinates(w, 0, 0)[0]
-            sep = w.separador_paneles
-            sx = sep.translate_coordinates(w, 0, 0)[0]
-            assert abs(sx + sep.get_allocated_width()/2 - px - panels.get_allocated_width()/2) <= 1, (language, width, actual, sx, sep.get_allocated_width(), px, panels.get_allocated_width(), sep.get_visible())
+            assert left.get_allocated_width() > right.get_allocated_width(), (
+                language, width, actual, left.get_allocated_width(), right.get_allocated_width())
+            sx = w.separador_paneles.translate_coordinates(w, 0, 0)[0]
+            lx = left.translate_coordinates(w, 0, 0)[0]
+            rx = right.translate_coordinates(w, 0, 0)[0]
+            assert lx < sx < rx
         if os.environ.get('AIO_UI_SCREENSHOTS') and width in (600, 1160) and language == 'es':
             directory = Path(os.environ['AIO_UI_SCREENSHOTS'])
             directory.mkdir(parents=True, exist_ok=True)

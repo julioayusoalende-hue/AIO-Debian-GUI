@@ -76,6 +76,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.0.1": "Renueva la pestaña de mantenimiento y amplía la consola de salida.",
     "1.0.0": "Distribución en paquete Debian y mantenimiento basado en 2.11.3.",
     "2.11.3": "Corrige la consulta del estado del programador en Flatpak y AppImage.",
     "2.11.2": "La instalación comprueba que el programador responde y muestra el motivo si la programación sigue bloqueada.",
@@ -162,7 +163,6 @@ NOVEDADES = {
     "1.0.3": "Las herramientas auxiliares instalan el soporte FUSE necesario para AppImage.",
     "1.0.2": "El logotipo de Debian aparece junto a la información del sistema.",
     "1.0.1": "El botón principal ahora se llama «Iniciar tareas».",
-    "1.0.0": "Primera versión independiente de la interfaz gráfica de AiO Debian.",
 }
 
 IDIOMA_ACTUAL = "es"
@@ -741,6 +741,78 @@ def etiqueta(texto, markup=False, dim=False, xalign=0.0):
     if dim:
         lbl.get_style_context().add_class("dim-label")
     return lbl
+
+
+ESTILO_MANTENIMIENTO = b"""
+.aio-maintenance {
+    background-color: shade(@theme_bg_color, 0.985);
+}
+.aio-maintenance frame.aio-card > border {
+    border: 1px solid alpha(@theme_fg_color, 0.16);
+    border-radius: 12px;
+    background-color: @theme_base_color;
+}
+.aio-maintenance .aio-heading {
+    font-size: 1.26em;
+    font-weight: 700;
+}
+.aio-maintenance .aio-icon {
+    color: @theme_fg_color;
+    background-color: alpha(@theme_selected_bg_color, 0.14);
+    border-radius: 8px;
+    padding: 6px;
+}
+.aio-maintenance .aio-group {
+    font-weight: 600;
+}
+.aio-maintenance list.aio-tasks {
+    background-color: transparent;
+}
+.aio-maintenance list.aio-tasks row {
+    padding: 2px 0;
+}
+.aio-maintenance checkbutton.aio-task {
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 7px 9px;
+}
+.aio-maintenance checkbutton.aio-task.aio-selected {
+    background-color: alpha(@theme_selected_bg_color, 0.10);
+    border-color: alpha(@theme_selected_bg_color, 0.13);
+}
+.aio-maintenance checkbutton.aio-task:hover {
+    background-color: alpha(@theme_selected_bg_color, 0.17);
+}
+.aio-maintenance checkbutton.aio-task label.aio-task-name {
+    font-weight: 600;
+}
+.aio-maintenance checkbutton.aio-task label.aio-task-detail {
+    font-size: 0.90em;
+}
+.aio-maintenance button.aio-run {
+    font-weight: 700;
+}
+"""
+
+
+def cabecera_mantenimiento(texto, icono, clase="aio-heading"):
+    cabecera = Gtk.Box(spacing=9)
+    imagen = Gtk.Image.new_from_icon_name(icono, Gtk.IconSize.BUTTON)
+    imagen.get_style_context().add_class("aio-icon")
+    cabecera.pack_start(imagen, False, False, 0)
+    titulo = etiqueta(texto)
+    titulo.get_style_context().add_class(clase)
+    cabecera.pack_start(titulo, True, True, 0)
+    return cabecera
+
+
+def tarjeta_mantenimiento(espacio):
+    marco = Gtk.Frame()
+    marco.get_style_context().add_class("aio-card")
+    contenido = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=espacio)
+    contenido.set_border_width(14)
+    marco.add(contenido)
+    return marco, contenido
 
 
 class VentanaPrincipal(Gtk.Window):
@@ -1356,10 +1428,19 @@ class VentanaPrincipal(Gtk.Window):
         self.destroy()
 
     def _construir_cuerpo(self):
-        # Paneles realmente lado a lado: información izquierda, tareas derecha.
-        # Cada columna puede desplazarse independientemente sin tapar los
-        # controles de ejecución ni la consola de la parte inferior.
-        principal = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        principal = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        principal.set_border_width(14)
+        estilo = principal.get_style_context()
+        estilo.add_class("aio-maintenance")
+        # El proveedor se instala una sola vez en la pantalla; las reglas están
+        # acotadas a esta pestaña y heredan los colores del tema GTK.
+        pantalla = self.get_screen()
+        if not getattr(pantalla, "_aio_estilo_mantenimiento", None):
+            proveedor = Gtk.CssProvider()
+            proveedor.load_from_data(ESTILO_MANTENIMIENTO)
+            Gtk.StyleContext.add_provider_for_screen(
+                pantalla, proveedor, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+            pantalla._aio_estilo_mantenimiento = proveedor
         notebook = Gtk.Notebook()
         notebook.set_tab_pos(Gtk.PositionType.TOP)
         notebook.set_scrollable(True)
@@ -1480,50 +1561,41 @@ class VentanaPrincipal(Gtk.Window):
         consola.pack_start(terminal_scroll, True, True, 0)
         notebook.append_page(consola, Gtk.Label(label=traducir("Terminal")))
         notebook.connect("switch-page", self._cambiar_pestana_terminal)
-        paneles = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        paneles.set_hexpand(True)
-        paneles.set_vexpand(True)
+        paneles = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         self.paneles_principales = paneles
-        self.grupo_ancho_paneles = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
         principal.pack_start(paneles, True, True, 0)
 
-        izquierda = Gtk.ScrolledWindow()
-        izquierda.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        izquierda.set_min_content_width(260)
-        izquierda.set_min_content_height(220)
-        caja_izquierda = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        caja_izquierda.set_border_width(12)
-        izquierda.add(caja_izquierda)
-        caja_izquierda.pack_start(self._tarjeta_info(), False, False, 0)
-        self.grupo_ancho_paneles.add_widget(izquierda)
-        paneles.pack_start(izquierda, True, True, 0)
+        tareas = Gtk.ScrolledWindow()
+        tareas.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        tareas.set_min_content_width(220)
+        tareas.set_min_content_height(220)
+        tareas.add(self._tarjeta_opciones())
+        paneles.pack_start(tareas, True, True, 0)
+
         separador = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
         paneles.pack_start(separador, False, False, 0)
 
-        derecha = Gtk.ScrolledWindow()
-        derecha.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        derecha.set_min_content_width(260)
-        caja_derecha = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        caja_derecha.set_border_width(12)
-        derecha.add(caja_derecha)
-        caja_derecha.pack_start(self._tarjeta_opciones(), False, False, 0)
-        self.grupo_ancho_paneles.add_widget(derecha)
-        paneles.pack_start(derecha, True, True, 0)
+        contexto = Gtk.ScrolledWindow()
+        contexto.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        contexto.set_size_request(300, -1)
+        contexto.set_min_content_height(200)
+        lateral = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        lateral.pack_start(self._tarjeta_info(), False, False, 0)
+        lateral.pack_start(self._tarjeta_seleccion(), False, False, 0)
+        contexto.add(lateral)
+        paneles.pack_start(contexto, False, True, 0)
         self.separador_paneles = separador
-        self.panel_izquierdo = izquierda
-        self.panel_derecho = derecha
+        self.panel_izquierdo = tareas
+        self.panel_derecho = contexto
+        self.adaptacion_paneles = None
         self.connect("size-allocate", self._adaptar_paneles)
 
-        inf = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        for margen in ("bottom", "start", "end"):
-            getattr(inf, "set_margin_" + margen)(12)
+        inf = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         principal.pack_end(inf, False, True, 0)
 
-        acciones = Gtk.Frame()
-        acciones_caja = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        for margen in ("top", "bottom", "start", "end"):
-            getattr(acciones_caja, "set_margin_" + margen)(10)
-        acciones.add(acciones_caja)
+        acciones, acciones_caja = tarjeta_mantenimiento(10)
+        acciones_caja.set_orientation(Gtk.Orientation.HORIZONTAL)
+        acciones_caja.set_border_width(10)
         texto_progreso = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7)
         fila = Gtk.Box(spacing=8)
         self.spinner = Gtk.Spinner()
@@ -1546,7 +1618,8 @@ class VentanaPrincipal(Gtk.Window):
             "media-playback-start-symbolic", Gtk.IconSize.BUTTON))
         self.btn_iniciar.set_always_show_image(True)
         self.btn_iniciar.get_style_context().add_class("suggested-action")
-        self.btn_iniciar.set_size_request(160, 48)
+        self.btn_iniciar.get_style_context().add_class("aio-run")
+        self.btn_iniciar.set_size_request(160, 44)
         self.btn_iniciar.connect("clicked", self._iniciar)
         acciones_caja.pack_end(self.btn_iniciar, False, False, 0)
         inf.pack_start(acciones, False, False, 0)
@@ -1591,14 +1664,16 @@ class VentanaPrincipal(Gtk.Window):
 
         marco = Gtk.ScrolledWindow()
         marco.set_shadow_type(Gtk.ShadowType.IN)
-        marco.set_size_request(-1, 132)
-        marco.set_min_content_height(110)
+        marco.set_min_content_height(132)
         self.marco_consola = marco
         self.log = Gtk.TextView(editable=False, cursor_visible=False)
         self.log.set_monospace(True)
         self.log.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
         self.log.set_left_margin(8)
         self.log.set_right_margin(8)
+        self.log.set_top_margin(6)
+        self.log.set_bottom_margin(6)
+        self.log.set_pixels_below_lines(2)
         self.buf = self.log.get_buffer()
         self.buf.create_tag("ok", foreground="#26a269")
         self.buf.create_tag("aviso", foreground="#cd9309")
@@ -1608,6 +1683,7 @@ class VentanaPrincipal(Gtk.Window):
         marco.add(self.log)
         contenido_consola.pack_start(marco, False, True, 0)
         contenido_consola.show_all()
+        self.expansor_consola.connect("notify::expanded", self._ajustar_consola)
 
     @staticmethod
     def _icono_aplicacion_backup(app):
@@ -2027,12 +2103,36 @@ class VentanaPrincipal(Gtk.Window):
 
     def _adaptar_paneles(self, _ventana, allocation):
         estrecha = allocation.width < 900
+        apilados = self.paneles_principales.get_orientation() == Gtk.Orientation.VERTICAL
+        ajustar_consola = (self.expansor_consola.get_expanded() and
+                           self.marco_consola.get_min_content_height() !=
+                           self._altura_consola(allocation.width, allocation.height))
+        if self.adaptacion_paneles is None and (estrecha != apilados or ajustar_consola):
+            self.adaptacion_paneles = GLib.idle_add(self._aplicar_disposicion)
+
+    def _aplicar_disposicion(self):
+        self.adaptacion_paneles = None
+        if self.destruida:
+            return GLib.SOURCE_REMOVE
+        estrecha = self.get_allocated_width() < 900
         orientacion = Gtk.Orientation.VERTICAL if estrecha else Gtk.Orientation.HORIZONTAL
         if self.paneles_principales.get_orientation() != orientacion:
             self.paneles_principales.set_orientation(orientacion)
+            self.separador_paneles.set_orientation(
+                Gtk.Orientation.HORIZONTAL if estrecha else Gtk.Orientation.VERTICAL)
             self.seleccion_detalle.set_expanded(not estrecha)
-            self.paneles_principales.set_child_packing(self.panel_izquierdo, not estrecha, True, 0, Gtk.PackType.START)
-        self.separador_paneles.set_orientation(Gtk.Orientation.HORIZONTAL if estrecha else Gtk.Orientation.VERTICAL)
+        self._ajustar_consola()
+        return GLib.SOURCE_REMOVE
+
+    @staticmethod
+    def _altura_consola(ancho, alto):
+        reserva = 550 if ancho < 900 else 330
+        return max(132, min(360, alto * 2 // 5, alto - reserva))
+
+    def _ajustar_consola(self, *_args):
+        if self.expansor_consola.get_expanded():
+            alto = self._altura_consola(self.get_allocated_width(), self.get_allocated_height())
+            self.marco_consola.set_min_content_height(alto)
 
     def _actualizar_seleccion(self):
         pasos = self._pasos_seleccionados()
@@ -2106,22 +2206,17 @@ class VentanaPrincipal(Gtk.Window):
             self.buf.set_text("")
 
     def _tarjeta_info(self):
-        marco = Gtk.Frame()
-        caja = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        for m in ("top", "bottom", "start", "end"):
-            getattr(caja, "set_margin_" + m)(12)
-        marco.add(caja)
-
-        titulo = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        titulo.pack_start(Gtk.Image.new_from_icon_name(
-            "computer-symbolic", Gtk.IconSize.BUTTON), False, False, 0)
-        titulo.pack_start(etiqueta("<b>Información del sistema</b>", markup=True), False, False, 0)
+        marco, caja = tarjeta_mantenimiento(9)
+        titulo = cabecera_mantenimiento("Información del sistema", "computer-symbolic")
+        caja.pack_start(titulo, False, False, 0)
         self.btn_diagnostico = Gtk.Button(label=traducir("Diagnosticar"))
         self.btn_diagnostico.set_tooltip_text(traducir(
             "Comprobar el sistema sin realizar modificaciones"))
         self.btn_diagnostico.connect("clicked", self._abrir_diagnostico)
-        titulo.pack_end(self.btn_diagnostico, False, False, 0)
-        caja.pack_start(titulo, False, False, 0)
+        self.btn_diagnostico.set_image(Gtk.Image.new_from_icon_name(
+            "edit-find-symbolic", Gtk.IconSize.BUTTON))
+        self.btn_diagnostico.set_always_show_image(True)
+        self.btn_diagnostico.set_halign(Gtk.Align.START)
 
         filas, version = informacion_sistema()
         grid = Gtk.Grid(column_spacing=12, row_spacing=6)
@@ -2145,6 +2240,7 @@ class VentanaPrincipal(Gtk.Window):
         caja.pack_start(self.salud_sistema, False, False, 0)
         self.consejo_sistema = etiqueta("Ejecuta el diagnóstico para revisar el estado del sistema.", dim=True)
         caja.pack_start(self.consejo_sistema, False, False, 0)
+        caja.pack_start(self.btn_diagnostico, False, False, 0)
         caja.pack_start(self.detalles_sistema, False, False, 0)
 
         ruta_logo, nombre_logo = logo_distribucion(self.distribucion)
@@ -2171,12 +2267,16 @@ class VentanaPrincipal(Gtk.Window):
         if self.distribucion == "debian":
             self.nvidia_info_label = etiqueta("Buscando GPU NVIDIA…", dim=True)
             detalles.pack_start(self.nvidia_info_label, False, False, 3)
-        caja.pack_start(Gtk.Separator(), False, False, 8)
+        return marco
+
+    def _tarjeta_seleccion(self):
+        marco, caja = tarjeta_mantenimiento(8)
         self.seleccion_detalle = Gtk.Expander(label=traducir("<b>Tu selección</b>"))
         self.seleccion_detalle.set_use_markup(True)
         self.seleccion_detalle.set_expanded(True)
         self.resumen_seleccion = etiqueta("")
         self.resumen_seleccion.set_max_width_chars(38)
+        self.resumen_seleccion.set_margin_top(8)
         self.seleccion_detalle.add(self.resumen_seleccion)
         caja.pack_start(self.seleccion_detalle, False, False, 0)
         return marco
@@ -2342,14 +2442,10 @@ class VentanaPrincipal(Gtk.Window):
         return GLib.SOURCE_REMOVE
 
     def _tarjeta_opciones(self):
-        externa = Gtk.Frame()
-        tarjeta = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        for margen in ("top", "bottom", "start", "end"):
-            getattr(tarjeta, "set_margin_" + margen)(12)
-        externa.add(tarjeta)
+        externa, tarjeta = tarjeta_mantenimiento(10)
+        tarjeta.pack_start(cabecera_mantenimiento(
+            "Tareas a realizar", "view-list-symbolic"), False, False, 0)
 
-        cab = Gtk.Box(spacing=8)
-        cab.pack_start(etiqueta("<b>Tareas a realizar</b>", markup=True), True, True, 0)
         presets = Gtk.Box()
         presets.get_style_context().add_class("linked")
         b1 = Gtk.Button(label=traducir("Completo"))
@@ -2360,11 +2456,12 @@ class VentanaPrincipal(Gtk.Window):
             traducir("Saltarse el mantenimiento de APT y actualizar solo Flatpak")
         )
         b2.connect("clicked", self._preset_flatpak)
+        b2.set_no_show_all(not self.flatpak_presente)
         presets.pack_start(b1, False, False, 0)
         presets.pack_start(b2, False, False, 0)
         self.botones_preset = (b1, b2)
-        cab.pack_end(presets, False, False, 0)
-        tarjeta.pack_start(cab, False, False, 0)
+        presets.set_halign(Gtk.Align.START)
+        tarjeta.pack_start(presets, False, False, 0)
 
         autorizacion = Gtk.Expander(label=traducir("Autorización de administrador"))
         opciones_autorizacion = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
@@ -2388,26 +2485,30 @@ class VentanaPrincipal(Gtk.Window):
             False, False, 0,
         )
 
-        tarjeta.pack_start(autorizacion, False, False, 0)
         grupos = (
-            ("Mantenimiento habitual", {"clock", "upgrade", "autoremove", "autoclean", "rebootcheck"}, True),
-            ("Aplicaciones y repositorios", {"repos", "tools", "snap-update", "flatpak-setup", "flatpak-update", "gnome-plugin", "ext-manager"}, True),
-            ("Kernel y controladores · Avanzado", {"backports-kernel-mesa", "revertir-backports", "nvidia-driver", "ubuntu-hwe"}, False),
+            ("Mantenimiento habitual", "view-refresh-symbolic", {"clock", "upgrade", "autoremove", "autoclean", "flatpak-update", "snap-update", "rebootcheck"}, True),
+            ("Aplicaciones y repositorios", "system-software-install-symbolic", {"repos", "tools", "flatpak-setup", "gnome-plugin", "ext-manager"}, True),
+            ("Kernel y controladores · Avanzado", "preferences-system-symbolic", {"backports-kernel-mesa", "revertir-backports", "nvidia-driver", "ubuntu-hwe"}, False),
         )
         self.grupos_tareas = []
-        for titulo, ids, abierto in grupos:
+        for titulo, icono, ids, abierto in grupos:
             visibles = [p for p in PASOS if p[0] in ids and self._visible(p[0])]
             if not visibles:
                 continue
-            grupo = Gtk.Expander(label=traducir(titulo))
+            grupo = Gtk.Expander()
+            grupo.set_label_widget(cabecera_mantenimiento(titulo, icono, "aio-group"))
+            grupo.get_accessible().set_name(traducir(titulo))
             grupo.set_expanded(abierto)
             lista = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
-            lista.set_margin_top(6)
+            lista.get_style_context().add_class("aio-tasks")
+            lista.set_margin_top(4)
             grupo.add(lista)
             for pid, titulo_tarea, desc, defecto, _ in visibles:
                 lista.add(self._fila(pid, titulo_tarea, desc, defecto))
             tarjeta.pack_start(grupo, False, False, 2)
             self.grupos_tareas.append(grupo)
+        tarjeta.pack_start(Gtk.Separator(), False, False, 0)
+        tarjeta.pack_start(autorizacion, False, False, 0)
         return externa
 
     def _consultar_estados_tareas(self, inicial=False):
@@ -2626,6 +2727,8 @@ class VentanaPrincipal(Gtk.Window):
             return self.distribucion == "debian"
         if pid == "ubuntu-hwe":
             return self.distribucion == "ubuntu"
+        if pid == "flatpak-update":
+            return self.flatpak_presente
         if pid == "flatpak-setup":
             return not self.flatpak_presente
         if pid in ("gnome-plugin", "ext-manager"):
@@ -2636,23 +2739,28 @@ class VentanaPrincipal(Gtk.Window):
         fila = Gtk.ListBoxRow(activatable=False)
         if pid == "nvidia-driver":
             fila.set_no_show_all(True)
-        caja = Gtk.Box(spacing=12)
-        for m in ("top", "bottom"):
-            getattr(caja, "set_margin_" + m)(6)
-        for m in ("start", "end"):
-            getattr(caja, "set_margin_" + m)(12)
-        # Fila compacta: el detalle sigue accesible en el tooltip.
-        textos = etiqueta(titulo)
-        textos.set_line_wrap(True)
-        fila.set_tooltip_text(traducir(desc))
-        indicador = Gtk.Label()
+        caja = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+        textos = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+        nombre = etiqueta(titulo)
+        nombre.get_style_context().add_class("aio-task-name")
+        detalle = etiqueta(desc, dim=True)
+        detalle.get_style_context().add_class("aio-task-detail")
+        detalle.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+        textos.pack_start(nombre, False, False, 0)
+        textos.pack_start(detalle, False, False, 0)
+
+        indicador = etiqueta("")
         indicador.set_no_show_all(True)
+        indicador.set_margin_start(9)
         sw = Gtk.CheckButton(active=defecto, valign=Gtk.Align.CENTER)
+        sw.get_style_context().add_class("aio-task")
         sw.get_accessible().set_name(traducir(titulo))
+        sw.get_accessible().set_description(traducir(desc))
+        sw.add(textos)
         caja.pack_start(sw, False, False, 0)
-        caja.pack_start(textos, True, True, 0)
-        caja.pack_end(indicador, False, False, 0)
+        caja.pack_start(indicador, False, False, 0)
         sw.connect("notify::active", self._cambio_switch_preset)
+        self._estilo_tarea(sw)
         if pid == "revertir-backports":
             sw.connect("notify::active", self._alternar_reversion_stable)
         fila.add(caja)
@@ -2660,6 +2768,14 @@ class VentanaPrincipal(Gtk.Window):
         self.filas[pid] = fila
         self.indicadores[pid] = indicador
         return fila
+
+    @staticmethod
+    def _estilo_tarea(switch):
+        estilo = switch.get_style_context()
+        if switch.get_active():
+            estilo.add_class("aio-selected")
+        else:
+            estilo.remove_class("aio-selected")
 
     # -- Presets ---------------------------------------------------------------
     def _preset_completo(self, _b):
@@ -2696,7 +2812,8 @@ class VentanaPrincipal(Gtk.Window):
                 self.actualizando_preset = False
         self._actualizar_sensibilidad()
 
-    def _cambio_switch_preset(self, _switch, _propiedad):
+    def _cambio_switch_preset(self, switch, _propiedad):
+        self._estilo_tarea(switch)
         if not self.actualizando_preset:
             self._marcar_preset_seleccionado(None)
             self._actualizar_sensibilidad()
