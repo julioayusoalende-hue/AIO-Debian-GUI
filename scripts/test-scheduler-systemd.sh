@@ -1,16 +1,27 @@
 #!/bin/bash
-# Integration en VM: configurar y retirar el timer con la cuenta del usuario.
+# Integración en una VM de CI: instala el DEB y ejecuta solo la comprobación de reinicio.
+# Nunca programa actualizaciones, eliminaciones de paquetes ni reinicios reales.
 set -euo pipefail
 if [ "${AIO_SYSTEMD_INTEGRATION:-}" != 1 ]; then
     echo 'Integración systemd omitida; requiere AIO_SYSTEMD_INTEGRATION=1 en una VM de CI.'
     exit 0
 fi
-if ! systemctl --user show-environment >/dev/null 2>&1; then
-    echo 'No hay un gestor systemd de usuario en esta sesión; integración omitida.'
-    exit 0
+if [ "$(cat /proc/1/comm)" != systemd ]; then
+    echo 'No hay systemd como PID 1; integración no disponible.' >&2
+    exit 1
 fi
 cd "$(dirname "$0")/.."
+DEB_FILE=$(find dist -maxdepth 1 -name '*.deb' -print -quit)
+[ -n "$DEB_FILE" ]
+sudo apt-get install -y "./$DEB_FILE"
 SCHEDULE_UID=$(id -u)
+HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
+TIMER="aio-debian-gui-maintenance-${SCHEDULE_UID}.timer"
+SERVICE="aio-debian-gui-maintenance@${SCHEDULE_UID}.service"
+cleanup() {
+    sudo env PKEXEC_UID="$SCHEDULE_UID" "$HELPER" --schedule-remove || true
+}
+trap cleanup EXIT
 CONFIG=$(python3 - <<'PY'
 import datetime, json
 future = datetime.datetime.now() + datetime.timedelta(hours=2)
@@ -18,40 +29,34 @@ print(json.dumps(dict(enabled=True, frequency='daily', weekday=0,
                      hour=future.hour, minute=future.minute, tasks=['rebootcheck'])))
 PY
 )
-run_scheduler() {
-    python3 - "$@" <<'PY'
-import json, sys
-from pathlib import Path
-sys.path.insert(0, str(Path("package/usr/lib/aio-debian-gui").resolve()))
-from aio_core.host_integration import run_user_scheduler
-action, uid = sys.argv[1:3]
-config = json.loads(sys.argv[3]) if len(sys.argv) > 3 else None
-report = run_user_scheduler("deb", action, uid, config)
-if report is not None:
-    print(json.dumps(report))
-PY
-}
-cleanup() {
-    run_scheduler --remove "$SCHEDULE_UID" >/dev/null 2>&1 || true
-}
-trap cleanup EXIT
-run_scheduler --configure "$SCHEDULE_UID" "$CONFIG" >/dev/null
-STATUS=$(run_scheduler --status "$SCHEDULE_UID")
+sudo env PKEXEC_UID="$SCHEDULE_UID" "$HELPER" --schedule-save "$CONFIG"
+systemctl is-active --quiet "$TIMER"
+[ -n "$(systemctl show "$TIMER" --property=NextElapseUSecRealtime --value)" ]
+for attempt in 1 2 3; do
+    if ! sudo systemctl start "$SERVICE"; then
+        sudo journalctl -u "$SERVICE" --no-pager -n 100 >&2
+        exit 1
+    fi
+    STATUS=$("$HELPER" --schedule-status)
+    OUTCOME=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["last_result"]["status"])' "$STATUS")
+    [ "$OUTCOME" = success ] && break
+    [ "$OUTCOME" = skipped ] || { echo "$STATUS" >&2; exit 1; }
+    sleep 5
+done
 python3 - "$STATUS" <<'PY'
 import json, sys
 report = json.loads(sys.argv[1])
-assert report['available'], report
-assert report['config']['enabled'], report
-assert report['timer_active'], report
-assert report['next_run'], report
+assert report['last_result']['status'] == 'success', report
+assert report['last_result']['tasks'] == {'rebootcheck': 'success'}, report
+assert report['timer_active']
 PY
 PAUSED=$(python3 -c 'import json,sys; c=json.loads(sys.argv[1]); c["enabled"]=False; print(json.dumps(c))' "$CONFIG")
-run_scheduler --configure "$SCHEDULE_UID" "$PAUSED" >/dev/null
-if systemctl --user is-active --quiet aio-debian-gui-maintenance.timer; then
+sudo env PKEXEC_UID="$SCHEDULE_UID" "$HELPER" --schedule-save "$PAUSED"
+if systemctl is-active --quiet "$TIMER"; then
     echo 'El temporizador no se ha pausado.' >&2
     exit 1
 fi
-run_scheduler --remove "$SCHEDULE_UID" >/dev/null
+cleanup
 trap - EXIT
-[ ! -e "$HOME/.config/systemd/user/aio-debian-gui-maintenance.timer" ]
-echo 'Systemd --user: activar, consultar próxima ejecución, pausar y eliminar sin privilegios OK'
+[ ! -e "/etc/systemd/system/$TIMER" ]
+echo 'Systemd real: activar, próxima ejecución, servicio de solo comprobación, resultados, pausa y eliminación OK'

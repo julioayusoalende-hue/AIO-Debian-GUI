@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""The scheduler is staged and controlled as the desktop user in every format."""
-import base64
+"""A compatible scheduler must never enter the privileged installer."""
 import json
 from pathlib import Path
 import subprocess
@@ -10,57 +9,75 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'package/usr/lib/aio-debian-gui'))
 from aio_core import host_integration as integration, scheduler
 
-helper = Path(__file__).resolve().parents[1] / 'package/usr/lib/aio-debian-gui/aio-debian-gui-helper'
-assert integration.compatible_helper('appimage', str(helper)), \
-    'The packaged maintenance helper must advertise the scheduler host protocol.'
+report = {'available': True, 'version': scheduler.VERSION, 'config': dict(scheduler.DEFAULT)}
+def result(data, code=0):
+    return subprocess.CompletedProcess([], code, json.dumps(data), '')
 
-report = {'available': True, 'version': scheduler.VERSION, 'protocol': scheduler.HOST_PROTOCOL,
-          'config': dict(scheduler.DEFAULT), 'timer_active': False, 'last_result': None}
+assert not scheduler.compatible_version('2.10.10')
+assert scheduler.compatible_version('2.10.12')
+assert scheduler.compatible_host({'protocol': 1, 'version': '99.0.0'})
+assert not scheduler.compatible_host({'protocol': 2, 'version': scheduler.VERSION})
+assert scheduler.compatible_version(scheduler.VERSION)
+assert not scheduler.compatible_version('2.10.9')
+assert not scheduler.compatible_version(None)
 
-for fmt in ('deb', 'appimage', 'flatpak', 'snap', 'dev'):
-    result = subprocess.CompletedProcess([], 0, json.dumps(report), '')
-    with mock.patch.object(integration.subprocess, 'run', return_value=result) as run:
-        actual = integration.run_user_scheduler(fmt, '--status', '1000')
-    assert actual == report
-    command = run.call_args.args[0]
-    assert command[-3:] == ['-I', '-c', integration._USER_SCHEDULER_PROGRAM]
-    assert (command[:2] == ['flatpak-spawn', '--host']) == (fmt == 'flatpak')
-    request = json.loads(run.call_args.kwargs['input'])
-    assert request['action'] == '--status' and request['uid'] == '1000'
-    assert set(request['files']) == {'__init__.py', 'preflight.py', 'scheduler.py'}
-    for name, file in request['files'].items():
-        data = base64.b64decode(file['data'], validate=True)
-        assert data == (Path(integration.__file__).parent/name).read_bytes()
-        assert file['sha256']
+for formato in ('appimage', 'flatpak'):
+    with mock.patch.object(integration.subprocess, 'run', return_value=result(report)) as run, mock.patch.object(integration, '_resources') as resources, mock.patch.object(integration, '_privileged') as privileged:
+        integration.install_host(formato)
+        resources.assert_not_called()
+        privileged.assert_not_called()
+        command = run.call_args.args[0]
+        assert command[-2:] == ['/usr/lib/aio-debian-gui/aio-debian-gui-helper', '--schedule-status']
+        assert (command[:2] == ['flatpak-spawn', '--host']) == (formato == 'flatpak')
+    for invalid in ({**report, 'version': '0.0.1'}, {**report, 'available': False}, {**report, 'available': 'yes'}, {**report, 'config': {'enabled': True}}, [], None):
+        with mock.patch.object(integration.subprocess, 'run', return_value=result(invalid)):
+            assert not integration.existing_scheduler(formato), invalid
+    with mock.patch.object(integration.subprocess, 'run', side_effect=FileNotFoundError):
+        assert not integration.existing_scheduler(formato)
+    with mock.patch.object(integration.subprocess, 'run', return_value=result(report, code=1)):
+        assert not integration.existing_scheduler(formato)
+    with mock.patch.object(integration.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, 'invalid json', '')):
+        assert not integration.existing_scheduler(formato)
+print('✔ Compatible host scheduler reused; missing, obsolete and invalid reports rejected')
 
-config = {**scheduler.DEFAULT, 'enabled': True, 'tasks': ['flatpak-update']}
-with mock.patch.object(integration.subprocess, 'run',
-                       return_value=subprocess.CompletedProcess([], 0, '', '')) as run:
-    assert integration.run_user_scheduler('flatpak', '--configure', '1000', config) is None
-    request = json.loads(run.call_args.kwargs['input'])
-    assert request['config'] == scheduler.validate_config(config)
-    assert request['action'] == '--configure'
+with mock.patch.object(integration.subprocess, 'run', return_value=result({**report, 'version': scheduler.VERSION})), mock.patch.object(integration, '_resources') as resources:
+    integration.install_host('appimage')
+    resources.assert_not_called()
 
-for fmt, action, uid, config in (
-    ('rpm', '--status', '1000', None),
-    ('flatpak', '--schedule-save', '1000', None),
-    ('appimage', '--remove', '0', None),
-    ('deb', '--status', '1000', config),
-):
-    try:
-        integration.run_user_scheduler(fmt, action, uid, config)
-    except ValueError:
-        pass
-    else:
-        raise AssertionError((fmt, action, uid, config))
+with mock.patch.object(integration, 'existing_scheduler', return_value=True), \
+     mock.patch.object(integration, 'request_host_update') as update, \
+     mock.patch.object(integration, 'install_host') as install:
+    integration.prepare_host('flatpak', '2.10.15')
+    update.assert_called_once_with('flatpak', '2.10.15')
+    install.assert_not_called()
 
-with mock.patch.object(integration.subprocess, 'run',
-                       return_value=subprocess.CompletedProcess([], 1, '', 'systemd user manager unavailable')):
-    try:
-        integration.run_user_scheduler('flatpak', '--status', '1000')
-    except RuntimeError as error:
-        assert 'systemd user manager unavailable' in str(error)
-    else:
-        raise AssertionError('Host scheduler failures must be surfaced')
+with mock.patch.object(integration, 'existing_scheduler', return_value=False), \
+     mock.patch.object(integration, '_portable_repair_ready', return_value=False), \
+     mock.patch.object(integration, 'request_host_update') as update, \
+     mock.patch.object(integration, 'install_host') as install:
+    integration.prepare_host('appimage', '2.10.15')
+    update.assert_not_called()
+    install.assert_not_called()
 
-print('User scheduler: host staging, no-privilege actions and DEB/AppImage/Flatpak dispatch OK')
+
+with mock.patch.object(integration, 'existing_scheduler', return_value=False), \
+     mock.patch.object(integration, '_portable_repair_ready', return_value=True), \
+     mock.patch.object(integration, 'request_host_update', return_value=True) as update, \
+     mock.patch.object(integration, 'install_host') as install:
+    integration.prepare_host('flatpak', '2.10.15')
+    update.assert_called_once_with('flatpak', '2.10.15')
+    install.assert_not_called()
+
+native = subprocess.CompletedProcess([], 0, 'aio-debian-gui: /usr/lib/aio-debian-gui/aio-debian-gui-helper\n', '')
+with mock.patch.object(integration.subprocess, 'run', return_value=native) as run:
+    assert integration.request_host_update('appimage', '2.10.15') is False
+    run.assert_called_once()
+
+for formato in ('appimage', 'flatpak'):
+    with mock.patch.object(integration.subprocess, 'run',
+                           return_value=subprocess.CompletedProcess([], 1, '', '')) as run, \
+         mock.patch.object(integration.subprocess, 'Popen') as spawn:
+        integration.prepare_host(formato, '2.11.0')
+        spawn.assert_not_called()
+        assert all('pkexec' not in call.args[0] for call in run.call_args_list)
+        assert run.call_count == 2

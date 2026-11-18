@@ -1371,19 +1371,6 @@ TRADUCCIONES["en"].update({"No se pudo comprobar si hace falta reiniciar; revisa
 TRADUCCIONES["fr"].update({"No se pudo comprobar si hace falta reiniciar; revisa needrestart y el journal.": "Impossible de vérifier si un redémarrage est nécessaire ; consultez needrestart et le journal."})
 TRADUCCIONES["zh"].update({"No se pudo comprobar si hace falta reiniciar; revisa needrestart y el journal.": "无法检查是否需要重启；请检查 needrestart 和系统日志。"})
 
-TRADUCCIONES["en"].update({
-    "El horario se guarda en tu cuenta y puede ejecutarse con la aplicación cerrada. Las tareas del sistema pueden pedir autorización de administrador al ejecutarse.": "The schedule is saved to your account and can run while the app is closed. System tasks may request administrator authorization when they run.",
-    "Guardando programación…": "Saving schedule…",
-})
-TRADUCCIONES["fr"].update({
-    "El horario se guarda en tu cuenta y puede ejecutarse con la aplicación cerrada. Las tareas del sistema pueden pedir autorización de administrador al ejecutarse.": "La programmation est enregistrée dans votre compte et peut s’exécuter lorsque l’application est fermée. Les tâches système peuvent demander une autorisation administrateur lors de leur exécution.",
-    "Guardando programación…": "Enregistrement de la programmation…",
-})
-TRADUCCIONES["zh"].update({
-    "El horario se guarda en tu cuenta y puede ejecutarse con la aplicación cerrada. Las tareas del sistema pueden pedir autorización de administrador al ejecutarse.": "计划保存在您的帐户中，应用关闭时也可运行。系统任务运行时可能会请求管理员授权。",
-    "Guardando programación…": "正在保存计划…",
-})
-
 TRADUCCIONES["en"].update({"Comprobación de reinicio más fiable con needrestart.": "More reliable restart checks with needrestart."})
 TRADUCCIONES["fr"].update({"Comprobación de reinicio más fiable con needrestart.": "Vérification plus fiable du redémarrage avec needrestart."})
 TRADUCCIONES["zh"].update({"Comprobación de reinicio más fiable con needrestart.": "使用 needrestart 更可靠地检查是否需要重启。"})
