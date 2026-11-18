@@ -2,6 +2,7 @@
 
 ## 1.0.9
 
+- Muestra la tarea de instalación del controlador cuando se detecta una GPU NVIDIA en Debian.
 - Al pulsar el número verde de versión, se abren las novedades desde el encabezado de la ventana.
 - La interfaz simple oculta la columna de información del sistema para dar más espacio a las tareas.
 
