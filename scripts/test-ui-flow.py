@@ -30,7 +30,7 @@ def settle():
         time.sleep(.005)
 
 for distro, version, expected in (
-    ('debian', '13', ['community-command', 'appimage']),
+    ('debian', '13', ['appimage']),
     ('ubuntu', '24.04', ['appimage']),
     ('ubuntu', '26.04', ['deb', 'appimage']),
     ('ubuntu', '26.10', ['deb', 'appimage']),
@@ -40,15 +40,18 @@ for distro, version, expected in (
         {'ID': distro, 'VERSION_ID': version})] == expected
 
 with patch.object(app.urllib.request, 'urlopen') as request:
-    request.return_value.__enter__.return_value.read.return_value = (
-        b'{"tag_name":"v1.4.0","assets":[{"name":"Ghostty-1.4.0-x86_64.AppImage"},'
-        b'{"name":"Ghostty-1.4.0-aarch64.AppImage"}]}'
+    request.return_value.__enter__.return_value.geturl.return_value = (
+        "https://github.com/pkgforge-dev/ghostty-appimage/releases/tag/v1.4.0"
     )
     for arch in ('x86_64', 'aarch64'):
         assert app.url_appimage_ghostty(arch) == (
             f'https://github.com/pkgforge-dev/ghostty-appimage/releases/download/v1.4.0/'
             f'Ghostty-1.4.0-{arch}.AppImage'
         )
+
+with patch.object(app.urllib.request, 'urlopen', side_effect=app.urllib.error.HTTPError(
+        app.GHOSTTY_APPIMAGE_RELEASES, 403, 'Forbidden', {}, None)):
+    assert app.url_appimage_ghostty('x86_64') == f'{app.GHOSTTY_APPIMAGE_RELEASES}/latest'
 
 for distro, version, texto in (('debian', '13', 'Debian 13'), ('ubuntu', '26.04', 'Ubuntu 26.04')):
     with patch.object(app, 'datos_distribucion_anfitrion', return_value={'ID': distro, 'VERSION_ID': version}), \
@@ -63,6 +66,33 @@ for distro, version, texto in (('debian', '13', 'Debian 13'), ('ubuntu', '26.04'
         assert logo.get_storage_type() == Gtk.ImageType.PIXBUF
         assert etiqueta_sistema.get_text() == texto
         ventana.destroy()
+
+with patch.object(app.Vte.Terminal, 'copy_clipboard_format') as copiar, \
+     patch.object(app.Vte.Terminal, 'paste_clipboard') as pegar, \
+     patch.object(app.Vte.Terminal, 'select_all') as seleccionar:
+    ventana = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+    ventana.show_all()
+    for tecla, accion in ((app.Gdk.KEY_C, copiar), (app.Gdk.KEY_V, pegar), (app.Gdk.KEY_A, seleccionar)):
+        evento = app.Gdk.Event.new(app.Gdk.EventType.KEY_PRESS)
+        evento.keyval = tecla
+        evento.state = app.Gdk.ModifierType.CONTROL_MASK | app.Gdk.ModifierType.SHIFT_MASK
+        assert ventana.terminal.emit('key-press-event', evento)
+        accion.assert_called_once()
+
+    with tempfile.TemporaryDirectory() as directorio, \
+         patch.object(app.GLib, 'get_user_config_dir', return_value=directorio), \
+         patch.object(ventana, '_mensaje') as mensaje:
+        config = Path(directorio) / 'fastfetch/config.jsonc'
+        config.parent.mkdir()
+        config.write_text('// Configuración anterior\n', encoding='utf-8')
+        ventana._aplicar_diseno_fastfetch(None)
+        assert config.read_bytes() == Path(app.FASTFETCH_LAYOUT).read_bytes()
+        (copia,) = config.parent.glob('config.jsonc.*.bak')
+        assert copia.read_text(encoding='utf-8') == '// Configuración anterior\n'
+        assert str(copia) in mensaje.call_args.args[-1]
+        ventana._aplicar_diseno_fastfetch(None)
+        assert list(config.parent.glob('*.bak')) == [copia]
+    ventana.destroy()
 
 for formato in ('appimage', 'flatpak', 'deb'):
     with patch.object(app, 'formato_actualizacion', return_value=formato), \

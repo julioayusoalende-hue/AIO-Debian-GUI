@@ -1,5 +1,11 @@
 # Cambios
 
+## 1.0.3
+
+- Añade un menú de edición y atajos para copiar, pegar y seleccionar texto en la terminal integrada.
+- Permite aplicar el diseño incluido de Fastfetch desde Configuración y mantenimiento. Guarda una copia de la configuración anterior del usuario cuando existe.
+- Ofrece Ghostty como AppImage en Debian. El enlace de descarga prescinde de la API de GitHub.
+
 ## 1.0.2
 
 - Muestra la versión de AiO Debian en verde y, debajo, el nombre, la versión y el logotipo del sistema operativo.

@@ -1,0 +1,121 @@
+{
+  "$schema": "https://github.com",
+  "logo": {
+    "type": "small",
+    "padding": {
+      "top": 1,
+      "left": 1,
+      "right": 3
+    }
+  },
+  "display": {
+    "separator": " ➜  "
+  },
+  "modules": [
+    "title",
+    {
+      "type": "custom",
+      "format": "───────────────────────────────"
+    },
+
+    // SECCIÓN 1: SISTEMA Y TIEMPOS
+    {
+      "type": "custom",
+      "format": "┌── Sistema ────────────────────"
+    },
+    {
+      "type": "os",
+      "key": "  OS         "
+    },
+    {
+      "type": "command",
+      "key": "  Instalación",
+      "text": "birth=$(stat -c %W /); if [ \"$birth\" -eq 0 ]; then birth=$(stat -c %X /); fi; date -d @$birth '+%d/%m/%Y'"
+    },
+    {
+      "type": "command",
+      "key": "  Antigüedad ",
+      "text": "birth=$(stat -c %W /); if [ \"$birth\" -eq 0 ]; then birth=$(stat -c %X /); fi; days=$(( ($(date +%s) - birth) / 86400 )); echo \"$days días\""
+    },
+    {
+      "type": "kernel",
+      "key": "  Kernel     "
+    },
+    {
+      "type": "uptime",
+      "key": "  Uptime     "
+    },
+    {
+      "type": "packages",
+      "key": "  Paquetes   "
+    },
+
+    // SECCIÓN 2: ENTORNO GRÁFICO
+    "break",
+    {
+      "type": "custom",
+      "format": "┌── Escritorio ─────────────────"
+    },
+    {
+      "type": "shell",
+      "key": "  Shell      "
+    },
+    {
+      "type": "de",
+      "key": "  DE         "
+    },
+    {
+      "type": "wm",
+      "key": "  WM         "
+    },
+    {
+      "type": "terminal",
+      "key": "  Terminal   "
+    },
+    {
+      "type": "display",
+      "key": "  Resolución "
+    },
+
+    // SECCIÓN 3: HARDWARE Y ESTADO
+    "break",
+    {
+      "type": "custom",
+      "format": "┌── Hardware ───────────────────"
+    },
+    {
+      "type": "cpu",
+      "key": "  CPU        "
+    },
+    {
+      "type": "gpu",
+      "key": "  GPU        "
+    },
+    {
+      "type": "memory",
+      "key": "  RAM        "
+    },
+    {
+      "type": "disk",
+      "key": "  Disco      "
+    },
+
+    // SECCIÓN 4: RED
+    "break",
+    {
+      "type": "custom",
+      "format": "┌── Red ────────────────────────"
+    },
+    {
+      "type": "localip",
+      "key": "  IP Local   "
+    },
+
+    // FINAL
+    "break",
+    {
+      "type": "colors",
+      "symbol": "circle"
+    }
+  ]
+}

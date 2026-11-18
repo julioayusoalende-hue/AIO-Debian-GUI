@@ -1503,28 +1503,58 @@ TRADUCCIONES["zh"].update({
 
 
 TRADUCCIONES["en"].update({
-    "Comando comunitario": "Community command",
     "Descargar AppImage": "Download AppImage",
-    "Copiar comando": "Copy command",
-    "Este comando descarga y ejecuta el instalador comunitario de Ghostty. Revísalo antes de ejecutarlo.": "This command downloads and runs the Ghostty community installer. Review it before running it.",
     "No hay AppImage de Ghostty para esta arquitectura.": "No Ghostty AppImage is available for this architecture.",
-    "No se encontró la descarga estable de Ghostty.": "The stable Ghostty download could not be found."
 })
 
 TRADUCCIONES["fr"].update({
-    "Comando comunitario": "Commande communautaire",
     "Descargar AppImage": "Télécharger l’AppImage",
-    "Copiar comando": "Copier la commande",
-    "Este comando descarga y ejecuta el instalador comunitario de Ghostty. Revísalo antes de ejecutarlo.": "Cette commande télécharge et exécute l’installeur communautaire de Ghostty. Vérifiez-le avant de l’exécuter.",
     "No hay AppImage de Ghostty para esta arquitectura.": "Aucune AppImage de Ghostty n’est disponible pour cette architecture.",
-    "No se encontró la descarga estable de Ghostty.": "Le téléchargement stable de Ghostty est introuvable."
 })
 
 TRADUCCIONES["zh"].update({
-    "Comando comunitario": "社区安装命令",
     "Descargar AppImage": "下载 AppImage",
-    "Copiar comando": "复制命令",
-    "Este comando descarga y ejecuta el instalador comunitario de Ghostty. Revísalo antes de ejecutarlo.": "此命令会下载并运行 Ghostty 社区安装脚本。运行前请先检查脚本。",
     "No hay AppImage de Ghostty para esta arquitectura.": "此架构没有可用的 Ghostty AppImage。",
-    "No se encontró la descarga estable de Ghostty.": "未找到 Ghostty 稳定版下载。"
+})
+
+TRADUCCIONES["en"].update({
+    "Copiar": "Copy",
+    "Pegar": "Paste",
+    "Seleccionar todo": "Select all",
+    "Quitar selección": "Clear selection",
+    "Editar": "Edit",
+    "Aplicar diseño de Fastfetch": "Apply Fastfetch layout",
+    "Guarda una copia de la configuración anterior de Fastfetch.": "Saves a copy of the previous Fastfetch configuration.",
+    "Diseño de Fastfetch": "Fastfetch layout",
+    "No se pudo aplicar el diseño de Fastfetch.": "Could not apply the Fastfetch layout.",
+    "El diseño de Fastfetch está activo.": "The Fastfetch layout is active.",
+    "Copia de la configuración anterior: %s": "Backup of the previous configuration: %s"
+})
+
+TRADUCCIONES["fr"].update({
+    "Copiar": "Copier",
+    "Pegar": "Coller",
+    "Seleccionar todo": "Tout sélectionner",
+    "Quitar selección": "Désélectionner",
+    "Editar": "Modifier",
+    "Aplicar diseño de Fastfetch": "Appliquer la disposition Fastfetch",
+    "Guarda una copia de la configuración anterior de Fastfetch.": "Enregistre une copie de l’ancienne configuration de Fastfetch.",
+    "Diseño de Fastfetch": "Disposition Fastfetch",
+    "No se pudo aplicar el diseño de Fastfetch.": "Impossible d’appliquer la disposition Fastfetch.",
+    "El diseño de Fastfetch está activo.": "La disposition Fastfetch est active.",
+    "Copia de la configuración anterior: %s": "Copie de l’ancienne configuration : %s"
+})
+
+TRADUCCIONES["zh"].update({
+    "Copiar": "复制",
+    "Pegar": "粘贴",
+    "Seleccionar todo": "全选",
+    "Quitar selección": "取消选择",
+    "Editar": "编辑",
+    "Aplicar diseño de Fastfetch": "应用 Fastfetch 布局",
+    "Guarda una copia de la configuración anterior de Fastfetch.": "备份原有的 Fastfetch 配置。",
+    "Diseño de Fastfetch": "Fastfetch 布局",
+    "No se pudo aplicar el diseño de Fastfetch.": "无法应用 Fastfetch 布局。",
+    "El diseño de Fastfetch está activo.": "Fastfetch 布局已启用。",
+    "Copia de la configuración anterior: %s": "原有配置的备份：%s"
 })

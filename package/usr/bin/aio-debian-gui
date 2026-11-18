@@ -22,6 +22,7 @@ import tempfile
 import threading
 import urllib.request
 import urllib.error
+from urllib.parse import unquote
 
 import gi
 
@@ -37,6 +38,7 @@ CORE_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file_
 if CORE_DIR not in sys.path:
     sys.path.insert(0, CORE_DIR)
 from aio_core import history as core_history, preferences as core_preferences, updates as core_updates, diagnostics as core_diagnostics, preflight as core_preflight, scheduler as core_scheduler, host_integration as core_host_integration  # noqa: E402
+from aio_core.fastfetch import instalar_layout  # noqa: E402
 from aio_core.gtk_appearance import aplicar_tema  # noqa: E402
 from aio_core.gtk_scheduler import ControladorProgramacion  # noqa: E402
 from aio_core.translations import TRADUCCIONES  # noqa: E402
@@ -53,6 +55,9 @@ DEBIAN_LOGO = os.path.normpath(
 )
 UBUNTU_LOGO = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/ubuntu-logo.svg")
+)
+FASTFETCH_LAYOUT = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/fastfetch-layout.jsonc")
 )
 RECOMMENDED_ICON_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/recommended-icons")
@@ -76,6 +81,7 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 # Novedades por versión (añade aquí una entrada al publicar una versión nueva)
 NOVEDADES = {
+    "1.0.3": "Edición en la terminal y diseño de Fastfetch aplicable desde mantenimiento.",
     "1.0.2": "Nueva cabecera y opciones para instalar Kitty y Ghostty desde Apps recomendadas.",
     "1.0.1": "Renueva la pestaña de mantenimiento y amplía la consola de salida.",
     "1.0.0": "Distribución en paquete Debian y mantenimiento basado en 2.11.3.",
@@ -538,8 +544,7 @@ def distribucion_anfitrion():
     return "no-soportada"
 
 
-GHOSTTY_COMANDO = '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/mkasberg/ghostty-ubuntu/HEAD/install.sh)"'
-GHOSTTY_APPIMAGE_REPO = "pkgforge-dev/ghostty-appimage"
+GHOSTTY_APPIMAGE_RELEASES = "https://github.com/pkgforge-dev/ghostty-appimage/releases"
 
 
 def canales_ghostty(distribucion):
@@ -547,7 +552,7 @@ def canales_ghostty(distribucion):
     version = distribucion.get("VERSION_ID", "")
     appimage = {"type": "appimage"}
     if sistema == "debian":
-        return [{"type": "community-command"}, appimage]
+        return [appimage]
     if sistema == "ubuntu":
         if re.fullmatch(r"[0-9]{2,}\.[0-9]{2}", version) and tuple(map(int, version.split("."))) >= (26, 4):
             return [{"type": "deb", "package": "ghostty", "command": "ghostty"}, appimage]
@@ -558,19 +563,22 @@ def canales_ghostty(distribucion):
 def url_appimage_ghostty(arquitectura):
     if arquitectura not in ("x86_64", "aarch64"):
         raise RuntimeError(traducir("No hay AppImage de Ghostty para esta arquitectura."))
-    api = f"https://api.github.com/repos/{GHOSTTY_APPIMAGE_REPO}/releases/latest"
-    solicitud = urllib.request.Request(api, headers={"User-Agent": PRGNAME})
-    with urllib.request.urlopen(solicitud, timeout=12) as respuesta:
-        release = json.loads(respuesta.read(256_000))
-    if not isinstance(release, dict) or release.get("prerelease") or release.get("draft"):
-        raise RuntimeError(traducir("No se encontró la descarga estable de Ghostty."))
-    etiqueta = release.get("tag_name", "")
-    if re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+(?:\+[0-9]+)?", etiqueta):
-        for archivo in release.get("assets", []):
-            nombre = archivo.get("name", "")
-            if re.fullmatch(rf"Ghostty-[0-9]+\.[0-9]+\.[0-9]+(?:\+[0-9]+)?-{arquitectura}\.AppImage", nombre):
-                return f"https://github.com/{GHOSTTY_APPIMAGE_REPO}/releases/download/{etiqueta}/{nombre}"
-    raise RuntimeError(traducir("No se encontró la descarga estable de Ghostty."))
+    pagina = f"{GHOSTTY_APPIMAGE_RELEASES}/latest"
+    solicitud = urllib.request.Request(pagina, headers={"User-Agent": PRGNAME}, method="HEAD")
+    try:
+        with urllib.request.urlopen(solicitud, timeout=8) as respuesta:
+            destino = unquote(respuesta.geturl())
+    except (OSError, ValueError):
+        return pagina
+    coincidencia = re.fullmatch(
+        rf"{re.escape(GHOSTTY_APPIMAGE_RELEASES)}/tag/(v([0-9]+\.[0-9]+\.[0-9]+))",
+        destino,
+    )
+    if not coincidencia:
+        return pagina
+    etiqueta, version = coincidencia.groups()
+    return f"{GHOSTTY_APPIMAGE_RELEASES}/download/{etiqueta}/Ghostty-{version}-{arquitectura}.AppImage"
+
 
 def sistema_operativo():
     contenido = leer_texto("/etc/os-release")
@@ -1606,7 +1614,6 @@ class VentanaPrincipal(Gtk.Window):
                 etiqueta_fuente = (
                     "DEB (APT)" if canal["type"] == "deb" else
                     "DEB (web oficial)" if canal["type"] == "deb-download" else
-                    "Comando comunitario" if canal["type"] == "community-command" else
                     "Descargar AppImage" if canal["type"] == "appimage" else
                     "Flatpak"
                 )
@@ -1642,8 +1649,10 @@ class VentanaPrincipal(Gtk.Window):
             accesos_terminal.pack_start(boton, False, False, 0)
             self.terminal_buttons[clave] = boton
         consola.pack_start(accesos_terminal, False, False, 0)
+        opciones_terminal = Gtk.Box(spacing=8)
         self.terminal_status = etiqueta("")
-        consola.pack_start(self.terminal_status, False, False, 0)
+        opciones_terminal.pack_start(self.terminal_status, True, True, 0)
+        consola.pack_start(opciones_terminal, False, False, 0)
         self.terminal_restart = Gtk.Button(label=traducir("Abrir nueva sesión"))
         self.terminal_restart.set_halign(Gtk.Align.START)
         self.terminal_restart.set_no_show_all(True)
@@ -1653,6 +1662,7 @@ class VentanaPrincipal(Gtk.Window):
         terminal_scroll.set_vexpand(True)
         self.terminal = Vte.Terminal()
         self.terminal.set_scrollback_lines(10000)
+        self._construir_edicion_terminal(opciones_terminal)
         self.terminal.connect("child-exited", self._terminal_finalizada)
         terminal_scroll.add(self.terminal)
         consola.pack_start(terminal_scroll, True, True, 0)
@@ -1933,6 +1943,52 @@ class VentanaPrincipal(Gtk.Window):
             raise RuntimeError((proc.stderr or "No se pudo consultar Flatpak.").strip()[-1000:])
         return set(proc.stdout.splitlines())
 
+    def _construir_edicion_terminal(self, barra):
+        acciones = (
+            (Gdk.KEY_c, "Copiar", lambda: self.terminal.copy_clipboard_format(Vte.Format.TEXT)),
+            (Gdk.KEY_v, "Pegar", self.terminal.paste_clipboard),
+            (Gdk.KEY_a, "Seleccionar todo", self.terminal.select_all),
+            (None, "Quitar selección", self.terminal.unselect_all),
+        )
+        menu = Gtk.Menu()
+        atajos = {}
+        modificadores = Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK
+        for tecla, nombre, accion in acciones:
+            item = Gtk.MenuItem()
+            texto = Gtk.AccelLabel(label=traducir(nombre), xalign=0)
+            if tecla is not None:
+                texto.set_accel(tecla, modificadores)
+                atajos[tecla] = accion
+            item.add(texto)
+            item.connect("activate", lambda _item, ejecutar=accion: ejecutar())
+            menu.append(item)
+        menu.show_all()
+
+        editar = Gtk.MenuButton(label=traducir("Editar"))
+        editar.set_popup(menu)
+        barra.pack_end(editar, False, False, 0)
+
+        def pulsar_tecla(_terminal, evento):
+            estado = evento.state & Gtk.accelerator_get_default_mod_mask()
+            accion = atajos.get(Gdk.keyval_to_lower(evento.keyval))
+            if estado != modificadores or accion is None:
+                return False
+            accion()
+            return True
+
+        def mostrar_menu(_terminal, evento=None):
+            if evento is not None:
+                if evento.button != 3:
+                    return False
+                menu.popup_at_pointer(evento)
+            else:
+                menu.popup_at_widget(self.terminal, Gdk.Gravity.CENTER, Gdk.Gravity.CENTER, None)
+            return True
+
+        self.terminal.connect("key-press-event", pulsar_tecla)
+        self.terminal.connect("button-press-event", mostrar_menu)
+        self.terminal.connect("popup-menu", mostrar_menu)
+
     def _cambiar_pestana_terminal(self, _notebook, _pagina, numero):
         if numero == 3 and not self.terminal_started:
             self._iniciar_terminal()
@@ -2037,7 +2093,7 @@ class VentanaPrincipal(Gtk.Window):
                 errores.append(str(exc))
             for app in APPS_RECOMENDADAS:
                 for canal in self.canales_recomendados[app["id"]]:
-                    if canal["type"] in ("community-command", "appimage"):
+                    if canal["type"] == "appimage":
                         continue
                     clave = (app["id"], canal["type"])
                     try:
@@ -2084,9 +2140,6 @@ class VentanaPrincipal(Gtk.Window):
                 or self.comprobando_actualizacion or self.programando
                 or self.recommended_installed.get((app_id, tipo_canal)) is True):
             return
-        if tipo_canal == "community-command":
-            self._mostrar_comando_ghostty()
-            return
         if tipo_canal == "appimage":
             self._descargar_appimage_ghostty()
             return
@@ -2107,23 +2160,6 @@ class VentanaPrincipal(Gtk.Window):
             GLib.idle_add(self._app_recomendada_comprobada, app_id, tipo_canal, accion, error)
 
         threading.Thread(target=comprobar, daemon=True).start()
-
-    def _mostrar_comando_ghostty(self):
-        dialogo = Gtk.MessageDialog(
-            transient_for=self, modal=True, message_type=Gtk.MessageType.INFO,
-            buttons=Gtk.ButtonsType.CLOSE, text="Ghostty",
-        )
-        dialogo.format_secondary_text(traducir(
-            "Este comando descarga y ejecuta el instalador comunitario de Ghostty. Revísalo antes de ejecutarlo."
-        ))
-        entrada = Gtk.Entry(text=GHOSTTY_COMANDO, editable=False, margin=12)
-        dialogo.get_message_area().pack_start(entrada, False, False, 0)
-        copiar = dialogo.add_button(traducir("Copiar comando"), Gtk.ResponseType.APPLY)
-        copiar.connect("clicked", lambda _boton: Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).set_text(
-            GHOSTTY_COMANDO, -1))
-        dialogo.show_all()
-        dialogo.run()
-        dialogo.destroy()
 
     def _descargar_appimage_ghostty(self):
         self.backup_action_in_progress = True
@@ -2394,6 +2430,11 @@ class VentanaPrincipal(Gtk.Window):
         caja.pack_start(self.consejo_sistema, False, False, 0)
         caja.pack_start(self.btn_diagnostico, False, False, 0)
         caja.pack_start(self.detalles_sistema, False, False, 0)
+        fastfetch = Gtk.Button(label=traducir("Aplicar diseño de Fastfetch"))
+        fastfetch.set_tooltip_text(traducir("Guarda una copia de la configuración anterior de Fastfetch."))
+        fastfetch.set_halign(Gtk.Align.START)
+        fastfetch.connect("clicked", self._aplicar_diseno_fastfetch)
+        caja.pack_start(fastfetch, False, False, 0)
 
         ruta_logo, nombre_logo = logo_distribucion(self.distribucion)
         if ruta_logo and os.path.isfile(ruta_logo):
@@ -2420,6 +2461,19 @@ class VentanaPrincipal(Gtk.Window):
             self.nvidia_info_label = etiqueta("Buscando GPU NVIDIA…", dim=True)
             detalles.pack_start(self.nvidia_info_label, False, False, 3)
         return marco
+
+    def _aplicar_diseno_fastfetch(self, _boton):
+        titulo = traducir("Diseño de Fastfetch")
+        try:
+            copia = instalar_layout(FASTFETCH_LAYOUT, GLib.get_user_config_dir())
+        except (OSError, RuntimeError) as error:
+            self._mensaje(Gtk.MessageType.ERROR, titulo,
+                          traducir("No se pudo aplicar el diseño de Fastfetch.") + "\n" + str(error))
+            return
+        mensaje = traducir("El diseño de Fastfetch está activo.")
+        if copia:
+            mensaje += "\n" + traducir("Copia de la configuración anterior: %s") % copia
+        self._mensaje(Gtk.MessageType.INFO, titulo, mensaje)
 
     def _tarjeta_seleccion(self):
         marco, caja = tarjeta_mantenimiento(8)
