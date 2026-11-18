@@ -1,5 +1,10 @@
 # Cambios
 
+## 1.0.9
+
+- Al pulsar el número verde de versión, se abren las novedades desde el encabezado de la ventana.
+- La interfaz simple oculta la columna de información del sistema para dar más espacio a las tareas.
+
 ## 1.0.8
 
 - Rediseña Backup con una carpeta de copia compartida y tarjetas para repositorios APT, ajustes del escritorio y aplicaciones de respaldo.
@@ -537,7 +542,7 @@ el estado y desactiva las tareas completadas.
 Añade un botón para cancelar la espera de Polkit y un límite para evitar que la interfaz
 quede indefinidamente esperando una autorización que no llega.
 
-## 1.0.9
+## 1.0.9 (serie anterior)
 Los botones «Completo» y «Solo Flatpak» resaltan el preset seleccionado. El resaltado se
 quita si se modifica una tarea individualmente.
 

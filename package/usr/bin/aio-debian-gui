@@ -833,6 +833,11 @@ ESTILO_APLICACION = b"""
     color: mix(@theme_fg_color, #279457, 0.66);
     font-weight: 700;
 }
+button.aio-header-version-button {
+    min-width: 0;
+    min-height: 0;
+    padding: 0 4px;
+}
 .aio-header-system {
     font-size: 0.90em;
 }
@@ -1081,12 +1086,7 @@ class VentanaPrincipal(Gtk.Window):
         nombre = Gtk.Label(label="AiO Debian")
         nombre.get_style_context().add_class("aio-header-title")
         principal.pack_start(nombre, False, False, 0)
-        version = version_app()
-        if not version_numerica(version.split("~", 1)[0]):
-            version = traducir("Desarrollo")
-        etiqueta_version = Gtk.Label(label=version)
-        etiqueta_version.get_style_context().add_class("aio-header-version")
-        principal.pack_start(etiqueta_version, False, False, 0)
+        principal.pack_start(self._boton_novedades(version_app()), False, False, 0)
         titulo.pack_start(principal, False, False, 0)
 
         sistema = Gtk.Box(spacing=5, halign=Gtk.Align.CENTER)
@@ -1108,6 +1108,44 @@ class VentanaPrincipal(Gtk.Window):
         sistema.pack_start(etiqueta_sistema, False, False, 0)
         titulo.pack_start(sistema, False, False, 0)
         return titulo
+
+    def _boton_novedades(self, version):
+        texto = version if version_numerica(version.split("~", 1)[0]) else traducir("Desarrollo")
+        boton = Gtk.MenuButton()
+        boton.set_relief(Gtk.ReliefStyle.NONE)
+        encabezado = traducir("Novedades de esta versión")
+        boton.set_tooltip_text(encabezado)
+        boton.get_accessible().set_name(f"{encabezado} · {texto}")
+        numero = Gtk.Label(label=texto)
+        numero.get_style_context().add_class("aio-header-version")
+        boton.get_style_context().add_class("aio-header-version-button")
+        boton.add(numero)
+
+        popover = Gtk.Popover.new(boton)
+        popover.set_position(Gtk.PositionType.BOTTOM)
+        caja = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        caja.set_border_width(12)
+        titulo = Gtk.Label(xalign=0)
+        titulo.set_markup("<b>%s</b>" % GLib.markup_escape_text(encabezado))
+        caja.pack_start(titulo, False, False, 0)
+
+        notas = novedades_version(version) or traducir("No hay notas para esta versión.")
+        detalle = Gtk.Label(label=notas, xalign=0, selectable=True)
+        detalle.set_line_wrap(True)
+        detalle.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+        detalle.set_max_width_chars(48)
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_min_content_width(280)
+        scroll.set_max_content_height(300)
+        scroll.set_propagate_natural_height(True)
+        scroll.add(detalle)
+        caja.pack_start(scroll, True, True, 0)
+
+        popover.add(caja)
+        caja.show_all()
+        boton.set_popover(popover)
+        return boton
 
     def _abrir_guia_integracion(self, _boton=None, parent=None):
         if self.programando:
@@ -1512,7 +1550,7 @@ class VentanaPrincipal(Gtk.Window):
         simple.set_active(self.preferencias["modo_simple"])
         grid.attach(simple, 0, 2, 2, 1)
         grid.attach(
-            etiqueta("Muestra solo Configuración y mantenimiento y oculta la salida de la consola.", dim=True),
+            etiqueta("Muestra solo Configuración y mantenimiento y oculta la columna de información del sistema y la salida de la consola.", dim=True),
             0, 3, 2, 1,
         )
         dialogo.show_all()
@@ -1558,6 +1596,13 @@ class VentanaPrincipal(Gtk.Window):
                 pagina.hide()
             else:
                 pagina.show_all()
+        self.panel_derecho.set_no_show_all(simple)
+        if simple:
+            self.panel_derecho.hide()
+        else:
+            self.panel_derecho.show_all()
+        self.separador_paneles.set_no_show_all(simple)
+        self.separador_paneles.set_visible(not simple)
         self.expansor_consola.set_expanded(False)
         self.expansor_consola.set_no_show_all(simple)
         self.expansor_consola.set_visible(not simple)

@@ -55,10 +55,12 @@ with patch.object(app.urllib.request, 'urlopen', side_effect=app.urllib.error.HT
 
 for distro, version, texto in (('debian', '13', 'Debian 13'), ('ubuntu', '26.04', 'Ubuntu 26.04')):
     with patch.object(app, 'datos_distribucion_anfitrion', return_value={'ID': distro, 'VERSION_ID': version}), \
-         patch.object(app, 'version_app', return_value='1.0.2~preview3'):
+         patch.object(app, 'version_app', return_value='1.0.2~preview3'), \
+         patch.object(app, 'novedades_version', return_value='• Mejora <GTK>'):
         ventana = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
         titulo, sistema = ventana.get_titlebar().get_custom_title().get_children()
-        nombre, version_app = titulo.get_children()
+        nombre, boton_version = titulo.get_children()
+        version_app = boton_version.get_child()
         assert nombre.get_text() == 'AiO Debian'
         assert version_app.get_text() == '1.0.2~preview3'
         assert version_app.get_style_context().has_class('aio-header-version')
@@ -67,6 +69,16 @@ for distro, version, texto in (('debian', '13', 'Debian 13'), ('ubuntu', '26.04'
         assert etiqueta_sistema.get_text() == texto
 
         ventana.show_all()
+        settle()
+        assert boton_version.get_can_focus()
+        boton_version.clicked()
+        settle()
+        popover = boton_version.get_popover()
+        assert popover.get_visible() and popover.get_relative_to() is boton_version
+        titulo_notas, scroll_notas = popover.get_child().get_children()
+        assert titulo_notas.get_text() == 'Novedades de esta versión'
+        assert scroll_notas.get_child().get_child().get_text() == '• Mejora <GTK>'
+        popover.popdown()
         settle()
         ventana.btn_detalles_sistema.clicked()
         settle()
