@@ -1226,1754 +1226,379 @@ nvidia_modulo_listo() {
     [ "$modulo" = "$version" ] || return 1
     LC_ALL=C dkms status 2>/dev/null | awk -F", " -v v="$version" -v k="$(uname -r)" '
         $1 ~ /^nvidia[^/]*\// && substr($1, index($1, "/") + 1) == v && $2 == k && $3 ~ /: installed$/ { found=1 }
-        END { exit !f…5125 tokens truncated…: "Simple interface",
-        "Muestra solo Configuración y mantenimiento y oculta la columna de información del sistema y la salida de la consola.": "Shows only Settings and maintenance and hides the system information column and console output.",
-        "Guardar": "Save",
-        "Cancelar": "Cancel",
-        "Aceptar": "OK",
-        "Continuar": "Continue",
-        "Listo. Elige las tareas y pulsa «Iniciar tareas».": "Ready. Choose tasks and click “Start tasks”.",
-        "Cancelar espera": "Cancel wait",
-        "<b>Información del sistema</b>": "<b>System information</b>",
-        "Sistema operativo": "Operating system",
-        "Kernel actual": "Current kernel",
-        "Espacio en disco (/)": "Disk space (/)",
-        "Usado: %.1f GiB / Total: %.1f GiB (%d%% ocupado)": "Used: %.1f GiB / Total: %.1f GiB (%d%% used)",
-        "Fecha de instalación": "Installation date",
-        "Antigüedad del sistema": "System age",
-        "%d años, %d meses y %d días (%d días en total)": "%d years, %d months and %d days (%d days total)",
-        "Versión de AiO Debian GUI": "AiO Debian GUI version",
-        "Sistema": "System",
-        "<b>Novedades de esta versión:</b>": "<b>What's new in this version:</b>",
-        "Novedades de esta versión": "What's new in this version",
-        "No hay notas para esta versión.": "No release notes for this version.",
-        "Los botones de preset resaltan la selección y se desmarcan al cambiar tareas.": "Preset buttons highlight the selection and clear when tasks change.",
-        "<b>Tareas a realizar</b>": "<b>Tasks to perform</b>",
-        "Completo": "Full",
-        "Mantenimiento completo (valores por defecto)": "Full maintenance (default selections)",
-        "Solo Flatpak": "Flatpak only",
-        "Saltarse el mantenimiento de APT y actualizar solo Flatpak": "Skip APT maintenance and update only Flatpak",
-        "No pedir contraseña para las tareas de AiO (solo este usuario)": "Do not ask for a password for AiO tasks (this user only)",
-        "La activación requiere autorización de administrador una vez. Puedes desmarcar esta opción para revocarla.": "Enabling this requires administrator authorization once. Uncheck this option to revoke it.",
-        "Permite ejecutar las tareas de AiO sin contraseña en la sesión local activa.": "Allows AiO tasks to run without a password in the active local session.",
-        "Sistema (APT)": "System (APT)",
-        "Al terminar": "After completion",
-        "Sincronizar el reloj": "Synchronize the clock",
-        "Un reloj desfasado rompe la validación de certificados (apt, Flathub…).": "An incorrect clock breaks certificate validation (APT, Flathub…).",
-        "Habilitar contrib y non-free": "Enable contrib and non-free",
-        "Añade los componentes a los repositorios oficiales de Debian (con copia .bak).": "Adds these components to official Debian repositories (with a .bak backup).",
-        "Instalar herramientas auxiliares": "Install auxiliary tools",
-        "Terminal con aceleración por GPU, pestañas y paneles divididos.": "GPU-accelerated terminal with tabs and split panes.",
-        "Terminal con aceleración por GPU, atajos configurables y soporte para imágenes.": "GPU-accelerated terminal with configurable shortcuts and image support.",
-        "Fastfetch, Synaptic y soporte FUSE para AppImage, si faltan.": "Fastfetch, Synaptic and FUSE support for AppImage, if missing.",
-        "Instalar kernel y Mesa desde Backports": "Install kernel and Mesa from Backports",
-        "Instala el kernel y los controladores gráficos Mesa de Debian Backports; puede requerir reinicio.": "Installs the kernel and Mesa graphics drivers from Debian Backports; may require a restart.",
-        "Actualizar los paquetes del sistema": "Upgrade system packages",
-        "Eliminar dependencias huérfanas": "Remove orphaned dependencies",
-        "Limpiar la caché de paquetes obsoletos": "Clean the obsolete package cache",
-        "apt-get update y apt-get dist-upgrade.": "apt-get update and apt-get dist-upgrade.",
-        "apt-get autoremove; puede quitar paquetes que APT considera huérfanos.": "apt-get autoremove; this can remove packages APT considers orphaned.",
-        "apt-get autoclean.": "apt-get autoclean.",
-        "Instalar soporte Flatpak y añadir Flathub": "Install Flatpak support and add Flathub",
-        "Flatpak no está instalado en este sistema.": "Flatpak is not installed on this system.",
-        "Actualizar aplicaciones Flatpak": "Update Flatpak applications",
-        "flatpak update y eliminación de runtimes sin uso.": "flatpak update and remove unused runtimes.",
-        "Plugin Flatpak para GNOME Software": "Flatpak plugin for GNOME Software",
-        "Permite gestionar apps Flatpak desde la tienda de GNOME.": "Manage Flatpak apps from the GNOME software store.",
-        "Extension Manager": "Extension Manager",
-        "Instala gnome-shell-extension-manager para gestionar extensiones de GNOME Shell.": "Installs gnome-shell-extension-manager to manage GNOME Shell extensions.",
-        "Comprobar si hace falta reiniciar": "Check whether a restart is needed",
-        "Revisa kernel y servicios críticos al terminar.": "Checks the kernel and critical services when finished.",
-        "Logotipo de Debian": "Debian logo",
-        "Comprobando tareas ya instaladas…": "Checking already-installed tasks…",
-        "✓ Ya configurados": "✓ Already configured",
-        "✓ Ya instaladas": "✓ Already installed",
-        "✓ Ya instalados": "✓ Already installed",
-        "✓ Ya instalado": "✓ Already installed",
-        "Esta tarea ya está completada y no se incluirá en futuras operaciones.": "This task is already complete and will not be included in future operations.",
-        "No se pudo comprobar el estado de las tareas; siguen disponibles.": "Could not check task status; tasks remain available.",
-        "El asistente no devolvió un estado completo de las tareas.": "The helper did not return a complete task status.",
-        "Nada que hacer": "Nothing to do",
-        "Activa al menos una tarea.": "Select at least one task.",
-        "Falta el asistente": "Helper missing",
-        "No se encuentra %s.\nReinstala el paquete aio-debian-gui.": "Could not find %s.\nReinstall the aio-debian-gui package.",
-        "Asistente del sistema desactualizado": "System helper is outdated",
-        "El asistente instalado no incluye la tarea de Backports. Actualiza el paquete .deb a la versión 1.0.7 o posterior.": "The installed helper does not include the Backports task. Upgrade the .deb package to version 1.0.7 or later.",
-        "Función no disponible en el asistente instalado": "Feature unavailable in the installed helper",
-        "El asistente del sistema no incluye la autorización sin contraseña. Actualiza el paquete .deb a la versión 1.0.6 o posterior.": "The system helper does not support passwordless authorization. Upgrade the .deb package to version 1.0.6 or later.",
-        "¿Instalar el kernel y Mesa desde Debian Backports?": "Install the kernel and Mesa from Debian Backports?",
-        "Se instalará el kernel de Backports para esta arquitectura y los controladores Mesa disponibles. Esto puede actualizar componentes gráficos y requerir un reinicio. Si falta, se añadirá la fuente oficial de Debian Backports.": "The Backports kernel for this architecture and available Mesa drivers will be installed. This may update graphics components and require a restart. The official Debian Backports source will be added if needed.",
-        "Instalación desde Backports cancelada.": "Backports installation cancelled.",
-        "Esperando autenticación de administrador…": "Waiting for administrator authentication…",
-        "No se pudo iniciar": "Could not start",
-        "Permitir tareas sin contraseña?": "Allow tasks without a password?",
-        "Se instalará una autorización persistente de Polkit para este usuario y solo para AiO Debian GUI. Todas las tareas de mantenimiento podrán ejecutarse como administrador sin volver a pedir contraseña. La activación requiere autorización de administrador una vez; puedes desactivarla desde esta opción.": "Persistent Polkit authorization will be installed for this user and AiO Debian GUI only. Maintenance tasks will be able to run as administrator without asking for a password again. Enabling this requires administrator authorization once; you can disable it here.",
-        "Cancelando la espera de autorización…": "Cancelling the authorization wait…",
-        "Paso %d de %d": "Step %d of %d",
-        "Autorización sin contraseña activada.": "Passwordless authorization enabled.",
-        "Autorización sin contraseña desactivada.": "Passwordless authorization disabled.",
-        "No se cambió la autorización.": "Authorization was not changed.",
-        "No se pudo cambiar la autorización.": "Could not change authorization.",
-        "No se pudieron guardar las preferencias": "Could not save preferences",
-        "No se pudieron leer las preferencias": "Could not read preferences",
-        "✔ ¡Mantenimiento completado con éxito!": "✔ Maintenance completed successfully!",
-        "No se obtuvo autorización de administrador.": "Administrator authorization was not granted.",
-        "Terminó con errores. Revisa el registro.": "Finished with errors. Check the log.",
-        "¿Reiniciar el sistema ahora?": "Restart the system now?",
-        "Se recomienda reiniciar para aplicar los cambios críticos (kernel/servicios).": "A restart is recommended to apply critical changes (kernel/services).",
-        "Más tarde": "Later",
-        "Reiniciar ahora": "Restart now",
-        "No se pudo reiniciar": "Could not restart",
-        "Mantenimiento y configuración todo en uno para Debian": "All-in-one Debian maintenance and configuration",
-        "Mantenimiento en curso": "Maintenance in progress",
-        "Espera a que termine: interrumpir apt o dpkg a mitad puede dejar el sistema en un estado inconsistente.": "Wait for it to finish: interrupting APT or dpkg may leave the system in an inconsistent state.",
-        "Espera de autorización agotada.": "Authorization wait timed out.",
-        "Espera de autorización cancelada.": "Authorization wait cancelled.",
-    },
-    "fr": {
-        "Navegador web con bloqueo de anuncios y rastreadores integrado.": "Navigateur web avec blocage intégré des publicités et des traqueurs.",
-        "Organiza e integra aplicaciones AppImage en el menú del escritorio y gestiona sus actualizaciones.": "Organise et intègre les applications AppImage au menu du bureau et gère leurs mises à jour.",
+        END { exit !found }'
+}
 
-        "Actualizar y limpiar Snap": "Mettre à jour et nettoyer Snap",
-        "Actualiza los snaps y elimina revisiones deshabilitadas antiguas, conservando una revisión anterior por aplicación.": "Met à jour les snaps et supprime les anciennes révisions désactivées, en conservant une révision précédente par application.",
+# Se consulta la lista de GPU del paquete candidato autenticado por APT.
+# No se usa nvidia-detect, cuya base puede pertenecer a otra rama.
+nvidia_elegir_modulo() {
+    local version="$1" temporal resultado estado
+    temporal=$(mktemp -d) || return 1
+    if ! (cd "$temporal" && apt-get download "nvidia-driver=$version" >&2); then
+        rm -rf -- "$temporal"; return 1
+    fi
+    resultado=$(python3 "$(dirname "${BASH_SOURCE[0]}")/aio_core/nvidia.py"         "$temporal" "$version" "$(nvidia_pci_root)")
+    estado=$?
+    rm -rf -- "$temporal"
+    [ "$estado" -eq 0 ] || return "$estado"
+    printf '%s\n' "$resultado"
+}
 
-        "Comprobando estado del sistema…": "Vérification du système…",
-        "Resumen de salud sin modificar paquetes": "Résumé de santé du système en lecture seule",
-        "Detalle de la simulación APT:": "Détails de la simulation APT :",
-        "Estado de mantenimiento": "État de maintenance",
-        "¿Crear instantánea Snapper antes del mantenimiento?": "Créer un instantané Snapper avant la maintenance ?",
-        "Sin instantánea": "Sans instantané",
-        "Crear instantánea": "Créer un instantané",
-        "No se pudo completar el resumen de salud.": "Impossible de terminer le résumé de santé.",
-        "Comprobando seguridad del mantenimiento…": "Vérification de la sécurité de la maintenance…",
-        "Comprobaciones de seguridad": "Contrôles de sécurité",
-        "No se pudieron completar las comprobaciones de seguridad.": "Impossible de terminer les contrôles de sécurité.",
-        "Actualizar AiO": "Mettre à jour AiO",
-        "Reiniciar AiO automáticamente tras actualizar": "Redémarrer automatiquement AiO après la mise à jour",
-        "Reiniciar aplicación": "Redémarrer l’application",
-        "Hay una actualización disponible. Puedes instalarla desde aquí.": "Une mise à jour est disponible. Vous pouvez l’installer ici.",
-        "Diagnosticar": "Diagnostiquer",
-        "Diagnóstico preventivo del sistema": "Diagnostic préventif du système",
-        "Abrir en otra ventana": "Ouvrir dans une autre fenêtre",
-        "Volver a integrar": "Réintégrer à la fenêtre",
-        "Salida de la consola": "Sortie de la console",
-        "Borrar": "Effacer",
-        "Detectar e instalar controlador NVIDIA": "Détecter et installer le pilote NVIDIA",
-        "En Debian analiza la GPU, el kernel, DKMS y Secure Boot. En portátiles híbridos mantiene PRIME bajo demanda; requiere confirmación.": "Sous Debian, vérifie le GPU, le noyau, DKMS et Secure Boot. Sur les portables hybrides, conserve PRIME à la demande ; confirmation requise.",
-        "Mantenimiento y configuración del sistema": "Maintenance et configuration du système",
-        "Iniciar tareas": "Lancer les tâches",
-        "Trabajando…": "En cours…",
-        "Acerca de AiO Debian": "À propos d’AiO Debian",
-        "Agradecimiento": "Remerciements",
-        "Cerrar": "Fermer",
-        "Foto de Adri y Lu": "Photo d’Adri et Lu",
-        "Menú de preferencias": "Menu des préférences",
-        "Preferencias": "Préférences",
-        "Idioma de la interfaz": "Langue de l’interface",
-        "Apariencia": "Apparence",
-        "Claro": "Clair",
-        "Oscuro": "Sombre",
-        "Interfaz simple": "Interface simple",
-        "Muestra solo Configuración y mantenimiento y oculta la columna de información del sistema y la salida de la consola.": "Affiche uniquement Configuration et maintenance et masque la colonne Informations système et la sortie de la console.",
-        "Guardar": "Enregistrer",
-        "Cancelar": "Annuler",
-        "Aceptar": "OK",
-        "Continuar": "Continuer",
-        "Listo. Elige las tareas y pulsa «Iniciar tareas».": "Prêt. Choisissez les tâches puis cliquez sur « Lancer les tâches ».",
-        "Cancelar espera": "Annuler l’attente",
-        "<b>Información del sistema</b>": "<b>Informations système</b>",
-        "Sistema operativo": "Système d’exploitation",
-        "Kernel actual": "Noyau actuel",
-        "Espacio en disco (/)": "Espace disque (/)",
-        "Usado: %.1f GiB / Total: %.1f GiB (%d%% ocupado)": "Utilisé : %.1f Gio / Total : %.1f Gio (%d%% occupé)",
-        "Fecha de instalación": "Date d’installation",
-        "Antigüedad del sistema": "Ancienneté du système",
-        "%d años, %d meses y %d días (%d días en total)": "%d ans, %d mois et %d jours (%d jours au total)",
-        "Versión de AiO Debian GUI": "Version d’AiO Debian GUI",
-        "<b>Novedades de esta versión:</b>": "<b>Nouveautés de cette version :</b>",
-        "Novedades de esta versión": "Nouveautés de cette version",
-        "No hay notas para esta versión.": "Aucune note pour cette version.",
-        "Los botones de preset resaltan la selección y se desmarcan al cambiar tareas.": "Les boutons de préréglage mettent la sélection en évidence et se désactivent lorsque les tâches changent.",
-        "<b>Tareas a realizar</b>": "<b>Tâches à effectuer</b>",
-        "Completo": "Complet",
-        "Mantenimiento completo (valores por defecto)": "Maintenance complète (sélection par défaut)",
-        "Solo Flatpak": "Flatpak uniquement",
-        "Saltarse el mantenimiento de APT y actualizar solo Flatpak": "Ignorer la maintenance APT et mettre à jour uniquement Flatpak",
-        "No pedir contraseña para las tareas de AiO (solo este usuario)": "Ne pas demander de mot de passe pour les tâches AiO (cet utilisateur uniquement)",
-        "La activación requiere autorización de administrador una vez. Puedes desmarcar esta opción para revocarla.": "L’activation nécessite une autorisation administrateur unique. Décochez cette option pour la révoquer.",
-        "Permite ejecutar las tareas de AiO sin contraseña en la sesión local activa.": "Permet d’exécuter les tâches AiO sans mot de passe dans la session locale active.",
-        "Sistema (APT)": "Système (APT)",
-        "Al terminar": "À la fin",
-        "Sincronizar el reloj": "Synchroniser l’horloge",
-        "Un reloj desfasado rompe la validación de certificados (apt, Flathub…).": "Une horloge incorrecte empêche la validation des certificats (APT, Flathub…).",
-        "Habilitar contrib y non-free": "Activer contrib et non-free",
-        "Añade los componentes a los repositorios oficiales de Debian (con copia .bak).": "Ajoute ces composants aux dépôts officiels Debian (avec sauvegarde .bak).",
-        "Instalar herramientas auxiliares": "Installer les outils auxiliaires",
-        "Terminal con aceleración por GPU, pestañas y paneles divididos.": "Terminal accéléré par le GPU avec onglets et volets fractionnés.",
-        "Terminal con aceleración por GPU, atajos configurables y soporte para imágenes.": "Terminal accéléré par le GPU avec raccourcis personnalisables et prise en charge des images.",
-        "Fastfetch, Synaptic y soporte FUSE para AppImage, si faltan.": "Fastfetch, Synaptic et prise en charge de FUSE pour AppImage, si nécessaire.",
-        "Instalar kernel y Mesa desde Backports": "Installer le noyau et Mesa depuis Backports",
-        "Instala el kernel y los controladores gráficos Mesa de Debian Backports; puede requerir reinicio.": "Installe le noyau et les pilotes graphiques Mesa de Debian Backports ; un redémarrage peut être nécessaire.",
-        "Actualizar los paquetes del sistema": "Mettre à jour les paquets du système",
-        "Eliminar dependencias huérfanas": "Supprimer les dépendances orphelines",
-        "Limpiar la caché de paquetes obsoletos": "Nettoyer le cache des paquets obsolètes",
-        "apt-get update y apt-get dist-upgrade.": "apt-get update et apt-get dist-upgrade.",
-        "apt-get autoremove; puede quitar paquetes que APT considera huérfanos.": "apt-get autoremove ; cette commande peut supprimer les paquets qu’APT considère comme orphelins.",
-        "apt-get autoclean.": "apt-get autoclean.",
-        "Instalar soporte Flatpak y añadir Flathub": "Installer Flatpak et ajouter Flathub",
-        "Flatpak no está instalado en este sistema.": "Flatpak n’est pas installé sur ce système.",
-        "Actualizar aplicaciones Flatpak": "Mettre à jour les applications Flatpak",
-        "flatpak update y eliminación de runtimes sin uso.": "flatpak update et suppression des environnements d’exécution inutilisés.",
-        "Plugin Flatpak para GNOME Software": "Extension Flatpak pour GNOME Logiciels",
-        "Permite gestionar apps Flatpak desde la tienda de GNOME.": "Permet de gérer les applications Flatpak depuis la boutique GNOME.",
-        "Extension Manager": "Extension Manager",
-        "Instala gnome-shell-extension-manager para gestionar extensiones de GNOME Shell.": "Installe gnome-shell-extension-manager pour gérer les extensions GNOME Shell.",
-        "Comprobar si hace falta reiniciar": "Vérifier si un redémarrage est nécessaire",
-        "Revisa kernel y servicios críticos al terminar.": "Vérifie le noyau et les services critiques à la fin.",
-        "Logotipo de Debian": "Logo Debian",
-        "Comprobando tareas ya instaladas…": "Vérification des tâches déjà installées…",
-        "✓ Ya configurados": "✓ Déjà configurés",
-        "✓ Ya instaladas": "✓ Déjà installées",
-        "✓ Ya instalados": "✓ Déjà installés",
-        "✓ Ya instalado": "✓ Déjà installé",
-        "Esta tarea ya está completada y no se incluirá en futuras operaciones.": "Cette tâche est déjà terminée et ne sera pas incluse dans les prochaines opérations.",
-        "No se pudo comprobar el estado de las tareas; siguen disponibles.": "Impossible de vérifier l’état des tâches ; elles restent disponibles.",
-        "El asistente no devolvió un estado completo de las tareas.": "L’assistant n’a pas renvoyé un état complet des tâches.",
-        "Nada que hacer": "Rien à faire",
-        "Activa al menos una tarea.": "Activez au moins une tâche.",
-        "Falta el asistente": "Assistant manquant",
-        "No se encuentra %s.\nReinstala el paquete aio-debian-gui.": "%s est introuvable.\nRéinstallez le paquet aio-debian-gui.",
-        "Asistente del sistema desactualizado": "Assistant système obsolète",
-        "El asistente instalado no incluye la tarea de Backports. Actualiza el paquete .deb a la versión 1.0.7 o posterior.": "L’assistant installé ne prend pas en charge la tâche Backports. Mettez à jour le paquet .deb vers la version 1.0.7 ou ultérieure.",
-        "Función no disponible en el asistente instalado": "Fonction indisponible dans l’assistant installé",
-        "El asistente del sistema no incluye la autorización sin contraseña. Actualiza el paquete .deb a la versión 1.0.6 o posterior.": "L’assistant système ne prend pas en charge l’autorisation sans mot de passe. Mettez à jour le paquet .deb vers la version 1.0.6 ou ultérieure.",
-        "¿Instalar el kernel y Mesa desde Debian Backports?": "Installer le noyau et Mesa depuis Debian Backports ?",
-        "Se instalará el kernel de Backports para esta arquitectura y los controladores Mesa disponibles. Esto puede actualizar componentes gráficos y requerir un reinicio. Si falta, se añadirá la fuente oficial de Debian Backports.": "Le noyau Backports de cette architecture et les pilotes Mesa disponibles seront installés. Cela peut mettre à jour les composants graphiques et nécessiter un redémarrage. Le dépôt officiel Debian Backports sera ajouté si nécessaire.",
-        "Instalación desde Backports cancelada.": "Installation Backports annulée.",
-        "Esperando autenticación de administrador…": "En attente de l’authentification administrateur…",
-        "No se pudo iniciar": "Impossible de démarrer",
-        "Permitir tareas sin contraseña?": "Autoriser les tâches sans mot de passe ?",
-        "Se instalará una autorización persistente de Polkit para este usuario y solo para AiO Debian GUI. Todas las tareas de mantenimiento podrán ejecutarse como administrador sin volver a pedir contraseña. La activación requiere autorización de administrador una vez; puedes desactivarla desde esta opción.": "Une autorisation Polkit persistante sera installée pour cet utilisateur et AiO Debian GUI uniquement. Les tâches de maintenance pourront s’exécuter en tant qu’administrateur sans redemander le mot de passe. L’activation nécessite une autorisation administrateur unique ; vous pouvez la désactiver ici.",
-        "Cancelando la espera de autorización…": "Annulation de l’attente d’autorisation…",
-        "Paso %d de %d": "Étape %d sur %d",
-        "Autorización sin contraseña activada.": "Autorisation sans mot de passe activée.",
-        "Autorización sin contraseña desactivada.": "Autorisation sans mot de passe désactivée.",
-        "No se cambió la autorización.": "L’autorisation n’a pas été modifiée.",
-        "No se pudo cambiar la autorización.": "Impossible de modifier l’autorisation.",
-        "No se pudieron guardar las preferencias": "Impossible d’enregistrer les préférences",
-        "No se pudieron leer las preferencias": "Impossible de lire les préférences",
-        "✔ ¡Mantenimiento completado con éxito!": "✔ Maintenance terminée avec succès !",
-        "No se obtuvo autorización de administrador.": "L’autorisation administrateur n’a pas été accordée.",
-        "Terminó con errores. Revisa el registro.": "Terminé avec des erreurs. Consultez le journal.",
-        "¿Reiniciar el sistema ahora?": "Redémarrer le système maintenant ?",
-        "Se recomienda reiniciar para aplicar los cambios críticos (kernel/servicios).": "Un redémarrage est recommandé pour appliquer les changements critiques (noyau/services).",
-        "Más tarde": "Plus tard",
-        "Reiniciar ahora": "Redémarrer maintenant",
-        "No se pudo reiniciar": "Impossible de redémarrer",
-        "Mantenimiento y configuración todo en uno para Debian": "Maintenance et configuration tout-en-un pour Debian",
-        "Mantenimiento en curso": "Maintenance en cours",
-        "Espera a que termine: interrumpir apt o dpkg a mitad puede dejar el sistema en un estado inconsistente.": "Attendez la fin : interrompre APT ou dpkg peut rendre le système incohérent.",
-        "Espera de autorización agotada.": "Délai d’autorisation dépassé.",
-        "Espera de autorización cancelada.": "Attente d’autorisation annulée.",
-    },
-    "zh": {
-        "Navegador web con bloqueo de anuncios y rastreadores integrado.": "内置广告和跟踪器拦截功能的网页浏览器。",
-        "Organiza e integra aplicaciones AppImage en el menú del escritorio y gestiona sus actualizaciones.": "整理 AppImage 应用，将其集成到桌面菜单并管理更新。",
+nvidia_report() {
+    local p=0 h=0 installed=0 candidate=no-disponible
+    if nvidia_presente; then
+        p=1
+        nvidia_hibrida && h=1
+        nvidia_modulo_listo && installed=1
+        candidate=$(LC_ALL=C apt-cache policy nvidia-driver 2>/dev/null | awk '/Candidate:/ {print $2; exit}')
+        [ -n "$candidate" ] || candidate=no-disponible
+    fi
+    printf '##NVIDIA:present:%s\n' "$p"
+    printf '##NVIDIA:hybrid:%s\n' "$h"
+    printf '##NVIDIA:installed:%s\n' "$installed"
+    printf '##NVIDIA:candidate:%s\n' "$candidate"
+    printf '##NVIDIA:secureboot:%s\n' "$(nvidia_secure_boot)"
+    printf '##NVIDIA:kernel:%s\n' "$(uname -r)"
+}
+paso_nvidia_driver() {
+    local candidate kernel headers modulo simulation metadata limite
+    [ "$(leer_distribucion)" = debian ] || { err "NVIDIA automático solo en Debian."; return 1; }
+    nvidia_presente || { err "No se detectó una GPU NVIDIA PCI."; return 1; }
+    if nvidia_modulo_listo; then
+        ok "El controlador NVIDIA tiene un módulo DKMS instalado para el kernel activo."
+        return 0
+    fi
+    if [ "$(nvidia_secure_boot)" != desactivado ]; then
+        err "Secure Boot activo o desconocido: configura primero la firma DKMS/MOK."
+        return 1
+    fi
+    if paquete_instalado bumblebee || paquete_instalado primus; then
+        err "Bumblebee/Primus detectado: requiere revisión antes de utilizar PRIME."
+        return 1
+    fi
+    asegurar_listas || return 1
+    candidate=$(LC_ALL=C apt-cache policy nvidia-driver | awk '/Candidate:/ {print $2; exit}')
+    [ -n "$candidate" ] && [ "$candidate" != "(none)" ] || {
+        err "Falta nvidia-driver en APT. Habilita contrib, non-free y non-free-firmware."
+        return 1
+    }
+    kernel=$(uname -r)
+    modulo=$(nvidia_elegir_modulo "$candidate") || {
+        err "No se pudo verificar soporte para todas las GPU en el paquete candidato. Revisión manual necesaria."
+        return 1
+    }
+    case "$modulo" in nvidia-kernel-dkms|nvidia-open-kernel-dkms) ;; *) return 1 ;; esac
+    metadata=$(LC_ALL=C apt-cache show "$modulo=$candidate") || return 1
+    limite=$(sed -nE 's/.*tested up to Linux ([0-9]+\.[0-9]+).*/\1/p' <<< "$metadata" | head -n 1)
+    if [ -z "$limite" ] || ! dpkg --compare-versions "$(cut -d. -f1,2 <<< "${kernel%%-*}")" le "$limite"; then
+        err "El paquete $modulo $candidate no acredita compatibilidad con el kernel $kernel. Revisión manual necesaria."
+        return 1
+    fi
+    headers="linux-headers-$kernel"
+    if ! paquete_instalado "$headers" &&
+       ! LC_ALL=C apt-cache policy "$headers" | grep -Eq 'Candidate:[[:space:]]+[^ (]'; then
+        err "No hay cabeceras disponibles para el kernel $kernel."
+        return 1
+    fi
+    simulation=$(LC_ALL=C apt-get -s --no-remove install "$headers" "nvidia-driver=$candidate" "$modulo=$candidate" 2>&1) || {
+        err "No se pueden resolver las dependencias sin eliminaciones: $simulation"; return 1;
+    }
+    if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
+        err "APT propone eliminar paquetes. Se cancela por seguridad."
+        return 1
+    fi
+    info "Controlador Debian $candidate para kernel $kernel."
+    if nvidia_hibrida; then
+        info "GPU Intel/AMD y NVIDIA presentes: no se modifica la configuración de pantallas. PRIME puede estar disponible."
+        info "PRIME: __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia programa"
+    fi
+    if ! apt-get "${APT_OPTS[@]}" --no-remove install "$headers" "nvidia-driver=$candidate" "$modulo=$candidate"; then
+        err "Fallo instalando NVIDIA. Consulta logs de DKMS y APT."
+        return 1
+    fi
+    if ! nvidia_modulo_listo; then
+        err "APT terminó, pero no se verificó el módulo DKMS para el kernel activo. Revisa DKMS antes de reiniciar."
+        return 1
+    fi
+    REINICIO_REQUERIDO=1
+    echo "##REBOOT:1"
+    ok "Módulo DKMS verificado. Reinicia y comprueba nvidia-smi; la GPU activa solo puede confirmarse después del reinicio."
+}
 
-        "Actualizar y limpiar Snap": "更新并清理 Snap",
-        "Actualiza los snaps y elimina revisiones deshabilitadas antiguas, conservando una revisión anterior por aplicación.": "更新 Snap 并删除较旧的已禁用修订版本，为每个应用保留一个先前版本。",
+# ------------------------------------------------------------------------------
+# Principal
+# ------------------------------------------------------------------------------
+declare -A TITULOS=(
+    [clock]="Sincronizar el reloj"
+    [repos]="Configurar componentes oficiales de repositorios"
+    [tools]="Instalar herramientas auxiliares"
+    [backports-kernel-mesa]="Instalar kernel y Mesa desde Backports"
+    [revertir-backports]="Preparar el retorno de kernel y Mesa a Debian Stable"
+    [nvidia-driver]="Detectar e instalar el controlador NVIDIA de Debian"
+    [ubuntu-hwe]="Instalar kernel HWE oficial de Ubuntu"
+    [flatpak-setup]="Instalar Flatpak y Flathub"
+    [gnome-plugin]="Plugin Flatpak para GNOME Software"
+    [ext-manager]="Extension Manager de GNOME"
+    [upgrade]="Actualizar paquetes del sistema"
+    [autoremove]="Eliminar dependencias huérfanas"
+    [autoclean]="Limpiar caché de paquetes"
+    [snap-update]="Actualizar y limpiar Snap"
+    [flatpak-update]="Actualizar aplicaciones Flatpak"
+    [rebootcheck]="Comprobar si hace falta reiniciar"
+)
+# Pasos cuyo fallo detiene la ejecución (el resto solo se anota)
+CRITICOS=" upgrade backports-kernel-mesa revertir-backports nvidia-driver "
 
-        "Comprobando estado del sistema…": "正在检查系统状态…",
-        "Resumen de salud sin modificar paquetes": "只读系统健康摘要",
-        "Detalle de la simulación APT:": "APT 模拟详情：",
-        "Estado de mantenimiento": "维护状态",
-        "¿Crear instantánea Snapper antes del mantenimiento?": "维护前创建 Snapper 快照？",
-        "Sin instantánea": "不创建快照",
-        "Crear instantánea": "创建快照",
-        "No se pudo completar el resumen de salud.": "无法完成健康摘要。",
-        "Comprobando seguridad del mantenimiento…": "正在检查维护安全性…",
-        "Comprobaciones de seguridad": "安全检查",
-        "No se pudieron completar las comprobaciones de seguridad.": "无法完成安全检查。",
-        "Actualizar AiO": "更新 AiO",
-        "Reiniciar AiO automáticamente tras actualizar": "更新后自动重启 AiO",
-        "Reiniciar aplicación": "重启应用",
-        "Hay una actualización disponible. Puedes instalarla desde aquí.": "发现可用更新。可从此处安装。",
-        "Diagnosticar": "诊断",
-        "Diagnóstico preventivo del sistema": "系统预防性诊断",
-        "Abrir en otra ventana": "在独立窗口打开",
-        "Volver a integrar": "返回主窗口",
-        "Salida de la consola": "控制台输出",
-        "Borrar": "清除",
-        "Detectar e instalar controlador NVIDIA": "检测并安装 NVIDIA 驱动",
-        "En Debian analiza la GPU, el kernel, DKMS y Secure Boot. En portátiles híbridos mantiene PRIME bajo demanda; requiere confirmación.": "在 Debian 上检查 GPU、内核、DKMS 和安全启动。混合显卡笔记本保留按需 PRIME；安装须确认。",
-        "Mantenimiento y configuración del sistema": "系统维护与配置",
-        "Iniciar tareas": "开始任务",
-        "Trabajando…": "正在处理…",
-        "Acerca de AiO Debian": "关于 AiO Debian",
-        "Agradecimiento": "致谢",
-        "Cerrar": "关闭",
-        "Foto de Adri y Lu": "Adri 和 Lu 的照片",
-        "Menú de preferencias": "偏好设置菜单",
-        "Preferencias": "偏好设置",
-        "Idioma de la interfaz": "界面语言",
-        "Apariencia": "外观",
-        "Claro": "浅色",
-        "Oscuro": "深色",
-        "Interfaz simple": "简洁界面",
-        "Muestra solo Configuración y mantenimiento y oculta la columna de información del sistema y la salida de la consola.": "仅显示配置与维护，并隐藏系统信息栏和控制台输出。",
-        "Guardar": "保存",
-        "Cancelar": "取消",
-        "Aceptar": "确定",
-        "Continuar": "继续",
-        "Listo. Elige las tareas y pulsa «Iniciar tareas».": "准备就绪。选择任务，然后点击“开始任务”。",
-        "Cancelar espera": "取消等待",
-        "<b>Información del sistema</b>": "<b>系统信息</b>",
-        "Sistema operativo": "操作系统",
-        "Kernel actual": "当前内核",
-        "Espacio en disco (/)": "磁盘空间（/）",
-        "Usado: %.1f GiB / Total: %.1f GiB (%d%% ocupado)": "已用：%.1f GiB / 总计：%.1f GiB（已用%d%%）",
-        "Fecha de instalación": "安装日期",
-        "Antigüedad del sistema": "系统运行时间",
-        "%d años, %d meses y %d días (%d días en total)": "%d年%d个月%d天（共%d天）",
-        "Versión de AiO Debian GUI": "AiO Debian GUI 版本",
-        "<b>Novedades de esta versión:</b>": "<b>此版本的新功能：</b>",
-        "Novedades de esta versión": "此版本的新功能",
-        "No hay notas para esta versión.": "此版本暂无发行说明。",
-        "Los botones de preset resaltan la selección y se desmarcan al cambiar tareas.": "预设按钮会突出显示当前选择，手动更改任务后取消突出显示。",
-        "<b>Tareas a realizar</b>": "<b>要执行的任务</b>",
-        "Completo": "完整",
-        "Mantenimiento completo (valores por defecto)": "完整维护（默认选项）",
-        "Solo Flatpak": "仅 Flatpak",
-        "Saltarse el mantenimiento de APT y actualizar solo Flatpak": "跳过 APT 维护，仅更新 Flatpak",
-        "No pedir contraseña para las tareas de AiO (solo este usuario)": "AiO 任务不再询问密码（仅此用户）",
-        "La activación requiere autorización de administrador una vez. Puedes desmarcar esta opción para revocarla.": "启用时需要一次管理员授权。取消勾选即可撤销。",
-        "Permite ejecutar las tareas de AiO sin contraseña en la sesión local activa.": "允许在当前本地会话中无需密码运行 AiO 任务。",
-        "Sistema (APT)": "系统（APT）",
-        "Al terminar": "完成后",
-        "Sincronizar el reloj": "同步时钟",
-        "Un reloj desfasado rompe la validación de certificados (apt, Flathub…).": "时钟不准确会导致证书验证失败（APT、Flathub 等）。",
-        "Habilitar contrib y non-free": "启用 contrib 和 non-free",
-        "Añade los componentes a los repositorios oficiales de Debian (con copia .bak).": "将这些组件添加到 Debian 官方软件源（创建 .bak 备份）。",
-        "Instalar herramientas auxiliares": "安装辅助工具",
-        "Terminal con aceleración por GPU, pestañas y paneles divididos.": "支持标签页和分屏的 GPU 加速终端。",
-        "Terminal con aceleración por GPU, atajos configurables y soporte para imágenes.": "支持自定义快捷键和图像显示的 GPU 加速终端。",
-        "Fastfetch, Synaptic y soporte FUSE para AppImage, si faltan.": "安装缺失的 Fastfetch、Synaptic 和 AppImage FUSE 支持。",
-        "Instalar kernel y Mesa desde Backports": "从 Backports 安装内核和 Mesa",
-        "Instala el kernel y los controladores gráficos Mesa de Debian Backports; puede requerir reinicio.": "从 Debian Backports 安装内核和 Mesa 显卡驱动；可能需要重启。",
-        "Actualizar los paquetes del sistema": "升级系统软件包",
-        "Eliminar dependencias huérfanas": "删除孤立依赖",
-        "Limpiar la caché de paquetes obsoletos": "清理过时软件包缓存",
-        "apt-get update y apt-get dist-upgrade.": "运行 apt-get update 和 apt-get dist-upgrade。",
-        "apt-get autoremove; puede quitar paquetes que APT considera huérfanos.": "apt-get autoremove；可能会移除 APT 视为孤立的软件包。",
-        "apt-get autoclean.": "运行 apt-get autoclean。",
-        "Instalar soporte Flatpak y añadir Flathub": "安装 Flatpak 支持并添加 Flathub",
-        "Flatpak no está instalado en este sistema.": "此系统尚未安装 Flatpak。",
-        "Actualizar aplicaciones Flatpak": "更新 Flatpak 应用",
-        "flatpak update y eliminación de runtimes sin uso.": "运行 flatpak update 并删除未使用的运行环境。",
-        "Plugin Flatpak para GNOME Software": "GNOME 软件的 Flatpak 插件",
-        "Permite gestionar apps Flatpak desde la tienda de GNOME.": "可在 GNOME 软件商店中管理 Flatpak 应用。",
-        "Extension Manager": "扩展管理器",
-        "Instala gnome-shell-extension-manager para gestionar extensiones de GNOME Shell.": "安装 gnome-shell-extension-manager 以管理 GNOME Shell 扩展。",
-        "Comprobar si hace falta reiniciar": "检查是否需要重启",
-        "Revisa kernel y servicios críticos al terminar.": "完成后检查内核和关键服务。",
-        "Logotipo de Debian": "Debian 标志",
-        "Comprobando tareas ya instaladas…": "正在检查已完成的任务…",
-        "✓ Ya configurados": "✓ 已配置",
-        "✓ Ya instaladas": "✓ 已安装",
-        "✓ Ya instalados": "✓ 已安装",
-        "✓ Ya instalado": "✓ 已安装",
-        "Esta tarea ya está completada y no se incluirá en futuras operaciones.": "此任务已完成，不会包含在后续操作中。",
-        "No se pudo comprobar el estado de las tareas; siguen disponibles.": "无法检查任务状态；任务仍可使用。",
-        "El asistente no devolvió un estado completo de las tareas.": "辅助程序未返回完整的任务状态。",
-        "Nada que hacer": "没有要执行的操作",
-        "Activa al menos una tarea.": "请至少选择一项任务。",
-        "Falta el asistente": "缺少辅助程序",
-        "No se encuentra %s.\nReinstala el paquete aio-debian-gui.": "找不到 %s。\n请重新安装 aio-debian-gui 软件包。",
-        "Asistente del sistema desactualizado": "系统辅助程序版本过旧",
-        "El asistente instalado no incluye la tarea de Backports. Actualiza el paquete .deb a la versión 1.0.7 o posterior.": "已安装的辅助程序不支持 Backports 任务。请将 .deb 软件包更新到 1.0.7 或更高版本。",
-        "Función no disponible en el asistente instalado": "已安装的辅助程序不支持此功能",
-        "El asistente del sistema no incluye la autorización sin contraseña. Actualiza el paquete .deb a la versión 1.0.6 o posterior.": "系统辅助程序不支持无密码授权。请将 .deb 软件包更新到 1.0.6 或更高版本。",
-        "¿Instalar el kernel y Mesa desde Debian Backports?": "要从 Debian Backports 安装内核和 Mesa 吗？",
-        "Se instalará el kernel de Backports para esta arquitectura y los controladores Mesa disponibles. Esto puede actualizar componentes gráficos y requerir un reinicio. Si falta, se añadirá la fuente oficial de Debian Backports.": "将安装适用于此架构的 Backports 内核和可用的 Mesa 驱动程序。这可能会更新图形组件并需要重启；如果尚未配置，将添加 Debian 官方 Backports 软件源。",
-        "Instalación desde Backports cancelada.": "已取消从 Backports 安装。",
-        "Esperando autenticación de administrador…": "正在等待管理员身份验证…",
-        "No se pudo iniciar": "无法启动",
-        "Permitir tareas sin contraseña?": "允许无密码执行任务？",
-        "Se instalará una autorización persistente de Polkit para este usuario y solo para AiO Debian GUI. Todas las tareas de mantenimiento podrán ejecutarse como administrador sin volver a pedir contraseña. La activación requiere autorización de administrador una vez; puedes desactivarla desde esta opción.": "将为此用户和 AiO Debian GUI 安装持久 Polkit 授权。维护任务可以管理员身份运行，而无需再次输入密码。启用时需要一次管理员授权；可在此处停用。",
-        "Cancelando la espera de autorización…": "正在取消授权等待…",
-        "Paso %d de %d": "第 %d 步，共 %d 步",
-        "Autorización sin contraseña activada.": "已启用无密码授权。",
-        "Autorización sin contraseña desactivada.": "已停用无密码授权。",
-        "No se cambió la autorización.": "授权未更改。",
-        "No se pudo cambiar la autorización.": "无法更改授权。",
-        "No se pudieron guardar las preferencias": "无法保存偏好设置",
-        "No se pudieron leer las preferencias": "无法读取偏好设置",
-        "✔ ¡Mantenimiento completado con éxito!": "✔ 维护已成功完成！",
-        "No se obtuvo autorización de administrador.": "未获得管理员授权。",
-        "Terminó con errores. Revisa el registro.": "执行结束但出现错误。请检查日志。",
-        "¿Reiniciar el sistema ahora?": "现在重启系统吗？",
-        "Se recomienda reiniciar para aplicar los cambios críticos (kernel/servicios).": "建议重启以应用关键更改（内核/服务）。",
-        "Más tarde": "稍后",
-        "Reiniciar ahora": "立即重启",
-        "No se pudo reiniciar": "无法重启",
-        "Mantenimiento y configuración todo en uno para Debian": "Debian 一体化维护与配置",
-        "Mantenimiento en curso": "维护正在进行",
-        "Espera a que termine: interrumpir apt o dpkg a mitad puede dejar el sistema en un estado inconsistente.": "请等待操作完成：中断 APT 或 dpkg 可能导致系统状态不一致。",
-        "Espera de autorización agotada.": "授权等待超时。",
-        "Espera de autorización cancelada.": "已取消授权等待。",
-    },
+mostrar_estados() {
+    local tarea funcion
+    local distro
+    distro=$(leer_distribucion) || distro=desconocida
+    for tarea in repos tools backports-kernel-mesa ubuntu-hwe gnome-plugin ext-manager; do
+        # Las tareas exclusivas de otra distribución se marcan como no configuradas.
+        case "$distro:$tarea" in
+            ubuntu:backports-kernel-mesa|debian:ubuntu-hwe|desconocida:backports-kernel-mesa|desconocida:ubuntu-hwe)
+                printf '##STATUS:%s:0\n' "$tarea"
+                continue ;;
+        esac
+        case "$tarea" in
+            repos) funcion=estado_repos ;;
+            tools) funcion=estado_tools ;;
+            backports-kernel-mesa) funcion=estado_backports ;;
+            ubuntu-hwe) funcion=estado_ubuntu_hwe ;;
+            gnome-plugin) funcion=estado_gnome_plugin ;;
+            ext-manager) funcion=estado_ext_manager ;;
+        esac
+        if "$funcion"; then
+            printf '##STATUS:%s:1\n' "$tarea"
+        else
+            printf '##STATUS:%s:0\n' "$tarea"
+        fi
+    done
 }
 
 
-# Textos del actualizador integrados con las traducciones existentes.
-TRADUCCIONES["en"].update({
-    "No se pudo solicitar la actualización del programador.": "Could not request a scheduler update.",
-    "Las eliminaciones previstas por autoremove y dist-upgrade se muestran como aviso y permiten continuar.": "Planned removals from autoremove and dist-upgrade are shown as a warning, and maintenance can continue.",
-    "La terminal inicia Bash sin ejecutar Fastfetch automáticamente; el acceso manual sigue disponible.": "The terminal starts Bash without running Fastfetch automatically; the manual shortcut remains available.",
-    "Activa autoremove por defecto y conserva libnotify-bin y needrestart, necesarios para la programación en AppImage y Flatpak.": "Enables autoremove by default and preserves libnotify-bin and needrestart, required for AppImage and Flatpak scheduling.",
-    "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.": "Automatically installs the initial scheduler integration for AppImage and Flatpak with administrator authorization.",
-    "Mantiene libnotify-bin y needrestart al eliminar dependencias huérfanas, necesarios para la programación en AppImage y Flatpak.": "Keeps libnotify-bin and needrestart when removing orphaned dependencies; AppImage and Flatpak scheduling needs them.",
-    "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.": "Adds icons for backup and recommended apps, even when they are not installed.",
-    "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.": "Shows maintenance output in the terminal and adds shortcuts.",
-    "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.": "Adds an interactive terminal that runs Fastfetch on startup when installed.",
-    "Terminal": "Terminal",
-    "Abrir nueva sesión": "Open new session",
-    "La sesión de terminal ha terminado.": "The terminal session has ended.",
-    "No se pudo iniciar la terminal.": "Could not start the terminal.",
-    "Fastfetch no está instalado; instala fastfetch para mostrar la información del sistema.": "Fastfetch is not installed; install fastfetch to show system information.",
-    "Limpiar": "Clear",
-    "Ver en Terminal": "View in Terminal",
-    "Abrir archivos como administrador": "Open files as administrator",
-    "No se pudo ejecutar %s.": "Could not run %s.",
-    "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.": "Adds icons for Celluloid, GIMP, Spotify and VLC to recommended apps.",
-    "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.": "Fixes Video Downloader and shows installed formats without opening apps automatically.",
-    "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.": "Improves recommended-app icons when an app's own icon is unavailable.",
-    "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.": "Alphabetical recommended-app catalog with DEB and Flatpak formats.",
-    "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.": "Fixes Backup tab startup while keeping the usual controls available.",
-    "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.": "New Backup tab to open Timeshift or install it with authorization.",
-    "Guía integrada para instalar o actualizar el asistente del anfitrión.": "Built-in guide to install or update the host helper.",
-    "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.": "Diagnostics refresh APT indexes with authorization before checking the system.",
-    "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.": "More complete APT update diagnostics and a warning about local indexes.",
-    "Buscar actualizaciones": "Check for updates",
-    "Confirmar actualización": "Confirm update",
-    "Actualización DEB completada": "DEB update completed",
-    "Actualizar esta aplicación": "Update this application",
-    "Actualización Flatpak completada": "Flatpak update completed",
-    "Ya tienes la última versión": "You have the latest version",
-    "Nueva AppImage descargada": "New AppImage downloaded",
-    "No se pudo actualizar": "Unable to update",
-})
-TRADUCCIONES["fr"].update({
-    "No se pudo solicitar la actualización del programador.": "Impossible de demander la mise à jour du planificateur.",
-    "Las eliminaciones previstas por autoremove y dist-upgrade se muestran como aviso y permiten continuar.": "Les suppressions prévues par autoremove et dist-upgrade sont signalées et il est possible de continuer la maintenance.",
-    "La terminal inicia Bash sin ejecutar Fastfetch automáticamente; el acceso manual sigue disponible.": "Le terminal lance Bash sans exécuter Fastfetch automatiquement ; le raccourci manuel reste disponible.",
-    "Activa autoremove por defecto y conserva libnotify-bin y needrestart, necesarios para la programación en AppImage y Flatpak.": "Active autoremove par défaut et conserve libnotify-bin et needrestart, requis pour la planification AppImage et Flatpak.",
-    "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.": "Installe automatiquement l’intégration initiale du planificateur pour AppImage et Flatpak avec une autorisation administrateur.",
-    "Mantiene libnotify-bin y needrestart al eliminar dependencias huérfanas, necesarios para la programación en AppImage y Flatpak.": "Conserve libnotify-bin et needrestart lors de la suppression des dépendances orphelines ; la planification AppImage et Flatpak en a besoin.",
-    "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.": "Ajoute des icônes pour les applications de sauvegarde et recommandées, même lorsqu’elles ne sont pas installées.",
-    "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.": "Affiche la sortie de maintenance dans le terminal et ajoute des raccourcis.",
-    "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.": "Ajoute un terminal interactif qui lance Fastfetch au démarrage lorsqu’il est installé.",
-    "Terminal": "Terminal",
-    "Abrir nueva sesión": "Ouvrir une nouvelle session",
-    "La sesión de terminal ha terminado.": "La session du terminal est terminée.",
-    "No se pudo iniciar la terminal.": "Impossible de démarrer le terminal.",
-    "Fastfetch no está instalado; instala fastfetch para mostrar la información del sistema.": "Fastfetch n’est pas installé ; installez fastfetch pour afficher les informations système.",
-    "Limpiar": "Effacer",
-    "Ver en Terminal": "Voir dans le terminal",
-    "Abrir archivos como administrador": "Ouvrir les fichiers en tant qu’administrateur",
-    "No se pudo ejecutar %s.": "Impossible d’exécuter %s.",
-    "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.": "Ajoute des icônes pour Celluloid, GIMP, Spotify et VLC aux applications recommandées.",
-    "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.": "Corrige Video Downloader et indique les formats installés sans ouvrir les applications automatiquement.",
-    "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.": "Améliore les icônes des applications recommandées lorsque leur icône propre est indisponible.",
-    "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.": "Catalogue alphabétique d’applications recommandées aux formats DEB et Flatpak.",
-    "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.": "Corrige le démarrage de l’onglet Sauvegarde tout en conservant les commandes habituelles.",
-    "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.": "Nouvel onglet Sauvegarde pour ouvrir Timeshift ou l’installer avec autorisation.",
-    "Guía integrada para instalar o actualizar el asistente del anfitrión.": "Guide intégré pour installer ou mettre à jour l’assistant de l’hôte.",
-    "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.": "Le diagnostic actualise les index APT avec autorisation avant de vérifier le système.",
-    "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.": "Diagnostic des mises à jour APT plus complet et avertissement sur les index locaux.",
-    "Buscar actualizaciones": "Rechercher des mises à jour",
-    "Confirmar actualización": "Confirmer la mise à jour",
-    "Actualización DEB completada": "Mise à jour DEB terminée",
-    "Actualizar esta aplicación": "Mettre à jour cette application",
-    "Actualización Flatpak completada": "Mise à jour Flatpak terminée",
-    "Ya tienes la última versión": "Vous avez la dernière version",
-    "Nueva AppImage descargada": "Nouvelle AppImage téléchargée",
-    "No se pudo actualizar": "Mise à jour impossible",
-})
-TRADUCCIONES["zh"].update({
-    "No se pudo solicitar la actualización del programador.": "无法请求更新计划程序。",
-    "Las eliminaciones previstas por autoremove y dist-upgrade se muestran como aviso y permiten continuar.": "autoremove 和 dist-upgrade 计划删除的软件包会显示警告，但仍可继续维护。",
-    "La terminal inicia Bash sin ejecutar Fastfetch automáticamente; el acceso manual sigue disponible.": "终端启动 Bash 时不再自动运行 Fastfetch；仍可手动使用快捷按钮。",
-    "Activa autoremove por defecto y conserva libnotify-bin y needrestart, necesarios para la programación en AppImage y Flatpak.": "默认启用 autoremove，并保留 AppImage 和 Flatpak 计划任务所需的 libnotify-bin 和 needrestart。",
-    "Instala automáticamente la integración inicial del programador en AppImage y Flatpak, con autorización de administrador.": "通过管理员授权自动安装 AppImage 和 Flatpak 的初始计划程序集成。",
-    "Mantiene libnotify-bin y needrestart al eliminar dependencias huérfanas, necesarios para la programación en AppImage y Flatpak.": "清理孤立依赖时保留 libnotify-bin 和 needrestart；AppImage 和 Flatpak 的计划任务需要它们。",
-    "Añade iconos propios para las aplicaciones de backup y recomendadas, aunque no estén instaladas.": "为备份和推荐应用添加图标，即使尚未安装也会显示。",
-    "Integra la salida de mantenimiento en la terminal y añade accesos rápidos.": "在终端显示维护输出并添加快捷操作。",
-    "Añade una terminal interactiva con Fastfetch al iniciar cuando está instalado.": "新增交互式终端；安装 Fastfetch 时会在启动时运行。",
-    "Terminal": "终端",
-    "Abrir nueva sesión": "打开新会话",
-    "La sesión de terminal ha terminado.": "终端会话已结束。",
-    "No se pudo iniciar la terminal.": "无法启动终端。",
-    "Fastfetch no está instalado; instala fastfetch para mostrar la información del sistema.": "尚未安装 Fastfetch；请安装 fastfetch 以显示系统信息。",
-    "Limpiar": "清屏",
-    "Ver en Terminal": "在终端中查看",
-    "Abrir archivos como administrador": "以管理员身份打开文件",
-    "No se pudo ejecutar %s.": "无法运行 %s。",
-    "Incorpora iconos para Celluloid, GIMP, Spotify y VLC en las aplicaciones recomendadas.": "为推荐应用中的 Celluloid、GIMP、Spotify 和 VLC 添加图标。",
-    "Corrige Video Downloader y muestra los formatos instalados sin abrir las aplicaciones automáticamente.": "修复 Video Downloader 并显示已安装的格式，不再自动打开应用。",
-    "Mejora los iconos de las aplicaciones recomendadas cuando falta el icono propio.": "当应用自身图标不可用时，改进推荐应用的图标显示。",
-    "Catálogo alfabético de aplicaciones recomendadas con formatos DEB y Flatpak.": "按字母排序的推荐应用目录，提供 DEB 和 Flatpak 格式。",
-    "Corrige la inicialización de la interfaz Backup y conserva los controles habituales.": "修复备份选项卡的启动，同时保留常用控件。",
-    "Nueva pestaña Backup para abrir Timeshift o instalarlo con autorización.": "新增备份选项卡，可打开 Timeshift 或经授权安装。",
-    "Guía integrada para instalar o actualizar el asistente del anfitrión.": "内置指南可帮助安装或更新主机辅助程序。",
-    "El diagnóstico actualiza los índices APT con autorización antes de comprobar el sistema.": "诊断会在检查系统前经授权刷新 APT 索引。",
-    "Diagnóstico de actualizaciones APT más completo y aviso sobre índices locales.": "更全面地诊断 APT 更新并提示本地索引问题。",
-    "Buscar actualizaciones": "检查更新",
-    "Confirmar actualización": "确认更新",
-    "Actualización DEB completada": "DEB 更新完成",
-    "Actualizar esta aplicación": "更新此应用",
-    "Actualización Flatpak completada": "Flatpak 更新完成",
-    "Ya tienes la última versión": "已是最新版本",
-    "Nueva AppImage descargada": "已下载新 AppImage",
-    "No se pudo actualizar": "更新失败",
-})
+main() {
+    if [ "${1:-}" = "--version" ] && [ "$#" -eq 1 ]; then
+        printf '%s\n' "$HELPER_VERSION"
+        return 0
+    fi
+    if [ "${1:-}" = "--maintenance-api" ] && [ "$#" -eq 1 ]; then
+        printf '%s\n' 1
+        return 0
+    fi
+    # Actualizar exclusivamente Flatpak del usuario sin elevar privilegios.
+    # Sin --system ni instalaciones de root; no requiere polkit ni pkexec.
+    if [ "${1:-}" = "--flatpak-user-update" ] && [ "$#" -eq 1 ]; then
+        [ "$EUID" -ne 0 ] || { err "Flatpak de usuario nunca se ejecuta como root."; return 1; }
+        command -v flatpak >/dev/null 2>&1 || { err "Flatpak no está instalado."; return 1; }
+        echo "##STEP:1:1:Actualizar aplicaciones Flatpak del usuario"
+        if flatpak --user update -y && flatpak --user uninstall --unused -y; then
+            ok "Flatpak de usuario actualizado y dependencias sin uso eliminadas."
+            echo "##RESULT:flatpak-update:0"
+            echo "##DONE:0"
+            return 0
+        fi
+        err "No se pudieron actualizar los Flatpak de usuario."
+        echo "##RESULT:flatpak-update:1"
+        echo "##DONE:1"
+        return 1
+    fi
+    if [ "${1:-}" = "--backports-rollback-plan" ] && [ "$#" -eq 1 ]; then
+        plan_revertir_backports
+        return $?
+    fi
+    if [ "${1:-}" = "--nvidia-report" ] && [ "$#" -eq 1 ]; then
+        nvidia_report
+        return 0
+    fi
+    if [ "${1:-}" = "--status" ] && [ "$#" -eq 1 ]; then
+        nvidia_report
+        mostrar_estados
+        return 0
+    fi
 
+    if [ "${1:-}" = "--schedule-status" ] && [ "$#" -eq 1 ]; then
+        [ -r "$SCHEDULER_MODULE" ] || { err "Instala la integración de programación de AiO en el anfitrión."; return 1; }
+        /usr/bin/python3 -I "$SCHEDULER_MODULE" --status "$(id -u)"
+        return $?
+    fi
 
+    if [ "$EUID" -ne 0 ]; then
+        err "Este asistente debe ejecutarse con privilegios de administrador." >&2
+        exit 1
+    fi
 
-TRADUCCIONES["en"].update({
-    "Historial de mantenimiento": "Maintenance history",
-    "Exportar historial": "Export history",
-    "Vista previa del mantenimiento": "Maintenance preview",
-    "Reinicio recomendado": "Restart recommended",
-    "Todavía no hay operaciones registradas.": "No operations have been recorded yet.",
-    "No se pudo exportar el historial": "Could not export history",
-    "Mantenimiento cancelado antes de comenzar.": "Maintenance cancelled before starting.",
-})
-TRADUCCIONES["fr"].update({
-    "Historial de mantenimiento": "Historique de maintenance",
-    "Exportar historial": "Exporter l'historique",
-    "Vista previa del mantenimiento": "Aperçu de maintenance",
-    "Reinicio recomendado": "Redémarrage recommandé",
-    "Todavía no hay operaciones registradas.": "Aucune opération enregistrée.",
-    "No se pudo exportar el historial": "Impossible d'exporter l'historique",
-    "Mantenimiento cancelado antes de comenzar.": "Maintenance annulée avant le début.",
-})
-TRADUCCIONES["zh"].update({
-    "Historial de mantenimiento": "维护历史",
-    "Exportar historial": "导出历史",
-    "Vista previa del mantenimiento": "维护预览",
-    "Reinicio recomendado": "建议重新启动",
-    "Todavía no hay operaciones registradas.": "尚无操作记录。",
-    "No se pudo exportar el historial": "无法导出历史",
-    "Mantenimiento cancelado antes de comenzar.": "维护已在开始前取消。",
-})
+    # Idioma de los mensajes de apt/flatpak (pkexec limpia el entorno)
+    if [ "${1:-}" = "--lang" ]; then
+        if [[ "${2:-}" =~ ^[A-Za-z0-9_.@-]{1,40}$ ]]; then
+            export LANG="$2"
+        fi
+        shift; [ $# -gt 0 ] && shift
+    fi
 
+    # Ghostty valida su propia versión de Ubuntu sin habilitar el resto del mantenimiento.
+    if [ "$#" -ne 2 ] || [ "${1:-}" != "--recommended-install" ] || [ "${2:-}" != ghostty ]; then
+        distribucion_soportada >/dev/null || exit 1
+    fi
 
-# Adaptación de tareas Debian / Ubuntu LTS.
-TRADUCCIONES["en"].update({
-    "Configurar repositorios oficiales": "Configure official repositories",
-    "En Debian habilita contrib/non-free; en Ubuntu LTS habilita universe/restricted/multiverse.": "Enable contrib/non-free on Debian or universe/restricted/multiverse on Ubuntu LTS.",
-    "Instalar kernel HWE oficial de Ubuntu": "Install official Ubuntu HWE kernel",
-    "Instala el metapaquete HWE de Ubuntu LTS solo si está disponible en los repositorios oficiales; puede requerir reinicio.": "Install the Ubuntu LTS HWE metapackage only when officially available; a reboot may be needed.",
-})
-TRADUCCIONES["fr"].update({
-    "Configurar repositorios oficiales": "Configurer les dépôts officiels",
-    "En Debian habilita contrib/non-free; en Ubuntu LTS habilita universe/restricted/multiverse.": "Active contrib/non-free sur Debian ou universe/restricted/multiverse sur Ubuntu LTS.",
-    "Instalar kernel HWE oficial de Ubuntu": "Installer le noyau HWE officiel d'Ubuntu",
-    "Instala el metapaquete HWE de Ubuntu LTS solo si está disponible en los repositorios oficiales; puede requerir reinicio.": "Installe le métapaquet HWE d'Ubuntu LTS seulement s'il est disponible ; un redémarrage peut être nécessaire.",
-})
-TRADUCCIONES["zh"].update({
-    "Configurar repositorios oficiales": "配置官方软件源",
-    "En Debian habilita contrib/non-free; en Ubuntu LTS habilita universe/restricted/multiverse.": "Debian 启用 contrib/non-free；Ubuntu LTS 启用 universe/restricted/multiverse。",
-    "Instalar kernel HWE oficial de Ubuntu": "安装 Ubuntu 官方 HWE 内核",
-    "Instala el metapaquete HWE de Ubuntu LTS solo si está disponible en los repositorios oficiales; puede requerir reinicio.": "仅在官方软件源提供时安装 Ubuntu LTS HWE 元软件包；可能需要重启。",
-})
+    local inherited_lock=""
+    if [ "${1:-}" = "--lock-fd" ]; then
+        inherited_lock="${2:-}"
+        [[ "$inherited_lock" =~ ^[1-9][0-9]{0,5}$ ]] && [ "$inherited_lock" -ge 3 ] || {
+            err "Descriptor de bloqueo no válido."; exit 2;
+        }
+        [ "$(readlink "/proc/self/fd/$inherited_lock")" = "$MAINTENANCE_LOCK" ] || {
+            err "El bloqueo heredado no corresponde a AiO."; exit 2;
+        }
+        shift 2
+    fi
 
-TRADUCCIONES["en"]["Logotipo de Ubuntu"] = "Ubuntu logo"
-TRADUCCIONES["fr"]["Logotipo de Ubuntu"] = "Logo Ubuntu"
-TRADUCCIONES["zh"]["Logotipo de Ubuntu"] = "Ubuntu 标志"
+    # Huella del plan mostrado por la GUI antes de solicitar autorización.
+    if [ "${1:-}" = "--upgrade-plan" ]; then
+        [[ "${2:-}" =~ ^[0-9a-f]{64}$ ]] || { err "Plan APT no válido."; exit 2; }
+        UPGRADE_PLAN="$2"
+        shift 2
+    fi
 
+    case "${1:-}" in
+        --refresh-diagnostic-apt)
+            [ "$#" -eq 1 ] || { err "Argumentos de diagnóstico no válidos."; exit 2; }
+            install -d -o root -g root -m 0755 /run/aio-debian-gui || exit 1
+            umask 077
+            exec 9>"$MAINTENANCE_LOCK" || exit 1
+            umask 022
+            chmod 0600 "$MAINTENANCE_LOCK" || exit 1
+            flock -n 9 || { err "Ya hay otro mantenimiento de AiO en curso."; exit 1; }
+            refrescar_indices_diagnostico
+            exit $?
+            ;;
+        --schedule-save)
+            [ "$#" -eq 2 ] || { err "Configuración de programación no válida."; exit 2; }
+            [ -r "$SCHEDULER_MODULE" ] || { err "Instala la integración de programación de AiO en el anfitrión."; exit 1; }
+            local schedule_uid
+            schedule_uid=$(pkexec_uid) || exit 1
+            echo "##SCHEDULE:authorized"
+            ejecutar_programador --configure "$schedule_uid" "$2"
+            exit $?
+            ;;
+        --schedule-remove)
+            [ "$#" -eq 1 ] || { err "Argumentos de programación no válidos."; exit 2; }
+            [ -r "$SCHEDULER_MODULE" ] || { err "Instala la integración de programación de AiO en el anfitrión."; exit 1; }
+            local schedule_uid
+            schedule_uid=$(pkexec_uid) || exit 1
+            echo "##SCHEDULE:authorized"
+            ejecutar_programador --remove "$schedule_uid"
+            exit $?
+            ;;
+        --check-update-self)
+            [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --check-update-self"; exit 2; }
+            paquete_instalado aio-debian-gui || { err "AiO Debian GUI no está instalado como DEB."; exit 1; }
+            asegurar_listas || exit 1
+            instalada=$(dpkg-query -W -f='${Version}' aio-debian-gui) || exit 1
+            disponible=$(LC_ALL=C apt-cache policy aio-debian-gui | awk '/^[[:space:]]*Candidate:/ { print $2; exit }')
+            [ -n "$disponible" ] && [ "$disponible" != "(none)" ] || {
+                err "No existe versión candidata de AiO Debian GUI en los repositorios APT."
+                exit 1
+            }
+            if dpkg --compare-versions "$disponible" gt "$instalada"; then
+                printf '##UPDATE:%s:%s\n' "${instalada#*:}" "${disponible#*:}"
+            else
+                printf '##NOUPDATE:%s:%s\n' "${instalada#*:}" "${disponible#*:}"
+            fi
+            exit 0
+            ;;
+        --update-self)
+            [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --update-self"; exit 2; }
+            # Solo actualiza el paquete oficial ya instalado por APT. No hay rutas,
+            # URLs ni argumentos controlados por el usuario.
+            if ! dpkg-query -W -f='${db:Status-Status}' aio-debian-gui 2>/dev/null | grep -qx installed; then
+                err "AiO Debian GUI no está instalado como paquete DEB."
+                exit 1
+            fi
+            asegurar_listas || exit 1
+            if ! apt-get "${APT_OPTS[@]}" --only-upgrade install aio-debian-gui; then
+                err "No se pudo actualizar AiO Debian GUI mediante APT."
+                exit 1
+            fi
+            ok "Comprobación y actualización del paquete DEB completadas."
+            exit 0
+            ;;
+        --backup-install)
+            [ "$#" -eq 2 ] || { err "Uso: $0 [--lang LOCALE] --backup-install timeshift|deja-dup"; exit 2; }
+            instalar_aplicacion_backup "$2"
+            exit $?
+            ;;
+        --recommended-install)
+            [ "$#" -eq 2 ] || { err "Uso: $0 [--lang LOCALE] --recommended-install btop|celluloid|deluge|ghostty|gimp|handbrake|htop|kitty|qbittorrent|vlc"; exit 2; }
+            instalar_aplicacion_recomendada "$2"
+            exit $?
+            ;;
+        --enable-passwordless)
+            [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --enable-passwordless"; exit 2; }
+            habilitar_sin_contrasena
+            exit $?
+            ;;
+        --disable-passwordless)
+            [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --disable-passwordless"; exit 2; }
+            deshabilitar_sin_contrasena
+            exit $?
+            ;;
+    esac
 
-TRADUCCIONES["en"]["Seguir el sistema"] = "Follow system"
-TRADUCCIONES["fr"]["Seguir el sistema"] = "Suivre le système"
-TRADUCCIONES["zh"]["Seguir el sistema"] = "跟随系统"
+    local pasos=() s
+    for s in "$@"; do
+        if [ -z "${TITULOS[$s]+x}" ]; then
+            err "Paso desconocido: $s" >&2
+            exit 2
+        fi
+        pasos+=("$s")
+    done
+    [ ${#pasos[@]} -gt 0 ] || { err "No se indicó ningún paso." >&2; exit 2; }
+    local distro
+    distro=$(leer_distribucion) || exit 1
+    for s in "${pasos[@]}"; do
+        case "$distro:$s" in
+            ubuntu:backports-kernel-mesa|ubuntu:revertir-backports|ubuntu:nvidia-driver|debian:ubuntu-hwe)
+                err "La tarea $s no es compatible con la distribución detectada."
+                exit 2 ;;
+        esac
+    done
 
+    # Un bloqueo común impide solapar tareas manuales y programadas de AiO.
+    if [ -z "$inherited_lock" ]; then
+        install -d -o root -g root -m 0755 /run/aio-debian-gui || exit 1
+        umask 077
+        exec 9>"$MAINTENANCE_LOCK" || exit 1
+        umask 022
+        chmod 0600 "$MAINTENANCE_LOCK" || exit 1
+        inherited_lock=9
+    fi
+    if ! flock -n "$inherited_lock"; then
+        err "Ya hay otro mantenimiento de AiO en curso."
+        exit 1
+    fi
 
-TRADUCCIONES["en"]["No solicitar contraseña de administrador en AiO (opcional)"] = "Do not request administrator password in AiO (optional)"
-TRADUCCIONES["fr"]["No solicitar contraseña de administrador en AiO (opcional)"] = "Ne pas demander le mot de passe administrateur dans AiO (optionnel)"
-TRADUCCIONES["zh"]["No solicitar contraseña de administrador en AiO (opcional)"] = "AiO 中不要求管理员密码（可选）"
+    local total=${#pasos[@]} i=0 fallos=0
+    for s in "${pasos[@]}"; do
+        i=$((i + 1))
+        echo "##STEP:${i}:${total}:${TITULOS[$s]}"
+        if ! "paso_${s//-/_}"; then
+            echo "##RESULT:${s}:1"
+            fallos=1
+            if [[ "$CRITICOS" == *" $s "* ]]; then
+                echo "##DONE:1"
+                exit 1
+            fi
+        else
+            echo "##RESULT:${s}:0"
+        fi
+    done
 
-# Traducciones de interfaz, versiones recientes y diagnóstico preventivo.
-# Se mantienen aquí para que los textos dinámicos usen el mismo catálogo.
-TRADUCCIONES["en"].update({
-    "La comprobación de actualizaciones de AiO funciona también con APT en español.": "AiO update checks now work with APT in Spanish.",
-    "Diagnosticar comprueba la versión de AiO, ofrece actualizar y permite reiniciar automáticamente al terminar.": "Diagnose checks the AiO version, offers updates and allows automatic restart afterwards.",
-    "Diagnóstico APT sin privilegios: evita falsos avisos críticos por bloqueo de dpkg.": "Unprivileged APT diagnostics: prevents false critical alerts from dpkg locks.",
-    "Diagnóstico preventivo de APT, paquetes, espacio, DKMS y servicios antes del mantenimiento.": "Preventive checks of APT, packages, disk space, DKMS and services before maintenance.",
-    "La salida de consola puede abrirse en una ventana independiente, ampliable y sincronizada en tiempo real.": "Console output can open in a separate, resizable window with live updates.",
-    "Menú unificado: Preferencias, Historial, Buscar actualizaciones y Acerca de en ese orden.": "Unified menu: Preferences, History, Check for updates and About, in that order.",
-    "Dos paneles lado a lado: sistema y tareas, sin duplicar Preferencias y con desplazamiento independiente.": "Side-by-side system and task panels, one Preferences entry and independent scrolling.",
-    "Interfaz más clara con secciones horizontales, tareas a todo el ancho y controles de ejecución mejor distribuidos.": "Clearer interface with horizontal sections, full-width tasks and improved action controls.",
-    "Detección NVIDIA en Debian, instalación supervisada del controlador compatible y soporte PRIME para equipos híbridos.": "NVIDIA detection on Debian, supervised driver installation and PRIME support for hybrid systems.",
-    "No se detectó una GPU NVIDIA PCI.": "No NVIDIA PCI GPU detected.",
-    "Buscando GPU NVIDIA…": "Detecting NVIDIA GPU…",
-    "Híbrida (integrada + NVIDIA)": "Hybrid (integrated + NVIDIA)",
-    "NVIDIA dedicada": "Dedicated NVIDIA",
-    "instalado": "installed",
-    "no instalado": "not installed",
-    "GPU: %s · driver %s · candidato APT: %s · Secure Boot: %s": "GPU: %s · driver %s · APT candidate: %s · Secure Boot: %s",
-    "Por defecto Polkit solicita contraseña. Esta excepción es voluntaria y aumenta los riesgos de seguridad.": "By default, Polkit asks for a password. This optional exception increases security risks.",
-    "<b>Salida de la consola</b>": "<b>Console output</b>",
-    "Comprobar el sistema sin realizar modificaciones": "Check the system without making changes",
-    "Análisis de solo lectura. No instala, elimina ni repara paquetes. Las comprobaciones dependen del estado de los índices APT.": "Read-only analysis. No packages are installed, removed or repaired. Results depend on the state of the APT indexes.",
-    "Analizando el sistema…": "Analyzing system…",
-    "No se pudo completar el diagnóstico: ": "Could not complete diagnostics: ",
-    "Críticos": "Critical",
-    "Avisos": "Warnings",
-    "No comprobados": "Not checked",
-    "Correctos": "OK",
-    "Requiere atención": "Needs attention",
-    "Revisar": "Review",
-    "Sin comprobar": "Not checked",
-    "Correcto": "OK",
-    "Instalar la versión disponible con el actualizador de AiO": "Install the available version using AiO's updater",
-    "Espacio en /": "Root disk space (/)",
-    "Estado de dpkg": "dpkg status",
-    "Dependencias APT": "APT dependencies",
-    "Actualizaciones pendientes": "Pending updates",
-    "Índices de APT": "APT indexes",
-    "Módulos DKMS": "DKMS modules",
-    "Reinicio pendiente": "Restart pending",
-    "Servicios systemd": "systemd services",
-    "Sistema anfitrión": "Host system",
-    "Versión de AiO Debian GUI": "AiO Debian GUI version",
-    "No se detectaron paquetes parcialmente instalados.": "No partially installed packages detected.",
-    "APT no comunica errores de dependencias.": "APT reports no dependency errors.",
-    "No se pudieron fechar los índices disponibles.": "Could not determine the age of the available indexes.",
-    "DKMS no está instalado; es normal si no utilizas módulos externos.": "DKMS is not installed; this is normal if no external modules are used.",
-    "Sin unidades fallidas.": "No failed units.",
-    "No hay una solicitud explícita de reinicio registrada.": "No explicit restart request is recorded.",
-    "El sistema solicita reiniciar.": "The system requests a restart.",
-    "No hay módulos DKMS registrados.": "No DKMS modules registered.",
-    "Módulos registrados sin incidencias detectadas.": "Registered modules have no detected issues.",
-    "systemd no está disponible en esta sesión.": "systemd is unavailable in this session.",
-    "No se pudieron verificar las dependencias por permisos.": "Could not check dependencies due to permissions.",
-    "Libera espacio antes de grandes actualizaciones.": "Free disk space before large updates.",
-    "Revisa los paquetes incompletos antes de iniciar otras operaciones APT.": "Review incomplete packages before other APT operations.",
-    "Examina las dependencias antes de actualizar.": "Review dependencies before updating.",
-    "Revisa y aplica las actualizaciones del sistema cuando corresponda.": "Review and install system updates when appropriate.",
-    "Ejecuta «Actualizar paquetes del sistema» para refrescar los índices.": "Run “Upgrade system packages” to refresh package indexes.",
-    "Comprueba la compilación de módulos para el kernel actual.": "Check module builds for the current kernel.",
-    "Guarda tu trabajo y reinicia cuando sea oportuno.": "Save your work and restart when convenient.",
-    "Revisa los servicios fallidos con systemctl --failed.": "Review failed services with systemctl --failed.",
-    "El diagnóstico local está limitado dentro de Flatpak; no se han comprobado APT, dpkg ni systemd del anfitrión.": "Local diagnostics are limited inside Flatpak; host APT, dpkg and systemd were not checked.",
-    "Para revisar Debian/Ubuntu usa la edición DEB o AppImage fuera del sandbox.": "To check Debian/Ubuntu, use the DEB or AppImage edition outside the sandbox.",
-    "%.1f GiB libres (%s del volumen)": "%.1f GiB free (%s of volume)",
-    "%d actualizaciones estimadas por APT%s.": "%d updates estimated by APT%s.",
-    "; %d retenidos": "; %d held back",
-    "Último índice de paquetes: hace %d días.": "Latest package index: %d days ago.",
-    "Instalada: %s. Disponible en APT: %s.": "Installed: %s. Available in APT: %s.",
-    "Instalada: %s. Al día según los índices APT locales.": "Installed: %s. Up to date according to local APT indexes.",
-    "No hay versión candidata en los índices APT.": "No candidate version in APT indexes.",
-    "2.0.9 — Traducciones completas para los paneles y el diagnóstico preventivo.": "2.0.9 — Completed translations for the panels and preventive diagnostics.",
-})
-TRADUCCIONES["fr"].update({
-    "La comprobación de actualizaciones de AiO funciona también con APT en español.": "La vérification des mises à jour AiO fonctionne aussi avec APT en espagnol.",
-    "Diagnosticar comprueba la versión de AiO, ofrece actualizar y permite reiniciar automáticamente al terminar.": "Diagnostiquer vérifie la version d’AiO, propose la mise à jour et permet le redémarrage automatique.",
-    "Diagnóstico APT sin privilegios: evita falsos avisos críticos por bloqueo de dpkg.": "Diagnostic APT sans privilèges : évite les fausses alertes critiques liées aux verrous dpkg.",
-    "Diagnóstico preventivo de APT, paquetes, espacio, DKMS y servicios antes del mantenimiento.": "Vérification préventive d’APT, des paquets, de l’espace disque, de DKMS et des services.",
-    "La salida de consola puede abrirse en una ventana independiente, ampliable y sincronizada en tiempo real.": "La console peut s’ouvrir dans une fenêtre séparée et redimensionnable, actualisée en temps réel.",
-    "Menú unificado: Preferencias, Historial, Buscar actualizaciones y Acerca de en ese orden.": "Menu unique : Préférences, Historique, Rechercher des mises à jour et À propos, dans cet ordre.",
-    "Dos paneles lado a lado: sistema y tareas, sin duplicar Preferencias y con desplazamiento independiente.": "Panneaux système et tâches côte à côte, sans doublon de Préférences, avec défilement indépendant.",
-    "Interfaz más clara con secciones horizontales, tareas a todo el ancho y controles de ejecución mejor distribuidos.": "Interface plus claire avec sections horizontales, tâches pleine largeur et commandes réorganisées.",
-    "Detección NVIDIA en Debian, instalación supervisada del controlador compatible y soporte PRIME para equipos híbridos.": "Détection NVIDIA sous Debian, installation contrôlée des pilotes et prise en charge de PRIME hybride.",
-    "No se detectó una GPU NVIDIA PCI.": "Aucun GPU NVIDIA PCI détecté.",
-    "Buscando GPU NVIDIA…": "Recherche du GPU NVIDIA…",
-    "Híbrida (integrada + NVIDIA)": "Hybride (intégrée + NVIDIA)",
-    "NVIDIA dedicada": "NVIDIA dédiée",
-    "instalado": "installé",
-    "no instalado": "non installé",
-    "GPU: %s · driver %s · candidato APT: %s · Secure Boot: %s": "GPU : %s · pilote %s · candidat APT : %s · Secure Boot : %s",
-    "Por defecto Polkit solicita contraseña. Esta excepción es voluntaria y aumenta los riesgos de seguridad.": "Par défaut, Polkit demande un mot de passe. Cette exception facultative augmente les risques de sécurité.",
-    "<b>Salida de la consola</b>": "<b>Sortie de la console</b>",
-    "Comprobar el sistema sin realizar modificaciones": "Vérifier le système sans aucune modification",
-    "Análisis de solo lectura. No instala, elimina ni repara paquetes. Las comprobaciones dependen del estado de los índices APT.": "Analyse en lecture seule. Aucun paquet n’est installé, supprimé ou réparé. Les résultats dépendent des index APT.",
-    "Analizando el sistema…": "Analyse du système…",
-    "No se pudo completar el diagnóstico: ": "Impossible de terminer le diagnostic : ",
-    "Críticos": "Critiques",
-    "Avisos": "Avertissements",
-    "No comprobados": "Non vérifiés",
-    "Correctos": "Corrects",
-    "Requiere atención": "Attention requise",
-    "Revisar": "À vérifier",
-    "Sin comprobar": "Non vérifié",
-    "Correcto": "Correct",
-    "Instalar la versión disponible con el actualizador de AiO": "Installer la version disponible avec le système de mise à jour d’AiO",
-    "Espacio en /": "Espace disque racine (/)",
-    "Estado de dpkg": "État de dpkg",
-    "Dependencias APT": "Dépendances APT",
-    "Actualizaciones pendientes": "Mises à jour en attente",
-    "Índices de APT": "Index APT",
-    "Módulos DKMS": "Modules DKMS",
-    "Reinicio pendiente": "Redémarrage en attente",
-    "Servicios systemd": "Services systemd",
-    "Sistema anfitrión": "Système hôte",
-    "Versión de AiO Debian GUI": "Version d’AiO Debian GUI",
-    "No se detectaron paquetes parcialmente instalados.": "Aucun paquet partiellement installé détecté.",
-    "APT no comunica errores de dependencias.": "APT ne signale aucune erreur de dépendance.",
-    "No se pudieron fechar los índices disponibles.": "Impossible de dater les index disponibles.",
-    "DKMS no está instalado; es normal si no utilizas módulos externos.": "DKMS n’est pas installé ; c’est normal sans modules externes.",
-    "Sin unidades fallidas.": "Aucune unité en échec.",
-    "No hay una solicitud explícita de reinicio registrada.": "Aucune demande explicite de redémarrage enregistrée.",
-    "El sistema solicita reiniciar.": "Le système demande un redémarrage.",
-    "No hay módulos DKMS registrados.": "Aucun module DKMS enregistré.",
-    "Módulos registrados sin incidencias detectadas.": "Aucun problème détecté pour les modules enregistrés.",
-    "systemd no está disponible en esta sesión.": "systemd n’est pas disponible dans cette session.",
-    "No se pudieron verificar las dependencias por permisos.": "Impossible de vérifier les dépendances à cause des autorisations.",
-    "Libera espacio antes de grandes actualizaciones.": "Libérez de l’espace avant une mise à jour importante.",
-    "Revisa los paquetes incompletos antes de iniciar otras operaciones APT.": "Vérifiez les paquets incomplets avant d’autres opérations APT.",
-    "Examina las dependencias antes de actualizar.": "Vérifiez les dépendances avant la mise à jour.",
-    "Revisa y aplica las actualizaciones del sistema cuando corresponda.": "Vérifiez et installez les mises à jour système si nécessaire.",
-    "Ejecuta «Actualizar paquetes del sistema» para refrescar los índices.": "Exécutez « Mettre à jour les paquets système » pour actualiser les index.",
-    "Comprueba la compilación de módulos para el kernel actual.": "Vérifiez la compilation des modules pour le noyau actuel.",
-    "Guarda tu trabajo y reinicia cuando sea oportuno.": "Enregistrez votre travail et redémarrez lorsque cela vous convient.",
-    "Revisa los servicios fallidos con systemctl --failed.": "Vérifiez les services en échec avec systemctl --failed.",
-    "El diagnóstico local está limitado dentro de Flatpak; no se han comprobado APT, dpkg ni systemd del anfitrión.": "Le diagnostic local est limité dans Flatpak ; APT, dpkg et systemd de l’hôte n’ont pas été vérifiés.",
-    "Para revisar Debian/Ubuntu usa la edición DEB o AppImage fuera del sandbox.": "Pour vérifier Debian/Ubuntu, utilisez l’édition DEB ou AppImage hors du bac à sable.",
-    "%.1f GiB libres (%s del volumen)": "%.1f Gio libres (%s du volume)",
-    "%d actualizaciones estimadas por APT%s.": "%d mises à jour estimées par APT%s.",
-    "; %d retenidos": " ; %d retenues",
-    "Último índice de paquetes: hace %d días.": "Dernier index de paquets : il y a %d jours.",
-    "Instalada: %s. Disponible en APT: %s.": "Installée : %s. Disponible dans APT : %s.",
-    "Instalada: %s. Al día según los índices APT locales.": "Installée : %s. À jour selon les index APT locaux.",
-    "No hay versión candidata en los índices APT.": "Aucune version candidate dans les index APT.",
-    "2.0.9 — Traducciones completas para los paneles y el diagnóstico preventivo.": "2.0.9 — Traductions complétées pour les panneaux et le diagnostic préventif.",
-})
-TRADUCCIONES["zh"].update({
-    "La comprobación de actualizaciones de AiO funciona también con APT en español.": "AiO 更新检查现支持西班牙语 APT。",
-    "Diagnosticar comprueba la versión de AiO, ofrece actualizar y permite reiniciar automáticamente al terminar.": "诊断功能检查 AiO 版本、提供更新并允许完成后自动重启。",
-    "Diagnóstico APT sin privilegios: evita falsos avisos críticos por bloqueo de dpkg.": "无需管理员权限的 APT 诊断：避免因 dpkg 锁误报严重问题。",
-    "Diagnóstico preventivo de APT, paquetes, espacio, DKMS y servicios antes del mantenimiento.": "维护前检查 APT、软件包、磁盘空间、DKMS 和服务。",
-    "La salida de consola puede abrirse en una ventana independiente, ampliable y sincronizada en tiempo real.": "控制台输出可在独立的可调整大小窗口中实时显示。",
-    "Menú unificado: Preferencias, Historial, Buscar actualizaciones y Acerca de en ese orden.": "统一菜单依次包含偏好设置、历史记录、检查更新和关于。",
-    "Dos paneles lado a lado: sistema y tareas, sin duplicar Preferencias y con desplazamiento independiente.": "系统信息和任务并排显示，偏好设置不重复且分别滚动。",
-    "Interfaz más clara con secciones horizontales, tareas a todo el ancho y controles de ejecución mejor distribuidos.": "界面采用水平分区、全宽任务区和更合理的操作按钮布局。",
-    "Detección NVIDIA en Debian, instalación supervisada del controlador compatible y soporte PRIME para equipos híbridos.": "Debian NVIDIA 检测、受控驱动安装及混合显卡 PRIME 支持。",
-    "No se detectó una GPU NVIDIA PCI.": "未检测到 NVIDIA PCI 显卡。",
-    "Buscando GPU NVIDIA…": "正在检测 NVIDIA 显卡…",
-    "Híbrida (integrada + NVIDIA)": "混合显卡（集成 + NVIDIA）",
-    "NVIDIA dedicada": "独立 NVIDIA 显卡",
-    "instalado": "已安装",
-    "no instalado": "未安装",
-    "GPU: %s · driver %s · candidato APT: %s · Secure Boot: %s": "显卡：%s · 驱动 %s · APT 候选版本：%s · 安全启动：%s",
-    "Por defecto Polkit solicita contraseña. Esta excepción es voluntaria y aumenta los riesgos de seguridad.": "默认情况下 Polkit 要求输入密码。此可选例外会增加安全风险。",
-    "<b>Salida de la consola</b>": "<b>控制台输出</b>",
-    "Comprobar el sistema sin realizar modificaciones": "检查系统而不做任何更改",
-    "Análisis de solo lectura. No instala, elimina ni repara paquetes. Las comprobaciones dependen del estado de los índices APT.": "只读分析。不安装、删除或修复软件包。检查结果取决于 APT 索引状态。",
-    "Analizando el sistema…": "正在分析系统…",
-    "No se pudo completar el diagnóstico: ": "无法完成诊断：",
-    "Críticos": "严重",
-    "Avisos": "警告",
-    "No comprobados": "未检查",
-    "Correctos": "正常",
-    "Requiere atención": "需要处理",
-    "Revisar": "需要检查",
-    "Sin comprobar": "未检查",
-    "Correcto": "正常",
-    "Instalar la versión disponible con el actualizador de AiO": "使用 AiO 更新程序安装可用版本",
-    "Espacio en /": "根分区空间（/）",
-    "Estado de dpkg": "dpkg 状态",
-    "Dependencias APT": "APT 依赖",
-    "Actualizaciones pendientes": "待处理更新",
-    "Índices de APT": "APT 索引",
-    "Módulos DKMS": "DKMS 模块",
-    "Reinicio pendiente": "等待重启",
-    "Servicios systemd": "systemd 服务",
-    "Sistema anfitrión": "宿主系统",
-    "Versión de AiO Debian GUI": "AiO Debian GUI 版本",
-    "No se detectaron paquetes parcialmente instalados.": "未发现部分安装的软件包。",
-    "APT no comunica errores de dependencias.": "APT 未报告依赖错误。",
-    "No se pudieron fechar los índices disponibles.": "无法确定现有索引的时间。",
-    "DKMS no está instalado; es normal si no utilizas módulos externos.": "未安装 DKMS；不使用外部模块时属正常情况。",
-    "Sin unidades fallidas.": "没有失败的单元。",
-    "No hay una solicitud explícita de reinicio registrada.": "没有明确的重启请求。",
-    "El sistema solicita reiniciar.": "系统要求重启。",
-    "No hay módulos DKMS registrados.": "没有已注册的 DKMS 模块。",
-    "Módulos registrados sin incidencias detectadas.": "已注册模块未发现问题。",
-    "systemd no está disponible en esta sesión.": "当前会话中 systemd 不可用。",
-    "No se pudieron verificar las dependencias por permisos.": "由于权限限制，无法检查依赖。",
-    "Libera espacio antes de grandes actualizaciones.": "大型更新前请释放磁盘空间。",
-    "Revisa los paquetes incompletos antes de iniciar otras operaciones APT.": "其他 APT 操作前请检查未完成安装的软件包。",
-    "Examina las dependencias antes de actualizar.": "更新前请检查依赖。",
-    "Revisa y aplica las actualizaciones del sistema cuando corresponda.": "适时检查并安装系统更新。",
-    "Ejecuta «Actualizar paquetes del sistema» para refrescar los índices.": "执行“更新系统软件包”以刷新索引。",
-    "Comprueba la compilación de módulos para el kernel actual.": "检查当前内核的模块编译状态。",
-    "Guarda tu trabajo y reinicia cuando sea oportuno.": "保存工作并在适当时候重启。",
-    "Revisa los servicios fallidos con systemctl --failed.": "使用 systemctl --failed 检查失败服务。",
-    "El diagnóstico local está limitado dentro de Flatpak; no se han comprobado APT, dpkg ni systemd del anfitrión.": "Flatpak 内的本地诊断受限；未检查宿主机的 APT、dpkg 和 systemd。",
-    "Para revisar Debian/Ubuntu usa la edición DEB o AppImage fuera del sandbox.": "要检查 Debian/Ubuntu，请在沙箱外使用 DEB 或 AppImage 版本。",
-    "%.1f GiB libres (%s del volumen)": "剩余 %.1f GiB（占磁盘 %s）",
-    "%d actualizaciones estimadas por APT%s.": "APT 预计有 %d 项更新%s。",
-    "; %d retenidos": "；%d 项已保留",
-    "Último índice de paquetes: hace %d días.": "最新软件包索引：%d 天前。",
-    "Instalada: %s. Disponible en APT: %s.": "已安装：%s。APT 可用：%s。",
-    "Instalada: %s. Al día según los índices APT locales.": "已安装：%s。根据本地 APT 索引已是最新。",
-    "No hay versión candidata en los índices APT.": "APT 索引中没有候选版本。",
-    "2.0.9 — Traducciones completas para los paneles y el diagnóstico preventivo.": "2.0.9 — 完善面板和预防性诊断的翻译。",
-})
+    echo "##DONE:${fallos}"
+    [ "$fallos" -eq 0 ]
+}
 
-TRADUCCIONES["en"].update({
-    "Configuración y mantenimiento": "Configuration and maintenance",
-    "Backup": "Backup",
-    "Copias de seguridad": "Backup applications",
-    "Timeshift y Respaldos permiten crear copias de seguridad. Cada aplicación gestiona su propia configuración y operaciones.": "Timeshift and Backups create backups. Each application manages its own settings and operations.",
-    "Abrir Timeshift": "Open Timeshift",
-    "Abrir Respaldos (Déjà Dup)": "Open Backups (Déjà Dup)",
-    "Crea instantáneas de los archivos del sistema para restaurarlo tras una actualización fallida u otro problema. Por defecto no incluye los archivos personales.": "Creates snapshots of system files to restore the system after a failed update or another problem. Personal files are excluded by default.",
-    "Crea copias de seguridad de las carpetas personales seleccionadas para recuperar archivos perdidos o modificados. No restaura el sistema operativo.": "Backs up selected personal folders so lost or modified files can be recovered. It does not restore the operating system.",
-    "Timeshift no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.": "Timeshift is not installed. Install it from the configured APT repositories? Administrator authorization will be requested.",
-    "Respaldos (Déjà Dup) no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.": "Backups (Déjà Dup) is not installed. Install it from the configured APT repositories? Administrator authorization will be requested.",
-    "Comprobando si %s está instalado…": "Checking whether %s is installed…",
-    "Instalando %s; se solicitará autorización de administrador…": "Installing %s; administrator authorization will be requested…",
-    "Abriendo %s…": "Opening %s…",
-    "%s se ha abierto.": "%s opened.",
-    "No se pudo abrir %s: %s": "Could not open %s: %s",
-    "No se pudo instalar %s: %s": "Could not install %s: %s",
-    "No se pudo comprobar %s": "Could not check %s",
-    "Operación en curso": "Operation in progress",
-    "Espera a que termine la operación de la aplicación antes de cerrar la ventana.": "Wait for the app operation to finish before closing the window.",
-    "No se encuentra el asistente actualizado en el anfitrión. Instala la integración desde su guía y vuelve a intentarlo.": "The current host helper was not found. Install the integration using its guide and try again.",
-    "Instalar": "Install",
-    "La aplicación todavía no está instalada.": "The application is not installed yet.",
-    "Apps recomendadas": "Recommended apps",
-    "Instalado": "Installed",
-    "No se pudo comprobar el estado de algunas aplicaciones.": "Could not check the status of some applications.",
-    "Aplicaciones recomendadas": "Recommended applications",
-    "Monitor de recursos en terminal con gráficos de CPU, memoria, disco y red.": "Terminal resource monitor with CPU, memory, disk, and network graphs.",
-    "Cliente BitTorrent con complementos y gestión remota.": "BitTorrent client with plugins and remote management.",
-    "Visor interactivo de procesos y del uso de CPU y memoria en terminal.": "Interactive terminal viewer for processes and CPU and memory usage.",
-    "Cliente BitTorrent con gestión de colas y límites de velocidad.": "BitTorrent client with queue management and speed limits.",
-    "Elige un formato por aplicación. Los paquetes DEB de los repositorios APT requieren autorización; Flatpak se instala solo para tu usuario y configura Flathub si hace falta.": "Choose a format for each app. DEB packages from APT repositories require authorization; Flatpak is installed for your user only, configuring Flathub if needed.",
-    "DEB (APT)": "DEB (system packages)",
-    "DEB (web oficial)": "DEB (official site)",
-    "Flatpak": "Flatpak (Flathub)",
-    "Las páginas de descarga .deb son oficiales; revisa el paquete e instálalo con el gestor de software.": "The .deb download pages are official; review the package and install it with your software manager.",
-    "Descargar .deb": "Download .deb",
-    "Instalar %s desde %s": "Install %s from %s",
-    "¿Quieres instalar %s en formato %s?": "Install %s in %s format?",
-    "Comprobando %s…": "Checking %s…",
-    "Instalando %s…": "Installing %s…",
-    "Se abrió la página oficial para descargar el paquete .deb.": "The official page to download the .deb package was opened.",
-    "No se pudo configurar Flathub para tu usuario. Comprueba que Flatpak y la conexión estén disponibles e inténtalo de nuevo.": "Could not configure Flathub for your user. Check that Flatpak and your connection are available, then try again.",
-    "Descarga el paquete .deb oficial desde esta página e instálalo con el gestor de software.": "Download the official .deb package from this page and install it with your software manager.",
-    "Reproductor de música para servidores Jellyfin, Navidrome y Subsonic.": "Music player for Jellyfin, Navidrome, and Subsonic servers.",
-    "Convierte imágenes por lotes entre formatos y cambia su tamaño.": "Batch-converts images between formats and resizes them.",
-    "Cliente de escritorio para reproducir contenido de tu biblioteca Plex.": "Desktop client for playing media from your Plex library.",
-    "Aplicación de escritorio para escuchar música, pódcast y listas de reproducción.": "Desktop app for music, podcasts, and playlists.",
-    "Descarga vídeos de sitios compatibles para verlos sin conexión.": "Downloads videos from supported sites for offline viewing.",
-    "Convierte y comprime vídeos con ajustes para formatos y dispositivos comunes.": "Converts and compresses videos with presets for common formats and devices.",
-    "Navegador web de Google. El paquete DEB se descarga desde la página oficial.": "Google's web browser. The DEB package is downloaded from the official website.",
-    "Editor de imágenes para crear, retocar y componer gráficos y fotografías.": "Image editor for creating, retouching, and composing graphics and photos.",
-    "Reproduce vídeos con mpv desde una interfaz GTK sencilla.": "Plays videos with mpv through a simple GTK interface.",
-    "Reproductor multimedia para vídeos, música y transmisiones de red.": "Media player for videos, music, and network streams.",
-})
-TRADUCCIONES["fr"].update({
-    "Configuración y mantenimiento": "Configuration et maintenance",
-    "Backup": "Sauvegarde",
-    "Copias de seguridad": "Applications de sauvegarde",
-    "Timeshift y Respaldos permiten crear copias de seguridad. Cada aplicación gestiona su propia configuración y operaciones.": "Timeshift et Sauvegardes permettent de créer des sauvegardes. Chaque application gère ses propres paramètres et opérations.",
-    "Abrir Timeshift": "Ouvrir Timeshift",
-    "Abrir Respaldos (Déjà Dup)": "Ouvrir Sauvegardes (Déjà Dup)",
-    "Crea instantáneas de los archivos del sistema para restaurarlo tras una actualización fallida u otro problema. Por defecto no incluye los archivos personales.": "Crée des instantanés des fichiers système pour restaurer le système après une mise à jour échouée ou un autre problème. Les fichiers personnels sont exclus par défaut.",
-    "Crea copias de seguridad de las carpetas personales seleccionadas para recuperar archivos perdidos o modificados. No restaura el sistema operativo.": "Sauvegarde les dossiers personnels sélectionnés pour récupérer les fichiers perdus ou modifiés. Ne restaure pas le système d’exploitation.",
-    "Timeshift no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.": "Timeshift n’est pas installé. Voulez-vous l’installer depuis les dépôts APT configurés ? Une autorisation administrateur sera demandée.",
-    "Respaldos (Déjà Dup) no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.": "Sauvegardes (Déjà Dup) n’est pas installé. Voulez-vous l’installer depuis les dépôts APT configurés ? Une autorisation administrateur sera demandée.",
-    "Comprobando si %s está instalado…": "Vérification de l’installation de %s…",
-    "Instalando %s; se solicitará autorización de administrador…": "Installation de %s ; une autorisation administrateur sera demandée…",
-    "Abriendo %s…": "Ouverture de %s…",
-    "%s se ha abierto.": "%s est ouvert.",
-    "No se pudo abrir %s: %s": "Impossible d’ouvrir %s : %s",
-    "No se pudo instalar %s: %s": "Impossible d’installer %s : %s",
-    "No se pudo comprobar %s": "Impossible de vérifier %s",
-    "Operación en curso": "Opération en cours",
-    "Espera a que termine la operación de la aplicación antes de cerrar la ventana.": "Attendez la fin de l’opération de l’application avant de fermer la fenêtre.",
-    "No se encuentra el asistente actualizado en el anfitrión. Instala la integración desde su guía y vuelve a intentarlo.": "L’assistant à jour est introuvable sur l’hôte. Installez l’intégration avec son guide, puis réessayez.",
-    "Instalar": "Installer",
-    "La aplicación todavía no está instalada.": "L’application n’est pas encore installée.",
-    "Apps recomendadas": "Applications recommandées",
-    "Instalado": "Installé",
-    "No se pudo comprobar el estado de algunas aplicaciones.": "Impossible de vérifier l’état de certaines applications.",
-    "Aplicaciones recomendadas": "Applications recommandées",
-    "Monitor de recursos en terminal con gráficos de CPU, memoria, disco y red.": "Moniteur de ressources en terminal avec graphiques du processeur, de la mémoire, du disque et du réseau.",
-    "Cliente BitTorrent con complementos y gestión remota.": "Client BitTorrent avec extensions et gestion à distance.",
-    "Visor interactivo de procesos y del uso de CPU y memoria en terminal.": "Visualiseur interactif en terminal des processus et de l’utilisation du processeur et de la mémoire.",
-    "Cliente BitTorrent con gestión de colas y límites de velocidad.": "Client BitTorrent avec gestion des files d’attente et limites de débit.",
-    "Elige un formato por aplicación. Los paquetes DEB de los repositorios APT requieren autorización; Flatpak se instala solo para tu usuario y configura Flathub si hace falta.": "Choisissez un format par application. Les paquets DEB des dépôts APT nécessitent une autorisation ; Flatpak est installé uniquement pour votre utilisateur et configure Flathub si nécessaire.",
-    "DEB (APT)": "DEB (dépôts APT)",
-    "DEB (web oficial)": "DEB (site officiel)",
-    "Flatpak": "Flatpak (Flathub)",
-    "Las páginas de descarga .deb son oficiales; revisa el paquete e instálalo con el gestor de software.": "Les pages de téléchargement .deb sont officielles ; vérifiez le paquet et installez-le avec le gestionnaire de logiciels.",
-    "Descargar .deb": "Télécharger .deb",
-    "Instalar %s desde %s": "Installer %s depuis %s",
-    "¿Quieres instalar %s en formato %s?": "Voulez-vous installer %s au format %s ?",
-    "Comprobando %s…": "Vérification de %s…",
-    "Instalando %s…": "Installation de %s…",
-    "Se abrió la página oficial para descargar el paquete .deb.": "La page officielle de téléchargement du paquet .deb a été ouverte.",
-    "No se pudo configurar Flathub para tu usuario. Comprueba que Flatpak y la conexión estén disponibles e inténtalo de nuevo.": "Impossible de configurer Flathub pour votre utilisateur. Vérifiez que Flatpak et la connexion sont disponibles, puis réessayez.",
-    "Descarga el paquete .deb oficial desde esta página e instálalo con el gestor de software.": "Téléchargez le paquet .deb officiel depuis cette page et installez-le avec le gestionnaire de logiciels.",
-    "Reproductor de música para servidores Jellyfin, Navidrome y Subsonic.": "Lecteur musical pour les serveurs Jellyfin, Navidrome et Subsonic.",
-    "Convierte imágenes por lotes entre formatos y cambia su tamaño.": "Convertit des images par lots entre formats et les redimensionne.",
-    "Cliente de escritorio para reproducir contenido de tu biblioteca Plex.": "Client de bureau pour lire le contenu de votre bibliothèque Plex.",
-    "Aplicación de escritorio para escuchar música, pódcast y listas de reproducción.": "Application de bureau pour écouter de la musique, des podcasts et des listes de lecture.",
-    "Descarga vídeos de sitios compatibles para verlos sin conexión.": "Télécharge des vidéos de sites pris en charge pour les regarder hors ligne.",
-    "Convierte y comprime vídeos con ajustes para formatos y dispositivos comunes.": "Convertit et compresse des vidéos avec des préréglages pour les formats et appareils courants.",
-    "Navegador web de Google. El paquete DEB se descarga desde la página oficial.": "Navigateur Web de Google. Le paquet DEB se télécharge depuis le site officiel.",
-    "Editor de imágenes para crear, retocar y componer gráficos y fotografías.": "Éditeur d’images pour créer, retoucher et composer des graphismes et des photos.",
-    "Reproduce vídeos con mpv desde una interfaz GTK sencilla.": "Lit des vidéos avec mpv grâce à une interface GTK simple.",
-    "Reproductor multimedia para vídeos, música y transmisiones de red.": "Lecteur multimédia pour vidéos, musique et flux réseau.",
-})
-TRADUCCIONES["zh"].update({
-    "Configuración y mantenimiento": "配置与维护",
-    "Backup": "备份",
-    "Copias de seguridad": "备份应用",
-    "Timeshift y Respaldos permiten crear copias de seguridad. Cada aplicación gestiona su propia configuración y operaciones.": "Timeshift 和备份应用可创建备份。每个应用分别管理自己的配置和操作。",
-    "Abrir Timeshift": "打开 Timeshift",
-    "Abrir Respaldos (Déjà Dup)": "打开备份（Déjà Dup）",
-    "Crea instantáneas de los archivos del sistema para restaurarlo tras una actualización fallida u otro problema. Por defecto no incluye los archivos personales.": "创建系统文件快照，以便在更新失败或出现其他问题后恢复系统。默认不包含个人文件。",
-    "Crea copias de seguridad de las carpetas personales seleccionadas para recuperar archivos perdidos o modificados. No restaura el sistema operativo.": "备份选定的个人文件夹，以便恢复丢失或修改的文件。不恢复操作系统。",
-    "Timeshift no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.": "尚未安装 Timeshift。要从已配置的 APT 软件源安装吗？安装时会请求管理员授权。",
-    "Respaldos (Déjà Dup) no está instalado. ¿Quieres instalarlo desde los repositorios APT configurados? Se solicitará autorización de administrador.": "尚未安装备份（Déjà Dup）。要从已配置的 APT 软件源安装吗？安装时会请求管理员授权。",
-    "Comprobando si %s está instalado…": "正在检查是否已安装 %s…",
-    "Instalando %s; se solicitará autorización de administrador…": "正在安装 %s；将请求管理员授权…",
-    "Abriendo %s…": "正在打开 %s…",
-    "%s se ha abierto.": "已打开 %s。",
-    "No se pudo abrir %s: %s": "无法打开 %s：%s",
-    "No se pudo instalar %s: %s": "无法安装 %s：%s",
-    "No se pudo comprobar %s": "无法检查 %s",
-    "Operación en curso": "操作正在进行",
-    "Espera a que termine la operación de la aplicación antes de cerrar la ventana.": "请等待应用操作完成后再关闭窗口。",
-    "No se encuentra el asistente actualizado en el anfitrión. Instala la integración desde su guía y vuelve a intentarlo.": "未找到主机上的当前版本辅助程序。请使用集成指南安装后重试。",
-    "Instalar": "安装",
-    "La aplicación todavía no está instalada.": "应用尚未安装。",
-    "Apps recomendadas": "推荐应用",
-    "Instalado": "已安装",
-    "No se pudo comprobar el estado de algunas aplicaciones.": "无法检查部分应用的状态。",
-    "Aplicaciones recomendadas": "推荐应用",
-    "Monitor de recursos en terminal con gráficos de CPU, memoria, disco y red.": "带有 CPU、内存、磁盘和网络图表的终端资源监视器。",
-    "Cliente BitTorrent con complementos y gestión remota.": "支持插件和远程管理的 BitTorrent 客户端。",
-    "Visor interactivo de procesos y del uso de CPU y memoria en terminal.": "在终端交互查看进程及 CPU 和内存用量。",
-    "Cliente BitTorrent con gestión de colas y límites de velocidad.": "支持队列管理和限速的 BitTorrent 客户端。",
-    "Elige un formato por aplicación. Los paquetes DEB de los repositorios APT requieren autorización; Flatpak se instala solo para tu usuario y configura Flathub si hace falta.": "为每个应用选择一种格式。来自 APT 软件源的 DEB 软件包需要授权；Flatpak 仅为当前用户安装，并在需要时配置 Flathub。",
-    "DEB (APT)": "DEB（APT 软件源）",
-    "DEB (web oficial)": "DEB（官方网站）",
-    "Flatpak": "Flatpak（Flathub）",
-    "Las páginas de descarga .deb son oficiales; revisa el paquete e instálalo con el gestor de software.": "这些 .deb 下载页面来自官方网站；请检查软件包并使用软件管理器安装。",
-    "Descargar .deb": "下载 .deb",
-    "Instalar %s desde %s": "从 %s 安装 %s",
-    "¿Quieres instalar %s en formato %s?": "要以 %s 格式安装 %s 吗？",
-    "Comprobando %s…": "正在检查 %s…",
-    "Instalando %s…": "正在安装 %s…",
-    "Se abrió la página oficial para descargar el paquete .deb.": "已打开官方 .deb 软件包下载页面。",
-    "No se pudo configurar Flathub para tu usuario. Comprueba que Flatpak y la conexión estén disponibles e inténtalo de nuevo.": "无法为当前用户配置 Flathub。请确认 Flatpak 和网络连接可用后重试。",
-    "Descarga el paquete .deb oficial desde esta página e instálalo con el gestor de software.": "请从此官方页面下载 .deb 软件包，并使用软件管理器安装。",
-    "Reproductor de música para servidores Jellyfin, Navidrome y Subsonic.": "适用于 Jellyfin、Navidrome 和 Subsonic 服务器的音乐播放器。",
-    "Convierte imágenes por lotes entre formatos y cambia su tamaño.": "批量转换图像格式并调整图像大小。",
-    "Cliente de escritorio para reproducir contenido de tu biblioteca Plex.": "用于播放 Plex 媒体库内容的桌面客户端。",
-    "Aplicación de escritorio para escuchar música, pódcast y listas de reproducción.": "用于收听音乐、播客和播放列表的桌面应用。",
-    "Descarga vídeos de sitios compatibles para verlos sin conexión.": "从支持的网站下载视频以供离线观看。",
-    "Convierte y comprime vídeos con ajustes para formatos y dispositivos comunes.": "使用常见格式和设备预设转换及压缩视频。",
-    "Navegador web de Google. El paquete DEB se descarga desde la página oficial.": "Google 网页浏览器。DEB 软件包从官方网站下载。",
-    "Editor de imágenes para crear, retocar y componer gráficos y fotografías.": "用于创建、修饰和合成图形与照片的图像编辑器。",
-    "Reproduce vídeos con mpv desde una interfaz GTK sencilla.": "通过简洁的 GTK 界面使用 mpv 播放视频。",
-    "Reproductor multimedia para vídeos, música y transmisiones de red.": "用于播放视频、音乐和网络流的多媒体播放器。",
-})
-
-TRADUCCIONES["en"].update({
-    "Volver a kernel y Mesa Stable": "Return to Stable kernel and Mesa",
-    "Prepara la versión Stable, simula APT y conserva el kernel Backports. Requiere elegir Stable en GRUB tras reiniciar.": "Prepares Stable packages, simulates APT and retains the Backports kernel. Select Stable in GRUB after reboot.",
-    "Reversión de Backports": "Backports rollback",
-    "La vuelta a Stable debe ejecutarse como única tarea. Desactiva las demás opciones.": "Return to Stable must be run as the only task. Disable other options.",
-    "Actualiza el asistente de AiO para revertir Backports.": "Update the AiO helper to revert Backports.",
-    "Reversión no segura": "Unsafe rollback",
-    "No se puede preparar el regreso a Stable. Revisa el diagnóstico y los módulos DKMS.": "Cannot prepare the return to Stable. Check diagnostics and DKMS modules.",
-    "¿Preparar el retorno a Debian Stable?": "Prepare return to Debian Stable?",
-    "Se instalarán las versiones Stable de los siguientes paquetes:": "The following Stable package versions will be installed:",
-    "El kernel Backports NO se eliminará. GRUB no cambiará. Tras reiniciar deberás seleccionar el kernel Stable y comprobar que funciona. La reversión completa requiere verificar ese arranque antes de eliminar el kernel antiguo.": "The Backports kernel will NOT be removed. GRUB will not change. After restarting, select the Stable kernel and verify that it works. Full rollback requires a successful boot before removing the old kernel.",
-    "Preparar Stable": "Prepare Stable",
-    "Nueva opción de preparación del retorno a kernel y Mesa Stable desde Backports, con simulación segura.": "New option to prepare a return from Backports to the Stable kernel and Mesa, with a safe simulation.",
-})
-
-TRADUCCIONES["fr"].update({
-    "Volver a kernel y Mesa Stable": "Revenir au noyau et à Mesa Stable",
-    "Prepara la versión Stable, simula APT y conserva el kernel Backports. Requiere elegir Stable en GRUB tras reiniciar.": "Prépare les paquets Stable, simule APT et conserve le noyau Backports. Choisissez Stable dans GRUB après redémarrage.",
-    "Reversión de Backports": "Retour de Backports",
-    "La vuelta a Stable debe ejecutarse como única tarea. Desactiva las demás opciones.": "Le retour à Stable doit être exécuté seul. Désactivez les autres tâches.",
-    "Actualiza el asistente de AiO para revertir Backports.": "Mettez à jour l’assistant AiO pour revenir de Backports.",
-    "Reversión no segura": "Retour non sûr",
-    "No se puede preparar el regreso a Stable. Revisa el diagnóstico y los módulos DKMS.": "Impossible de préparer le retour à Stable. Vérifiez le diagnostic et les modules DKMS.",
-    "¿Preparar el retorno a Debian Stable?": "Préparer le retour à Debian Stable ?",
-    "Se instalarán las versiones Stable de los siguientes paquetes:": "Les versions Stable suivantes seront installées :",
-    "El kernel Backports NO se eliminará. GRUB no cambiará. Tras reiniciar deberás seleccionar el kernel Stable y comprobar que funciona. La reversión completa requiere verificar ese arranque antes de eliminar el kernel antiguo.": "Le noyau Backports ne sera PAS supprimé. GRUB restera inchangé. Après redémarrage, sélectionnez le noyau Stable et vérifiez son fonctionnement. La suppression de l’ancien noyau nécessite un démarrage Stable réussi.",
-    "Preparar Stable": "Préparer Stable",
-    "Nueva opción de preparación del retorno a kernel y Mesa Stable desde Backports, con simulación segura.": "Nouvelle option de retour de Backports vers le noyau et Mesa Stable avec simulation sécurisée.",
-})
-
-TRADUCCIONES["zh"].update({
-    "Volver a kernel y Mesa Stable": "恢复 Stable 内核和 Mesa",
-    "Prepara la versión Stable, simula APT y conserva el kernel Backports. Requiere elegir Stable en GRUB tras reiniciar.": "准备 Stable 软件包、模拟 APT 并保留 Backports 内核。重启后需在 GRUB 中选择 Stable。",
-    "Reversión de Backports": "回退 Backports",
-    "La vuelta a Stable debe ejecutarse como única tarea. Desactiva las demás opciones.": "恢复 Stable 必须单独执行。请取消其他任务。",
-    "Actualiza el asistente de AiO para revertir Backports.": "请更新 AiO 助手以回退 Backports。",
-    "Reversión no segura": "回退不安全",
-    "No se puede preparar el regreso a Stable. Revisa el diagnóstico y los módulos DKMS.": "无法准备恢复 Stable。请检查诊断和 DKMS 模块。",
-    "¿Preparar el retorno a Debian Stable?": "准备恢复 Debian Stable？",
-    "Se instalarán las versiones Stable de los siguientes paquetes:": "将安装以下 Stable 版本的软件包：",
-    "El kernel Backports NO se eliminará. GRUB no cambiará. Tras reiniciar deberás seleccionar el kernel Stable y comprobar que funciona. La reversión completa requiere verificar ese arranque antes de eliminar el kernel antiguo.": "不会删除 Backports 内核，也不会修改 GRUB。重启后请选择 Stable 内核并验证其正常运行。删除旧内核前必须成功启动 Stable。",
-    "Preparar Stable": "准备 Stable",
-    "Nueva opción de preparación del retorno a kernel y Mesa Stable desde Backports, con simulación segura.": "新增从 Backports 安全准备恢复 Stable 内核和 Mesa 的选项。",
-})
-
-TRADUCCIONES["en"].update({'Desarrollo': 'Development',
- 'Selecciona las tareas que quieres ejecutar.': 'Select the tasks you want to run.',
- 'Detalles técnicos': 'Technical details',
- 'No comprobado': 'Not checked',
- 'Ejecuta el diagnóstico para revisar el estado del sistema.': 'Run diagnostics to check system '
-                                                               'health.',
- '<b>Tu selección</b>': '<b>Your selection</b>',
- 'Autorización de administrador': 'Administrator authorization',
- 'Mantenimiento habitual': 'Routine maintenance',
- 'Aplicaciones y repositorios': 'Applications and repositories',
- 'Kernel y controladores · Avanzado': 'Kernel and drivers · Advanced',
- 'Ejecutar 1 tarea': 'Run 1 task',
- 'Ejecutar %d tareas': 'Run %d tasks',
- 'No hay tareas seleccionadas.': 'No tasks selected.',
- 'Sin incidencias': 'No issues found',
- 'No se detectaron incidencias en las comprobaciones realizadas.': 'No issues found in the checks '
-                                                                   'performed.',
- 'Pendiente': 'Pending',
- 'En curso': 'Running',
- 'Completada': 'Completed',
- 'Error': 'Error',
- 'No ejecutada': 'Not run',
- 'Paneles adaptables, selección clara de tareas, diagnóstico resumido y consola plegable con resultados por tarea.': 'Responsive '
-                                                                                                                     'panels, '
-                                                                                                                     'clear '
-                                                                                                                     'task '
-                                                                                                                     'selection, '
-                                                                                                                     'diagnostic '
-                                                                                                                     'overview '
-                                                                                                                     'and '
-                                                                                                                     'collapsible '
-                                                                                                                     'console '
-                                                                                                                     'with '
-                                                                                                                     'per-task '
-                                                                                                                     'results.'})
-
-TRADUCCIONES["fr"].update({'Desarrollo': 'Développement',
- 'Selecciona las tareas que quieres ejecutar.': 'Sélectionnez les tâches à exécuter.',
- 'Detalles técnicos': 'Détails techniques',
- 'No comprobado': 'Non vérifié',
- 'Ejecuta el diagnóstico para revisar el estado del sistema.': 'Lancez le diagnostic pour vérifier '
-                                                               'le système.',
- '<b>Tu selección</b>': '<b>Votre sélection</b>',
- 'Autorización de administrador': 'Autorisation administrateur',
- 'Mantenimiento habitual': 'Maintenance courante',
- 'Aplicaciones y repositorios': 'Applications et dépôts',
- 'Kernel y controladores · Avanzado': 'Noyau et pilotes · Avancé',
- 'Ejecutar 1 tarea': 'Exécuter 1 tâche',
- 'Ejecutar %d tareas': 'Exécuter %d tâches',
- 'No hay tareas seleccionadas.': 'Aucune tâche sélectionnée.',
- 'Sin incidencias': 'Aucun problème détecté',
- 'No se detectaron incidencias en las comprobaciones realizadas.': 'Aucun problème détecté dans '
-                                                                   'les vérifications effectuées.',
- 'Pendiente': 'En attente',
- 'En curso': 'En cours',
- 'Completada': 'Terminée',
- 'Error': 'Erreur',
- 'No ejecutada': 'Non exécutée',
- 'Paneles adaptables, selección clara de tareas, diagnóstico resumido y consola plegable con resultados por tarea.': 'Panneaux '
-                                                                                                                     'adaptatifs, '
-                                                                                                                     'sélection '
-                                                                                                                     'claire, '
-                                                                                                                     'diagnostic '
-                                                                                                                     'synthétique '
-                                                                                                                     'et '
-                                                                                                                     'console '
-                                                                                                                     'repliable '
-                                                                                                                     'avec '
-                                                                                                                     'résultats '
-                                                                                                                     'par '
-                                                                                                                     'tâche.'})
-
-TRADUCCIONES["zh"].update({'Desarrollo': '开发版',
- 'Selecciona las tareas que quieres ejecutar.': '请选择要执行的任务。',
- 'Detalles técnicos': '技术详情',
- 'No comprobado': '未检查',
- 'Ejecuta el diagnóstico para revisar el estado del sistema.': '运行诊断以检查系统状态。',
- '<b>Tu selección</b>': '<b>已选任务</b>',
- 'Autorización de administrador': '管理员授权',
- 'Mantenimiento habitual': '日常维护',
- 'Aplicaciones y repositorios': '应用与软件源',
- 'Kernel y controladores · Avanzado': '内核和驱动 · 高级',
- 'Ejecutar 1 tarea': '执行 1 项任务',
- 'Ejecutar %d tareas': '执行 %d 项任务',
- 'No hay tareas seleccionadas.': '未选择任务。',
- 'Sin incidencias': '未发现问题',
- 'No se detectaron incidencias en las comprobaciones realizadas.': '已完成的检查未发现问题。',
- 'Pendiente': '待执行',
- 'En curso': '执行中',
- 'Completada': '已完成',
- 'Error': '错误',
- 'No ejecutada': '未执行',
- 'Paneles adaptables, selección clara de tareas, diagnóstico resumido y consola plegable con resultados por tarea.': '自适应面板、清晰的任务选择、诊断概览和含任务结果的可折叠控制台。'})
-
-TRADUCCIONES["en"].update({'Programar mantenimiento': 'Schedule maintenance',
- 'El mantenimiento se ejecutará con la aplicación cerrada. Guardar la programación requiere autorización de administrador.': 'Maintenance '
-                                                                                                                             'runs '
-                                                                                                                             'with '
-                                                                                                                             'the '
-                                                                                                                             'app '
-                                                                                                                             'closed. '
-                                                                                                                             'Saving '
-                                                                                                                             'the '
-                                                                                                                             'schedule '
-                                                                                                                             'requires '
-                                                                                                                             'administrator '
-                                                                                                                             'authorization.',
- 'Cargando programación…': 'Loading schedule…',
- 'Activar mantenimiento automático': 'Enable automatic maintenance',
- 'Cada día': 'Every day',
- 'Cada semana': 'Every week',
- 'Cada mes (día 1)': 'Every month (day 1)',
- 'Lunes': 'Monday',
- 'Martes': 'Tuesday',
- 'Miércoles': 'Wednesday',
- 'Jueves': 'Thursday',
- 'Viernes': 'Friday',
- 'Sábado': 'Saturday',
- 'Domingo': 'Sunday',
- 'Frecuencia': 'Frequency',
- 'Día de la semana': 'Day of the week',
- 'Hora local': 'Local time',
- 'Tareas del mantenimiento automático': 'Automatic maintenance tasks',
- 'Si el equipo estaba apagado, se recupera la ejecución pendiente al encender. No se reinicia automáticamente. Eliminaciones de paquetes, kernel, controladores y repositorios se gestionan manualmente.': 'If '
-                                                                                                                                                                                                           'the '
-                                                                                                                                                                                                           'computer '
-                                                                                                                                                                                                           'was '
-                                                                                                                                                                                                           'off, '
-                                                                                                                                                                                                           'missed '
-                                                                                                                                                                                                           'maintenance '
-                                                                                                                                                                                                           'runs '
-                                                                                                                                                                                                           'when '
-                                                                                                                                                                                                           'it '
-                                                                                                                                                                                                           'starts. '
-                                                                                                                                                                                                           'No '
-                                                                                                                                                                                                           'automatic '
-                                                                                                                                                                                                           'reboot. '
-                                                                                                                                                                                                           'Package '
-                                                                                                                                                                                                           'removal, '
-                                                                                                                                                                                                           'kernel, '
-                                                                                                                                                                                                           'drivers '
-                                                                                                                                                                                                           'and '
-                                                                                                                                                                                                           'repositories '
-                                                                                                                                                                                                           'are '
-                                                                                                                                                                                                           'managed '
-                                                                                                                                                                                                           'manually.',
- 'Guardar programación': 'Save schedule',
- 'Pausar': 'Pause',
- 'Eliminar programación': 'Delete schedule',
- 'Actualizar estado': 'Refresh status',
- 'Instala o actualiza la integración de AiO en el anfitrión y utiliza systemd para habilitar la programación. Consulta el README.': 'Install or update the AiO host integration and use systemd to enable scheduling. See the README.',
- 'Programación activa': 'Schedule active',
- 'Próxima ejecución: %s': 'Next run: %s',
- 'Programación pausada': 'Schedule paused',
- 'Sin programación': 'No schedule',
- 'Bloqueado': 'Blocked',
- 'Omitido': 'Skipped',
- 'Interrumpido': 'Interrupted',
- 'Última ejecución: %s · %s': 'Last run: %s · %s',
- 'Todavía no hay ejecuciones programadas.': 'No scheduled runs yet.',
- 'Selecciona al menos una tarea programable, sin duplicados.': 'Select at least one supported '
-                                                               'task, without duplicates.',
- 'No se pudo guardar la programación.': 'Could not save the schedule.',
- 'Espera a que termine de guardar la programación.': 'Wait until the schedule has finished saving.',
- 'Ya hay otro mantenimiento de AiO en curso.': 'Another AiO maintenance is already running.',
- 'APT/dpkg ocupado o no se pudo comprobar su bloqueo.': 'APT/dpkg is busy or its lock could not be '
-                                                        'checked.',
- 'No se pudieron actualizar los índices APT.': 'Could not refresh APT indexes.',
- 'Mantenimiento completado.': 'Maintenance completed.',
- 'El mantenimiento terminó con errores; revisa los resultados de las tareas.': 'Maintenance '
-                                                                               'finished with '
-                                                                               'errors; review the '
-                                                                               'task results.',
- 'Mantenimientos automáticos programables con selección de tareas, horario, pausa y resultados.': 'Scheduled '
-                                                                                                  'automatic '
-                                                                                                  'maintenance '
-                                                                                                  'with '
-                                                                                                  'task '
-                                                                                                  'selection, '
-                                                                                                  'time '
-                                                                                                  'settings, '
-                                                                                                  'pause '
-                                                                                                  'and '
-                                                                                                  'results.'})
-
-TRADUCCIONES["fr"].update({'Programar mantenimiento': 'Programmer la maintenance',
- 'El mantenimiento se ejecutará con la aplicación cerrada. Guardar la programación requiere autorización de administrador.': 'La '
-                                                                                                                             'maintenance '
-                                                                                                                             'fonctionne '
-                                                                                                                             'lorsque '
-                                                                                                                             'l’application '
-                                                                                                                             'est '
-                                                                                                                             'fermée. '
-                                                                                                                             'Enregistrer '
-                                                                                                                             'la '
-                                                                                                                             'programmation '
-                                                                                                                             'nécessite '
-                                                                                                                             'une '
-                                                                                                                             'autorisation '
-                                                                                                                             'administrateur.',
- 'Cargando programación…': 'Chargement de la programmation…',
- 'Activar mantenimiento automático': 'Activer la maintenance automatique',
- 'Cada día': 'Chaque jour',
- 'Cada semana': 'Chaque semaine',
- 'Cada mes (día 1)': 'Chaque mois (le 1er)',
- 'Lunes': 'Lundi',
- 'Martes': 'Mardi',
- 'Miércoles': 'Mercredi',
- 'Jueves': 'Jeudi',
- 'Viernes': 'Vendredi',
- 'Sábado': 'Samedi',
- 'Domingo': 'Dimanche',
- 'Frecuencia': 'Fréquence',
- 'Día de la semana': 'Jour de la semaine',
- 'Hora local': 'Heure locale',
- 'Tareas del mantenimiento automático': 'Tâches de maintenance automatique',
- 'Si el equipo estaba apagado, se recupera la ejecución pendiente al encender. No se reinicia automáticamente. Eliminaciones de paquetes, kernel, controladores y repositorios se gestionan manualmente.': 'Si '
-                                                                                                                                                                                                           'l’ordinateur '
-                                                                                                                                                                                                           'était '
-                                                                                                                                                                                                           'éteint, '
-                                                                                                                                                                                                           'la '
-                                                                                                                                                                                                           'maintenance '
-                                                                                                                                                                                                           'manquée '
-                                                                                                                                                                                                           'est '
-                                                                                                                                                                                                           'rattrapée '
-                                                                                                                                                                                                           'au '
-                                                                                                                                                                                                           'démarrage. '
-                                                                                                                                                                                                           'Aucun '
-                                                                                                                                                                                                           'redémarrage '
-                                                                                                                                                                                                           'automatique. '
-                                                                                                                                                                                                           'Suppression '
-                                                                                                                                                                                                           'de '
-                                                                                                                                                                                                           'paquets, '
-                                                                                                                                                                                                           'noyau, '
-                                                                                                                                                                                                           'pilotes '
-                                                                                                                                                                                                           'et '
-                                                                                                                                                                                                           'dépôts '
-                                                                                                                                                                                                           'restent '
-                                                                                                                                                                                                           'manuels.',
- 'Guardar programación': 'Enregistrer la programmation',
- 'Pausar': 'Suspendre',
- 'Eliminar programación': 'Supprimer la programmation',
- 'Actualizar estado': 'Actualiser l’état',
- 'Instala o actualiza la integración de AiO en el anfitrión y utiliza systemd para habilitar la programación. Consulta el README.': 'Installez ou mettez à jour l’intégration AiO sur l’hôte et utilisez systemd pour activer la programmation. Consultez le README.',
- 'Programación activa': 'Programmation active',
- 'Próxima ejecución: %s': 'Prochaine exécution : %s',
- 'Programación pausada': 'Programmation suspendue',
- 'Sin programación': 'Aucune programmation',
- 'Bloqueado': 'Bloqué',
- 'Omitido': 'Ignoré',
- 'Interrumpido': 'Interrompu',
- 'Última ejecución: %s · %s': 'Dernière exécution : %s · %s',
- 'Todavía no hay ejecuciones programadas.': 'Aucune exécution programmée pour le moment.',
- 'Selecciona al menos una tarea programable, sin duplicados.': 'Sélectionnez au moins une tâche '
-                                                               'programmable, sans doublons.',
- 'No se pudo guardar la programación.': 'Impossible d’enregistrer la programmation.',
- 'Espera a que termine de guardar la programación.': 'Attendez la fin de l’enregistrement de la '
-                                                     'programmation.',
- 'Ya hay otro mantenimiento de AiO en curso.': 'Une autre maintenance AiO est déjà en cours.',
- 'APT/dpkg ocupado o no se pudo comprobar su bloqueo.': 'APT/dpkg est occupé ou son verrou n’a pas '
-                                                        'pu être vérifié.',
- 'No se pudieron actualizar los índices APT.': 'Impossible d’actualiser les index APT.',
- 'Mantenimiento completado.': 'Maintenance terminée.',
- 'El mantenimiento terminó con errores; revisa los resultados de las tareas.': 'La maintenance '
-                                                                               's’est terminée '
-                                                                               'avec des erreurs ; '
-                                                                               'consultez les '
-                                                                               'résultats des '
-                                                                               'tâches.',
- 'Mantenimientos automáticos programables con selección de tareas, horario, pausa y resultados.': 'Maintenance '
-                                                                                                  'automatique '
-                                                                                                  'programmée '
-                                                                                                  'avec '
-                                                                                                  'sélection '
-                                                                                                  'des '
-                                                                                                  'tâches, '
-                                                                                                  'horaires, '
-                                                                                                  'pause '
-                                                                                                  'et '
-                                                                                                  'résultats.'})
-
-TRADUCCIONES["zh"].update({'Programar mantenimiento': '计划维护',
- 'El mantenimiento se ejecutará con la aplicación cerrada. Guardar la programación requiere autorización de administrador.': '应用关闭时仍会执行维护。保存计划需要管理员授权。',
- 'Cargando programación…': '正在加载计划…',
- 'Activar mantenimiento automático': '启用自动维护',
- 'Cada día': '每天',
- 'Cada semana': '每周',
- 'Cada mes (día 1)': '每月（1 日）',
- 'Lunes': '星期一',
- 'Martes': '星期二',
- 'Miércoles': '星期三',
- 'Jueves': '星期四',
- 'Viernes': '星期五',
- 'Sábado': '星期六',
- 'Domingo': '星期日',
- 'Frecuencia': '频率',
- 'Día de la semana': '星期',
- 'Hora local': '本地时间',
- 'Tareas del mantenimiento automático': '自动维护任务',
- 'Si el equipo estaba apagado, se recupera la ejecución pendiente al encender. No se reinicia automáticamente. Eliminaciones de paquetes, kernel, controladores y repositorios se gestionan manualmente.': '若电脑关机，将在开机后补执行错过的维护。不自动重启。软件包删除、内核、驱动和软件源需手动管理。',
- 'Guardar programación': '保存计划',
- 'Pausar': '暂停',
- 'Eliminar programación': '删除计划',
- 'Actualizar estado': '刷新状态',
- 'Instala o actualiza la integración de AiO en el anfitrión y utiliza systemd para habilitar la programación. Consulta el README.': '请在主机安装或更新 AiO 集成并使用 systemd 启用计划功能。请参阅 README。',
- 'Programación activa': '计划已启用',
- 'Próxima ejecución: %s': '下次执行：%s',
- 'Programación pausada': '计划已暂停',
- 'Sin programación': '未设置计划',
- 'Bloqueado': '已阻止',
- 'Omitido': '已跳过',
- 'Interrumpido': '已中断',
- 'Última ejecución: %s · %s': '上次执行：%s · %s',
- 'Todavía no hay ejecuciones programadas.': '尚无计划执行记录。',
- 'Selecciona al menos una tarea programable, sin duplicados.': '请至少选择一项支持的任务，且不要重复。',
- 'No se pudo guardar la programación.': '无法保存计划。',
- 'Espera a que termine de guardar la programación.': '请等待计划保存完成。',
- 'Ya hay otro mantenimiento de AiO en curso.': '已有另一项 AiO 维护正在执行。',
- 'APT/dpkg ocupado o no se pudo comprobar su bloqueo.': 'APT/dpkg 正忙或无法检查其锁定状态。',
- 'No se pudieron actualizar los índices APT.': '无法刷新 APT 索引。',
- 'Mantenimiento completado.': '维护已完成。',
- 'El mantenimiento terminó con errores; revisa los resultados de las tareas.': '维护结束但出现错误，请查看任务结果。',
- 'Mantenimientos automáticos programables con selección de tareas, horario, pausa y resultados.': '可选择任务、设置时间、暂停及查看结果的自动维护计划。'})
-
-TRADUCCIONES["en"].update({"Se recomienda reiniciar para aplicar los cambios críticos.": "A restart is recommended to apply critical changes."})
-TRADUCCIONES["fr"].update({"Se recomienda reiniciar para aplicar los cambios críticos.": "Un redémarrage est recommandé pour appliquer les changements critiques."})
-TRADUCCIONES["zh"].update({"Se recomienda reiniciar para aplicar los cambios críticos.": "建议重启以应用关键更改。"})
-
-TRADUCCIONES["en"].update({"Programación no activa": "Schedule inactive", "Flatpak no está instalado en el anfitrión.": "Flatpak is not installed on the host."})
-TRADUCCIONES["fr"].update({"Programación no activa": "Programmation inactive", "Flatpak no está instalado en el anfitrión.": "Flatpak n’est pas installé sur l’hôte."})
-TRADUCCIONES["zh"].update({"Programación no activa": "计划未启用", "Flatpak no está instalado en el anfitrión.": "主机未安装 Flatpak。"})
-
-TRADUCCIONES["en"].update({"Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB.": "Schedule maintenance in Flatpak and AppImage without installing the DEB."})
-TRADUCCIONES["fr"].update({"Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB.": "Programmez la maintenance dans Flatpak et AppImage sans installer le paquet DEB."})
-TRADUCCIONES["zh"].update({"Programación de mantenimiento en Flatpak y AppImage sin instalar el DEB.": "无需安装 DEB 即可在 Flatpak 和 AppImage 中计划维护。"})
-
-TRADUCCIONES["en"].update({"Notificación de escritorio al completar correctamente el mantenimiento programado.": "Desktop notification when scheduled maintenance completes successfully."})
-TRADUCCIONES["fr"].update({"Notificación de escritorio al completar correctamente el mantenimiento programado.": "Notification sur le bureau lorsque la maintenance programmée se termine correctement."})
-TRADUCCIONES["zh"].update({"Notificación de escritorio al completar correctamente el mantenimiento programado.": "计划维护成功完成时显示桌面通知。"})
-
-TRADUCCIONES["en"].update({"No se pudo comprobar si hace falta reiniciar; revisa needrestart y el journal.": "Could not check whether a restart is needed; check needrestart and the journal."})
-TRADUCCIONES["fr"].update({"No se pudo comprobar si hace falta reiniciar; revisa needrestart y el journal.": "Impossible de vérifier si un redémarrage est nécessaire ; consultez needrestart et le journal."})
-TRADUCCIONES["zh"].update({"No se pudo comprobar si hace falta reiniciar; revisa needrestart y el journal.": "无法检查是否需要重启；请检查 needrestart 和系统日志。"})
-
-TRADUCCIONES["en"].update({"Comprobación de reinicio más fiable con needrestart.": "More reliable restart checks with needrestart."})
-TRADUCCIONES["fr"].update({"Comprobación de reinicio más fiable con needrestart.": "Vérification plus fiable du redémarrage avec needrestart."})
-TRADUCCIONES["zh"].update({"Comprobación de reinicio más fiable con needrestart.": "使用 needrestart 更可靠地检查是否需要重启。"})
-
-TRADUCCIONES["en"].update({
-    "%d actualizaciones disponibles según los índices APT locales.": "%d updates available according to local APT indexes.",
-    "No se pudo interpretar la lista de actualizaciones APT.": "Could not interpret the APT update list.",
-    "Los índices APT pueden estar desactualizados y ocultar actualizaciones del sistema o de AiO. Para renovarlos sin instalar paquetes, ejecuta «sudo apt update» y vuelve a diagnosticar.": "APT indexes may be outdated and hide system or AiO updates. To refresh them without installing packages, run “sudo apt update” and diagnose again.",
-})
-TRADUCCIONES["fr"].update({
-    "%d actualizaciones disponibles según los índices APT locales.": "%d mises à jour disponibles selon les index APT locaux.",
-    "No se pudo interpretar la lista de actualizaciones APT.": "Impossible d’interpréter la liste des mises à jour APT.",
-    "Los índices APT pueden estar desactualizados y ocultar actualizaciones del sistema o de AiO. Para renovarlos sin instalar paquetes, ejecuta «sudo apt update» y vuelve a diagnosticar.": "Les index APT peuvent être obsolètes et masquer des mises à jour du système ou d’AiO. Pour les actualiser sans installer de paquets, exécutez « sudo apt update » puis relancez le diagnostic.",
-})
-TRADUCCIONES["zh"].update({
-    "%d actualizaciones disponibles según los índices APT locales.": "根据本地 APT 索引，有 %d 项更新可用。",
-    "No se pudo interpretar la lista de actualizaciones APT.": "无法解析 APT 更新列表。",
-    "Los índices APT pueden estar desactualizados y ocultar actualizaciones del sistema o de AiO. Para renovarlos sin instalar paquetes, ejecuta «sudo apt update» y vuelve a diagnosticar.": "APT 索引可能已过期，导致系统或 AiO 更新不可见。要在不安装软件包的情况下刷新索引，请运行“sudo apt update”并重新诊断。",
-})
-
-TRADUCCIONES["en"].update({
-    "Antes del diagnóstico se actualizarán los índices APT con autorización de administrador. No se instalarán ni eliminarán paquetes.": "Before diagnostics, APT indexes will be refreshed with administrator authorization. No packages will be installed or removed.",
-    "Actualizando índices APT y analizando el sistema…": "Refreshing APT indexes and analyzing the system…",
-    "No se pudieron actualizar los índices APT; los resultados pueden estar desactualizados.": "Could not refresh APT indexes; results may be outdated.",
-    "No se pudieron verificar las actualizaciones con índices APT actualizados.": "Could not check for updates using refreshed APT indexes.",
-})
-TRADUCCIONES["fr"].update({
-    "Antes del diagnóstico se actualizarán los índices APT con autorización de administrador. No se instalarán ni eliminarán paquetes.": "Avant le diagnostic, les index APT seront actualisés avec une autorisation administrateur. Aucun paquet ne sera installé ni supprimé.",
-    "Actualizando índices APT y analizando el sistema…": "Actualisation des index APT et analyse du système…",
-    "No se pudieron actualizar los índices APT; los resultados pueden estar desactualizados.": "Impossible d’actualiser les index APT ; les résultats peuvent être obsolètes.",
-    "No se pudieron verificar las actualizaciones con índices APT actualizados.": "Impossible de vérifier les mises à jour avec des index APT actualisés.",
-})
-TRADUCCIONES["zh"].update({
-    "Antes del diagnóstico se actualizarán los índices APT con autorización de administrador. No se instalarán ni eliminarán paquetes.": "诊断前将使用管理员授权刷新 APT 索引。不会安装或删除软件包。",
-    "Actualizando índices APT y analizando el sistema…": "正在刷新 APT 索引并分析系统…",
-    "No se pudieron actualizar los índices APT; los resultados pueden estar desactualizados.": "无法刷新 APT 索引；结果可能已过期。",
-    "No se pudieron verificar las actualizaciones con índices APT actualizados.": "无法使用已刷新的 APT 索引检查更新。",
-})
-
-TRADUCCIONES["en"].update({
-    "Modulariza traducciones, apariencia GTK y programación; conserva los flujos existentes.": "Modularizes translations, GTK appearance and scheduling while preserving existing workflows.",
-    "Puedes instalar una integración nueva automáticamente con autorización de administrador. Para actualizar una integración existente, sigue la guía manual.": "You can install a new integration automatically with administrator authorization. To update an existing integration, follow the manual guide.",
-    "Instalar integración automáticamente": "Install integration automatically",
-    "Se instalarán en el anfitrión el asistente privilegiado, la política Polkit y el programador de esta versión. Solo continúa si confías en esta aplicación. Se solicitará autorización de administrador.": "The privileged helper, Polkit policy and scheduler from this version will be installed on the host. Continue only if you trust this application. Administrator authorization will be requested.",
-    "Si se encuentra una programación compatible de una instalación anterior, se guardará una copia y se recuperará su horario. Si estaba activada, el mantenimiento volverá a ejecutarse automáticamente.": "If a compatible schedule from a previous installation is found, it will be backed up and restored. If it was enabled, maintenance will run automatically again.",
-    "No se pudo instalar la integración.": "Could not install the integration.",
-    "Integración instalada": "Integration installed",
-    "La integración se ha instalado. Comprueba el estado de la programación.": "The integration has been installed. Check the schedule status.",
-    "Guía de integración del anfitrión": "Host integration guide",
-    "Programación no disponible": "Scheduling unavailable",
-    "Preparando el mantenimiento del sistema…": "Preparing system maintenance…",
-    "No se pudo preparar la integración del anfitrión.": "Could not prepare host integration.",
-    "AiO comparte la integración de mantenimiento entre DEB, Flatpak y AppImage. Puedes volver a prepararla desde aquí.": "AiO shares host maintenance across DEB, Flatpak and AppImage. You can retry setup here.",
-    "Los horarios compatibles y su historial se conservan. Los horarios que estaban activados volverán a ejecutarse automáticamente.": "Compatible schedules and their history are kept. Enabled schedules will resume automatically.",
-    "Para habilitar las tareas administrativas, abre la guía de integración del anfitrión.": "To enable administrative tasks, open the host integration guide.",
-    "La integración instala el asistente, la política Polkit y el programador en el sistema anfitrión. La aplicación no ejecuta estos comandos por ti.": "Host integration installs the helper, Polkit policy and scheduler. The application does not run these commands for you.",
-    "Antes de actualizar, pausa las programaciones de todos los usuarios y espera a que terminen las tareas. Si el DEB está instalado, actualízalo con APT y no uses esta guía.": "Before updating, pause every user's schedules and wait for tasks to finish. If the DEB is installed, update it with APT instead of using this guide.",
-    "1. Copia y ejecuta este bloque en una terminal del anfitrión. Anota el directorio mostrado y revisa los archivos extraídos.": "1. Copy and run this block in a host terminal. Note the displayed directory and review the extracted files.",
-    "2. En la misma terminal, entra en ese directorio con cd. Copia el segundo bloque solo si confías en los archivos y autorizas su instalación como administrador.": "2. In the same terminal, use cd to enter that directory. Copy the second block only if you trust the files and authorize their installation as administrator.",
-    "3. Reinicia AiO y actualiza el estado de la programación. Tras actualizar AiO, repite estos pasos con la misma versión.": "3. Restart AiO and refresh the schedule status. After updating AiO, repeat these steps with the same version.",
-    "Copiar extracción": "Copy extraction",
-    "Copiar instalación": "Copy installation",
-    "No se pudo preparar la guía de integración.": "Could not prepare the integration guide.",
-    "No se pudo determinar la ruta absoluta del AppImage.": "Could not determine the absolute AppImage path.",
-    "Para las notificaciones y la comprobación de reinicio, instala libnotify-bin y needrestart en el anfitrión.": "For notifications and restart checks, install libnotify-bin and needrestart on the host.",
-    "Abre la guía de integración para instalar o actualizar el asistente del anfitrión.": "Open the integration guide to install or update the host helper.",
-})
-TRADUCCIONES["fr"].update({
-    "Modulariza traducciones, apariencia GTK y programación; conserva los flujos existentes.": "Modularise les traductions, l’apparence GTK et la planification tout en préservant les flux existants.",
-    "Puedes instalar una integración nueva automáticamente con autorización de administrador. Para actualizar una integración existente, sigue la guía manual.": "Vous pouvez installer une nouvelle intégration automatiquement avec une autorisation administrateur. Pour mettre à jour une intégration existante, suivez le guide manuel.",
-    "Instalar integración automáticamente": "Installer l’intégration automatiquement",
-    "Se instalarán en el anfitrión el asistente privilegiado, la política Polkit y el programador de esta versión. Solo continúa si confías en esta aplicación. Se solicitará autorización de administrador.": "L’assistant privilégié, la politique Polkit et le planificateur de cette version seront installés sur l’hôte. Ne continuez que si vous faites confiance à cette application. Une autorisation administrateur sera demandée.",
-    "Si se encuentra una programación compatible de una instalación anterior, se guardará una copia y se recuperará su horario. Si estaba activada, el mantenimiento volverá a ejecutarse automáticamente.": "Si une programmation compatible issue d’une installation précédente est détectée, elle sera sauvegardée et restaurée. Si elle était activée, la maintenance reprendra automatiquement.",
-    "No se pudo instalar la integración.": "Impossible d’installer l’intégration.",
-    "Integración instalada": "Intégration installée",
-    "La integración se ha instalado. Comprueba el estado de la programación.": "L’intégration est installée. Vérifiez l’état de la planification.",
-    "Guía de integración del anfitrión": "Guide d’intégration de l’hôte",
-    "Programación no disponible": "Programmation indisponible",
-    "Preparando el mantenimiento del sistema…": "Préparation de la maintenance du système…",
-    "No se pudo preparar la integración del anfitrión.": "L’intégration de l’hôte n’a pas pu être préparée.",
-    "AiO comparte la integración de mantenimiento entre DEB, Flatpak y AppImage. Puedes volver a prepararla desde aquí.": "AiO partage la maintenance de l’hôte entre DEB, Flatpak et AppImage. Vous pouvez relancer la configuration ici.",
-    "Los horarios compatibles y su historial se conservan. Los horarios que estaban activados volverán a ejecutarse automáticamente.": "Les programmations compatibles et leur historique sont conservés. Les programmations actives reprendront automatiquement.",
-    "Para habilitar las tareas administrativas, abre la guía de integración del anfitrión.": "Pour activer les tâches d’administration, ouvrez le guide d’intégration de l’hôte.",
-    "La integración instala el asistente, la política Polkit y el programador en el sistema anfitrión. La aplicación no ejecuta estos comandos por ti.": "L’intégration installe l’assistant, la politique Polkit et le planificateur sur l’hôte. L’application n’exécute pas ces commandes à votre place.",
-    "Antes de actualizar, pausa las programaciones de todos los usuarios y espera a que terminen las tareas. Si el DEB está instalado, actualízalo con APT y no uses esta guía.": "Avant la mise à jour, suspendez les planifications de tous les utilisateurs et attendez la fin des tâches. Si le DEB est installé, mettez-le à jour avec APT sans utiliser ce guide.",
-    "1. Copia y ejecuta este bloque en una terminal del anfitrión. Anota el directorio mostrado y revisa los archivos extraídos.": "1. Copiez et exécutez ce bloc dans un terminal de l’hôte. Notez le répertoire affiché et vérifiez les fichiers extraits.",
-    "2. En la misma terminal, entra en ese directorio con cd. Copia el segundo bloque solo si confías en los archivos y autorizas su instalación como administrador.": "2. Dans le même terminal, entrez dans ce répertoire avec cd. Copiez le second bloc uniquement si vous faites confiance aux fichiers et autorisez leur installation en tant qu’administrateur.",
-    "3. Reinicia AiO y actualiza el estado de la programación. Tras actualizar AiO, repite estos pasos con la misma versión.": "3. Redémarrez AiO et actualisez l’état de la planification. Après chaque mise à jour d’AiO, répétez ces étapes avec la même version.",
-    "Copiar extracción": "Copier l’extraction",
-    "Copiar instalación": "Copier l’installation",
-    "No se pudo preparar la guía de integración.": "Impossible de préparer le guide d’intégration.",
-    "No se pudo determinar la ruta absoluta del AppImage.": "Impossible de déterminer le chemin absolu de l’AppImage.",
-    "Para las notificaciones y la comprobación de reinicio, instala libnotify-bin y needrestart en el anfitrión.": "Pour les notifications et la vérification des redémarrages, installez libnotify-bin et needrestart sur l’hôte.",
-    "Abre la guía de integración para instalar o actualizar el asistente del anfitrión.": "Ouvrez le guide d’intégration pour installer ou mettre à jour l’assistant de l’hôte.",
-})
-TRADUCCIONES["zh"].update({
-    "Modulariza traducciones, apariencia GTK y programación; conserva los flujos existentes.": "将翻译、GTK 外观和计划功能模块化，同时保留现有工作流程。",
-    "Puedes instalar una integración nueva automáticamente con autorización de administrador. Para actualizar una integración existente, sigue la guía manual.": "可以使用管理员授权自动安装新的集成。要更新现有集成，请按照手动指南操作。",
-    "Instalar integración automáticamente": "自动安装集成",
-    "Se instalarán en el anfitrión el asistente privilegiado, la política Polkit y el programador de esta versión. Solo continúa si confías en esta aplicación. Se solicitará autorización de administrador.": "将在主机上安装此版本的特权辅助程序、Polkit 策略和计划程序。只有信任此应用时才继续。系统会请求管理员授权。",
-    "Si se encuentra una programación compatible de una instalación anterior, se guardará una copia y se recuperará su horario. Si estaba activada, el mantenimiento volverá a ejecutarse automáticamente.": "如果发现以前安装中兼容的计划，应用将备份并恢复该计划。如果该计划原先已启用，维护任务将恢复自动运行。",
-    "No se pudo instalar la integración.": "无法安装集成。",
-    "Integración instalada": "集成已安装",
-    "La integración se ha instalado. Comprueba el estado de la programación.": "集成已安装。请检查计划状态。",
-    "Guía de integración del anfitrión": "主机集成指南",
-    "Programación no disponible": "计划功能不可用",
-    "Preparando el mantenimiento del sistema…": "正在准备系统维护…",
-    "No se pudo preparar la integración del anfitrión.": "无法准备主机集成。",
-    "AiO comparte la integración de mantenimiento entre DEB, Flatpak y AppImage. Puedes volver a prepararla desde aquí.": "AiO 的 DEB、Flatpak 和 AppImage 版本共用主机维护功能。你可以在这里重试设置。",
-    "Los horarios compatibles y su historial se conservan. Los horarios que estaban activados volverán a ejecutarse automáticamente.": "兼容的计划及其历史记录将被保留。已启用的计划会自动恢复运行。",
-    "Para habilitar las tareas administrativas, abre la guía de integración del anfitrión.": "要启用管理任务，请打开主机集成指南。",
-    "La integración instala el asistente, la política Polkit y el programador en el sistema anfitrión. La aplicación no ejecuta estos comandos por ti.": "集成会在主机上安装辅助程序、Polkit 策略和计划程序。应用不会替您执行这些命令。",
-    "Antes de actualizar, pausa las programaciones de todos los usuarios y espera a que terminen las tareas. Si el DEB está instalado, actualízalo con APT y no uses esta guía.": "更新前请暂停所有用户的计划并等待任务结束。如果已安装 DEB，请通过 APT 更新，不要使用此指南。",
-    "1. Copia y ejecuta este bloque en una terminal del anfitrión. Anota el directorio mostrado y revisa los archivos extraídos.": "1. 在主机终端复制并执行此代码块。记下显示的目录并检查提取的文件。",
-    "2. En la misma terminal, entra en ese directorio con cd. Copia el segundo bloque solo si confías en los archivos y autorizas su instalación como administrador.": "2. 在同一终端使用 cd 进入该目录。只有信任这些文件并授权以管理员身份安装时，才复制第二个代码块。",
-    "3. Reinicia AiO y actualiza el estado de la programación. Tras actualizar AiO, repite estos pasos con la misma versión.": "3. 重启 AiO 并刷新计划状态。更新 AiO 后，使用相同版本重复这些步骤。",
-    "Copiar extracción": "复制提取命令",
-    "Copiar instalación": "复制安装命令",
-    "No se pudo preparar la guía de integración.": "无法准备集成指南。",
-    "No se pudo determinar la ruta absoluta del AppImage.": "无法确定 AppImage 的绝对路径。",
-    "Para las notificaciones y la comprobación de reinicio, instala libnotify-bin y needrestart en el anfitrión.": "若要使用通知和重启检查，请在主机上安装 libnotify-bin 和 needrestart。",
-    "Abre la guía de integración para instalar o actualizar el asistente del anfitrión.": "打开集成指南以安装或更新主机辅助程序。",
-})
-
-
-TRADUCCIONES["en"].update({
-    "Descargar AppImage": "Download AppImage",
-    "No hay AppImage de Ghostty para esta arquitectura.": "No Ghostty AppImage is available for this architecture.",
-})
-
-TRADUCCIONES["fr"].update({
-    "Descargar AppImage": "Télécharger l’AppImage",
-    "No hay AppImage de Ghostty para esta arquitectura.": "Aucune AppImage de Ghostty n’est disponible pour cette architecture.",
-})
-
-TRADUCCIONES["zh"].update({
-    "Descargar AppImage": "下载 AppImage",
-    "No hay AppImage de Ghostty para esta arquitectura.": "此架构没有可用的 Ghostty AppImage。",
-})
-
-TRADUCCIONES["en"].update({
-    "Copiar": "Copy",
-    "Pegar": "Paste",
-    "Seleccionar todo": "Select all",
-    "Quitar selección": "Clear selection",
-    "Editar": "Edit",
-    "Aplicar diseño de Fastfetch": "Apply Fastfetch layout",
-    "Guarda una copia de la configuración anterior de Fastfetch.": "Saves a copy of the previous Fastfetch configuration.",
-    "Diseño de Fastfetch": "Fastfetch layout",
-    "No se pudo aplicar el diseño de Fastfetch.": "Could not apply the Fastfetch layout.",
-    "El diseño de Fastfetch está activo.": "The Fastfetch layout is active.",
-    "Copia de la configuración anterior: %s": "Backup of the previous configuration: %s"
-})
-
-TRADUCCIONES["fr"].update({
-    "Copiar": "Copier",
-    "Pegar": "Coller",
-    "Seleccionar todo": "Tout sélectionner",
-    "Quitar selección": "Désélectionner",
-    "Editar": "Modifier",
-    "Aplicar diseño de Fastfetch": "Appliquer la disposition Fastfetch",
-    "Guarda una copia de la configuración anterior de Fastfetch.": "Enregistre une copie de l’ancienne configuration de Fastfetch.",
-    "Diseño de Fastfetch": "Disposition Fastfetch",
-    "No se pudo aplicar el diseño de Fastfetch.": "Impossible d’appliquer la disposition Fastfetch.",
-    "El diseño de Fastfetch está activo.": "La disposition Fastfetch est active.",
-    "Copia de la configuración anterior: %s": "Copie de l’ancienne configuration : %s"
-})
-
-TRADUCCIONES["zh"].update({
-    "Copiar": "复制",
-    "Pegar": "粘贴",
-    "Seleccionar todo": "全选",
-    "Quitar selección": "取消选择",
-    "Editar": "编辑",
-    "Aplicar diseño de Fastfetch": "应用 Fastfetch 布局",
-    "Guarda una copia de la configuración anterior de Fastfetch.": "备份原有的 Fastfetch 配置。",
-    "Diseño de Fastfetch": "Fastfetch 布局",
-    "No se pudo aplicar el diseño de Fastfetch.": "无法应用 Fastfetch 布局。",
-    "El diseño de Fastfetch está activo.": "Fastfetch 布局已启用。",
-    "Copia de la configuración anterior: %s": "原有配置的备份：%s"
-})
-
-TRADUCCIONES["en"].update({
-    "Restaurar diseño anterior de Fastfetch": "Restore previous Fastfetch layout",
-    "No se pudo restaurar el diseño de Fastfetch.": "Could not restore the Fastfetch layout.",
-    "Se restauró el diseño anterior de Fastfetch.": "The previous Fastfetch layout was restored.",
-    "El diseño de AiO no está activo o se ha modificado.": "The AiO layout is inactive or has been modified."
-})
-
-TRADUCCIONES["fr"].update({
-    "Restaurar diseño anterior de Fastfetch": "Restaurer la disposition Fastfetch précédente",
-    "No se pudo restaurar el diseño de Fastfetch.": "Impossible de restaurer la disposition Fastfetch.",
-    "Se restauró el diseño anterior de Fastfetch.": "La disposition Fastfetch précédente a été restaurée.",
-    "El diseño de AiO no está activo o se ha modificado.": "La disposition AiO est inactive ou a été modifiée."
-})
-
-TRADUCCIONES["zh"].update({
-    "Restaurar diseño anterior de Fastfetch": "恢复之前的 Fastfetch 布局",
-    "No se pudo restaurar el diseño de Fastfetch.": "无法恢复 Fastfetch 布局。",
-    "Se restauró el diseño anterior de Fastfetch.": "已恢复之前的 Fastfetch 布局。",
-    "El diseño de AiO no está activo o se ha modificado.": "AiO 布局未启用或已被修改。"
-})
-
-TRADUCCIONES["en"].update({
-    "<b>Repositorios APT</b>": "<b>APT repositories</b>",
-    "Repositorios APT": "APT repositories",
-    "APT requiere autorización de administrador. Flatpak instala para tu usuario y añade Flathub si hace falta. Para los DEB de la web oficial, usa el gestor de software.": "APT requires administrator authorization. Flatpak installs for your user and adds Flathub if needed. Use the software manager for DEBs from official websites.",
-    "Fuentes de software y claves de APT.": "APT software sources and keys.",
-    "Preferencias, extensiones y widgets de GNOME o KDE Plasma.": "GNOME or KDE Plasma preferences, extensions, and widgets.",
-    "Copiar repositorios APT": "Back up APT repositories",
-    "Restaurar repositorios APT": "Restore APT repositories",
-    "Cambiar carpeta de copia": "Change backup folder",
-    "Carpeta de copia: %s": "Backup folder: %s",
-    "Elige una carpeta para guardar y recuperar la copia.": "Choose a folder to save and recover the backup.",
-    "Carpeta de copia de repositorios": "Repository backup folder",
-    "No se encontró la copia de repositorios.": "The repository backup was not found.",
-    "¿Restaurar los repositorios APT?": "Restore APT repositories?",
-    "¿Reemplazar la copia de repositorios?": "Replace the repository backup?",
-    "La copia sustituirá las fuentes APT actuales. Continúa solo si confías en su contenido.": "The backup will replace the current APT sources. Continue only if you trust its contents.",
-    "La copia nueva sustituirá el archivo existente.": "The new backup will replace the existing file.",
-    "Se solicitará autorización de administrador…": "Administrator authorization will be requested…",
-    "Instala o actualiza la integración del anfitrión para gestionar las copias APT.": "Install or update the host integration to manage APT backups.",
-    "La copia de repositorios supera el tamaño permitido.": "The repository backup exceeds the size limit.",
-    "No se completó la autorización o la operación.": "Authorization or the operation did not complete.",
-    "La copia de repositorios está vacía.": "The repository backup is empty.",
-    "No se pudo completar la operación de repositorios.": "Could not complete the repository operation.",
-    "Repositorios restaurados. Actualiza los índices APT desde Mantenimiento.": "Repositories restored. Refresh the APT indexes from Maintenance.",
-    "Copia de repositorios guardada en %s": "Repository backup saved to %s",
-})
-
-TRADUCCIONES["fr"].update({
-    "<b>Repositorios APT</b>": "<b>Dépôts APT</b>",
-    "Repositorios APT": "Dépôts APT",
-    "APT requiere autorización de administrador. Flatpak instala para tu usuario y añade Flathub si hace falta. Para los DEB de la web oficial, usa el gestor de software.": "APT nécessite une autorisation administrateur. Flatpak installe pour votre compte et ajoute Flathub au besoin. Utilisez le gestionnaire de logiciels pour les DEB des sites officiels.",
-    "Fuentes de software y claves de APT.": "Sources de logiciels et clés APT.",
-    "Preferencias, extensiones y widgets de GNOME o KDE Plasma.": "Préférences, extensions et widgets de GNOME ou KDE Plasma.",
-    "Copiar repositorios APT": "Sauvegarder les dépôts APT",
-    "Restaurar repositorios APT": "Restaurer les dépôts APT",
-    "Cambiar carpeta de copia": "Changer le dossier de sauvegarde",
-    "Carpeta de copia: %s": "Dossier de sauvegarde : %s",
-    "Elige una carpeta para guardar y recuperar la copia.": "Choisissez un dossier pour enregistrer et récupérer la sauvegarde.",
-    "Carpeta de copia de repositorios": "Dossier de sauvegarde des dépôts",
-    "No se encontró la copia de repositorios.": "La sauvegarde des dépôts est introuvable.",
-    "¿Restaurar los repositorios APT?": "Restaurer les dépôts APT ?",
-    "¿Reemplazar la copia de repositorios?": "Remplacer la sauvegarde des dépôts ?",
-    "La copia sustituirá las fuentes APT actuales. Continúa solo si confías en su contenido.": "La sauvegarde remplacera les sources APT actuelles. Continuez uniquement si vous faites confiance à son contenu.",
-    "La copia nueva sustituirá el archivo existente.": "La nouvelle sauvegarde remplacera le fichier existant.",
-    "Se solicitará autorización de administrador…": "Une autorisation administrateur sera demandée…",
-    "Instala o actualiza la integración del anfitrión para gestionar las copias APT.": "Installez ou mettez à jour l’intégration de l’hôte pour gérer les sauvegardes APT.",
-    "La copia de repositorios supera el tamaño permitido.": "La sauvegarde des dépôts dépasse la taille autorisée.",
-    "No se completó la autorización o la operación.": "L’autorisation ou l’opération a échoué.",
-    "La copia de repositorios está vacía.": "La sauvegarde des dépôts est vide.",
-    "No se pudo completar la operación de repositorios.": "Impossible de terminer l’opération sur les dépôts.",
-    "Repositorios restaurados. Actualiza los índices APT desde Mantenimiento.": "Dépôts restaurés. Actualisez les index APT depuis Maintenance.",
-    "Copia de repositorios guardada en %s": "Sauvegarde des dépôts enregistrée dans %s",
-})
-
-TRADUCCIONES["zh"].update({
-    "<b>Repositorios APT</b>": "<b>APT 软件源</b>",
-    "Repositorios APT": "APT 软件源",
-    "APT requiere autorización de administrador. Flatpak instala para tu usuario y añade Flathub si hace falta. Para los DEB de la web oficial, usa el gestor de software.": "APT 需要管理员授权。Flatpak 为当前用户安装应用，并在需要时添加 Flathub。请使用软件管理器安装从官方网站下载的 DEB 软件包。",
-    "Fuentes de software y claves de APT.": "APT 软件源和密钥。",
-    "Preferencias, extensiones y widgets de GNOME o KDE Plasma.": "GNOME 或 KDE Plasma 的首选项、扩展和小部件。",
-    "Copiar repositorios APT": "备份 APT 软件源",
-    "Restaurar repositorios APT": "恢复 APT 软件源",
-    "Cambiar carpeta de copia": "更改备份文件夹",
-    "Carpeta de copia: %s": "备份文件夹：%s",
-    "Elige una carpeta para guardar y recuperar la copia.": "选择用于保存和恢复备份的文件夹。",
-    "Carpeta de copia de repositorios": "软件源备份文件夹",
-    "No se encontró la copia de repositorios.": "找不到软件源备份。",
-    "¿Restaurar los repositorios APT?": "恢复 APT 软件源？",
-    "¿Reemplazar la copia de repositorios?": "替换软件源备份？",
-    "La copia sustituirá las fuentes APT actuales. Continúa solo si confías en su contenido.": "备份将替换当前的 APT 软件源。仅在信任其内容时继续。",
-    "La copia nueva sustituirá el archivo existente.": "新备份将替换现有文件。",
-    "Se solicitará autorización de administrador…": "将请求管理员授权…",
-    "Instala o actualiza la integración del anfitrión para gestionar las copias APT.": "安装或更新主机集成以管理 APT 备份。",
-    "La copia de repositorios supera el tamaño permitido.": "软件源备份超出大小限制。",
-    "No se completó la autorización o la operación.": "授权或操作未完成。",
-    "La copia de repositorios está vacía.": "软件源备份为空。",
-    "No se pudo completar la operación de repositorios.": "无法完成软件源操作。",
-    "Repositorios restaurados. Actualiza los índices APT desde Mantenimiento.": "软件源已恢复。请在维护选项卡中刷新 APT 索引。",
-    "Copia de repositorios guardada en %s": "软件源备份已保存到 %s",
-})
-
-TRADUCCIONES["en"].update({
-    "<b>Ajustes del escritorio</b>": "<b>Desktop settings</b>",
-    "Ajustes del escritorio": "Desktop settings",
-    "Carpeta de copia": "Backup folder",
-    "Copiar ajustes del escritorio": "Back up desktop settings",
-    "Restaurar ajustes del escritorio": "Restore desktop settings",
-    "Abre AiO desde una sesión de GNOME o KDE Plasma.": "Open AiO from a GNOME or KDE Plasma session.",
-    "¿Reemplazar la copia del escritorio?": "Replace the desktop backup?",
-    "Preparando la copia del escritorio…": "Preparing the desktop backup…",
-    "Ajustes restaurados. Cierra sesión y vuelve a entrar. Copia anterior: %s": "Settings restored. Sign out and sign back in. Previous settings: %s",
-    "Copia del escritorio guardada en %s": "Desktop backup saved to %s",
-    "Copia de %s · %s\nSesión actual: %s": "%s backup · %s\nCurrent session: %s",
-    "Las versiones son distintas. Algunas extensiones o widgets podrían ser incompatibles.": "The versions differ. Some extensions or widgets may be incompatible.",
-    "Se guardará una copia de los ajustes actuales. Continúa solo si confías en las extensiones y widgets de esta copia.": "Your current settings will be backed up. Continue only if you trust the extensions and widgets in this backup.",
-    "¿Restaurar los ajustes del escritorio?": "Restore desktop settings?",
-    "Restaurando los ajustes del escritorio…": "Restoring desktop settings…",
-    "No se pudo completar la copia o restauración del escritorio.": "Could not complete the desktop backup or restore.",
-})
-
-TRADUCCIONES["fr"].update({
-    "<b>Ajustes del escritorio</b>": "<b>Paramètres du bureau</b>",
-    "Ajustes del escritorio": "Paramètres du bureau",
-    "Carpeta de copia": "Dossier de sauvegarde",
-    "Copiar ajustes del escritorio": "Sauvegarder les paramètres du bureau",
-    "Restaurar ajustes del escritorio": "Restaurer les paramètres du bureau",
-    "Abre AiO desde una sesión de GNOME o KDE Plasma.": "Ouvrez AiO depuis une session GNOME ou KDE Plasma.",
-    "¿Reemplazar la copia del escritorio?": "Remplacer la sauvegarde du bureau ?",
-    "Preparando la copia del escritorio…": "Préparation de la sauvegarde du bureau…",
-    "Ajustes restaurados. Cierra sesión y vuelve a entrar. Copia anterior: %s": "Paramètres restaurés. Déconnectez-vous puis reconnectez-vous. Sauvegarde précédente : %s",
-    "Copia del escritorio guardada en %s": "Sauvegarde du bureau enregistrée dans %s",
-    "Copia de %s · %s\nSesión actual: %s": "Sauvegarde de %s · %s\nSession actuelle : %s",
-    "Las versiones son distintas. Algunas extensiones o widgets podrían ser incompatibles.": "Les versions diffèrent. Certaines extensions ou certains widgets peuvent être incompatibles.",
-    "Se guardará una copia de los ajustes actuales. Continúa solo si confías en las extensiones y widgets de esta copia.": "Vos paramètres actuels seront sauvegardés. Continuez uniquement si vous faites confiance aux extensions et aux widgets de cette sauvegarde.",
-    "¿Restaurar los ajustes del escritorio?": "Restaurer les paramètres du bureau ?",
-    "Restaurando los ajustes del escritorio…": "Restauration des paramètres du bureau…",
-    "No se pudo completar la copia o restauración del escritorio.": "Impossible de terminer la sauvegarde ou la restauration du bureau.",
-})
-
-TRADUCCIONES["zh"].update({
-    "<b>Ajustes del escritorio</b>": "<b>桌面设置</b>",
-    "Ajustes del escritorio": "桌面设置",
-    "Carpeta de copia": "备份文件夹",
-    "Copiar ajustes del escritorio": "备份桌面设置",
-    "Restaurar ajustes del escritorio": "恢复桌面设置",
-    "Abre AiO desde una sesión de GNOME o KDE Plasma.": "请在 GNOME 或 KDE Plasma 会话中打开 AiO。",
-    "¿Reemplazar la copia del escritorio?": "替换桌面备份？",
-    "Preparando la copia del escritorio…": "正在准备桌面备份…",
-    "Ajustes restaurados. Cierra sesión y vuelve a entrar. Copia anterior: %s": "设置已恢复。请注销后重新登录。原设置备份：%s",
-    "Copia del escritorio guardada en %s": "桌面备份已保存到 %s",
-    "Copia de %s · %s\nSesión actual: %s": "%s 备份 · %s\n当前会话：%s",
-    "Las versiones son distintas. Algunas extensiones o widgets podrían ser incompatibles.": "版本不同。部分扩展或小部件可能不兼容。",
-    "Se guardará una copia de los ajustes actuales. Continúa solo si confías en las extensiones y widgets de esta copia.": "将备份当前设置。仅在信任备份中的扩展和小部件时继续。",
-    "¿Restaurar los ajustes del escritorio?": "恢复桌面设置？",
-    "Restaurando los ajustes del escritorio…": "正在恢复桌面设置…",
-    "No se pudo completar la copia o restauración del escritorio.": "无法完成桌面备份或恢复。",
-})
-
-TRADUCCIONES["en"].update({
-    "Arquitectura": "Architecture",
-    "Procesador": "Processor",
-    "Procesadores lógicos": "Logical processors",
-    "Memoria RAM total": "Total RAM",
-    "Memoria RAM disponible": "Available RAM",
-    "Entorno de escritorio": "Desktop environment",
-    "Tipo de sesión": "Session type",
-    "Tiempo encendido": "Uptime",
-    "%d d · %d h · %d min": "%d d · %d h · %d min",
-})
-
-TRADUCCIONES["fr"].update({
-    "Arquitectura": "Architecture",
-    "Procesador": "Processeur",
-    "Procesadores lógicos": "Processeurs logiques",
-    "Memoria RAM total": "Mémoire vive totale",
-    "Memoria RAM disponible": "Mémoire vive disponible",
-    "Entorno de escritorio": "Environnement de bureau",
-    "Tipo de sesión": "Type de session",
-    "Tiempo encendido": "Temps de fonctionnement",
-    "%d d · %d h · %d min": "%d j · %d h · %d min",
-})
-
-TRADUCCIONES["zh"].update({
-    "Arquitectura": "架构",
-    "Procesador": "处理器",
-    "Procesadores lógicos": "逻辑处理器",
-    "Memoria RAM total": "总内存",
-    "Memoria RAM disponible": "可用内存",
-    "Entorno de escritorio": "桌面环境",
-    "Tipo de sesión": "会话类型",
-    "Tiempo encendido": "运行时间",
-    "%d d · %d h · %d min": "%d 天 · %d 小时 · %d 分钟",
-})
-
-TRADUCCIONES["en"].update({
-    "GPU": "GPU",
-    "Controlador gráfico activo": "Active graphics driver",
-    "Versión del módulo NVIDIA instalado": "Installed NVIDIA module version",
-    "Paquete del controlador NVIDIA": "NVIDIA driver package",
-    "Versión del módulo NVIDIA cargado": "Loaded NVIDIA module version",
-})
-
-TRADUCCIONES["fr"].update({
-    "GPU": "GPU",
-    "Controlador gráfico activo": "Pilote graphique actif",
-    "Versión del módulo NVIDIA instalado": "Version du module NVIDIA installé",
-    "Paquete del controlador NVIDIA": "Paquet du pilote NVIDIA",
-    "Versión del módulo NVIDIA cargado": "Version du module NVIDIA chargé",
-})
-
-TRADUCCIONES["zh"].update({
-    "GPU": "GPU",
-    "Controlador gráfico activo": "当前显卡驱动",
-    "Versión del módulo NVIDIA instalado": "已安装的 NVIDIA 模块版本",
-    "Paquete del controlador NVIDIA": "NVIDIA 驱动软件包",
-    "Versión del módulo NVIDIA cargado": "已加载的 NVIDIA 模块版本",
-})
+# Permite hacer 'source' del archivo para pruebas sin ejecutar nada
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    main "$@"
+fi
