@@ -1705,3 +1705,63 @@ TRADUCCIONES["zh"].update({
     "Restaurando los ajustes del escritorio…": "正在恢复桌面设置…",
     "No se pudo completar la copia o restauración del escritorio.": "无法完成桌面备份或恢复。",
 })
+
+TRADUCCIONES["en"].update({
+    "Arquitectura": "Architecture",
+    "Procesador": "Processor",
+    "Procesadores lógicos": "Logical processors",
+    "Memoria RAM total": "Total RAM",
+    "Memoria RAM disponible": "Available RAM",
+    "Entorno de escritorio": "Desktop environment",
+    "Tipo de sesión": "Session type",
+    "Tiempo encendido": "Uptime",
+    "%d d · %d h · %d min": "%d d · %d h · %d min",
+})
+
+TRADUCCIONES["fr"].update({
+    "Arquitectura": "Architecture",
+    "Procesador": "Processeur",
+    "Procesadores lógicos": "Processeurs logiques",
+    "Memoria RAM total": "Mémoire vive totale",
+    "Memoria RAM disponible": "Mémoire vive disponible",
+    "Entorno de escritorio": "Environnement de bureau",
+    "Tipo de sesión": "Type de session",
+    "Tiempo encendido": "Temps de fonctionnement",
+    "%d d · %d h · %d min": "%d j · %d h · %d min",
+})
+
+TRADUCCIONES["zh"].update({
+    "Arquitectura": "架构",
+    "Procesador": "处理器",
+    "Procesadores lógicos": "逻辑处理器",
+    "Memoria RAM total": "总内存",
+    "Memoria RAM disponible": "可用内存",
+    "Entorno de escritorio": "桌面环境",
+    "Tipo de sesión": "会话类型",
+    "Tiempo encendido": "运行时间",
+    "%d d · %d h · %d min": "%d 天 · %d 小时 · %d 分钟",
+})
+
+TRADUCCIONES["en"].update({
+    "GPU": "GPU",
+    "Controlador gráfico activo": "Active graphics driver",
+    "Versión del módulo NVIDIA instalado": "Installed NVIDIA module version",
+    "Paquete del controlador NVIDIA": "NVIDIA driver package",
+    "Versión del módulo NVIDIA cargado": "Loaded NVIDIA module version",
+})
+
+TRADUCCIONES["fr"].update({
+    "GPU": "GPU",
+    "Controlador gráfico activo": "Pilote graphique actif",
+    "Versión del módulo NVIDIA instalado": "Version du module NVIDIA installé",
+    "Paquete del controlador NVIDIA": "Paquet du pilote NVIDIA",
+    "Versión del módulo NVIDIA cargado": "Version du module NVIDIA chargé",
+})
+
+TRADUCCIONES["zh"].update({
+    "GPU": "GPU",
+    "Controlador gráfico activo": "当前显卡驱动",
+    "Versión del módulo NVIDIA instalado": "已安装的 NVIDIA 模块版本",
+    "Paquete del controlador NVIDIA": "NVIDIA 驱动软件包",
+    "Versión del módulo NVIDIA cargado": "已加载的 NVIDIA 模块版本",
+})

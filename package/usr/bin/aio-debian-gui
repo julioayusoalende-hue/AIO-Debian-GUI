@@ -638,11 +638,100 @@ def antiguedad(desde, hoy):
     return anios, meses, dias
 
 
+def informacion_grafica():
+    filas = []
+    nvidia = False
+    salida = _ejecutar(comando_host("lspci", "-D", "-vmm", "-nnk"))
+    for bloque in salida.split("\n\n"):
+        campos = dict(re.findall(r"^([\w]+):\t(.+)$", bloque, re.MULTILINE))
+        if not re.search(r"\[03[0-9a-f]{2}\]$", campos.get("Class", ""), re.IGNORECASE):
+            continue
+        fabricante = campos.get("Vendor", "")
+        dispositivo = campos.get("Device", "")
+        modelo = " ".join(filter(None, (fabricante, dispositivo)))
+        if not modelo:
+            continue
+        filas.append(("GPU", modelo))
+        if campos.get("Driver"):
+            filas.append(("Controlador gráfico activo", campos["Driver"]))
+        nvidia |= fabricante.lower().endswith("[10de]")
+
+    if not filas:
+        fabricantes = {"0x10de": "NVIDIA", "0x1002": "AMD", "0x8086": "Intel"}
+        for ruta in sorted(Path("/sys/bus/pci/devices").glob("*")):
+            clase = (leer_texto(str(ruta / "class")) or "").strip()
+            if not clase.startswith("0x03"):
+                continue
+            fabricante = (leer_texto(str(ruta / "vendor")) or "").strip().lower()
+            dispositivo = (leer_texto(str(ruta / "device")) or "").strip().lower()
+            modelo = fabricantes.get(fabricante, fabricante) or ruta.name
+            if dispositivo:
+                modelo += " [" + dispositivo.removeprefix("0x") + "]"
+            filas.append(("GPU", modelo))
+            try:
+                controlador = (ruta / "driver").readlink().name
+            except OSError:
+                pass
+            else:
+                filas.append(("Controlador gráfico activo", controlador))
+            nvidia |= fabricante == "0x10de"
+
+    if nvidia:
+        instalada = _ejecutar(comando_host("/usr/sbin/modinfo", "-F", "version", "nvidia"))
+        cargada = (leer_texto("/sys/module/nvidia/version") or "").strip()
+        if instalada:
+            filas.append(("Versión del módulo NVIDIA instalado", instalada))
+        else:
+            paquetes = _ejecutar(comando_host(
+                "dpkg-query", "-W", "-f=${db:Status-Status}\t${Package}\t${Version}\n",
+                "nvidia-driver", "nvidia-driver-*", "nvidia-tesla-*-driver", "nvidia-legacy-*-driver",
+            ))
+            for linea in paquetes.splitlines():
+                campos = linea.split("\t")
+                if len(campos) == 3 and campos[0] == "installed":
+                    filas.append(("Paquete del controlador NVIDIA", f"{campos[1]} {campos[2]}"))
+        if cargada and cargada != instalada:
+            filas.append(("Versión del módulo NVIDIA cargado", cargada))
+    return filas
+
+
 def informacion_sistema():
+    uname = os.uname()
     filas = [
         ("Sistema operativo", sistema_operativo()),
-        ("Kernel actual", os.uname().release),
+        ("Kernel actual", uname.release),
+        ("Arquitectura", uname.machine),
     ]
+    cpuinfo = leer_texto("/proc/cpuinfo") or ""
+    procesador = re.search(r"^(?:model name|Hardware)\s*:\s*(.+)$", cpuinfo, re.MULTILINE)
+    if procesador:
+        filas.append(("Procesador", procesador.group(1).strip()))
+    hilos = os.cpu_count()
+    if hilos is not None:
+        filas.append(("Procesadores lógicos", str(hilos)))
+
+    meminfo = leer_texto("/proc/meminfo") or ""
+    for campo, nombre in (("MemTotal", "Memoria RAM total"),
+                          ("MemAvailable", "Memoria RAM disponible")):
+        memoria = re.search(rf"^{campo}:\s*(\d+) kB$", meminfo, re.MULTILINE)
+        if memoria:
+            filas.append((nombre, "%.1f GiB" % (int(memoria.group(1)) / 1024 ** 2)))
+
+    filas.extend(informacion_grafica())
+
+    escritorio = os.environ.get("XDG_CURRENT_DESKTOP")
+    if escritorio:
+        filas.append(("Entorno de escritorio", " / ".join(escritorio.split(":"))))
+    sesion = os.environ.get("XDG_SESSION_TYPE", "").lower()
+    if sesion:
+        filas.append(("Tipo de sesión", {"wayland": "Wayland", "x11": "X11"}.get(sesion, sesion)))
+
+    uptime = re.match(r"[0-9]+", leer_texto("/proc/uptime") or "")
+    if uptime:
+        horas, minutos = divmod(int(uptime.group()) // 60, 60)
+        dias, horas = divmod(horas, 24)
+        filas.append(("Tiempo encendido", traducir("%d d · %d h · %d min") % (dias, horas, minutos)))
+
     try:
         du = shutil.disk_usage("/")
         gib = 1024 ** 3
@@ -2617,9 +2706,10 @@ class VentanaPrincipal(Gtk.Window):
         if dialogo is None:
             dialogo = self._crear_detalles_sistema()
             self.ventana_detalles_sistema = dialogo
-            dialogo.set_default_size(ancho, min(alto, 460))
+            dialogo.set_default_size(ancho, min(alto, 640))
         else:
             dialogo.resize(ancho, dialogo.get_size()[1])
+        self._actualizar_detalles_sistema()
         dialogo.show_all()
         dialogo.present()
 
@@ -2651,24 +2741,27 @@ class VentanaPrincipal(Gtk.Window):
             except GLib.Error:
                 pass
 
-        filas, _ = informacion_sistema()
-        grid = Gtk.Grid(column_spacing=12, row_spacing=10)
-        for i, (clave, valor) in enumerate(filas):
-            nombre = etiqueta(clave, dim=True)
-            nombre.set_line_wrap(True)
-            nombre.set_max_width_chars(20)
-            grid.attach(nombre, 0, i, 1, 1)
-            dato = etiqueta(valor)
-            dato.set_line_wrap(True)
-            dato.set_hexpand(True)
-            dato.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
-            dato.set_selectable(True)
-            grid.attach(dato, 1, i, 1, 1)
-        detalles.pack_start(grid, False, False, 0)
+        self.grid_detalles_sistema = Gtk.Grid(column_spacing=16, row_spacing=10)
+        detalles.pack_start(self.grid_detalles_sistema, False, False, 0)
         if self.distribucion == "debian":
             self.nvidia_info_label.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
             detalles.pack_start(self.nvidia_info_label, False, False, 0)
         return dialogo
+
+    def _actualizar_detalles_sistema(self):
+        filas, _ = informacion_sistema()
+        grid = self.grid_detalles_sistema
+        for widget in grid.get_children():
+            widget.destroy()
+        for i, (clave, valor) in enumerate(filas):
+            nombre = etiqueta(clave, dim=True)
+            nombre.set_max_width_chars(20)
+            grid.attach(nombre, 0, i, 1, 1)
+            dato = etiqueta(valor)
+            dato.set_hexpand(True)
+            dato.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+            dato.set_selectable(True)
+            grid.attach(dato, 1, i, 1, 1)
 
     def _aplicar_diseno_fastfetch(self, _boton):
         titulo = traducir("Diseño de Fastfetch")
