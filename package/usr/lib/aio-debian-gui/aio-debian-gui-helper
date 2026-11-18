@@ -1305,7 +1305,7 @@ main() {
         return 0
     fi
     if [ "${1:-}" = "--maintenance-api" ] && [ "$#" -eq 1 ]; then
-        printf '%s\n' 1
+        printf '%s\n' 2
         return 0
     fi
     case "${1:-}" in
