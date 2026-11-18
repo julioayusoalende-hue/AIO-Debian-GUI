@@ -157,9 +157,12 @@ for language in ('es', 'en', 'fr', 'zh'):
         app.traducir('Apps recomendadas')
     assert w.notebook.get_tab_label_text(w.notebook.get_nth_page(3)) == \
         app.traducir('Terminal')
-    assert set(w.backup_buttons) == {'timeshift', 'deja-dup'}
-    assert all(button.get_image() is not None for button in w.backup_buttons.values())
-    for app_id, button in w.backup_buttons.items():
+    assert set(w.backup_buttons) == {'timeshift', 'deja-dup', 'backup', 'restore', 'folder'}
+    assert w.backup_buttons['backup'].get_label() == app.traducir('Copiar repositorios APT')
+    assert w.backup_buttons['restore'].get_label() == app.traducir('Restaurar repositorios APT')
+    for app_id in app.APLICACIONES_BACKUP:
+        button = w.backup_buttons[app_id]
+        assert button.get_image() is not None
         image = button.get_image()
         assert image.get_storage_type() == Gtk.ImageType.PIXBUF
         pixbuf = image.get_pixbuf()

@@ -43,6 +43,9 @@ with tempfile.TemporaryDirectory() as directorio:
     ruta = pathlib.Path(directorio) / "preferences.json"
     valores = {"idioma": "zh", "tema": "oscuro", "modo_simple": True}
     app.guardar_preferencias(valores, str(ruta))
+    assert app.cargar_preferencias(str(ruta)) == dict(valores, carpeta_repositorios="")
+    valores["carpeta_repositorios"] = directorio
+    app.guardar_preferencias(valores, str(ruta))
     assert app.cargar_preferencias(str(ruta)) == valores
     ruta.write_text('{"idioma":"invalid"}', encoding="utf-8")
     try:
@@ -238,7 +241,7 @@ if Gtk.init_check([])[0]:
         ventana._abrir_preferencias(None)
         guardadas = app.cargar_preferencias(str(ruta))
         assert guardadas == {
-            "idioma": "en", "tema": "oscuro", "modo_simple": True
+            "idioma": "en", "tema": "oscuro", "modo_simple": True, "carpeta_repositorios": ""
         }, guardadas
         nuevas_ventanas = [
             widget for widget in Gtk.Window.list_toplevels()
