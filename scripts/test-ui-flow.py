@@ -73,13 +73,20 @@ for distro, version, texto in (('debian', '13', 'Debian 13'), ('ubuntu', '26.04'
         assert boton_version.get_can_focus()
         boton_version.clicked()
         settle()
-        popover = boton_version.get_popover()
-        assert popover.get_visible() and popover.get_relative_to() is boton_version
-        titulo_notas, scroll_notas = popover.get_child().get_children()
-        assert titulo_notas.get_text() == 'Novedades de esta versión'
-        assert scroll_notas.get_child().get_child().get_text() == '• Mejora <GTK>'
-        popover.popdown()
+        novedades = next(dialogo for dialogo in Gtk.Window.list_toplevels()
+                         if isinstance(dialogo, Gtk.Dialog) and dialogo.get_transient_for() == ventana
+                         and dialogo.get_title() == 'Novedades de esta versión')
+        assert novedades.get_visible() and novedades.get_resizable()
+        area = ventana.get_display().get_monitor_at_window(ventana.get_window()).get_workarea()
+        assert novedades.get_default_size() == (min(820, area.width * 9 // 10),
+                                                min(560, area.height * 9 // 10))
+        scroll_notas = next(widget for widget in novedades.get_content_area().get_children()
+                            if isinstance(widget, Gtk.ScrolledWindow))
+        buffer = scroll_notas.get_child().get_buffer()
+        assert buffer.get_text(*buffer.get_bounds(), True) == '• Mejora <GTK>'
+        novedades.get_widget_for_response(Gtk.ResponseType.CLOSE).clicked()
         settle()
+        assert not novedades.get_visible()
         ventana.btn_detalles_sistema.clicked()
         settle()
         dialogo = ventana.ventana_detalles_sistema

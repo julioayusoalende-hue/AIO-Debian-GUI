@@ -1111,7 +1111,7 @@ class VentanaPrincipal(Gtk.Window):
 
     def _boton_novedades(self, version):
         texto = version if version_numerica(version.split("~", 1)[0]) else traducir("Desarrollo")
-        boton = Gtk.MenuButton()
+        boton = Gtk.Button()
         boton.set_relief(Gtk.ReliefStyle.NONE)
         encabezado = traducir("Novedades de esta versión")
         boton.set_tooltip_text(encabezado)
@@ -1120,32 +1120,38 @@ class VentanaPrincipal(Gtk.Window):
         numero.get_style_context().add_class("aio-header-version")
         boton.get_style_context().add_class("aio-header-version-button")
         boton.add(numero)
+        boton.connect("clicked", self._abrir_novedades, version)
+        return boton
 
-        popover = Gtk.Popover.new(boton)
-        popover.set_position(Gtk.PositionType.BOTTOM)
-        caja = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        caja.set_border_width(12)
-        titulo = Gtk.Label(xalign=0)
-        titulo.set_markup("<b>%s</b>" % GLib.markup_escape_text(encabezado))
-        caja.pack_start(titulo, False, False, 0)
+    def _abrir_novedades(self, _boton, version):
+        dialogo = Gtk.Dialog(title=traducir("Novedades de esta versión"),
+                             transient_for=self, modal=True)
+        dialogo.add_button(traducir("Cerrar"), Gtk.ResponseType.CLOSE)
+        dialogo.connect("response", lambda d, _r: d.destroy())
+        ventana = self.get_window()
+        monitor = self.get_display().get_monitor_at_window(ventana) if ventana else None
+        area = monitor.get_workarea() if monitor else None
+        ancho = min(820, area.width * 9 // 10) if area else 820
+        alto = min(560, area.height * 9 // 10) if area else 560
+        dialogo.set_default_size(ancho, alto)
 
         notas = novedades_version(version) or traducir("No hay notas para esta versión.")
-        detalle = Gtk.Label(label=notas, xalign=0, selectable=True)
-        detalle.set_line_wrap(True)
-        detalle.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
-        detalle.set_max_width_chars(48)
+        detalle = Gtk.TextView(editable=False, cursor_visible=False)
+        detalle.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        detalle.set_left_margin(16)
+        detalle.set_right_margin(16)
+        detalle.set_top_margin(12)
+        detalle.set_bottom_margin(12)
+        detalle.set_pixels_below_lines(5)
+        detalle.get_buffer().set_text(notas)
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scroll.set_min_content_width(280)
-        scroll.set_max_content_height(300)
-        scroll.set_propagate_natural_height(True)
+        scroll.set_overlay_scrolling(False)
         scroll.add(detalle)
-        caja.pack_start(scroll, True, True, 0)
-
-        popover.add(caja)
-        caja.show_all()
-        boton.set_popover(popover)
-        return boton
+        contenido = dialogo.get_content_area()
+        contenido.set_border_width(12)
+        contenido.pack_start(scroll, True, True, 0)
+        dialogo.show_all()
 
     def _abrir_guia_integracion(self, _boton=None, parent=None):
         if self.programando:
