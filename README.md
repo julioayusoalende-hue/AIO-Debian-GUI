@@ -51,6 +51,17 @@ La copia incluye `/etc/apt/sources.list`, las fuentes `.list` y `.sources` de `/
 
 Las dos operaciones piden autorización de administrador. Al restaurar, AiO sustituye las fuentes actuales por las de la copia y conserva las claves adicionales. Después puedes renovar los índices desde **Configuración y mantenimiento**.
 
+## Copiar y restaurar ajustes del escritorio
+
+En **Backup**, usa **Copiar ajustes del escritorio** y **Restaurar ajustes del escritorio** desde tu sesión de GNOME o KDE Plasma. AiO guarda un ZIP por escritorio en la misma carpeta que las copias APT.
+
+- **GNOME** guarda preferencias de GNOME Shell, favoritos del dock, atajos, ajustes de Mutter y las extensiones instaladas en tu cuenta. La posición de cada archivo en el escritorio depende de la extensión que lo gestione.
+- **KDE Plasma** guarda paneles, lanzadores, disposición de widgets, atajos, apariencia y ajustes de KWin. Incluye los applets instalados en tu cuenta. Para aplicar la disposición, AiO detiene y reinicia el servicio de usuario de Plasma Shell.
+
+Las extensiones y widgets instalados para todo el sistema se recuperan instalando sus paquetes. La restauración se ejecuta con los permisos de tu cuenta, muestra las versiones y complementa los archivos y ajustes existentes. Cierra sesión y vuelve a entrar para aplicar los cambios. Los paneles y widgets pueden quedar en posiciones distintas si cambian las pantallas.
+
+AiO guarda la configuración previa en `$XDG_STATE_HOME/aio-debian-gui/desktop-backups/` (por defecto, bajo `~/.local/state`). Para volver a esa configuración, copia el ZIP a tu carpeta de copias con el nombre `escritorio-gnome.zip` o `escritorio-plasma.zip` y usa el botón de restauración.
+
 ## Programación y permisos
 
 El paquete Debian incluye el asistente y el programador de mantenimiento del anfitrión.

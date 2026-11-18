@@ -157,7 +157,10 @@ for language in ('es', 'en', 'fr', 'zh'):
         app.traducir('Apps recomendadas')
     assert w.notebook.get_tab_label_text(w.notebook.get_nth_page(3)) == \
         app.traducir('Terminal')
-    assert set(w.backup_buttons) == {'timeshift', 'deja-dup', 'backup', 'restore', 'folder'}
+    assert set(w.backup_buttons) == {
+        'timeshift', 'deja-dup', 'backup', 'restore', 'folder',
+        'desktop-backup', 'desktop-restore',
+    }
     assert w.backup_buttons['backup'].get_label() == app.traducir('Copiar repositorios APT')
     assert w.backup_buttons['restore'].get_label() == app.traducir('Restaurar repositorios APT')
     for app_id in app.APLICACIONES_BACKUP:

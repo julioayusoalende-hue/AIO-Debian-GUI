@@ -2,6 +2,7 @@
 
 ## 1.0.7
 
+- Añade copia y restauración de ajustes, extensiones y widgets del usuario en GNOME y KDE Plasma, con una copia previa antes de restaurar.
 - Añade botones en Backup para copiar y restaurar los repositorios APT desde una misma carpeta.
 
 ## 1.0.6

@@ -22,6 +22,8 @@ import tempfile
 import threading
 import urllib.request
 import urllib.error
+import zipfile
+from pathlib import Path
 from urllib.parse import unquote
 
 import gi
@@ -38,6 +40,7 @@ CORE_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file_
 if CORE_DIR not in sys.path:
     sys.path.insert(0, CORE_DIR)
 from aio_core import history as core_history, preferences as core_preferences, updates as core_updates, diagnostics as core_diagnostics, preflight as core_preflight, scheduler as core_scheduler, host_integration as core_host_integration  # noqa: E402
+from aio_core import desktop_backup as core_desktop_backup  # noqa: E402
 from aio_core.fastfetch import instalar_layout, restaurar_layout  # noqa: E402
 from aio_core.gtk_appearance import aplicar_tema  # noqa: E402
 from aio_core.gtk_scheduler import ControladorProgramacion  # noqa: E402
@@ -1525,6 +1528,16 @@ class VentanaPrincipal(Gtk.Window):
             repositorios.pack_start(boton, False, False, 0)
             self.backup_buttons[accion] = boton
         backup.pack_start(repositorios, False, False, 0)
+        escritorio = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        escritorio.pack_start(etiqueta("<b>Ajustes del escritorio</b>", markup=True), False, False, 0)
+        for accion, texto in (("desktop-backup", "Copiar ajustes del escritorio"),
+                              ("desktop-restore", "Restaurar ajustes del escritorio")):
+            boton = Gtk.Button(label=traducir(texto))
+            boton.set_halign(Gtk.Align.START)
+            boton.connect("clicked", self._accion_escritorio, accion)
+            escritorio.pack_start(boton, False, False, 0)
+            self.backup_buttons[accion] = boton
+        backup.pack_start(escritorio, False, False, 0)
         self.backup_status = etiqueta("")
         backup.pack_start(self.backup_status, False, False, 0)
         backup_scroll = Gtk.ScrolledWindow()
@@ -1772,7 +1785,7 @@ class VentanaPrincipal(Gtk.Window):
 
     def _elegir_carpeta_repositorios(self):
         selector = Gtk.FileChooserNative.new(
-            traducir("Carpeta de copia de repositorios"), self,
+            traducir("Carpeta de copia"), self,
             Gtk.FileChooserAction.SELECT_FOLDER, traducir("Aceptar"), traducir("Cancelar"))
         carpeta = self.preferencias.get("carpeta_repositorios")
         if carpeta and os.path.isdir(carpeta):
@@ -1873,6 +1886,91 @@ class VentanaPrincipal(Gtk.Window):
             self.backup_status.set_text(traducir("Repositorios restaurados. Actualiza los índices APT desde Mantenimiento."))
         else:
             self.backup_status.set_text(traducir("Copia de repositorios guardada en %s") % ruta)
+        return GLib.SOURCE_REMOVE
+
+    def _accion_escritorio(self, _boton, accion):
+        if (self.backup_action_in_progress or self.en_curso or self.diagnostico_en_curso
+                or self.comprobando_actualizacion or self.programando):
+            return
+        escritorio = core_desktop_backup.detect()
+        if not escritorio:
+            self._mensaje(Gtk.MessageType.INFO, "Ajustes del escritorio",
+                          "Abre AiO desde una sesión de GNOME o KDE Plasma.")
+            return
+        carpeta = self.preferencias.get("carpeta_repositorios") or self._elegir_carpeta_repositorios()
+        if not carpeta:
+            return
+        ruta = os.path.join(carpeta, f"escritorio-{escritorio}.zip")
+        if accion == "desktop-backup" and os.path.lexists(ruta):
+            if not self._confirmar_escritorio("¿Reemplazar la copia del escritorio?", ruta):
+                return
+        self.backup_action_in_progress = True
+        self.backup_status.set_text(traducir("Preparando la copia del escritorio…"))
+        self._actualizar_sensibilidad()
+        threading.Thread(target=self._procesar_escritorio,
+                         args=(accion, escritorio, ruta), daemon=True).start()
+
+    def _confirmar_escritorio(self, titulo, detalle):
+        dialogo = Gtk.MessageDialog(
+            transient_for=self, modal=True, message_type=Gtk.MessageType.WARNING,
+            buttons=Gtk.ButtonsType.NONE, text=traducir(titulo))
+        dialogo.format_secondary_text(detalle)
+        dialogo.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
+        dialogo.add_button(traducir("Continuar"), Gtk.ResponseType.OK)
+        dialogo.set_default_response(Gtk.ResponseType.CANCEL)
+        continuar = dialogo.run() == Gtk.ResponseType.OK
+        dialogo.destroy()
+        return continuar
+
+    def _procesar_escritorio(self, accion, escritorio, ruta, preparados=None):
+        try:
+            if preparados is not None:
+                version_actual, archivos, directorios = preparados
+                recuperacion = core_desktop_backup.restore(
+                    escritorio, version_actual, archivos, directorios)
+                mensaje = traducir("Ajustes restaurados. Cierra sesión y vuelve a entrar. Copia anterior: %s") % recuperacion
+            else:
+                version_actual = core_desktop_backup.version(escritorio)
+                directorios = core_desktop_backup.user_dirs()
+                if accion == "desktop-restore":
+                    origen, archivos = core_desktop_backup.read(Path(ruta), escritorio)
+                    GLib.idle_add(self._confirmar_restauracion_escritorio, escritorio, ruta,
+                                  origen, (version_actual, archivos, directorios))
+                    return
+                archivos = core_desktop_backup.snapshot(escritorio, directorios)
+                core_desktop_backup.save(Path(ruta), escritorio, version_actual, archivos)
+                mensaje = traducir("Copia del escritorio guardada en %s") % ruta
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError, KeyError,
+                NotImplementedError, zipfile.BadZipFile, RecursionError) as error:
+            GLib.idle_add(self._escritorio_finalizado, None, str(error))
+        else:
+            GLib.idle_add(self._escritorio_finalizado, mensaje, None)
+
+    def _confirmar_restauracion_escritorio(self, escritorio, ruta, origen, preparados):
+        version_actual = preparados[0]
+        detalle = traducir("Copia de %s · %s\nSesión actual: %s") % (
+            core_desktop_backup.LABELS[escritorio], origen, version_actual)
+        if origen != version_actual:
+            detalle += "\n\n" + traducir("Las versiones son distintas. Algunas extensiones o widgets podrían ser incompatibles.")
+        detalle += "\n\n" + traducir(
+            "Se guardará una copia de los ajustes actuales. Continúa solo si confías en las extensiones y widgets de esta copia.")
+        if self._confirmar_escritorio("¿Restaurar los ajustes del escritorio?", detalle):
+            self.backup_status.set_text(traducir("Restaurando los ajustes del escritorio…"))
+            threading.Thread(target=self._procesar_escritorio,
+                             args=("desktop-restore", escritorio, ruta, preparados), daemon=True).start()
+        else:
+            self._escritorio_finalizado("", None)
+        return GLib.SOURCE_REMOVE
+
+    def _escritorio_finalizado(self, mensaje, error):
+        self.backup_action_in_progress = False
+        self._actualizar_sensibilidad()
+        if error:
+            titulo = "No se pudo completar la copia o restauración del escritorio."
+            self.backup_status.set_text(traducir(titulo))
+            self._mensaje(Gtk.MessageType.ERROR, titulo, error)
+        else:
+            self.backup_status.set_text(mensaje)
         return GLib.SOURCE_REMOVE
 
     def _accion_backup(self, _boton, app_id):

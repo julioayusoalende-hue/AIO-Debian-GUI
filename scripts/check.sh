@@ -45,6 +45,7 @@ bash scripts/test-nvidia.sh && bien "detección NVIDIA e híbrida" || fallo "pru
 bash scripts/test-backports-rollback.sh && bien "reversión Backports segura" || fallo "pruebas de reversión Backports"
 bash scripts/test-backup-apps.sh && bien "instalación segura de aplicaciones de backup" || fallo "pruebas de aplicaciones de backup"
 python3 scripts/test-apt-sources-backup.py && bien "copia y restauración de repositorios APT" || fallo "pruebas de copias APT"
+python3 scripts/test-desktop-backup.py && bien "copia y restauración de ajustes del escritorio" || fallo "pruebas de copias del escritorio"
 bash scripts/test-recommended-apps.sh && bien "instalación segura de apps recomendadas" || fallo "pruebas de apps recomendadas"
 
 if python3 -c 'import gi; gi.require_version("Gtk", "3.0")' >/dev/null 2>&1; then
