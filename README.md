@@ -4,11 +4,17 @@
 
 [![Última versión](https://img.shields.io/github/v/release/julioayusoalende-hue/AIO-Debian-GUI?label=versi%C3%B3n)](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)
 [![Licencia GPL-3.0](https://img.shields.io/badge/licencia-GPL--3.0-blue)](LICENSE)
-[![Descargas](https://img.shields.io/badge/descargas-Releases-red)](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)
+[![Testing](https://img.shields.io/badge/descargas-testing-orange)](#versiones-testing)
 
 AiO Debian GUI reúne tareas habituales de administración en una aplicación GTK. Antes de las operaciones delicadas presenta comprobaciones y pide confirmación. Es un proyecto independiente del script de consola [aio-debian](https://github.com/julioayusoalende-hue/aio-debian).
 
-**Descarga la última versión estable desde [Releases](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest).** La distribución incluye el paquete Debian y el archivo `SHA256SUMS`.
+## Versión estable
+
+[Descargar la última versión estable](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest). Incluye el paquete DEB y el archivo `SHA256SUMS`. Consulta las [instrucciones de instalación](#instalar).
+
+## Versiones testing
+
+[Ver las descargas de testing](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases?q=testing&expanded=true). Aquí se publican las versiones preliminares de la rama [`testing`](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/tree/testing), con su paquete DEB y el archivo `SHA256SUMS`.
 
 ## Funciones
 
