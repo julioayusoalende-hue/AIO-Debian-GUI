@@ -260,7 +260,7 @@ for language in ('es', 'en', 'fr', 'zh'):
     settle()
     if language != 'es':
         assert app.traducir('Operación en curso') != 'Operación en curso'
-    assert not w.detalles_sistema.get_expanded()
+    assert w.ventana_detalles_sistema is None
     assert not w.expansor_consola.get_expanded()
     w.expansor_consola.set_expanded(True)
     settle()
