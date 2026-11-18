@@ -3437,7 +3437,8 @@ class VentanaPrincipal(Gtk.Window):
             ventana = self.get_window()
             monitor = self.get_display().get_monitor_at_window(ventana) if ventana else None
             area = monitor.get_workarea() if monitor else None
-            scroll.set_min_content_width(min(540, area.width * 4 // 5) if area else 540)
+            dialogo_seguro.set_resizable(True)
+            scroll.set_min_content_width(min(900, area.width * 4 // 5) if area else 900)
             scroll.set_min_content_height(min(380, area.height * 2 // 5) if area else 320)
             scroll.add(detalle)
             dialogo_seguro.get_message_area().pack_start(scroll, True, True, 0)
