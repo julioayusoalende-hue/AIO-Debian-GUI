@@ -36,8 +36,10 @@ jobs:
           stable_control=$(gh api -H 'Accept: application/vnd.github.raw+json' \
             "repos/$GITHUB_REPOSITORY/contents/package/DEBIAN/control?ref=$tag" | sed -n 's/^Version: //p')
           version=$(bash scripts/testing-version.sh "$tag" "$stable_control" "$GITHUB_RUN_NUMBER" "$GITHUB_RUN_ATTEMPT")
+          testing_tag="testing-v${version/\~/-}"
+          git check-ref-format "refs/tags/$testing_tag"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "tag=testing-v${version/~/-}" >> "$GITHUB_OUTPUT"
+          echo "tag=$testing_tag" >> "$GITHUB_OUTPUT"
           echo "stable=$tag" >> "$GITHUB_OUTPUT"
       - name: Build and verify testing package
         env:
