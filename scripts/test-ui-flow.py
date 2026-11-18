@@ -195,16 +195,13 @@ for language in ('es', 'en', 'fr', 'zh'):
     assert w.backup_buttons['restore'].get_label() == app.traducir('Restaurar repositorios APT')
     for app_id in app.APLICACIONES_BACKUP:
         button = w.backup_buttons[app_id]
-        assert button.get_image() is not None
-        image = button.get_image()
-        assert image.get_storage_type() == Gtk.ImageType.PIXBUF
-        pixbuf = image.get_pixbuf()
+        icon, text, action = button.get_parent().get_children()
+        assert action is button
+        assert icon.get_storage_type() == Gtk.ImageType.PIXBUF
+        pixbuf = icon.get_pixbuf()
         assert max(pixbuf.get_width(), pixbuf.get_height()) == 48
-        row = button.get_parent()
-        assert row.get_orientation() == Gtk.Orientation.VERTICAL
-        assert len(row.get_children()) == 2
-        description = row.get_children()[1]
-        assert isinstance(description, Gtk.Label)
+        name, description = text.get_children()
+        assert name.get_text() == app.APLICACIONES_BACKUP[app_id]['name']
         assert description.get_text() == app.traducir(app.APLICACIONES_BACKUP[app_id]['description'])
     w.notebook.set_current_page(1)
     w.resize(600, 900)
@@ -216,12 +213,19 @@ for language in ('es', 'en', 'fr', 'zh'):
     assert w.get_size()[0] <= 601, (language, w.get_size())
     assert all(button.get_mapped() for button in w.recommended_buttons.values())
     assert len(w.recommended_grid.get_children()) == 14
+    first = w.recommended_grid.get_child_at_index(0)
+    second = w.recommended_grid.get_child_at_index(1)
+    assert first.get_allocation().x == second.get_allocation().x
+    w.resize(1160, 900)
+    settle()
+    assert first.get_allocation().y == second.get_allocation().y
+    assert first.get_allocation().x < second.get_allocation().x
     expected_names = ['Brave', 'Celluloid', 'Feishin', 'Gear Lever', 'Ghostty', 'GIMP', 'Google Chrome', 'HandBrake', 'Kitty',
                       'Plex', 'Spotify', 'Switcheroo', 'Video Downloader', 'VLC']
     assert [item['name'] for item in app.APPS_RECOMENDADAS] == expected_names
     for index, name in enumerate(expected_names):
-        card = w.recommended_grid.get_child_at(index % 2, index // 2)
-        assert card is not None
+        card = w.recommended_grid.get_child_at_index(index).get_child()
+        assert card.get_style_context().has_class("aio-card")
         contents = card.get_child().get_children()
         header = contents[0].get_children()
         assert isinstance(header[0], Gtk.Image)
@@ -581,8 +585,7 @@ with patch.object(w, '_comprobar_deb_recomendada',
     settle()
     assert w.recommended_indicators[('gimp', 'deb')].get_visible()
     assert not w.recommended_indicators[('gimp', 'flatpak')].get_visible()
-    assert w.recommended_indicators[('gimp', 'deb')].get_text() == app.traducir('Instalado')
-    assert 'foreground="#258b45"' in w.recommended_indicators[('gimp', 'deb')].get_label()
+    assert w.recommended_indicators[('gimp', 'deb')].get_text() == '✓ ' + app.traducir('Instalado')
     assert w.recommended_indicators[('google-chrome', 'deb-download')].get_visible()
     assert w.recommended_indicators[('video-downloader', 'flatpak')].get_visible()
     assert not w.recommended_buttons[('google-chrome', 'deb-download')].get_sensitive()

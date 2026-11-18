@@ -282,6 +282,7 @@ APPS_RECOMENDADAS = [
         "id": "feishin", "name": "Feishin",
         "icon": "org.jeffvli.feishin",
         "bundled_icon": "feishin.png",
+        "light_icon_background": True,
         "fallback_icon": "audio-x-generic",
         "description": "Reproductor de música para servidores Jellyfin, Navidrome y Subsonic.",
         "channels": [
@@ -835,26 +836,36 @@ ESTILO_APLICACION = b"""
 .aio-header-system {
     font-size: 0.90em;
 }
-.aio-maintenance {
+.aio-page {
     background-color: shade(@theme_bg_color, 0.985);
 }
-.aio-maintenance frame.aio-card > border {
+.aio-page frame.aio-card > border {
     border: 1px solid alpha(@theme_fg_color, 0.16);
     border-radius: 12px;
     background-color: @theme_base_color;
 }
-.aio-maintenance .aio-heading {
+.aio-page .aio-heading {
     font-size: 1.26em;
     font-weight: 700;
 }
-.aio-maintenance .aio-icon {
+.aio-page .aio-icon {
     color: @theme_fg_color;
     background-color: alpha(@theme_selected_bg_color, 0.14);
     border-radius: 8px;
     padding: 6px;
 }
-.aio-maintenance .aio-group {
+.aio-page .aio-group {
     font-weight: 600;
+}
+.aio-page .aio-light-icon-background {
+    background-color: #f6f5f4;
+    border-radius: 8px;
+}
+.aio-page flowbox.aio-card-grid {
+    background-color: transparent;
+}
+.aio-page flowbox.aio-card-grid > flowboxchild {
+    padding: 0;
 }
 .aio-maintenance list.aio-tasks {
     background-color: transparent;
@@ -1566,9 +1577,10 @@ class VentanaPrincipal(Gtk.Window):
         principal = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         principal.set_border_width(14)
         estilo = principal.get_style_context()
+        estilo.add_class("aio-page")
         estilo.add_class("aio-maintenance")
         # El proveedor se instala una sola vez en la pantalla; las reglas están
-        # acotadas a la cabecera y a mantenimiento y heredan el tema GTK.
+        # acotadas a las pestañas de la aplicación y heredan el tema GTK.
         pantalla = self.get_screen()
         if not getattr(pantalla, "_aio_estilo_aplicacion", None):
             proveedor = Gtk.CssProvider()
@@ -1582,121 +1594,8 @@ class VentanaPrincipal(Gtk.Window):
         self.notebook = notebook
         self.add(notebook)
         notebook.append_page(principal, Gtk.Label(label=traducir("Configuración y mantenimiento")))
-        backup = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
-        backup.set_border_width(24)
-        backup.set_valign(Gtk.Align.START)
-        backup.pack_start(etiqueta("Copias de seguridad", markup=True), False, False, 0)
-        backup.pack_start(etiqueta(
-            "Timeshift y Respaldos permiten crear copias de seguridad. Cada aplicación gestiona su propia configuración y operaciones."
-        ), False, False, 0)
-        for app_id, app in APLICACIONES_BACKUP.items():
-            fila = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-            boton = Gtk.Button(label=traducir("Abrir " + app["name"]))
-            boton.set_image(self._icono_aplicacion_backup(app))
-            boton.set_always_show_image(True)
-            boton.set_image_position(Gtk.PositionType.LEFT)
-            boton.set_size_request(280, 64)
-            boton.set_halign(Gtk.Align.START)
-            boton.connect("clicked", self._accion_backup, app_id)
-            fila.pack_start(boton, False, False, 0)
-            fila.pack_start(etiqueta(app["description"]), False, False, 0)
-            backup.pack_start(fila, False, False, 0)
-            self.backup_buttons[app_id] = boton
-        repositorios = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        repositorios.pack_start(etiqueta("<b>Repositorios APT</b>", markup=True), False, False, 0)
-        self.carpeta_repositorios_label = etiqueta("", dim=True)
-        self._mostrar_carpeta_repositorios()
-        repositorios.pack_start(self.carpeta_repositorios_label, False, False, 0)
-        for accion, texto in (
-                ("backup", "Copiar repositorios APT"),
-                ("restore", "Restaurar repositorios APT"),
-                ("folder", "Cambiar carpeta de copia")):
-            boton = Gtk.Button(label=traducir(texto))
-            boton.set_halign(Gtk.Align.START)
-            boton.connect("clicked", self._accion_repositorios, accion)
-            repositorios.pack_start(boton, False, False, 0)
-            self.backup_buttons[accion] = boton
-        backup.pack_start(repositorios, False, False, 0)
-        escritorio = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        escritorio.pack_start(etiqueta("<b>Ajustes del escritorio</b>", markup=True), False, False, 0)
-        for accion, texto in (("desktop-backup", "Copiar ajustes del escritorio"),
-                              ("desktop-restore", "Restaurar ajustes del escritorio")):
-            boton = Gtk.Button(label=traducir(texto))
-            boton.set_halign(Gtk.Align.START)
-            boton.connect("clicked", self._accion_escritorio, accion)
-            escritorio.pack_start(boton, False, False, 0)
-            self.backup_buttons[accion] = boton
-        backup.pack_start(escritorio, False, False, 0)
-        self.backup_status = etiqueta("")
-        backup.pack_start(self.backup_status, False, False, 0)
-        backup_scroll = Gtk.ScrolledWindow()
-        backup_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        backup_scroll.add(backup)
-        notebook.append_page(backup_scroll, Gtk.Label(label=traducir("Backup")))
-        recomendadas = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        recomendadas.set_border_width(20)
-        recomendadas.pack_start(etiqueta("Aplicaciones recomendadas", markup=True), False, False, 0)
-        recomendadas.pack_start(etiqueta(
-            "Elige un formato por aplicación. Los paquetes DEB de los repositorios APT requieren autorización; Flatpak se instala solo para tu usuario y configura Flathub si hace falta."
-        ), False, False, 0)
-        recomendadas.pack_start(etiqueta(
-            "Las páginas de descarga .deb son oficiales; revisa el paquete e instálalo con el gestor de software.",
-            dim=True,
-        ), False, False, 0)
-        self.recommended_status = etiqueta("")
-        recomendadas.pack_start(self.recommended_status, False, False, 0)
-        scroll_recomendadas = Gtk.ScrolledWindow()
-        scroll_recomendadas.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        scroll_recomendadas.set_vexpand(True)
-        grid_recomendadas = Gtk.Grid(column_spacing=12, row_spacing=12)
-        grid_recomendadas.set_column_homogeneous(True)
-        self.recommended_buttons = {}
-        self.recommended_installed = {}
-        self.recommended_indicators = {}
-        self.recommended_grid = grid_recomendadas
-        for index, app in enumerate(APPS_RECOMENDADAS):
-            tarjeta = Gtk.Frame()
-            contenido = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-            contenido.set_border_width(12)
-            tarjeta.add(contenido)
-            cabecera_app = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-            icono_app = icono_recomendada(app)
-            cabecera_app.pack_start(icono_app, False, False, 0)
-            cabecera_app.pack_start(etiqueta(
-                "<b>%s</b>" % GLib.markup_escape_text(app["name"]), markup=True
-            ), True, True, 0)
-            contenido.pack_start(cabecera_app, False, False, 0)
-            descripcion = etiqueta(app["description"], dim=True)
-            descripcion.set_max_width_chars(58)
-            contenido.pack_start(descripcion, True, True, 0)
-            botones_fuente = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-            for canal in self.canales_recomendados[app["id"]]:
-                etiqueta_fuente = (
-                    "DEB (APT)" if canal["type"] == "deb" else
-                    "DEB (web oficial)" if canal["type"] == "deb-download" else
-                    "Descargar AppImage" if canal["type"] == "appimage" else
-                    "Flatpak"
-                )
-                boton = Gtk.Button(label=traducir(etiqueta_fuente))
-                boton.set_hexpand(True)
-                boton.connect("clicked", self._accion_app_recomendada,
-                              app["id"], canal["type"])
-                columna = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-                columna.pack_start(boton, False, False, 0)
-                indicador = Gtk.Label()
-                indicador.set_markup('<span foreground="#258b45">%s</span>' %
-                                     GLib.markup_escape_text(traducir("Instalado")))
-                indicador.set_no_show_all(True)
-                columna.pack_start(indicador, False, False, 0)
-                botones_fuente.pack_start(columna, True, True, 0)
-                clave = (app["id"], canal["type"])
-                self.recommended_buttons[clave] = boton
-                self.recommended_indicators[clave] = indicador
-            contenido.pack_start(botones_fuente, False, False, 0)
-            grid_recomendadas.attach(tarjeta, index % 2, index // 2, 1, 1)
-        scroll_recomendadas.add(grid_recomendadas)
-        recomendadas.pack_start(scroll_recomendadas, True, True, 0)
-        notebook.append_page(recomendadas, Gtk.Label(label=traducir("Apps recomendadas")))
+        notebook.append_page(self._pagina_backup(), Gtk.Label(label=traducir("Backup")))
+        notebook.append_page(self._pagina_recomendadas(), Gtk.Label(label=traducir("Apps recomendadas")))
         notebook.connect("switch-page", self._cambiar_pestana_recomendadas)
         consola = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         consola.set_border_width(12)
@@ -1854,6 +1753,180 @@ class VentanaPrincipal(Gtk.Window):
             self._aplicar_modo_simple()
 
     @staticmethod
+    def _pagina_tarjetas():
+        pagina = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        pagina.set_border_width(14)
+        pagina.get_style_context().add_class("aio-page")
+        return pagina
+
+    @staticmethod
+    def _scroll_tarjetas(contenido):
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_overlay_scrolling(False)
+        scroll.add(contenido)
+        return scroll
+
+    @staticmethod
+    def _rejilla_tarjetas():
+        rejilla = Gtk.FlowBox(
+            selection_mode=Gtk.SelectionMode.NONE, homogeneous=True,
+            min_children_per_line=1, max_children_per_line=2,
+            column_spacing=10, row_spacing=10, valign=Gtk.Align.START,
+        )
+        rejilla.get_style_context().add_class("aio-card-grid")
+        return rejilla
+
+    @staticmethod
+    def _etiqueta_estado():
+        estado = etiqueta("")
+        estado.set_no_show_all(True)
+        estado.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+        estado.connect("notify::label", lambda lbl, _: lbl.set_visible(bool(lbl.get_text())))
+        return estado
+
+    def _boton_backup(self, accion, texto, icono, callback):
+        boton = Gtk.Button(label=traducir(texto))
+        boton.set_image(Gtk.Image.new_from_icon_name(icono, Gtk.IconSize.BUTTON))
+        boton.set_always_show_image(True)
+        boton.set_halign(Gtk.Align.START)
+        boton.connect("clicked", callback, accion)
+        self.backup_buttons[accion] = boton
+        return boton
+
+    def _pagina_backup(self):
+        pagina = self._pagina_tarjetas()
+        contenido = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        carpeta, caja = tarjeta_mantenimiento(8)
+        caja.pack_start(cabecera_mantenimiento("Carpeta de copia", "folder-symbolic"),
+                        False, False, 0)
+        self.carpeta_repositorios_label = etiqueta("")
+        self.carpeta_repositorios_label.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+        self.carpeta_repositorios_label.set_selectable(True)
+        self._mostrar_carpeta_repositorios()
+        fila_carpeta = Gtk.Box(spacing=10)
+        fila_carpeta.pack_start(self.carpeta_repositorios_label, True, True, 0)
+        boton = self._boton_backup("folder", "Cambiar carpeta de copia",
+                                   "folder-open-symbolic", self._accion_repositorios)
+        boton.set_valign(Gtk.Align.CENTER)
+        fila_carpeta.pack_end(boton, False, False, 0)
+        caja.pack_start(fila_carpeta, False, False, 0)
+        contenido.pack_start(carpeta, False, False, 0)
+
+        grupos = self._rejilla_tarjetas()
+        for titulo, icono, descripcion, acciones, callback in (
+            ("Repositorios APT", "system-software-install-symbolic",
+             "Fuentes de software y claves de APT.", (
+                ("backup", "Copiar repositorios APT", "document-save-symbolic"),
+                ("restore", "Restaurar repositorios APT", "document-revert-symbolic"),
+            ), self._accion_repositorios),
+            ("Ajustes del escritorio", "preferences-desktop-symbolic",
+             "Preferencias, extensiones y widgets de GNOME o KDE Plasma.", (
+                ("desktop-backup", "Copiar ajustes del escritorio", "document-save-symbolic"),
+                ("desktop-restore", "Restaurar ajustes del escritorio", "document-revert-symbolic"),
+            ), self._accion_escritorio),
+        ):
+            tarjeta, caja = tarjeta_mantenimiento(8)
+            tarjeta.set_size_request(330, -1)
+            caja.pack_start(cabecera_mantenimiento(titulo, icono), False, False, 0)
+            caja.pack_start(etiqueta(descripcion), True, True, 0)
+            for accion, texto, icono_accion in acciones:
+                boton = self._boton_backup(accion, texto, icono_accion, callback)
+                caja.pack_start(boton, False, False, 0)
+            grupos.add(tarjeta)
+        contenido.pack_start(grupos, False, False, 0)
+
+        herramientas, caja = tarjeta_mantenimiento(10)
+        caja.pack_start(cabecera_mantenimiento("Copias de seguridad", "drive-harddisk-symbolic"),
+                        False, False, 0)
+        for indice, (app_id, app) in enumerate(APLICACIONES_BACKUP.items()):
+            if indice:
+                caja.pack_start(Gtk.Separator(), False, False, 0)
+            fila = Gtk.Box(spacing=10)
+            fila.pack_start(self._icono_aplicacion_backup(app), False, False, 0)
+            texto = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+            nombre = etiqueta(app["name"])
+            nombre.get_style_context().add_class("aio-group")
+            texto.pack_start(nombre, False, False, 0)
+            descripcion = etiqueta(app["description"])
+            descripcion.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+            texto.pack_start(descripcion, False, False, 0)
+            fila.pack_start(texto, True, True, 0)
+            boton = self._boton_backup(app_id, "Abrir " + app["name"],
+                                       "document-open-symbolic", self._accion_backup)
+            boton.set_valign(Gtk.Align.CENTER)
+            fila.pack_end(boton, False, False, 0)
+            caja.pack_start(fila, False, False, 0)
+        contenido.pack_start(herramientas, False, False, 0)
+        pagina.pack_start(self._scroll_tarjetas(contenido), True, True, 0)
+        self.backup_status = self._etiqueta_estado()
+        pagina.pack_start(self.backup_status, False, False, 0)
+        return pagina
+
+    def _pagina_recomendadas(self):
+        pagina = self._pagina_tarjetas()
+        introduccion, caja = tarjeta_mantenimiento(7)
+        caja.pack_start(cabecera_mantenimiento("Aplicaciones recomendadas", "view-grid-symbolic"),
+                        False, False, 0)
+        caja.pack_start(etiqueta(
+            "APT requiere autorización de administrador. Flatpak instala para tu usuario y añade Flathub si hace falta. Para los DEB de la web oficial, usa el gestor de software."
+        ), False, False, 0)
+        self.recommended_status = self._etiqueta_estado()
+        caja.pack_start(self.recommended_status, False, False, 0)
+        pagina.pack_start(introduccion, False, False, 0)
+
+        self.recommended_buttons = {}
+        self.recommended_installed = {}
+        self.recommended_indicators = {}
+        self.recommended_grid = self._rejilla_tarjetas()
+        for app in APPS_RECOMENDADAS:
+            self.recommended_grid.add(self._tarjeta_recomendada(app))
+        pagina.pack_start(self._scroll_tarjetas(self.recommended_grid), True, True, 0)
+        return pagina
+
+    def _tarjeta_recomendada(self, app):
+        tarjeta, contenido = tarjeta_mantenimiento(8)
+        tarjeta.set_size_request(330, -1)
+        cabecera = Gtk.Box(spacing=10)
+        icono_app = icono_recomendada(app)
+        if app.get("light_icon_background"):
+            icono_app.get_style_context().add_class("aio-light-icon-background")
+        cabecera.pack_start(icono_app, False, False, 0)
+        titulo = etiqueta(app["name"])
+        titulo.get_style_context().add_class("aio-heading")
+        cabecera.pack_start(titulo, True, True, 0)
+        contenido.pack_start(cabecera, False, False, 0)
+        descripcion = etiqueta(app["description"])
+        descripcion.set_max_width_chars(54)
+        contenido.pack_start(descripcion, True, True, 0)
+
+        botones = Gtk.Box(spacing=8, homogeneous=True)
+        for canal in self.canales_recomendados[app["id"]]:
+            tipo = canal["type"]
+            texto, icono = {
+                "deb": ("DEB (APT)", "system-software-install-symbolic"),
+                "deb-download": ("DEB (web oficial)", "web-browser-symbolic"),
+                "appimage": ("Descargar AppImage", "folder-download-symbolic"),
+                "flatpak": ("Flatpak", "package-x-generic-symbolic"),
+            }[tipo]
+            boton = Gtk.Button(label=traducir(texto))
+            boton.set_image(Gtk.Image.new_from_icon_name(icono, Gtk.IconSize.BUTTON))
+            boton.set_always_show_image(True)
+            boton.connect("clicked", self._accion_app_recomendada, app["id"], tipo)
+            columna = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            columna.pack_start(boton, False, False, 0)
+            indicador = Gtk.Label(label="✓ " + traducir("Instalado"))
+            indicador.get_style_context().add_class("aio-group")
+            indicador.set_no_show_all(True)
+            columna.pack_start(indicador, False, False, 0)
+            botones.pack_start(columna, True, True, 0)
+            clave = (app["id"], tipo)
+            self.recommended_buttons[clave] = boton
+            self.recommended_indicators[clave] = indicador
+        contenido.pack_end(botones, False, False, 0)
+        return tarjeta
+
+    @staticmethod
     def _icono_aplicacion_backup(app):
         ruta = os.path.join(BACKUP_ICON_DIR, app["bundled_icon"])
         try:
@@ -1868,8 +1941,7 @@ class VentanaPrincipal(Gtk.Window):
 
     def _mostrar_carpeta_repositorios(self):
         carpeta = self.preferencias.get("carpeta_repositorios")
-        texto = (traducir("Carpeta de copia: %s") % carpeta if carpeta
-                 else traducir("Elige una carpeta para guardar y recuperar la copia."))
+        texto = carpeta or traducir("Elige una carpeta para guardar y recuperar la copia.")
         self.carpeta_repositorios_label.set_text(texto)
 
     def _elegir_carpeta_repositorios(self):

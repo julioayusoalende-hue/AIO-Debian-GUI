@@ -1582,6 +1582,10 @@ TRADUCCIONES["zh"].update({
 
 TRADUCCIONES["en"].update({
     "<b>Repositorios APT</b>": "<b>APT repositories</b>",
+    "Repositorios APT": "APT repositories",
+    "APT requiere autorización de administrador. Flatpak instala para tu usuario y añade Flathub si hace falta. Para los DEB de la web oficial, usa el gestor de software.": "APT requires administrator authorization. Flatpak installs for your user and adds Flathub if needed. Use the software manager for DEBs from official websites.",
+    "Fuentes de software y claves de APT.": "APT software sources and keys.",
+    "Preferencias, extensiones y widgets de GNOME o KDE Plasma.": "GNOME or KDE Plasma preferences, extensions, and widgets.",
     "Copiar repositorios APT": "Back up APT repositories",
     "Restaurar repositorios APT": "Restore APT repositories",
     "Cambiar carpeta de copia": "Change backup folder",
@@ -1605,6 +1609,10 @@ TRADUCCIONES["en"].update({
 
 TRADUCCIONES["fr"].update({
     "<b>Repositorios APT</b>": "<b>Dépôts APT</b>",
+    "Repositorios APT": "Dépôts APT",
+    "APT requiere autorización de administrador. Flatpak instala para tu usuario y añade Flathub si hace falta. Para los DEB de la web oficial, usa el gestor de software.": "APT nécessite une autorisation administrateur. Flatpak installe pour votre compte et ajoute Flathub au besoin. Utilisez le gestionnaire de logiciels pour les DEB des sites officiels.",
+    "Fuentes de software y claves de APT.": "Sources de logiciels et clés APT.",
+    "Preferencias, extensiones y widgets de GNOME o KDE Plasma.": "Préférences, extensions et widgets de GNOME ou KDE Plasma.",
     "Copiar repositorios APT": "Sauvegarder les dépôts APT",
     "Restaurar repositorios APT": "Restaurer les dépôts APT",
     "Cambiar carpeta de copia": "Changer le dossier de sauvegarde",
@@ -1628,6 +1636,10 @@ TRADUCCIONES["fr"].update({
 
 TRADUCCIONES["zh"].update({
     "<b>Repositorios APT</b>": "<b>APT 软件源</b>",
+    "Repositorios APT": "APT 软件源",
+    "APT requiere autorización de administrador. Flatpak instala para tu usuario y añade Flathub si hace falta. Para los DEB de la web oficial, usa el gestor de software.": "APT 需要管理员授权。Flatpak 为当前用户安装应用，并在需要时添加 Flathub。请使用软件管理器安装从官方网站下载的 DEB 软件包。",
+    "Fuentes de software y claves de APT.": "APT 软件源和密钥。",
+    "Preferencias, extensiones y widgets de GNOME o KDE Plasma.": "GNOME 或 KDE Plasma 的首选项、扩展和小部件。",
     "Copiar repositorios APT": "备份 APT 软件源",
     "Restaurar repositorios APT": "恢复 APT 软件源",
     "Cambiar carpeta de copia": "更改备份文件夹",

@@ -1,5 +1,10 @@
 # Cambios
 
+## 1.0.8
+
+- Rediseña Backup con una carpeta de copia compartida y tarjetas para repositorios APT, ajustes del escritorio y aplicaciones de respaldo.
+- Rediseña Apps recomendadas con tarjetas de una o dos columnas según el ancho de la ventana, acciones por formato y un indicador de instalación más legible.
+
 ## 1.0.7
 
 - Ajusta el tamaño inicial de «Comprobaciones de seguridad» a 680 × 526 píxeles y lo adapta al área disponible en pantallas pequeñas.
@@ -525,7 +530,7 @@ Corrige la visualización del menú de preferencias.
 Añade preferencias de idioma (español, inglés, francés y chino), tema claro u oscuro e
 interfaz simple sin salida detallada de consola.
 
-## 1.0.8
+## 1.0.8 (serie anterior)
 Detecta si contrib/non-free, las herramientas auxiliares, GNOME Software Plugin Flatpak,
 Extension Manager y el kernel/Mesa de Backports ya están configurados o instalados; muestra
 el estado y desactiva las tareas completadas.
