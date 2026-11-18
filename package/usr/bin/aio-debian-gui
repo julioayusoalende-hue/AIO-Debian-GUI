@@ -2811,14 +2811,6 @@ class VentanaPrincipal(Gtk.Window):
         restaurar.connect("clicked", self._restaurar_diseno_fastfetch)
         caja.pack_start(restaurar, False, False, 0)
 
-        nov = novedades_version(version_app())
-        if nov:
-            caja.pack_start(etiqueta("<b>Novedades de esta versión:</b>",
-                                     markup=True), False, False, 4)
-            detalle = etiqueta(nov, dim=True)
-            detalle.set_line_wrap(True)
-            detalle.set_max_width_chars(44)
-            caja.pack_start(detalle, False, False, 0)
         if self.distribucion == "debian":
             self.nvidia_info_label = etiqueta("Buscando GPU NVIDIA…", dim=True)
         return marco
