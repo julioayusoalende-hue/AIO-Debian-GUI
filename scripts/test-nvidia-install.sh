@@ -22,6 +22,7 @@ trap 'rm -rf -- "$tmp"' EXIT
 )
 
 # Flujo administrativo enteramente simulado: ninguna llamada real a APT/DKMS.
+leer_distribucion() { echo debian; }
 nvidia_presente() { return 0; }
 nvidia_hibrida() { return 1; }
 READY=1
