@@ -5,12 +5,47 @@ cd "$(dirname "$0")/.."
 
 VERSION=$(sed -n 's/^Version: //p' package/DEBIAN/control)
 [ -n "$VERSION" ] || { echo "No se pudo leer la versión de package/DEBIAN/control" >&2; exit 1; }
+EPOCH=""
+if [[ "$VERSION" == *:* ]]; then
+    EPOCH="${VERSION%%:*}:"
+fi
 VERSION=${VERSION#*:}
-SALIDA="dist/aio-debian-gui_${VERSION}_all.deb"
+if [ "$#" -ne 0 ]; then
+    if [ "$#" -ne 2 ] || [ "$1" != "--testing-version" ] ||
+       [[ ! "$2" =~ ^[0-9]+\.[0-9]+\.[0-9]+~testing\.[1-9][0-9]*\.[1-9][0-9]*$ ]]; then
+        echo "Uso: $0 [--testing-version X.Y.Z~testing.N.INTENTO]" >&2
+        exit 2
+    fi
+    TESTING_VERSION=$2
+else
+    TESTING_VERSION=""
+fi
+PUBLIC_VERSION=${TESTING_VERSION:-$VERSION}
+SALIDA="dist/aio-debian-gui_${PUBLIC_VERSION}_all.deb"
 
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
 cp -a package/. "$STAGE/"
+
+if [ -n "$TESTING_VERSION" ]; then
+    python3 - "$STAGE" "$EPOCH" "$VERSION" "$TESTING_VERSION" <<'PY'
+from pathlib import Path
+import sys
+
+stage, epoch, old, new = sys.argv[1:]
+files = [
+    ("DEBIAN/control", f"Version: {epoch}{old}\n", f"Version: {epoch}{new}\n"),
+    ("usr/lib/aio-debian-gui/aio_core/scheduler.py", f"VERSION = '{old}'\n", f"VERSION = '{new}'\n"),
+    ("usr/lib/aio-debian-gui/aio-debian-gui-helper", f"HELPER_VERSION={old}\n", f"HELPER_VERSION={new}\n"),
+]
+for name, original, replacement in files:
+    path = Path(stage, name)
+    text = path.read_text(encoding="utf-8")
+    if text.count(original) != 1:
+        raise SystemExit(f"Versión ausente o incompatible en {name}")
+    path.write_text(text.replace(original, replacement), encoding="utf-8")
+PY
+fi
 
 # Permisos normalizados (git/zip no los conservan siempre)
 find "$STAGE" -type d -exec chmod 755 {} +

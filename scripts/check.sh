@@ -29,6 +29,7 @@ bash scripts/test-polkit-escaping.sh && bien "validación de usuario Polkit" || 
 bash scripts/test-passwordless.sh && bien "reglas Polkit de AiO y Flatpak de usuario" || fallo "pruebas de autorización"
 bash scripts/test-distro.sh && bien "detección Debian/Ubuntu LTS y HWE" || fallo "pruebas de distribución"
 python3 scripts/test-updater.py && bien "actualizador AppImage: versiones y SHA-256" || fallo "pruebas de actualizador"
+python3 scripts/test-testing-release.py && bien "versionado y paquete de testing" || fallo "pruebas de testing"
 python3 scripts/test-history.py && bien "historial de mantenimiento y persistencia" || fallo "pruebas del historial"
 python3 scripts/test-scheduler.py && bien "programación automática de mantenimiento" || fallo "pruebas de programación"
 python3 scripts/test-preflight.py && bien "modo de mantenimiento seguro" || fallo "pruebas de mantenimiento seguro"

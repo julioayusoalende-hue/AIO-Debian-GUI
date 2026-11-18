@@ -61,6 +61,20 @@ cd AIO-Debian-GUI
 ./scripts/check.sh
 ```
 
+### Versiones de prueba
+
+Cada cambio en `testing` que supere las comprobaciones publica una preversión
+en GitHub Releases, sin modificar `main` ni el repositorio APT estable. Por
+ejemplo, si la última versión estable es `1.0.3`, el paquete de prueba se
+numera `1.0.4~testing.N.INTENTO`. El número aumenta con cada ejecución y
+Debian lo considera anterior a `1.0.4`. Si se publica otra versión estable,
+las siguientes pruebas parten de la siguiente versión de esa publicación.
+
+El número de prueba solo se aplica al paquete construido, no a los archivos
+de versión del código. Al integrar los cambios en `main`, se asigna y publica
+manualmente la versión estable que corresponda; no se arrastra el contador de
+pruebas. Las preversiones se descargan desde Releases, no mediante APT.
+
 El catálogo de traducciones de la interfaz está en
 `package/usr/lib/aio-debian-gui/aio_core/translations.py`; la selección del
 idioma sigue gestionándose en la interfaz. El seguimiento del tema GTK está en
