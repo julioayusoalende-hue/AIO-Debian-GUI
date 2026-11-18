@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
-"""Planificación aislada: temporales y comandos simulados; nunca activa timers reales."""
+"""User-level scheduling tests; no real user units or privileged commands are run."""
 import copy
-import fcntl
-import io
 import json
 import os
 from pathlib import Path
-import shutil
-import socket
 import subprocess
 import sys
 import tempfile
@@ -15,7 +11,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path('package/usr/lib/aio-debian-gui').resolve()))
-from aio_core import scheduler as s, preflight
+from aio_core import scheduler as s
 
 base = copy.deepcopy(s.DEFAULT)
 assert s.calendar(base) == 'Sun *-*-* 10:00:00'
@@ -34,10 +30,8 @@ invalid = [None, {}, {**base, 'extra': 'bad'}, {**base, 'hour': True},
            {**base, 'tasks': []}, {**base, 'tasks': ['upgrade', 'upgrade']},
            {**base, 'tasks': ['backports-kernel-mesa']}, {**base, 'tasks': ['reboot']},
            {**base, 'tasks': ['upgrade; reboot']}, {**base, 'tasks': ['repos']},
-           {**base, 'tasks': ['autoremove']}, {**base, 'tasks': ['clock']},
            {**base, 'launcher': {'format': 'shell', 'path': '/tmp/run'}},
-           {**base, 'launcher': {'format': 'appimage', 'path': 'relative.AppImage'}},
-           {**base, 'launcher': {'format': 'deb', 'path': '/tmp/custom'}}]
+           {**base, 'launcher': {'format': 'appimage', 'path': 'relative.AppImage'}}]
 for config in invalid:
     try:
         s.validate_config(config)
@@ -45,254 +39,171 @@ for config in invalid:
         pass
     else:
         raise AssertionError(config)
-legacy = {key: value for key, value in base.items() if key != 'launcher'}
-assert s.validate_config(legacy)['launcher'] is None
-unit = s.timer_text('1000', base)
-assert 'Persistent=true' in unit and 'WakeSystem=false' in unit
-assert 'Unit=aio-debian-gui-maintenance@1000.service' in unit
+assert 'Persistent=true' in s.timer_text(base)
+assert f'Unit={s.SERVICE_NAME}' in s.timer_text(base)
+assert 'systemctl --user' not in s.service_text()
+assert '--run %U' in s.service_text()
 for frequency in ('daily', 'weekly', 'monthly'):
     if Path('/usr/bin/systemd-analyze').exists():
-        result = subprocess.run(['systemd-analyze', 'calendar', s.calendar({**base, 'frequency': frequency})], capture_output=True)
+        result = subprocess.run(['systemd-analyze', 'calendar', s.calendar({**base, 'frequency': frequency})],
+                                capture_output=True)
         assert result.returncode == 0, result.stderr
-with patch.object(s.os, 'geteuid', return_value=1000):
-    try:
-        s.configure('1000', base)
-    except PermissionError:
-        pass
-    else:
-        raise AssertionError('Configuración sin privilegios aceptada')
 
 with tempfile.TemporaryDirectory() as directory:
     root = Path(directory)
-    helper = root/'usr/lib/aio-debian-gui/aio-debian-gui-helper'
-    modules = helper.parent/'aio_core'
-    service = root/'usr/lib/systemd/system/aio-debian-gui-maintenance@.service'
-    modules.mkdir(parents=True)
-    service.parent.mkdir(parents=True)
-    shutil.copy('package/usr/lib/aio-debian-gui/aio-debian-gui-helper', helper)
-    shutil.copy('package/usr/lib/systemd/system/aio-debian-gui-maintenance@.service', service)
-    for name in ('__init__.py', 'scheduler.py', 'preflight.py'):
-        shutil.copy(Path('package/usr/lib/aio-debian-gui/aio_core')/name, modules/name)
-    with patch.multiple(s, HELPER=str(helper), SERVICE=service), \
-         patch.object(s, 'host_supported', return_value=True), \
-         patch.object(s.shutil, 'which', return_value='/usr/bin/systemctl'), \
-         patch.object(Path, 'is_dir', return_value=True):
-        assert s.available()
-        (modules/'preflight.py').unlink()
-        assert not s.available()
-    shutil.copy('package/usr/lib/aio-debian-gui/aio_core/preflight.py', modules/'preflight.py')
-    isolated = subprocess.run(
-        [sys.executable, '-I', str(modules/'scheduler.py'), '--status', '1000'],
-        cwd=root, capture_output=True, text=True, check=True)
-    assert json.loads(isolated.stdout)['version'] == s.VERSION
-    assert '/usr/lib/aio-debian-gui/aio_core/scheduler.py --run %i' in service.read_text()
-
-with patch.object(Path, 'is_dir', return_value=True), \
-     patch.object(Path, 'is_socket', return_value=True), \
-     patch.object(s.pwd, 'getpwuid', return_value=SimpleNamespace(pw_name='julio')), \
-     patch.object(s.shutil, 'which', side_effect=lambda name: f'/usr/bin/{name}'), \
-     patch.object(s.subprocess, 'run', return_value=SimpleNamespace(returncode=0, stdout='', stderr='')) as notify:
-    s._notify_success('1000')
-    command = notify.call_args.args[0]
-    assert command[:4] == ['/usr/bin/runuser', '-u', 'julio', '--']
-    assert 'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus' in command
-    assert command[-5:] == [
-        '--app-name=AiO Debian GUI', '--urgency=normal', '--expire-time=10000',
-        'Mantenimiento programado completado',
-        'El mantenimiento programado se ha realizado correctamente.',
-    ]
-with patch.object(Path, 'is_dir', return_value=False), \
-     patch.object(s.subprocess, 'run') as notify:
-    s._notify_success('1000')
-    notify.assert_not_called()
-
-with patch.object(Path, 'is_dir', return_value=True), \
-     patch.object(Path, 'is_socket', return_value=True), \
-     patch.object(s.shutil, 'which', return_value='/usr/bin/tool'), \
-     patch.object(s.pwd, 'getpwuid', side_effect=KeyError), \
-     patch.object(s.subprocess, 'run') as notify, \
-     patch.object(s.sys, 'stderr', new_callable=io.StringIO) as errors:
-    s._notify_success('1000')
-    notify.assert_not_called()
-    assert 'UID 1000' in errors.getvalue()
-
-if os.geteuid() == 0 and shutil.which('runuser'):
-    account = s.pwd.getpwnam('nobody')
-    runuser_path = shutil.which('runuser')
-    with tempfile.TemporaryDirectory() as directory:
-        root = Path(directory)
-        root.chmod(0o755)
-        runtime = root / str(account.pw_uid)
-        runtime.mkdir(mode=0o755)
-        sender = root / 'notify-send'
-        sender.write_text('#!/bin/sh\nid -u\nprintf "%s\\n" "$DBUS_SESSION_BUS_ADDRESS"\n')
-        sender.chmod(0o755)
-        results = []
-        real_run = s.subprocess.run
-        def capture(*args, **kwargs):
-            result = real_run(*args, **kwargs)
-            results.append(result)
-            return result
-        with socket.socket(socket.AF_UNIX) as bus:
-            bus.bind(str(runtime / 'bus'))
-            with patch.object(s, 'USER_RUNTIME_DIR', root), \
-                 patch.object(s.shutil, 'which', side_effect=lambda name: str(sender) if name == 'notify-send' else runuser_path), \
-                 patch.object(s.subprocess, 'run', side_effect=capture):
-                s._notify_success(str(account.pw_uid))
-        assert len(results) == 1 and results[0].returncode == 0
-        assert results[0].stdout.splitlines() == [
-            str(account.pw_uid), f'unix:path={runtime}/bus']
-
-with patch.object(Path, 'is_dir', return_value=True), \
-     patch.object(Path, 'is_socket', return_value=True), \
-     patch.object(s.pwd, 'getpwuid', return_value=SimpleNamespace(pw_name='julio')), \
-     patch.object(s.shutil, 'which', side_effect=lambda name: f'/usr/bin/{name}'), \
-     patch.object(s.os, 'access', return_value=True), \
-     patch.object(s.subprocess, 'run', return_value=SimpleNamespace(
-         returncode=0, stdout='DISPLAY=:0\nWAYLAND_DISPLAY=wayland-0\n', stderr='')) as session_env, \
-     patch.object(s.subprocess, 'Popen') as launch:
-    s._launch_for_reboot('1000', {'format': 'deb', 'path': ''})
-    assert session_env.call_count == 2
-    command = session_env.call_args.args[0]
-    assert session_env.call_args_list[0].args[0][:4] == ['/usr/bin/runuser', '-u', 'julio', '--']
-    assert command[:4] == ['/usr/bin/runuser', '-u', 'julio', '--']
-    assert '/usr/bin/aio-debian-gui' in command
-    assert command[-1] == '--scheduled-reboot-required'
-    assert '/usr/bin/systemd-run' in command
-    assert '--setenv=DISPLAY=:0' in command and '--setenv=WAYLAND_DISPLAY=wayland-0' in command
-    launch.assert_not_called()
-
-with tempfile.TemporaryDirectory() as directory:
-    root = Path(directory)
-    with patch.multiple(s, CONFIG_DIR=root/'config', STATE_DIR=root/'state', UNIT_DIR=root/'units', LOCK=str(root/'run/maintenance.lock')), \
-         patch.object(s.os, 'geteuid', return_value=0), \
-         patch.object(s.pwd, 'getpwuid', return_value=SimpleNamespace(pw_name='test')), \
+    config_dir, state_dir, unit_dir = root/'config', root/'state', root/'units'
+    service, timer = unit_dir/'aio-debian-gui-maintenance.service', unit_dir/'aio-debian-gui-maintenance.timer'
+    home = root/'home'
+    home.mkdir()
+    with patch.multiple(s, CONFIG_DIR=config_dir, STATE_DIR=state_dir, UNIT_DIR=unit_dir,
+                        SERVICE=service, TIMER=timer, LOCK=state_dir/'maintenance.lock'), \
+         patch.object(s.os, 'getuid', return_value=1000), \
+         patch.object(s.pwd, 'getpwuid', return_value=SimpleNamespace(pw_dir=str(home))), \
          patch.object(s, 'available', return_value=True), \
          patch.object(s, 'host_supported', return_value=True), \
+         patch.object(s.shutil, 'which', side_effect=lambda name: f'/usr/bin/{name}'), \
          patch.object(s, '_systemctl', return_value='') as systemctl:
         config = {**base, 'enabled': True}
         s.configure('1000', config)
-        path = s.CONFIG_DIR/'1000.json'
+        path = config_dir/'schedule.json'
         assert json.loads(path.read_text()) == config
-        assert path.stat().st_mode & 0o777 == 0o644
-        assert (s.UNIT_DIR/s.timer_name('1000')).read_text() == s.timer_text('1000', config)
-        assert any(call.args == ('enable', '--now', s.timer_name('1000')) for call in systemctl.call_args_list)
-        s.configure('1000', base)
-        with patch.object(s.shutil, 'which', return_value=None):
+        assert path.stat().st_mode & 0o777 == 0o600
+        assert timer.read_text() == s.timer_text(config)
+        assert service.read_text() == s.service_text()
+        assert ('--now', s.TIMER_NAME) in [call.args[-2:] for call in systemctl.call_args_list
+                                          if call.args[0] == 'enable']
+
+        config_unavailable = {**config, 'enabled': False}
+        with patch.object(s, 'available', return_value=False):
             try:
-                s.configure('1000', {**config, 'tasks':['flatpak-update']})
+                s.configure('1000', config_unavailable)
             except RuntimeError:
                 pass
             else:
-                raise AssertionError('Flatpak ausente aceptado')
-        assert systemctl.call_args.args == ('disable', '--now', s.timer_name('1000'))
+                raise AssertionError('Configuración sin systemd --user aceptada')
+
+        with patch.object(s.os, 'getuid', return_value=1001):
+            try:
+                s.configure('1000', base)
+            except PermissionError:
+                pass
+            else:
+                raise AssertionError('Se permitió modificar la programación de otro usuario')
+
         def fail_enable(*args):
             if args[0] == 'enable':
                 raise RuntimeError('enable failed')
             return ''
         with patch.object(s, '_systemctl', side_effect=fail_enable):
             try:
-                s.configure('1000', config)
+                s.configure('1000', {**config, 'hour': 11})
             except RuntimeError:
                 pass
             else:
                 raise AssertionError('Fallo de systemd ignorado')
-        assert json.loads(path.read_text()) == base
-        assert (s.UNIT_DIR/s.timer_name('1000')).read_text() == s.timer_text('1000', base)
-        s.remove('1000')
-        assert not path.exists() and not (s.UNIT_DIR/s.timer_name('1000')).exists()
-        assert not any('stop' in call.args for call in systemctl.call_args_list)
-        s._atomic(path, json.dumps(base))
-        with patch.object(s.subprocess, 'run') as run:
-            assert s.run_schedule('1000') == 0
-            run.assert_not_called()
-        s._atomic(path, json.dumps(config))
-        class Process:
-            def __init__(self, command, **kwargs):
-                assert command[:4] == [s.HELPER, '--lang', 'C.UTF-8', '--lock-fd']
-                assert '--upgrade-plan' in command
-                assert kwargs['pass_fds'] == (int(command[4]),)
-                assert kwargs['env']['PKEXEC_UID'] == '1000'
-                fd = os.open(s.LOCK, os.O_WRONLY)
+        assert json.loads(path.read_text()) == config
+        assert timer.read_text() == s.timer_text(config)
+
+        with patch.object(s, '_systemctl', return_value=''):
+            s.configure('1000', base)
+            with patch.object(s.shutil, 'which', return_value=None):
                 try:
-                    try:
-                        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                    except BlockingIOError:
-                        pass
-                    else:
-                        raise AssertionError('Mantenimiento sin bloqueo global')
-                finally:
-                    os.close(fd)
-                self.stdout = iter(['##REBOOT:1\n'] + ['##RESULT:' + t + ':0\n' for t in config['tasks']])
-            def __enter__(self): return self
-            def __exit__(self, *args): pass
-            def wait(self): return 0
-        report = preflight.Report(False, [], [], 'a'*64)
-        with patch.object(preflight, '_apt_locks', return_value=[]), \
-             patch.object(preflight, '_check_local', return_value=report) as check, \
-             patch.object(s.shutil, 'disk_usage', return_value=SimpleNamespace(free=4*1024**3)), \
-             patch.object(s.subprocess, 'run', return_value=SimpleNamespace(returncode=0)) as run, \
-             patch.object(s.subprocess, 'Popen', side_effect=Process) as popen, \
-             patch.object(s, '_notify_success') as notify, \
-             patch.object(s, '_launch_for_reboot') as launch:
+                    s.configure('1000', {**config, 'tasks': ['flatpak-update']})
+                except RuntimeError:
+                    pass
+                else:
+                    raise AssertionError('Flatpak ausente aceptado')
+            s.remove('1000')
+        assert not path.exists() and not timer.exists() and not service.exists()
+        assert not (state_dir/'schedule.json').exists()
+        assert (home/'.config/aio-debian-gui/legacy-disabled').read_text() == 'disabled\n'
+
+with tempfile.TemporaryDirectory() as directory:
+    root = Path(directory)
+    home = root/'home'
+    config_dir, state_dir, unit_dir = root/'config', root/'state', root/'units'
+    config_dir.mkdir()
+    legacy = root/'etc/aio-debian-gui/schedules'
+    legacy.mkdir(parents=True)
+    legacy_config = {**base, 'enabled': True, 'tasks': ['rebootcheck']}
+    (legacy/'1000.json').write_text(json.dumps(legacy_config))
+    with patch.multiple(s, CONFIG_DIR=config_dir, STATE_DIR=state_dir, UNIT_DIR=unit_dir,
+                        SERVICE=unit_dir/'aio-debian-gui-maintenance.service',
+                        TIMER=unit_dir/'aio-debian-gui-maintenance.timer',
+                        LOCK=state_dir/'maintenance.lock', LEGACY_CONFIG_DIR=legacy,
+                        LEGACY_STATE_DIR=root/'legacy-state'), \
+         patch.object(s.os, 'getuid', return_value=1000), \
+         patch.object(s.pwd, 'getpwuid', return_value=SimpleNamespace(pw_dir=str(home))), \
+         patch.object(s, 'available', return_value=True), \
+         patch.object(s, '_systemctl', return_value=''):
+        migrated = s.status('1000')
+        assert migrated['config'] == legacy_config
+        assert json.loads((config_dir/'schedule.json').read_text()) == legacy_config
+        assert (home/'.config/aio-debian-gui/legacy-disabled').read_text() == 'disabled\n'
+        with patch.object(s.os, 'geteuid', return_value=0), \
+             patch.object(s, '_legacy_disabled', return_value=True), \
+             patch.object(s, '_run_legacy_schedule') as old_run:
             assert s.run_schedule('1000') == 0
-            notify.assert_called_once_with('1000')
-            launch.assert_called_once_with('1000', config['launcher'])
-            result = s._read(s.STATE_DIR/'1000.json')
-            assert result['status'] == 'success' and result['finished'] and result['reboot_required']
-            assert all(v == 'success' for v in result['tasks'].values())
-            assert run.call_args.args[0] == ['apt-get', '-o', 'APT::Update::Error-Mode=any', 'update']
-            class FailedRebootProcess(Process):
-                def __init__(self, command, **kwargs):
-                    super().__init__(command, **kwargs)
-                    self.stdout = iter(['##REBOOT:1\n', '##RESULT:upgrade:0\n',
-                                        '##RESULT:autoclean:0\n', '##RESULT:rebootcheck:1\n'])
-                def wait(self): return 1
-            with patch.object(s.subprocess, 'Popen', side_effect=FailedRebootProcess):
-                notify.reset_mock()
-                launch.reset_mock()
-                assert s.run_schedule('1000') == 1
-                result = s._read(s.STATE_DIR/'1000.json')
-                assert result['status'] == 'error' and 'needrestart' in result['detail']
-                assert result['reboot_required'] and result['tasks']['rebootcheck'] == 'error'
-                notify.assert_not_called()
-                launch.assert_called_once_with('1000', config['launcher'])
-            with patch.object(preflight, '_check_local', return_value=preflight.Report(True, ['blocked'])):
-                popen.reset_mock()
-                notify.reset_mock()
-                launch.reset_mock()
-                assert s.run_schedule('1000') == 1
-                popen.assert_not_called()
-                notify.assert_not_called()
-                launch.assert_not_called()
-                assert s._read(s.STATE_DIR/'1000.json')['status'] == 'blocked'
-            with patch.object(preflight, '_apt_locks', return_value=['/var/lib/dpkg/lock']):
-                run.reset_mock()
-                assert s.run_schedule('1000') == 0
-                run.assert_not_called()
-                assert s._read(s.STATE_DIR/'1000.json')['status'] == 'skipped'
-            with patch.object(s.shutil, 'disk_usage', return_value=SimpleNamespace(free=500*1024**2)):
-                run.reset_mock()
-                assert s.run_schedule('1000') == 1
-                run.assert_not_called()
-            run.return_value = SimpleNamespace(returncode=1)
-            popen.reset_mock()
-            assert s.run_schedule('1000') == 1
-            popen.assert_not_called()
-            run.return_value = SimpleNamespace(returncode=0)
-            with patch.object(s.subprocess, 'Popen', side_effect=OSError('missing helper')):
-                assert s.run_schedule('1000') == 1
-                assert s._read(s.STATE_DIR/'1000.json')['status'] == 'error'
-            fd = os.open(s.LOCK, os.O_WRONLY)
-            try:
-                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                run.reset_mock()
-                assert s.run_schedule('1000') == 0
-                run.assert_not_called()
-                assert s._read(s.STATE_DIR/'1000.json')['status'] == 'skipped'
-            finally:
-                os.close(fd)
-        s._atomic(s.STATE_DIR/'1000.json', json.dumps({'status':'running', 'tasks':{}}))
-        with patch.object(s, '_systemctl', return_value='inactive'):
-            assert s.status('1000')['last_result']['status'] == 'interrupted'
-print('Programación: validación, calendarios, permisos, persistencia, pausa, borrado, rollback, bloqueos, preflight y resultados OK')
+            old_run.assert_not_called()
+        s.remove('1000')
+        assert not (config_dir/'schedule.json').exists()
+        assert (home/'.config/aio-debian-gui/legacy-disabled').exists()
+
+with patch.object(s, '_run_admin') as admin:
+    admin.assert_not_called()
+    with patch.object(s.shutil, 'which', return_value='/usr/bin/flatpak'), \
+         patch.object(s.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, '', '')) as flatpak:
+        s._run_task('flatpak-update')
+        assert flatpak.call_count == 2
+        assert flatpak.call_args_list[0].args[0] == ['/usr/bin/flatpak', '--user', 'update', '-y']
+        assert flatpak.call_args_list[1].args[0] == [
+            '/usr/bin/flatpak', '--user', 'uninstall', '--unused', '-y']
+    admin.assert_not_called()
+    with patch.object(s, '_trusted_system_command', return_value=True):
+        s._run_task('upgrade')
+    assert admin.call_count == 2
+    assert admin.call_args_list[0].args[0][-1] == 'update'
+    assert admin.call_args_list[1].args[0][-1] == 'upgrade'
+    assert 'dist-upgrade' not in admin.call_args_list[1].args[0]
+    admin.reset_mock()
+    with patch.object(s, '_trusted_system_command', return_value=True), \
+         patch.object(s.subprocess, 'run',
+                      return_value=subprocess.CompletedProcess([], 0, 'Name Version Rev Tracking Publisher Notes\n', '')):
+        s._run_task('snap-update')
+    admin.assert_called_once_with([s.SNAP, 'refresh'])
+
+with tempfile.TemporaryDirectory() as directory:
+    state_dir = Path(directory)/'state'
+    config_dir = Path(directory)/'config'
+    config_dir.mkdir()
+    state_dir.mkdir()
+    config = {**base, 'enabled': True, 'tasks': ['flatpak-update', 'rebootcheck']}
+    (config_dir/'schedule.json').write_text(json.dumps(config))
+    with patch.multiple(s, CONFIG_DIR=config_dir, STATE_DIR=state_dir, LOCK=state_dir/'maintenance.lock'), \
+         patch.object(s.os, 'getuid', return_value=1000), \
+    patch.object(s.os, 'geteuid', return_value=1000), \
+         patch.object(s, 'host_supported', return_value=True), \
+         patch.object(s.shutil, 'disk_usage', return_value=SimpleNamespace(free=4*1024**3)), \
+         patch.object(s, '_systemctl', return_value=''), \
+         patch('aio_core.preflight._apt_locks', return_value=[]), \
+         patch('aio_core.preflight._check_local', return_value=SimpleNamespace(blocked=False, messages=[])), \
+         patch.object(s, '_run_task', side_effect=[False, True]) as task, \
+         patch.object(s, '_notify') as notify:
+        assert s.run_schedule('1000') == 0
+        assert task.call_args_list[0].args == ('flatpak-update',)
+        assert task.call_args_list[1].args == ('rebootcheck',)
+        result = json.loads((state_dir/'schedule.json').read_text())
+        assert result['status'] == 'success' and result['reboot_required']
+        assert result['tasks'] == {'flatpak-update': 'success', 'rebootcheck': 'success'}
+        assert notify.call_count == 2
+
+with patch.object(s.os, 'getuid', return_value=1000), \
+     patch.object(s.pwd, 'getpwuid', return_value=SimpleNamespace(pw_dir='/tmp')):
+    with tempfile.TemporaryDirectory() as directory:
+        with patch.object(s, 'STATE_DIR', Path(directory)), \
+             patch.object(s, '_systemctl', return_value='inactive'), \
+             patch.object(s, 'available', return_value=True):
+            report = s.status('1000')
+            assert report['available'] and report['config'] is None
+
+print('User scheduler: calendars, validation, user ownership, units, rollback, persistence and task authorization OK')

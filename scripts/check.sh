@@ -88,7 +88,8 @@ sh -n package/DEBIAN/postinst && bien "sintaxis postinst" || fallo "sintaxis pos
 V=$(sed -n 's/^Version: //p' package/DEBIAN/control)
 SCHEDULER_VERSION=$(python3 -c 'import sys; sys.path.insert(0,"package/usr/lib/aio-debian-gui"); from aio_core.scheduler import VERSION; print(VERSION)')
 [ "$SCHEDULER_VERSION" = "$V" ] && bien "versión del programador coincide con el paquete" || fallo "versión del programador incompatible"
-[ -f package/usr/lib/systemd/system/aio-debian-gui-maintenance@.service ] && bien "servicio de mantenimiento incluido" || fallo "falta servicio systemd"
+python3 -c 'import sys; sys.path.insert(0,"package/usr/lib/aio-debian-gui"); from aio_core.scheduler import service_text; u=service_text(); assert "ExecStart=/usr/bin/python3 -I %h/.local/share/aio-debian-gui/scheduler/aio_core/scheduler.py --run %U" in u and "User=" not in u' &&
+    bien "servicio systemd de usuario sin privilegios" || fallo "servicio systemd de usuario incorrecto"
 grep -Fxq "  - --env=AIO_DEBIAN_GUI_VERSION=$V" flatpak/io.github.julioayusoalende_hue.aio_debian_gui.yml &&
     bien "versión Flatpak coincide con el paquete" || fallo "versión Flatpak incompatible con el paquete"
 [ "$(bash "$HELPER" --version)" = "$V" ] &&
@@ -201,6 +202,20 @@ else
 fi
 
 python3 scripts/test-existing-scheduler.py && bien "reutilización del programador existente" || fallo "programador existente"
+
+if bash -c 'source "$1"; main --schedule-save "{}"' \
+        _ "$HELPER" >/dev/null 2>&1; then
+    fallo "el asistente privilegiado aún modifica la programación"
+elif [ "$?" -ne 2 ]; then
+    fallo "el asistente privilegiado no rechazó guardar la programación"
+elif bash -c 'source "$1"; main --schedule-remove' \
+        _ "$HELPER" >/dev/null 2>&1; then
+    fallo "el asistente privilegiado aún modifica la programación"
+elif [ "$?" -ne 2 ]; then
+    fallo "el asistente privilegiado no rechazó eliminar la programación"
+else
+    bien "el asistente privilegiado rechaza modificar la programación"
+fi
 
 bash scripts/test-snap-maintenance.sh && bien "mantenimiento Snap" || fallo "mantenimiento Snap"
 

@@ -1,7 +1,6 @@
 """Interfaz GTK de programación de mantenimiento."""
 
 import datetime
-import json
 import os
 import subprocess
 import threading
@@ -23,7 +22,7 @@ class ControladorProgramacion:
     def abrir(self):
         contexto = self.ventana._contexto_programacion()
         traducir, etiqueta = contexto["traducir"], contexto["etiqueta"]
-        PASOS, formato_actualizacion = contexto["pasos"], contexto["formato"]
+        PASOS = contexto["pasos"]
         if self.ventana.en_curso or self.ventana.programando or self.ventana.comprobando_actualizacion:
             return
         self.ventana.menu_popover.popdown()
@@ -40,7 +39,7 @@ class ControladorProgramacion:
         area = dialogo.get_content_area()
         area.set_border_width(14)
         area.set_spacing(10)
-        aviso = etiqueta("El mantenimiento se ejecutará con la aplicación cerrada. Guardar la programación requiere autorización de administrador.")
+        aviso = etiqueta("El horario se guarda en tu cuenta y puede ejecutarse con la aplicación cerrada. Las tareas del sistema pueden pedir autorización de administrador al ejecutarse.")
         aviso.set_max_width_chars(65)
         area.pack_start(aviso, False, False, 0)
         estado = etiqueta("Cargando programación…")
@@ -109,19 +108,15 @@ class ControladorProgramacion:
             boton.get_child().set_max_width_chars(24)
             acciones.attach(boton, i % 2, i // 2, 1, 1)
         area.pack_start(acciones, False, False, 0)
-        integracion = Gtk.Button(label=traducir("Guía de integración del anfitrión"))
-        integracion.connect("clicked", lambda _b: self.ventana._abrir_guia_integracion(parent=dialogo))
-        area.pack_start(integracion, False, False, 0)
         self.programacion_widgets = dict(activo=activo, frecuencia=frecuencia, dia=dia,
             hora=hora, minuto=minuto, tareas=tareas, estado=estado, resultados=resultados,
             formulario=formulario, guardar=guardar, pausar=pausar, eliminar=eliminar,
-            actualizar=actualizar, integracion=integracion, disponible=False, config=None)
+            actualizar=actualizar, disponible=False, config=None)
         guardar.connect("clicked", lambda _b: self._cambiar_programacion(dialogo))
         pausar.connect("clicked", lambda _b: self._cambiar_programacion(dialogo, pausar=True))
         eliminar.connect("clicked", lambda _b: self._cambiar_programacion(dialogo, eliminar=True))
         actualizar.connect("clicked", lambda _b: self._cargar_programacion(dialogo, cargar_formulario=False))
         dialogo.show_all()
-        integracion.set_visible(formato_actualizacion() in ("flatpak", "appimage"))
         self._cargar_programacion(dialogo)
 
     @staticmethod
@@ -135,7 +130,6 @@ class ControladorProgramacion:
 
     def _cargar_programacion(self, dialogo, cargar_formulario=True):
         contexto = self.ventana._contexto_programacion()
-        comando_host, HELPER_SISTEMA = contexto["comando_host"], contexto["helper"]
         if self.ventana.programando:
             return
         w = self.programacion_widgets
@@ -143,8 +137,8 @@ class ControladorProgramacion:
             w[nombre].set_sensitive(False)
         def consultar():
             try:
-                datos = core_host_integration.read_scheduler_report(
-                    comando_host(HELPER_SISTEMA, "--schedule-status"))
+                datos = core_host_integration.run_user_scheduler(
+                    contexto["formato"]() or "dev", "--status", str(os.getuid()))
                 error = core_host_integration.scheduler_problem(datos)
             except (OSError, ValueError, TypeError, subprocess.SubprocessError, RuntimeError) as exc:
                 datos, error = {}, str(exc)
@@ -174,7 +168,6 @@ class ControladorProgramacion:
         w['pausar'].set_sensitive(bool(disponible and datos.get('config') and config['enabled']))
         w['eliminar'].set_sensitive(bool(disponible and datos.get('config')))
         w['actualizar'].set_sensitive(True)
-        w['integracion'].set_sensitive(not disponible)
         if not disponible:
             texto = traducir("Programación no disponible")
             if error:
@@ -209,13 +202,12 @@ class ControladorProgramacion:
     def _cambiar_programacion(self, dialogo, eliminar=False, pausar=False):
         contexto = self.ventana._contexto_programacion()
         traducir = contexto["traducir"]
-        comando_pkexec, HELPER_SISTEMA = contexto["comando_pkexec"], contexto["helper"]
         if self.ventana.programando or not self.programacion_widgets['disponible']:
             return
         w = self.programacion_widgets
         try:
             if eliminar:
-                argumentos = ['--schedule-remove']
+                accion, config = '--remove', None
             else:
                 config = ({**w['config'], 'enabled': False} if pausar else {
                     'enabled': w['activo'].get_active(), 'frequency': w['frecuencia'].get_active_id(),
@@ -225,43 +217,22 @@ class ControladorProgramacion:
                 if not pausar:
                     config['launcher'] = self._lanzador_programacion()
                 config = core_scheduler.validate_config(config)
-                argumentos = ['--schedule-save', json.dumps(config)]
+                accion = '--configure'
         except (ValueError, TypeError):
             self.ventana._mensaje(Gtk.MessageType.ERROR, "Programar mantenimiento", "Selecciona al menos una tarea programable, sin duplicados.")
             return
         self.ventana.programando = True
         self.ventana._actualizar_sensibilidad()
-        for nombre in ('formulario', 'guardar', 'pausar', 'eliminar', 'actualizar', 'integracion'):
+        for nombre in ('formulario', 'guardar', 'pausar', 'eliminar', 'actualizar'):
             w[nombre].set_sensitive(False)
         dialogo.set_response_sensitive(Gtk.ResponseType.CLOSE, False)
-        w['estado'].set_text(traducir('Esperando autorización de administrador…'))
+        w['estado'].set_text(traducir('Guardando programación…'))
         def aplicar():
-            import select
-            import time
             try:
-                comando = comando_pkexec(HELPER_SISTEMA, 'C.UTF-8', *argumentos)
-                with subprocess.Popen(comando, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0) as proc:
-                    salida = b''
-                    limite = time.monotonic() + 90
-                    while proc.poll() is None:
-                        restante = limite - time.monotonic()
-                        if restante <= 0 or not select.select([proc.stdout], [], [], max(0, restante))[0]:
-                            proc.kill()
-                            proc.wait()
-                            raise RuntimeError(traducir('Espera de autorización agotada.'))
-                        bloque = os.read(proc.stdout.fileno(), 4096)
-                        salida += bloque
-                        if b'##SCHEDULE:authorized\n' in salida:
-                            break
-                        if not bloque:
-                            break
-                    resto, _ = proc.communicate()
-                    salida += resto
-                    if proc.returncode:
-                        detalle = "\n".join(traducir(linea) for linea in salida.decode('utf-8', errors='replace').splitlines() if not linea.startswith('##'))
-                        raise RuntimeError(detalle[-1500:] or traducir('No se obtuvo autorización de administrador.'))
+                core_host_integration.run_user_scheduler(
+                    contexto["formato"]() or "dev", accion, str(os.getuid()), config)
                 error = None
-            except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
+            except (OSError, ValueError, TypeError, RuntimeError, subprocess.SubprocessError) as exc:
                 error = str(exc)
             GLib.idle_add(self._programacion_guardada, dialogo, error)
         threading.Thread(target=aplicar, daemon=True).start()

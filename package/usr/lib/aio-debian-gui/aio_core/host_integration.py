@@ -855,6 +855,82 @@ def read_scheduler_report(command):
     return report
 
 
+_USER_SCHEDULER_PROGRAM = r'''import base64, hashlib, json, os, subprocess, sys, tempfile
+from pathlib import Path
+
+request = json.load(sys.stdin)
+files = request["files"]
+directory = Path.home() / ".local/share/aio-debian-gui/scheduler/aio_core"
+directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+for name in ("__init__.py", "preflight.py", "scheduler.py"):
+    data = base64.b64decode(files[name]["data"], validate=True)
+    if hashlib.sha256(data).hexdigest() != files[name]["sha256"]:
+        raise ValueError("El archivo del programador no coincide con su huella.")
+    fd, temporary = tempfile.mkstemp(prefix=".aio-", dir=directory)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.chmod(temporary, 0o600)
+        os.replace(temporary, directory / name)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+script = directory / "scheduler.py"
+command = [sys.executable, "-I", str(script), request["action"], request["uid"]]
+if "config" in request:
+    command.append(json.dumps(request["config"], separators=(",", ":")))
+result = subprocess.run(command, capture_output=True, text=True, timeout=60, check=False)
+sys.stdout.write(result.stdout)
+sys.stderr.write(result.stderr)
+sys.exit(result.returncode)
+'''
+
+
+def run_user_scheduler(formato, action, uid, config=None):
+    """Run the user-owned scheduler on the host for DEB, AppImage and Flatpak."""
+    if formato not in ("deb", "appimage", "flatpak", "snap", "dev"):
+        raise ValueError("Formato de programación no compatible.")
+    if action not in ("--status", "--configure", "--remove"):
+        raise ValueError("Acción del programador no válida.")
+    from .scheduler import validate_config, validate_uid
+    uid = validate_uid(uid)
+    request = {"action": action, "uid": uid}
+    if action == "--configure":
+        request["config"] = validate_config(config)
+    elif config is not None:
+        raise ValueError("Configuración inesperada para esta acción.")
+    core = Path(__file__).resolve().parent
+    request["files"] = {}
+    for name in ("__init__.py", "preflight.py", "scheduler.py"):
+        data = (core / name).read_bytes()
+        request["files"][name] = {
+            "data": base64.b64encode(data).decode("ascii"),
+            "sha256": hashlib.sha256(data).hexdigest(),
+        }
+    prefix = ["flatpak-spawn", "--host"] if formato == "flatpak" else []
+    result = subprocess.run(
+        [*prefix, "/usr/bin/python3", "-I", "-c", _USER_SCHEDULER_PROGRAM],
+        input=json.dumps(request), capture_output=True, text=True, timeout=60, check=False)
+    if result.returncode:
+        detail = (result.stderr or result.stdout).strip()[-1200:]
+        raise RuntimeError(detail or f"El programador terminó con código {result.returncode}.")
+    if action == "--status":
+        return read_scheduler_report_from_text(result.stdout)
+    return None
+
+
+def read_scheduler_report_from_text(text):
+    from .scheduler import validate_config
+    report = json.loads(text)
+    if not isinstance(report, dict):
+        raise ValueError("La respuesta del programador no es válida.")
+    if report.get("config") is not None:
+        report["config"] = validate_config(report["config"])
+    return report
+
+
 def scheduler_problem(report):
     from .scheduler import compatible_host
     if report.get("available") is not True:

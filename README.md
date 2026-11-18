@@ -125,17 +125,17 @@ sha256sum -c --ignore-missing SHA256SUMS
 
 ## Programación y permisos
 
-Las ediciones DEB, Flatpak y AppImage usan el mismo asistente y programador del anfitrión. AiO comprueba la integración al abrirse y reutiliza una instalación compatible, independientemente de la versión de la interfaz.
+Las ediciones DEB, Flatpak y AppImage guardan el horario y sus unidades en la cuenta del usuario, usando `systemd --user`. Crear, cambiar, pausar o eliminar una programación no requiere autorización de administrador ni instala servicios en el sistema. Los tres formatos comparten el mismo horario y el estado del último mantenimiento.
 
-Programar, pausar o eliminar un horario requiere autorización de administrador. Los temporizadores de systemd conservan sus horarios durante las actualizaciones. Si AiO recupera un horario existente, respeta si estaba activado o pausado.
+Al abrir AiO por primera vez, un horario compatible de la integración antigua se migra a la cuenta del usuario y deja de ejecutar la tarea de sistema anterior, sin pedir autorización. El gestor de usuario ejecuta el horario cuando la sesión está disponible; si el equipo estaba apagado, `Persistent=true` recupera la ejecución al volver a iniciar sesión. Las tareas que modifican el sistema (APT, Snap y la comprobación de reinicio) pueden solicitar autorización de administrador al ejecutarse. Las actualizaciones APT programadas usan `apt-get upgrade`, que no elimina paquetes; Flatpak se actualiza en la instalación del usuario y Snap conserva sus revisiones según la política de snapd.
 
 Antes de cambiar kernel, Mesa, repositorios o controladores, haz una copia de seguridad y revisa las advertencias de la tarea. La vuelta de kernel y Mesa desde Backports no cambia por sí sola el kernel de arranque; NVIDIA puede quedar bloqueado cuando la compatibilidad no se pueda verificar. La opción de Polkit sin contraseña es opcional, está desactivada inicialmente y reduce la protección de la cuenta.
 
-### Integración del programador para AppImage y Flatpak
+### Integración de actualizaciones para AppImage y Flatpak
 
-Al abrir Flatpak o AppImage, AiO comprueba la integración y deja en cola las actualizaciones o reparaciones que el servicio firmado puede aplicar. Cuando se necesita instalar la integración, puedes hacerlo desde **Menú → Guía de integración del anfitrión**. El sistema solicita la autorización de administrador al confirmar esa acción.
+La guía de integración del anfitrión sirve para instalar o actualizar el componente firmado que mantiene actualizados los archivos de integración del anfitrión. No es necesaria para crear, cambiar o ejecutar el horario de mantenimiento.
 
-Si el asistente lo proporciona un DEB, APT se encarga de actualizarlo. Si se instaló desde Flatpak o AppImage, systemd aplica las actualizaciones firmadas cuando no hay mantenimiento ni operaciones de paquetes en curso. Los horarios se guardan en el anfitrión y se comparten entre los formatos.
+Si el asistente lo proporciona un DEB, APT se encarga de actualizarlo. Si se instaló desde Flatpak o AppImage, systemd aplica las actualizaciones firmadas cuando no hay operaciones de paquetes en curso.
 
 ## Desarrollo
 

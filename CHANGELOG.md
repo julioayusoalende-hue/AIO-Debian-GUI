@@ -1,5 +1,11 @@
 # Cambios
 
+## 2.12.0
+
+- Guarda, activa, pausa y elimina horarios en `systemd --user`, sin instalar integración del sistema ni pedir autorización de administrador.
+- Comparte el mismo programador persistente entre DEB, AppImage y Flatpak. Las operaciones que modifican APT o Snap solicitan autorización al ejecutarse.
+- Limita las actualizaciones APT programadas a `apt-get upgrade`, que no elimina paquetes.
+
 ## 2.11.4
 
 - Flatpak y AppImage identifican el paquete que gestiona la integración del anfitrión y solicitan la actualización firmada del paquete de integración anterior cuando corresponde.
