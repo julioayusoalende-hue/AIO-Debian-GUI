@@ -65,6 +65,36 @@ for distro, version, texto in (('debian', '13', 'Debian 13'), ('ubuntu', '26.04'
         logo, etiqueta_sistema = sistema.get_children()
         assert logo.get_storage_type() == Gtk.ImageType.PIXBUF
         assert etiqueta_sistema.get_text() == texto
+
+        ventana.show_all()
+        settle()
+        ventana.btn_detalles_sistema.clicked()
+        settle()
+        dialogo = ventana.ventana_detalles_sistema
+        assert dialogo.get_visible() and dialogo.get_transient_for() == ventana
+        assert dialogo.get_size()[0] == ventana.get_size()[0]
+        scroll = next(widget for widget in dialogo.get_content_area().get_children()
+                      if isinstance(widget, Gtk.ScrolledWindow))
+        detalles = scroll.get_child().get_child()
+        logo_detalles, grid, *extras = detalles.get_children()
+        assert logo_detalles.get_storage_type() == Gtk.ImageType.PIXBUF
+        assert logo_detalles.get_accessible().get_name() == app.logo_distribucion(distro)[1]
+        filas, _ = app.informacion_sistema()
+        assert len(grid.get_children()) == 2 * len(filas)
+        assert all(grid.get_child_at(1, i).get_selectable() for i in range(len(filas)))
+        assert extras == ([ventana.nvidia_info_label] if distro == 'debian' else [])
+
+        dialogo.close()
+        settle()
+        assert not dialogo.get_visible()
+        ventana.resize(ventana.get_size()[0] + 80, ventana.get_size()[1])
+        settle()
+        ventana.btn_detalles_sistema.clicked()
+        settle()
+        assert ventana.ventana_detalles_sistema == dialogo
+        assert dialogo.get_size()[0] == ventana.get_size()[0]
+        dialogo.response(Gtk.ResponseType.CLOSE)
+        assert not dialogo.get_visible()
         ventana.destroy()
 
 with patch.object(app.Vte.Terminal, 'copy_clipboard_format') as copiar, \

@@ -2575,22 +2575,10 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_diagnostico.set_always_show_image(True)
         self.btn_diagnostico.set_halign(Gtk.Align.START)
 
-        filas, version = informacion_sistema()
-        grid = Gtk.Grid(column_spacing=12, row_spacing=6)
-        for i, (clave, valor) in enumerate(filas):
-            nombre = etiqueta(clave, dim=True)
-            nombre.set_line_wrap(True)
-            nombre.set_max_width_chars(20)
-            grid.attach(nombre, 0, i, 1, 1)
-            dato = etiqueta(valor)
-            dato.set_line_wrap(True)
-            dato.set_max_width_chars(25)
-            dato.set_selectable(True)
-            grid.attach(dato, 1, i, 1, 1)
-        self.detalles_sistema = Gtk.Expander(label=traducir("Detalles técnicos"))
-        detalles = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        detalles.pack_start(grid, False, False, 0)
-        self.detalles_sistema.add(detalles)
+        self.ventana_detalles_sistema = None
+        self.btn_detalles_sistema = Gtk.Button(label=traducir("Detalles técnicos"))
+        self.btn_detalles_sistema.set_halign(Gtk.Align.START)
+        self.btn_detalles_sistema.connect("clicked", self._abrir_detalles_sistema)
         self.salud_sistema = etiqueta("No comprobado")
         self.salud_sistema.get_style_context().add_class("dim-label")
         caja.pack_start(etiqueta(sistema_operativo()), False, False, 0)
@@ -2598,7 +2586,7 @@ class VentanaPrincipal(Gtk.Window):
         self.consejo_sistema = etiqueta("Ejecuta el diagnóstico para revisar el estado del sistema.", dim=True)
         caja.pack_start(self.consejo_sistema, False, False, 0)
         caja.pack_start(self.btn_diagnostico, False, False, 0)
-        caja.pack_start(self.detalles_sistema, False, False, 0)
+        caja.pack_start(self.btn_detalles_sistema, False, False, 0)
         fastfetch = Gtk.Button(label=traducir("Aplicar diseño de Fastfetch"))
         fastfetch.set_tooltip_text(traducir("Guarda una copia de la configuración anterior de Fastfetch."))
         fastfetch.set_halign(Gtk.Align.START)
@@ -2611,20 +2599,7 @@ class VentanaPrincipal(Gtk.Window):
         restaurar.connect("clicked", self._restaurar_diseno_fastfetch)
         caja.pack_start(restaurar, False, False, 0)
 
-        ruta_logo, nombre_logo = logo_distribucion(self.distribucion)
-        if ruta_logo and os.path.isfile(ruta_logo):
-            try:
-                imagen_logo = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                    ruta_logo, 76, 76, True)
-                logo = Gtk.Image.new_from_pixbuf(imagen_logo)
-                logo.set_tooltip_text(traducir(nombre_logo))
-                logo.set_halign(Gtk.Align.CENTER)
-                logo.get_accessible().set_name(traducir(nombre_logo))
-                detalles.pack_start(logo, False, False, 6)
-            except GLib.Error:
-                pass
-
-        nov = novedades_version(version)
+        nov = novedades_version(version_app())
         if nov:
             caja.pack_start(etiqueta("<b>Novedades de esta versión:</b>",
                                      markup=True), False, False, 4)
@@ -2634,8 +2609,66 @@ class VentanaPrincipal(Gtk.Window):
             caja.pack_start(detalle, False, False, 0)
         if self.distribucion == "debian":
             self.nvidia_info_label = etiqueta("Buscando GPU NVIDIA…", dim=True)
-            detalles.pack_start(self.nvidia_info_label, False, False, 3)
         return marco
+
+    def _abrir_detalles_sistema(self, _boton):
+        ancho, alto = self.get_size()
+        dialogo = self.ventana_detalles_sistema
+        if dialogo is None:
+            dialogo = self._crear_detalles_sistema()
+            self.ventana_detalles_sistema = dialogo
+            dialogo.set_default_size(ancho, min(alto, 460))
+        else:
+            dialogo.resize(ancho, dialogo.get_size()[1])
+        dialogo.show_all()
+        dialogo.present()
+
+    def _crear_detalles_sistema(self):
+        dialogo = Gtk.Dialog(title=traducir("Detalles técnicos"), transient_for=self,
+                              destroy_with_parent=True)
+        dialogo.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
+        dialogo.add_button(traducir("Cerrar"), Gtk.ResponseType.CLOSE)
+        dialogo.connect("response", lambda ventana, _respuesta: ventana.hide())
+        dialogo.connect("delete-event", lambda ventana, _evento: ventana.hide_on_delete())
+
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        dialogo.get_content_area().pack_start(scroll, True, True, 0)
+        detalles = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+        detalles.set_border_width(20)
+        scroll.add(detalles)
+
+        ruta_logo, nombre_logo = logo_distribucion(self.distribucion)
+        if ruta_logo and os.path.isfile(ruta_logo):
+            try:
+                imagen_logo = GdkPixbuf.Pixbuf.new_from_file_at_scale(
+                    ruta_logo, 100, 100, True)
+                logo = Gtk.Image.new_from_pixbuf(imagen_logo)
+                logo.set_tooltip_text(traducir(nombre_logo))
+                logo.set_halign(Gtk.Align.CENTER)
+                logo.get_accessible().set_name(traducir(nombre_logo))
+                detalles.pack_start(logo, False, False, 6)
+            except GLib.Error:
+                pass
+
+        filas, _ = informacion_sistema()
+        grid = Gtk.Grid(column_spacing=12, row_spacing=10)
+        for i, (clave, valor) in enumerate(filas):
+            nombre = etiqueta(clave, dim=True)
+            nombre.set_line_wrap(True)
+            nombre.set_max_width_chars(20)
+            grid.attach(nombre, 0, i, 1, 1)
+            dato = etiqueta(valor)
+            dato.set_line_wrap(True)
+            dato.set_hexpand(True)
+            dato.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+            dato.set_selectable(True)
+            grid.attach(dato, 1, i, 1, 1)
+        detalles.pack_start(grid, False, False, 0)
+        if self.distribucion == "debian":
+            self.nvidia_info_label.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+            detalles.pack_start(self.nvidia_info_label, False, False, 0)
+        return dialogo
 
     def _aplicar_diseno_fastfetch(self, _boton):
         titulo = traducir("Diseño de Fastfetch")
