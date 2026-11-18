@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.12.1
+
+- Corrige el protocolo anunciado por el asistente del anfitrión para que AppImage y Flatpak reconozcan la integración actual y puedan ejecutar tareas de mantenimiento.
+
 ## 2.12.0
 
 - Guarda, activa, pausa y elimina horarios en `systemd --user`, sin instalar integración del sistema ni pedir autorización de administrador.
