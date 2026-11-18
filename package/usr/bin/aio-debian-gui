@@ -294,6 +294,7 @@ APPS_RECOMENDADAS = [
         "description": "Cliente BitTorrent con complementos y gestión remota.",
         "channels": [
             {"type": "deb", "package": "deluge", "command": "deluge"},
+            {"type": "flatpak", "app_id": "org.deluge_torrent.deluge"},
         ],
     },
     {
@@ -343,6 +344,7 @@ APPS_RECOMENDADAS = [
         "description": "Navegador web de Google. El paquete DEB se descarga desde la página oficial.",
         "channels": [
             {"type": "deb-download", "package": "google-chrome-stable", "uri": "https://www.google.com/chrome/"},
+            {"type": "flatpak", "app_id": "com.google.Chrome"},
         ],
     },
     {
@@ -400,6 +402,7 @@ APPS_RECOMENDADAS = [
         "description": "Cliente BitTorrent con gestión de colas y límites de velocidad.",
         "channels": [
             {"type": "deb", "package": "qbittorrent", "command": "qbittorrent"},
+            {"type": "flatpak", "app_id": "org.qbittorrent.qBittorrent"},
         ],
     },
     {

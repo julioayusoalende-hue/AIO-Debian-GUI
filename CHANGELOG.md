@@ -2,6 +2,7 @@
 
 ## 1.0.11
 
+- Añade instalación por Flatpak desde Flathub para Deluge, Google Chrome y qBittorrent.
 - Añade Deluge, qBittorrent, btop, htop y GParted a Apps recomendadas con instalación vía APT.
 
 ## 1.0.10

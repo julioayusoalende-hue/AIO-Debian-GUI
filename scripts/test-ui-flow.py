@@ -277,6 +277,13 @@ for language in ('es', 'en', 'fr', 'zh'):
     assert ('gearlever', 'flatpak') in w.recommended_buttons
     assert ('plex', 'flatpak') in w.recommended_buttons
     assert ('google-chrome', 'deb-download') in w.recommended_buttons
+    for app_id, flatpak_id in (
+        ('deluge', 'org.deluge_torrent.deluge'),
+        ('google-chrome', 'com.google.Chrome'),
+        ('qbittorrent', 'org.qbittorrent.qBittorrent'),
+    ):
+        assert (app_id, 'flatpak') in w.recommended_buttons
+        assert {'type': 'flatpak', 'app_id': flatpak_id} in w.canales_recomendados[app_id]
     assert {tipo for app_id, tipo in w.recommended_buttons if app_id == 'ghostty'} == {
         canal['type'] for canal in app.canales_ghostty(app.datos_distribucion_anfitrion())
     }
