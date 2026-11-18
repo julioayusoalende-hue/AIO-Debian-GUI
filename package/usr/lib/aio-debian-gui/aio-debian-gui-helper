@@ -352,6 +352,7 @@ instalar_aplicacion_recomendada() {
             paquete=ghostty
             ;;
         gimp) paquete=gimp ;;
+        gparted) paquete=gparted ;;
         handbrake) paquete=handbrake ;;
         htop) paquete=htop ;;
         kitty) paquete=kitty ;;
@@ -1529,7 +1530,7 @@ main() {
             exit $?
             ;;
         --recommended-install)
-            [ "$#" -eq 2 ] || { err "Uso: $0 [--lang LOCALE] --recommended-install btop|celluloid|deluge|ghostty|gimp|handbrake|htop|kitty|qbittorrent|vlc"; exit 2; }
+            [ "$#" -eq 2 ] || { err "Uso: $0 [--lang LOCALE] --recommended-install btop|celluloid|deluge|ghostty|gimp|gparted|handbrake|htop|kitty|qbittorrent|vlc"; exit 2; }
             instalar_aplicacion_recomendada "$2"
             exit $?
             ;;

@@ -2,7 +2,7 @@
 
 ## 1.0.11
 
-- Añade Deluge, qBittorrent, btop y htop a Apps recomendadas con instalación vía APT.
+- Añade Deluge, qBittorrent, btop, htop y GParted a Apps recomendadas con instalación vía APT.
 
 ## 1.0.10
 

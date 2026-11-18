@@ -346,6 +346,15 @@ APPS_RECOMENDADAS = [
         ],
     },
     {
+        "id": "gparted", "name": "GParted",
+        "icon": "gparted", "bundled_icon": "gparted.png",
+        "fallback_icon": "drive-harddisk",
+        "description": "Editor gráfico para crear, redimensionar y gestionar particiones de disco.",
+        "channels": [
+            {"type": "deb", "package": "gparted", "command": "gparted"},
+        ],
+    },
+    {
         "id": "handbrake", "name": "HandBrake",
         "icon": "fr.handbrake.ghb",
         "bundled_icon": "handbrake.png",
