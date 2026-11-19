@@ -2482,7 +2482,8 @@ class VentanaPrincipal(Gtk.Window):
                 NotImplementedError, zipfile.BadZipFile, RecursionError) as error:
             GLib.idle_add(self._escritorio_finalizado, None, str(error))
         else:
-            GLib.idle_add(self._escritorio_finalizado, mensaje, None)
+            avisar_cierre_sesion = preparados is not None and escritorio == "gnome"
+            GLib.idle_add(self._escritorio_finalizado, mensaje, None, avisar_cierre_sesion)
 
     def _confirmar_restauracion_escritorio(self, escritorio, ruta, origen, preparados):
         version_actual = preparados[0]
@@ -2492,6 +2493,9 @@ class VentanaPrincipal(Gtk.Window):
             detalle += "\n\n" + traducir("Las versiones son distintas. Algunas extensiones o widgets podrían ser incompatibles.")
         detalle += "\n\n" + traducir(
             "Se guardará una copia de los ajustes actuales. Continúa solo si confías en las extensiones y widgets de esta copia.")
+        if escritorio == "gnome":
+            detalle += "\n\n" + traducir(
+                "Para cargar las extensiones restauradas, cierra sesión en GNOME y vuelve a entrar.")
         if self._confirmar_escritorio("¿Restaurar los ajustes del escritorio?", detalle):
             self.backup_status.set_text(traducir("Restaurando los ajustes del escritorio…"))
             threading.Thread(target=self._procesar_escritorio,
@@ -2500,7 +2504,7 @@ class VentanaPrincipal(Gtk.Window):
             self._escritorio_finalizado("", None)
         return GLib.SOURCE_REMOVE
 
-    def _escritorio_finalizado(self, mensaje, error):
+    def _escritorio_finalizado(self, mensaje, error, avisar_cierre_sesion=False):
         self.backup_action_in_progress = False
         self._actualizar_sensibilidad()
         if error:
@@ -2509,7 +2513,43 @@ class VentanaPrincipal(Gtk.Window):
             self._mensaje(Gtk.MessageType.ERROR, titulo, error)
         else:
             self.backup_status.set_text(mensaje)
+            if avisar_cierre_sesion:
+                self._ofrecer_cerrar_sesion_gnome()
         return GLib.SOURCE_REMOVE
+
+    def _ofrecer_cerrar_sesion_gnome(self):
+        dialogo = Gtk.MessageDialog(
+            transient_for=self, modal=True, message_type=Gtk.MessageType.INFO,
+            buttons=Gtk.ButtonsType.NONE, text=traducir("Restauración de GNOME completada"),
+        )
+        dialogo.format_secondary_text(
+            traducir("Para cargar las extensiones restauradas, cierra sesión en GNOME y vuelve a entrar.")
+            + "\n\n" + traducir("Guarda tu trabajo antes de cerrar sesión.")
+        )
+        dialogo.add_button(traducir("Más tarde"), Gtk.ResponseType.CANCEL)
+        dialogo.add_button(traducir("Cerrar sesión…"), Gtk.ResponseType.OK)
+        dialogo.set_default_response(Gtk.ResponseType.CANCEL)
+        respuesta = dialogo.run()
+        dialogo.destroy()
+        if respuesta != Gtk.ResponseType.OK:
+            return
+
+        def informar_error(error):
+            if not self.destruida:
+                self._mensaje(Gtk.MessageType.ERROR, "No se pudo solicitar el cierre de sesión", error.message)
+
+        def sesion_solicitada(proceso, resultado):
+            try:
+                proceso.wait_check_finish(resultado)
+            except GLib.Error as error:
+                informar_error(error)
+
+        try:
+            proceso = Gio.Subprocess.new(
+                comando_host("gnome-session-quit", "--logout"), Gio.SubprocessFlags.NONE)
+            proceso.wait_check_async(None, sesion_solicitada)
+        except GLib.Error as error:
+            informar_error(error)
 
     def _accion_backup(self, _boton, app_id):
         if (app_id not in APLICACIONES_BACKUP or self.backup_action_in_progress

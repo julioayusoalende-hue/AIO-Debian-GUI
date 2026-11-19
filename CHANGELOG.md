@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.1.2
+
+- Explica cuándo volver a iniciar sesión tras restaurar GNOME y ofrece el botón «Cerrar sesión…» en el aviso final.
+
 ## 1.1.1
 
 - Ajusta la cabecera para mantener el nombre y el icono del sistema dentro de la barra de título.
