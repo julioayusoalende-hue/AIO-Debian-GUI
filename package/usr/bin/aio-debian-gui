@@ -1015,6 +1015,7 @@ class VentanaPrincipal(Gtk.Window):
         self.backup_buttons = {}
         self.recommended_scan_generation = 0
         self.terminal_started = False
+        self.ventana_terminal = None
         self.programando = False
         self.programacion = ControladorProgramacion(self)
         self.diagnostico_en_curso = False
@@ -1064,6 +1065,9 @@ class VentanaPrincipal(Gtk.Window):
 
     def _ventana_destruida(self, _ventana):
         self.destruida = True
+        if self.ventana_terminal is not None:
+            self.ventana_terminal.destroy()
+            self.ventana_terminal = None
 
     def _anfitrion_preparado(self, error):
         if self.destruida:
@@ -1696,7 +1700,15 @@ class VentanaPrincipal(Gtk.Window):
         notebook.append_page(self._pagina_backup(), Gtk.Label(label=traducir("Backup")))
         notebook.append_page(self._pagina_recomendadas(), Gtk.Label(label=traducir("Apps recomendadas")))
         notebook.connect("switch-page", self._cambiar_pestana_recomendadas)
+        self.pagina_terminal = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.boton_mostrar_terminal = Gtk.Button(label=traducir("Mostrar ventana de la terminal"))
+        self.boton_mostrar_terminal.set_halign(Gtk.Align.CENTER)
+        self.boton_mostrar_terminal.set_valign(Gtk.Align.CENTER)
+        self.boton_mostrar_terminal.set_no_show_all(True)
+        self.boton_mostrar_terminal.connect("clicked", self._abrir_terminal)
+        self.pagina_terminal.pack_start(self.boton_mostrar_terminal, True, True, 0)
         consola = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        self.contenido_terminal = consola
         consola.set_border_width(12)
         accesos_terminal = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         self.terminal_buttons = {}
@@ -1710,6 +1722,9 @@ class VentanaPrincipal(Gtk.Window):
         opciones_terminal = Gtk.Box(spacing=8)
         self.terminal_status = etiqueta("")
         opciones_terminal.pack_start(self.terminal_status, True, True, 0)
+        self.boton_separar_terminal = Gtk.Button(label=traducir("Separar terminal"))
+        self.boton_separar_terminal.connect("clicked", self._alternar_ventana_terminal)
+        opciones_terminal.pack_end(self.boton_separar_terminal, False, False, 0)
         consola.pack_start(opciones_terminal, False, False, 0)
         self.terminal_restart = Gtk.Button(label=traducir("Abrir nueva sesión"))
         self.terminal_restart.set_halign(Gtk.Align.START)
@@ -1724,7 +1739,8 @@ class VentanaPrincipal(Gtk.Window):
         self.terminal.connect("child-exited", self._terminal_finalizada)
         terminal_scroll.add(self.terminal)
         consola.pack_start(terminal_scroll, True, True, 0)
-        notebook.append_page(consola, Gtk.Label(label=traducir("Terminal")))
+        self.pagina_terminal.pack_start(consola, True, True, 0)
+        notebook.append_page(self.pagina_terminal, Gtk.Label(label=traducir("Terminal")))
         notebook.connect("switch-page", self._cambiar_pestana_terminal)
         paneles = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         self.paneles_principales = paneles
@@ -2427,11 +2443,45 @@ class VentanaPrincipal(Gtk.Window):
         self.terminal.connect("button-press-event", mostrar_menu)
         self.terminal.connect("popup-menu", mostrar_menu)
 
-    def _cambiar_pestana_terminal(self, _notebook, _pagina, numero):
-        if numero == 3 and not self.terminal_started:
+    def _cambiar_pestana_terminal(self, _notebook, pagina, _numero):
+        if pagina != self.pagina_terminal or self.ventana_terminal is not None:
+            return
+        if not self.terminal_started:
             self._iniciar_terminal()
-        if numero == 3:
+        self.terminal.grab_focus()
+
+    def _alternar_ventana_terminal(self, _boton):
+        if self.ventana_terminal is not None:
+            self._acoplar_terminal()
+            return
+        ventana = Gtk.Window(title=f"AiO Debian · {traducir('Terminal')}")
+        ventana.set_screen(self.get_screen())
+        ventana.set_icon_name(self.get_icon_name())
+        ventana.set_default_size(940, 580)
+        ventana.connect("delete-event", self._acoplar_terminal)
+        self.ventana_terminal = ventana
+        self.boton_mostrar_terminal.show()
+        self.boton_separar_terminal.set_label(traducir("Volver a acoplar"))
+        ventana.realize()
+        # Se mueve la terminal existente para conservar la sesión y su salida.
+        self.contenido_terminal.reparent(ventana)
+        ventana.present()
+        self.terminal.grab_focus()
+
+    def _acoplar_terminal(self, *_args):
+        ventana = self.ventana_terminal
+        self.contenido_terminal.reparent(self.pagina_terminal)
+        self.pagina_terminal.set_child_packing(
+            self.contenido_terminal, True, True, 0, Gtk.PackType.START)
+        self.boton_mostrar_terminal.hide()
+        self.boton_separar_terminal.set_label(traducir("Separar terminal"))
+        self.ventana_terminal = None
+        ventana.destroy()
+        if not self.preferencias["modo_simple"]:
+            self.notebook.set_current_page(self.notebook.page_num(self.pagina_terminal))
+            self.present()
             self.terminal.grab_focus()
+        return True
 
     def _ejecutar_acceso_terminal(self, boton, clave):
         comandos = {
@@ -2889,8 +2939,11 @@ class VentanaPrincipal(Gtk.Window):
             self.expansor_consola.set_expanded(True)
 
     def _abrir_terminal(self, _boton=None):
-        if not self.preferencias["modo_simple"]:
-            self.notebook.set_current_page(3)
+        if self.ventana_terminal is not None:
+            self.ventana_terminal.present()
+            self.terminal.grab_focus()
+        elif not self.preferencias["modo_simple"]:
+            self.notebook.set_current_page(self.notebook.page_num(self.pagina_terminal))
 
     def _desplazar_consola(self, vista):
         marca = self.buf.create_mark(None, self.buf.get_end_iter(), False)

@@ -843,6 +843,26 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
             w._escribir('\x1b[2JAIO_LOG_SAFE\n')
             assert terminal_contains('AIO_LOG_BEFORE_OPEN')
             assert terminal_contains('AIO_LOG_SAFE')
+            pty = w.terminal.get_pty()
+            w.terminal.feed_child(b"AIO_DOCK_STATE=preserved\n")
+            w.boton_separar_terminal.clicked()
+            settle()
+            detached = w.ventana_terminal
+            assert detached.get_mapped()
+            assert w.terminal.get_toplevel() == detached
+            assert w.terminal.get_pty() == pty
+            assert w.boton_mostrar_terminal.get_mapped()
+            assert terminal_contains('AIO_LOG_SAFE')
+            with patch.object(detached, 'present', wraps=detached.present) as present:
+                w.notebook.set_current_page(0)
+                w.btn_ver_terminal.clicked()
+                present.assert_called_once_with()
+                assert w.notebook.get_current_page() == 0
+                w.notebook.set_current_page(3)
+                w.boton_mostrar_terminal.clicked()
+                assert present.call_count == 2
+            w.terminal.feed_child(b'printf "%s%s\\n" AIO_DETACHED_ "$AIO_DOCK_STATE"\n')
+            assert terminal_contains('AIO_DETACHED_preserved')
             assert set(w.terminal_buttons) == {'clear', 'fastfetch', 'nautilus'}
             w.terminal_buttons['clear'].clicked()
             wait_button('clear')
@@ -882,6 +902,19 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
                 )
             w.terminal.feed_child(b"printf '%s%s\\n' AIO_TERMINAL_ COMMAND_OK\n")
             assert terminal_contains('AIO_TERMINAL_COMMAND_OK')
+            detached.close()
+            settle()
+            assert w.ventana_terminal is None
+            assert not detached.get_visible()
+            assert w.terminal.get_toplevel() == w
+            assert w.terminal.get_pty() == pty
+            assert terminal_contains('AIO_TERMINAL_COMMAND_OK')
+            w.boton_separar_terminal.clicked()
+            w.boton_separar_terminal.clicked()
+            settle()
+            assert w.ventana_terminal is None
+            w.terminal.feed_child(b'printf "%s%s\\n" AIO_REATTACHED_ "$AIO_DOCK_STATE"\n')
+            assert terminal_contains('AIO_REATTACHED_preserved')
             w.terminal.feed_child(b'exit\n')
             deadline = time.monotonic() + 8
             while w.terminal_started and time.monotonic() < deadline:

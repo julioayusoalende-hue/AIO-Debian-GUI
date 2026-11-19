@@ -2,6 +2,7 @@
 
 ## 1.0.11
 
+- Permite separar la terminal en una ventana redimensionable y volver a acoplarla conservando la sesión, los comandos en curso y la salida.
 - Permite seleccionar varias aplicaciones, elegir DEB (APT) o Flatpak por aplicación e iniciar todas las instalaciones con un solo botón.
 - Añade instalación por Flatpak desde Flathub para Deluge, Google Chrome y qBittorrent.
 - Añade Deluge, qBittorrent, btop, htop y GParted a Apps recomendadas con instalación vía APT.
