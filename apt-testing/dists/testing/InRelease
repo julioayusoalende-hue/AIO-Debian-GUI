@@ -1,0 +1,35 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Origin: aio-debian-gui
+Label: aio-debian-gui
+Suite: testing
+Codename: testing
+Date: Thu, 19 Nov 2026 19:30:30 UTC
+Architectures: all
+Components: main
+Description: Repositorio APT de aio-debian-gui
+MD5Sum:
+ 0bd04e5cf597df7f29ee1c2a353214fe             1322 main/binary-all/Packages
+ ad041f826cae4f834777fe2ea9486835              801 main/binary-all/Packages.gz
+ e0f7922a735576bacb62a36a0ba77581              884 main/binary-all/Packages.xz
+SHA256:
+ b20a97e104ebc24d00dbf22216493cb36a3eb6a53a8740f82114269181d9e151             1322 main/binary-all/Packages
+ 88e1581a4fcc8f2833e3d3a29583de380ca523114859b7d7c32f2d732d8dd0ac              801 main/binary-all/Packages.gz
+ 300e5558685f5756cbf49b54756d4e8628ef8f54a85821f82d55208e41486e9e              884 main/binary-all/Packages.xz
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCgAdFiEEBKUjgaIDXVuVJMpq4OZLjuD5AAwFAmr/TlYACgkQ4OZLjuD5
+AAxqbg//f2eJ3QRcAjDX/PIQXdzFzf6ViFRsAZ1cFpTN5agK8nJzu8bNAYUBYWJb
+S2+ohZo+DYEG7vPcHc+x1NJ0sCpTgERl5c3TcwMdxM/LG8o8tAl/1415EdU4mn33
+rzFMvrLFRrirPmfEqajFiJ1i0pvYjh74ciHYDU4CX013WwXPPW9igtOzRmY/nXDq
+ZuscDOlZSWZ+NHUKu5MYLxcZwTjg4fdrmWsAopU5iK5ivflBeAxoGzkcXv886fPn
+/CmhrzAz7jrqi/IqJiHH/ICuHr3PtSnnvOMpA6M93v4kmrZmwkhlAypT6qet4gXa
+UdgIQGtf6n5nJpK7PLwyf+fk2m84amEvuVKOSQd1A15rTplDZQ/EqhRQaTbTM3IN
+AGx41pIJIeGdG4O6FP3aXURxk55EAt7KZbVJ4e+6vvdzM/zBDJ68qsEaTlm0A9E2
+svwLoC9/2TDoGVKOST/XJPiyNxJjtgP74IwOIhVEynWx//57QEcI1SHM24X62o/Y
+SgiW3rSWz5qWGMTQdLla4o6DYCKFrYm3j9hLQQdSue5tv4mEkYUlvuhv8gwg03hO
+eGA3WW0I2CpJdYMdGrTkc1LO51HiHuPvwiYhioqPNySI+F5SGFJqy5YaxPD7pQzG
+8/srgiQPqZ7XjxYkRrD8qHFt3EH0fCQYjNmwkRTKcUgRlD/QCQk=
+=9KzP
+-----END PGP SIGNATURE-----

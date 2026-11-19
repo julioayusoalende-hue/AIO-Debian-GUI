@@ -1,0 +1,25 @@
+Package: aio-debian-gui
+Version: 1:1.1.1~testing.33.1
+Architecture: all
+Maintainer: Julio Ayuso <epdc@msn.com>
+Installed-Size: 1862
+Depends: bash, apt, dconf-cli, coreutils, diffutils, grep, sed, util-linux, pciutils, libnotify-bin, needrestart, python3, python3-gi, gir1.2-gtk-3.0, gir1.2-vte-2.91, librsvg2-common, pkexec | policykit-1
+Conflicts: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
+Replaces: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
+Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.1.1~testing.33.1_all.deb
+Size: 917280
+MD5sum: 9ee6ef6700148d21cfe38ec4bee02f81
+SHA1: de75775f8a490a7df6890976afbc3f9df736ea9d
+SHA256: 2e050ee739610528153c249a0fbab498674a50e59ebdc69a977a3252538ba0a0
+Section: admin
+Priority: optional
+Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
+Description: Interfaz gráfica de mantenimiento y configuración para Debian y Ubuntu LTS
+ Aplicación gráfica para actualizar paquetes, revisar el estado del sistema,
+ programar el mantenimiento y guardar o restaurar copias de repositorios APT
+ y ajustes del escritorio.
+ .
+ También permite instalar aplicaciones recomendadas por APT o Flatpak,
+ configurar GRUB en sistemas compatibles y usar una terminal separable.
+ Este paquete configura el repositorio APT de AiO Debian GUI.
+
