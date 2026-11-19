@@ -52,6 +52,7 @@ HELPER = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "../lib/aio-debian-gui/aio-debian-gui-helper")
 )
 HELPER_SISTEMA = "/usr/lib/aio-debian-gui/aio-debian-gui-helper"
+GRUB_HELPER = "/usr/lib/aio-debian-gui/aio-grub-settings"
 APT_BACKUP_HELPER = "/usr/lib/aio-debian-gui/aio-apt-sources-backup"
 APT_BACKUP_FILENAME = "repositorios-apt.json"
 APT_BACKUP_LIMIT = 32 * 1024 * 1024
@@ -1012,6 +1013,8 @@ class VentanaPrincipal(Gtk.Window):
         self.salida_estados = []
         self.comprobando_actualizacion = False
         self.backup_action_in_progress = False
+        self.grub_action_in_progress = False
+        self.grub_estado = None
         self.backup_buttons = {}
         self.recommended_scan_generation = 0
         self.terminal_started = False
@@ -1742,6 +1745,7 @@ class VentanaPrincipal(Gtk.Window):
         self.pagina_terminal.pack_start(consola, True, True, 0)
         notebook.append_page(self.pagina_terminal, Gtk.Label(label=traducir("Terminal")))
         notebook.connect("switch-page", self._cambiar_pestana_terminal)
+        notebook.append_page(self._pagina_inicio(), Gtk.Label(label=traducir("Inicio")))
         paneles = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         self.paneles_principales = paneles
         principal.pack_start(paneles, True, True, 0)
@@ -1869,6 +1873,7 @@ class VentanaPrincipal(Gtk.Window):
 
     @staticmethod
     def _pagina_tarjetas():
+        # Contenedor común para pestañas con paneles de ajustes y acciones.
         pagina = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         pagina.set_border_width(14)
         pagina.get_style_context().add_class("aio-page")
@@ -1899,6 +1904,156 @@ class VentanaPrincipal(Gtk.Window):
         estado.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
         estado.connect("notify::label", lambda lbl, _: lbl.set_visible(bool(lbl.get_text())))
         return estado
+
+    def _pagina_inicio(self):
+        pagina = self._pagina_tarjetas()
+        contenido = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        tarjeta, caja = tarjeta_mantenimiento(10)
+        caja.pack_start(cabecera_mantenimiento("Configuración de arranque de GRUB",
+                                               "system-reboot-symbolic"), False, False, 0)
+        contenido.pack_start(tarjeta, False, False, 0)
+        pagina.pack_start(self._scroll_tarjetas(contenido), True, True, 0)
+
+        cargar = Gtk.Button(label=traducir("Cargar ajustes de GRUB"))
+        cargar.set_halign(Gtk.Align.START)
+        cargar.connect("clicked", self._accion_grub, "status")
+        caja.pack_start(cargar, False, False, 0)
+
+        self.grub_formulario = Gtk.Grid(column_spacing=14, row_spacing=10)
+        self.grub_formulario.set_sensitive(False)
+        caja.pack_start(self.grub_formulario, False, False, 0)
+        self.grub_entrada = Gtk.ComboBoxText(hexpand=True)
+        for renderer in self.grub_entrada.get_cells():
+            renderer.set_property("ellipsize", Pango.EllipsizeMode.END)
+        self.grub_tiempo = Gtk.Entry(placeholder_text=traducir("Usar los ajustes del sistema"))
+        self.grub_tiempo.set_width_chars(12)
+        self.grub_estilo = Gtk.ComboBoxText()
+        for clave, texto in (("@system", "Usar los ajustes del sistema"), ("menu", "Mostrar menú"),
+                             ("countdown", "Mostrar cuenta atrás"), ("hidden", "Ocultar menú")):
+            self.grub_estilo.append(clave, traducir(texto))
+        self.grub_estilo.set_active_id("@system")
+        self.grub_entrada.append("@system", traducir("Usar los ajustes del sistema"))
+        self.grub_entrada.set_active_id("@system")
+        for fila, (texto, widget) in enumerate((
+            ("Entrada predeterminada", self.grub_entrada),
+            ("Tiempo de espera (segundos)", self.grub_tiempo),
+            ("Visibilidad del menú", self.grub_estilo),
+        )):
+            label = etiqueta(texto)
+            label.set_mnemonic_widget(widget)
+            self.grub_formulario.attach(label, 0, fila, 1, 1)
+            self.grub_formulario.attach(widget, 1, fila, 1, 1)
+
+        caja.pack_start(etiqueta(
+            "Usa 0 para arrancar al instante, -1 para esperar indefinidamente "
+            "o deja el campo vacío para usar los ajustes del sistema.", dim=True),
+            False, False, 0)
+        self.grub_acciones = Gtk.Box(spacing=8)
+        self.grub_acciones.set_sensitive(False)
+        caja.pack_start(self.grub_acciones, False, False, 0)
+        aplicar = Gtk.Button(label=traducir("Aplicar cambios"))
+        aplicar.get_style_context().add_class("suggested-action")
+        aplicar.connect("clicked", self._accion_grub, "apply")
+        self.grub_acciones.pack_start(aplicar, False, False, 0)
+        self.grub_restaurar = Gtk.Button(label=traducir("Restaurar ajustes del sistema"))
+        self.grub_restaurar.set_sensitive(False)
+        self.grub_restaurar.connect("clicked", self._accion_grub, "restore")
+        self.grub_acciones.pack_start(self.grub_restaurar, False, False, 0)
+        for boton, icono in ((cargar, "view-refresh-symbolic"),
+                             (aplicar, "document-save-symbolic"),
+                             (self.grub_restaurar, "document-revert-symbolic")):
+            boton.set_image(Gtk.Image.new_from_icon_name(icono, Gtk.IconSize.BUTTON))
+            boton.set_always_show_image(True)
+        self.grub_mensaje = self._etiqueta_estado()
+        pagina.pack_start(self.grub_mensaje, False, False, 0)
+        self.grub_pagina = pagina
+        return pagina
+
+    def _accion_grub(self, _boton, accion):
+        if not self.grub_pagina.get_sensitive() or (accion != "status" and self.grub_estado is None):
+            return
+        argumentos = ["status"]
+        if accion != "status":
+            ajustes = {}
+            if accion == "apply":
+                entrada = self.grub_entrada.get_active_id()
+                estilo = self.grub_estilo.get_active_id()
+                tiempo = self.grub_tiempo.get_text().strip()
+                if tiempo and not re.fullmatch(r"-1|0|[1-9][0-9]{0,2}", tiempo):
+                    self._mensaje(Gtk.MessageType.ERROR, "Tiempo de espera no válido",
+                                  "Escribe un número entre -1 y 999.")
+                    return
+                ajustes = {clave: valor for clave, valor in (
+                    ("GRUB_DEFAULT", entrada), ("GRUB_TIMEOUT", tiempo),
+                    ("GRUB_TIMEOUT_STYLE", estilo),
+                ) if valor and valor != "@system"}
+            if ajustes == self.grub_estado["settings"]:
+                return
+            dialogo = Gtk.MessageDialog(
+                transient_for=self, modal=True, message_type=Gtk.MessageType.QUESTION,
+                buttons=Gtk.ButtonsType.NONE, text=traducir("¿Actualizar el arranque de GRUB?"))
+            dialogo.format_secondary_text(traducir("Los cambios se aplicarán en el próximo arranque."))
+            dialogo.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
+            dialogo.add_button(traducir("Continuar"), Gtk.ResponseType.OK)
+            dialogo.set_default_response(Gtk.ResponseType.CANCEL)
+            continuar = dialogo.run() == Gtk.ResponseType.OK
+            dialogo.destroy()
+            if not continuar:
+                return
+            argumentos = ["apply", json.dumps(
+                {"revision": self.grub_estado["revision"], "settings": ajustes})]
+
+        self.grub_action_in_progress = True
+        self.grub_mensaje.set_text(traducir("Se solicitará autorización de administrador…"))
+        self._actualizar_sensibilidad()
+        threading.Thread(target=self._procesar_grub, args=(argumentos,), daemon=True).start()
+
+    def _procesar_grub(self, argumentos):
+        estado, error = None, None
+        try:
+            if not helper_disponible(GRUB_HELPER):
+                raise RuntimeError(traducir("Instala o actualiza la integración del anfitrión para gestionar GRUB."))
+            resultado = subprocess.run(comando_host("pkexec", GRUB_HELPER, *argumentos),
+                                       stdin=subprocess.DEVNULL, capture_output=True,
+                                       text=True, errors="replace")
+            if resultado.returncode:
+                raise RuntimeError(resultado.stderr.strip() or
+                                   traducir("No se completó la autorización o la operación."))
+            estado = json.loads(resultado.stdout)
+        except (OSError, ValueError, RuntimeError) as exc:
+            error = str(exc)
+        GLib.idle_add(self._grub_finalizado, argumentos[0], estado, error)
+
+    def _grub_finalizado(self, accion, estado, error):
+        self.grub_action_in_progress = False
+        if self.destruida:
+            return GLib.SOURCE_REMOVE
+        self._actualizar_sensibilidad()
+        if error:
+            titulo = "No se pudo gestionar el arranque de GRUB"
+            self.grub_mensaje.set_text(traducir(titulo))
+            self._mensaje(Gtk.MessageType.ERROR, titulo, error)
+            return GLib.SOURCE_REMOVE
+
+        self.grub_estado = estado
+        ajustes = estado["settings"]
+        self.grub_entrada.remove_all()
+        self.grub_entrada.append("@system", traducir("Usar los ajustes del sistema"))
+        for entrada in estado["entries"]:
+            self.grub_entrada.append(entrada["id"], entrada["title"])
+        predeterminada = ajustes.get("GRUB_DEFAULT", "@system")
+        if not self.grub_entrada.set_active_id(predeterminada):
+            self.grub_entrada.append(predeterminada, traducir("Entrada no disponible") + " · " + predeterminada)
+            self.grub_entrada.set_active_id(predeterminada)
+        self.grub_tiempo.set_text(ajustes.get("GRUB_TIMEOUT", ""))
+        self.grub_estilo.set_active_id(ajustes.get("GRUB_TIMEOUT_STYLE", "@system"))
+        self.grub_formulario.set_sensitive(True)
+        self.grub_acciones.set_sensitive(True)
+        self.grub_restaurar.set_sensitive(bool(ajustes))
+        mensaje = ("Los cambios se aplicarán en el próximo arranque." if accion == "apply"
+                   else "Ajustes de GRUB cargados.")
+        self.grub_mensaje.set_text(traducir(mensaje))
+        return GLib.SOURCE_REMOVE
 
     def _boton_backup(self, accion, texto, icono, callback):
         boton = Gtk.Button(label=traducir(texto))
@@ -3493,7 +3648,9 @@ class VentanaPrincipal(Gtk.Window):
     def _actualizar_sensibilidad(self):
         disponible = (not self.en_curso and not self.comprobando_actualizacion and not self.programando
                      and not self.diagnostico_en_curso and not self.backup_action_in_progress
+                     and not self.grub_action_in_progress
                      and self.distribucion != "no-soportada")
+        self.grub_pagina.set_sensitive(disponible)
         self._actualizar_seleccion()
         self.btn_iniciar.set_sensitive(disponible and not self.consultando_estados and bool(self._pasos_seleccionados()))
         if self.btn_actualizar is not None:
@@ -3506,7 +3663,8 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_borrar.set_sensitive(not self.en_curso)
         self.btn_diagnostico.set_sensitive(not self.en_curso and not self.diagnostico_en_curso
                                            and not self.comprobando_actualizacion and not self.programando
-                                           and not self.backup_action_in_progress)
+                                           and not self.backup_action_in_progress
+                                           and not self.grub_action_in_progress)
         if self.btn_actualizar_diagnostico is not None:
             self.btn_actualizar_diagnostico.set_sensitive(
                 not self.en_curso and not self.comprobando_actualizacion)
@@ -3524,11 +3682,13 @@ class VentanaPrincipal(Gtk.Window):
             boton.set_sensitive(not self.en_curso and not self.programando
                                 and not self.comprobando_actualizacion
                                 and not self.diagnostico_en_curso
-                                and not self.backup_action_in_progress)
+                                and not self.backup_action_in_progress
+                                and not self.grub_action_in_progress)
         recomendaciones_disponibles = (not self.en_curso and not self.programando
                                        and not self.comprobando_actualizacion
                                        and not self.diagnostico_en_curso
-                                       and not self.backup_action_in_progress)
+                                       and not self.backup_action_in_progress
+                                       and not self.grub_action_in_progress)
         modo_multiple = self.recommended_multi.get_active()
         self.recommended_multi.set_sensitive(recomendaciones_disponibles)
         seleccionables = 0
@@ -4462,6 +4622,10 @@ class VentanaPrincipal(Gtk.Window):
             d.destroy()
 
     def _al_cerrar(self, *_a):
+        if self.grub_action_in_progress:
+            self._mensaje(Gtk.MessageType.INFO, "Operación en curso",
+                          "Espera a que termine la operación de la aplicación antes de cerrar la ventana.")
+            return True
         if self.programando:
             self._mensaje(Gtk.MessageType.INFO, "Programar mantenimiento", "Espera a que termine de guardar la programación.")
             return True

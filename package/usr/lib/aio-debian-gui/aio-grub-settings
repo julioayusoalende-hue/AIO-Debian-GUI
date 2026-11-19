@@ -1,0 +1,197 @@
+#!/usr/bin/python3 -I
+"""Read GRUB entries and manage a dedicated GRUB configuration fragment."""
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shlex
+import stat
+import subprocess
+import sys
+import tempfile
+
+
+DROP_IN = "99-zz-aio-debian-gui.cfg"
+HEADER = "# Managed by AiO Debian GUI\n"
+FIELDS = ("GRUB_DEFAULT", "GRUB_TIMEOUT", "GRUB_TIMEOUT_STYLE")
+ENTRY_ID = re.compile(r"[A-Za-z0-9_.:+-]+")
+TIMEOUT = re.compile(r"-1|0|[1-9][0-9]{0,2}")
+
+
+def menu_entries(config):
+    entries = []
+    submenus = []
+    for line in config.splitlines():
+        start = line.lstrip()
+        indent = len(line) - len(start)
+        if start.rstrip() == "}" and submenus and submenus[-1][0] == indent:
+            submenus.pop()
+        if not start.startswith(("menuentry ", "submenu ")):
+            continue
+        while submenus and submenus[-1][0] >= indent:
+            submenus.pop()
+        try:
+            declaration = shlex.split(start)
+            marker = next(i for i, part in enumerate(declaration[2:], start=2)
+                          if part in ("$menuentry_id_option", "${menuentry_id_option}", "--id")
+                          or part.startswith("--id="))
+            option = declaration[marker]
+            identifier = option[5:] if option.startswith("--id=") else declaration[marker + 1]
+            title = declaration[1]
+        except (ValueError, StopIteration, IndexError):
+            identifier, title = "", ""
+        if not ENTRY_ID.fullmatch(identifier):
+            identifier = ""
+        if start.startswith("submenu "):
+            submenus.append((indent, identifier, title))
+        elif identifier and all(item[1] for item in submenus):
+            entries.append({
+                "id": ">".join([item[1] for item in submenus] + [identifier]),
+                "title": " › ".join([item[2] for item in submenus] + [title]),
+            })
+    return entries
+
+
+def render(values, entry_ids=None):
+    if not isinstance(values, dict) or values.keys() - set(FIELDS):
+        raise ValueError("Invalid GRUB settings.")
+    default = values.get("GRUB_DEFAULT")
+    if default is not None and (
+        not isinstance(default, str)
+        or not all(ENTRY_ID.fullmatch(part) for part in default.split(">"))
+        or (entry_ids is not None and default not in entry_ids)
+    ):
+        raise ValueError("Invalid or unavailable GRUB menu entry.")
+    timeout = values.get("GRUB_TIMEOUT")
+    if timeout is not None and (not isinstance(timeout, str) or not TIMEOUT.fullmatch(timeout)):
+        raise ValueError("GRUB timeout must be between -1 and 999 seconds.")
+    style = values.get("GRUB_TIMEOUT_STYLE")
+    if style is not None and style not in ("menu", "countdown", "hidden"):
+        raise ValueError("Invalid GRUB timeout style.")
+    if any(value is None for value in values.values()):
+        raise ValueError("Invalid empty GRUB setting.")
+    return HEADER + "".join(f"{key}='{values[key]}'\n" for key in FIELDS if key in values)
+
+
+def current_settings(path):
+    if path.is_symlink():
+        raise ValueError("The AiO GRUB fragment is a symbolic link.")
+    if not path.exists():
+        return "", {}
+    if not path.is_file():
+        raise ValueError("The AiO GRUB fragment is not a regular file.")
+    content = path.read_text()
+    values = dict(re.findall(r"^(GRUB_[A-Z_]+)='([^']*)'$", content, re.MULTILINE))
+    if content != render(values):
+        raise ValueError("The AiO GRUB fragment has been modified outside the application.")
+    return content, values
+
+
+def write_fragment(path, contents):
+    if not contents:
+        path.unlink(missing_ok=True)
+        return
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent,
+                                     prefix=".aio-grub-", delete=False) as handle:
+        pending = Path(handle.name)
+        try:
+            handle.write(contents)
+            handle.flush()
+            os.fsync(handle.fileno())
+            os.fchmod(handle.fileno(), 0o644)
+            os.replace(pending, path)
+        finally:
+            pending.unlink(missing_ok=True)
+
+
+def manage(defaults, config, regenerate, action, request=None):
+    if not defaults.is_file() or config.is_symlink() or not config.is_file():
+        raise ValueError("The host does not have a generated GRUB configuration.")
+    directory = defaults.with_name("grub.d")
+    if directory.exists() or directory.is_symlink():
+        status = directory.lstat()
+        if (not stat.S_ISDIR(status.st_mode) or status.st_uid != os.geteuid()
+                or status.st_mode & 0o022):
+            raise ValueError("The GRUB settings directory has unexpected ownership or permissions.")
+    path = directory / DROP_IN
+    previous, values = current_settings(path)
+    revision = hashlib.sha256(previous.encode()).hexdigest()
+    entries = menu_entries(config.read_text(errors="replace"))
+    if action == "apply":
+        if not isinstance(request, dict) or request.keys() != {"revision", "settings"}:
+            raise ValueError("Invalid GRUB request.")
+        if request["revision"] != revision:
+            raise ValueError("The settings changed. Reload them before applying.")
+        requested = request["settings"]
+        checked = render(requested, {entry["id"] for entry in entries})
+        new_contents = checked if requested else ""
+        if new_contents != previous:
+            if new_contents:
+                directory.mkdir(mode=0o755, exist_ok=True)
+            write_fragment(path, new_contents)
+            try:
+                regenerate(config, requested.get("GRUB_DEFAULT"))
+            except (OSError, ValueError, subprocess.SubprocessError) as exc:
+                write_fragment(path, previous)
+                detail = getattr(exc, "stderr", None) or str(exc)
+                raise ValueError(f"GRUB regeneration failed. Previous settings restored.\n{detail}") from exc
+            return manage(defaults, config, regenerate, "status")
+    return {"entries": entries, "settings": values, "revision": revision}
+
+
+def regenerate(config, required_entry):
+    # Generate and validate in the same filesystem before replacing grub.cfg.
+    original = config.lstat()
+    with tempfile.TemporaryDirectory(prefix=".aio-grub-", dir=config.parent,
+                                     ignore_cleanup_errors=True) as tmp:
+        candidate = Path(tmp) / "grub.cfg"
+        subprocess.run(
+            ["/usr/sbin/grub-mkconfig", "-o", str(candidate)], stdin=subprocess.DEVNULL,
+            capture_output=True, text=True, errors="replace", check=True,
+        )
+        generated = candidate.read_text(errors="replace")
+        if not generated.strip():
+            raise ValueError("GRUB produced an empty configuration.")
+        if required_entry and required_entry not in {entry["id"] for entry in menu_entries(generated)}:
+            raise ValueError("The selected entry is missing from the new GRUB menu.")
+        with candidate.open("rb") as handle:
+            os.fchown(handle.fileno(), original.st_uid, original.st_gid)
+            os.fchmod(handle.fileno(), stat.S_IMODE(original.st_mode))
+            os.fsync(handle.fileno())
+        active = config.lstat()
+        if (active.st_dev, active.st_ino, active.st_mtime_ns, active.st_size) != (
+            original.st_dev, original.st_ino, original.st_mtime_ns, original.st_size
+        ):
+            raise ValueError("GRUB configuration changed during regeneration.")
+        os.replace(candidate, config)
+
+
+def main():
+    if os.geteuid() != 0:
+        raise ValueError("Administrator authorization is required.")
+    os.environ["PATH"] = "/usr/sbin:/usr/bin:/sbin:/bin"
+    if not os.access("/usr/sbin/grub-mkconfig", os.X_OK):
+        raise ValueError("grub-mkconfig is not installed.")
+    args = sys.argv[1:]
+    if args == ["status"]:
+        action, request = "status", None
+    elif len(args) == 2 and args[0] == "apply" and len(args[1]) <= 8192:
+        action, request = "apply", json.loads(args[1])
+    else:
+        raise ValueError("Invalid GRUB operation.")
+
+    lock = os.open("/run/aio-debian-gui-grub.lock",
+                   os.O_CREAT | os.O_NOFOLLOW | os.O_RDWR, 0o600)
+    with os.fdopen(lock, "wb"):
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        print(json.dumps(manage(Path("/etc/default/grub"), Path("/boot/grub/grub.cfg"),
+                                regenerate, action, request)))
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (OSError, ValueError) as exc:
+        sys.exit(str(exc))

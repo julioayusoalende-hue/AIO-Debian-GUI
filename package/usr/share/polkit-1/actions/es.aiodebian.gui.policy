@@ -27,4 +27,14 @@
     </defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/aio-debian-gui/aio-apt-sources-backup</annotate>
   </action>
+  <action id="es.aiodebian.gui.grub">
+    <description>Configurar el arranque de GRUB</description>
+    <message>Se necesita autenticación para gestionar el arranque de GRUB</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/aio-debian-gui/aio-grub-settings</annotate>
+  </action>
 </policyconfig>

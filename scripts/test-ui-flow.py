@@ -197,7 +197,43 @@ for language in ('es', 'en', 'fr', 'zh'):
         w = app.VentanaPrincipal({'idioma': language, 'tema': 'claro', 'modo_simple': False})
     w.show_all()
     settle()
-    assert w.notebook.get_n_pages() == 4
+    assert w.notebook.get_n_pages() == 5
+    assert w.notebook.get_nth_page(4) == w.grub_pagina
+    assert w.notebook.get_tab_label_text(w.grub_pagina) == app.traducir('Inicio')
+    assert w.grub_pagina.get_style_context().has_class("aio-page")
+    grub_card = w.grub_formulario.get_ancestor(Gtk.Frame)
+    assert grub_card.get_style_context().has_class("aio-card")
+    assert not w.grub_mensaje.get_visible()
+    assert not w.grub_formulario.get_sensitive()
+    if language == 'es':
+        grub_status = {
+            'entries': [{'id': 'test-debian', 'title': 'Debian GNU/Linux'}],
+            'settings': {'GRUB_DEFAULT': 'test-debian', 'GRUB_TIMEOUT': '8',
+                         'GRUB_TIMEOUT_STYLE': 'menu'},
+            'revision': 'test-revision',
+        }
+        w._grub_finalizado('status', grub_status, None)
+        assert w.grub_formulario.get_sensitive()
+        assert w.grub_entrada.get_active_id() == 'test-debian'
+        assert w.grub_tiempo.get_text() == '8'
+        assert w.grub_estilo.get_active_id() == 'menu'
+        assert w.grub_restaurar.get_sensitive()
+        w.grub_tiempo.set_text('1000')
+        with patch.object(w, '_mensaje') as message:
+            w._accion_grub(None, 'apply')
+            assert 'Tiempo de espera no válido' in message.call_args.args
+        with patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK), \
+             patch.object(app.threading, 'Thread') as thread:
+            w.grub_tiempo.set_text('12')
+            w._accion_grub(None, 'apply')
+            assert app.json.loads(thread.call_args.kwargs['args'][0][1]) == {
+                'revision': 'test-revision',
+                'settings': {**grub_status['settings'], 'GRUB_TIMEOUT': '12'},
+            }
+            assert not w.grub_pagina.get_sensitive()
+            thread.return_value.start.assert_called_once()
+        w._grub_finalizado('apply', grub_status, None)
+        assert w.grub_pagina.get_sensitive()
     assert [w.notebook.get_tab_label_text(w.notebook.get_nth_page(i))
             for i in range(2)] == [
                 app.traducir('Configuración y mantenimiento'), app.traducir('Backup')

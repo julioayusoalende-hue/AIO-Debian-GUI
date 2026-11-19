@@ -1828,3 +1828,36 @@ TRADUCCIONES["zh"].update({
     "Paquete del controlador NVIDIA": "NVIDIA 驱动软件包",
     "Versión del módulo NVIDIA cargado": "已加载的 NVIDIA 模块版本",
 })
+
+GRUB_LABELS = [
+    ("Inicio", "Startup", "Démarrage", "启动"),
+    ("Configuración de arranque de GRUB", "GRUB boot settings", "Paramètres de démarrage GRUB", "GRUB 启动设置"),
+    ("Cargar ajustes de GRUB", "Load GRUB settings", "Charger les paramètres de GRUB", "加载 GRUB 设置"),
+    ("Usar los ajustes del sistema", "Use system settings", "Utiliser les paramètres du système", "使用系统设置"),
+    ("Mostrar menú", "Show menu", "Afficher le menu", "显示菜单"),
+    ("Mostrar cuenta atrás", "Show countdown", "Afficher le compte à rebours", "显示倒计时"),
+    ("Ocultar menú", "Hide menu", "Masquer le menu", "隐藏菜单"),
+    ("Entrada predeterminada", "Default boot entry", "Entrée de démarrage par défaut", "默认启动项"),
+    ("Tiempo de espera (segundos)", "Timeout (seconds)", "Délai (secondes)", "等待时间（秒）"),
+    ("Visibilidad del menú", "Menu visibility", "Visibilité du menu", "菜单可见性"),
+    ("Usa 0 para arrancar al instante, -1 para esperar indefinidamente o deja el campo vacío para usar los ajustes del sistema.",
+     "Use 0 to boot immediately, -1 to wait indefinitely, or leave blank to use the system settings.",
+     "Saisissez 0 pour démarrer immédiatement, -1 pour attendre indéfiniment ou laissez vide pour utiliser les paramètres du système.",
+     "输入 0 立即启动，输入 -1 无限等待，留空则使用系统设置。"),
+    ("Aplicar cambios", "Apply changes", "Appliquer les modifications", "应用更改"),
+    ("Restaurar ajustes del sistema", "Restore system settings", "Rétablir les paramètres du système", "恢复系统设置"),
+    ("Tiempo de espera no válido", "Invalid timeout", "Délai non valide", "等待时间无效"),
+    ("Escribe un número entre -1 y 999.", "Enter a number from -1 to 999.", "Saisissez un nombre entre -1 et 999.", "请输入 -1 到 999 之间的数字。"),
+    ("¿Actualizar el arranque de GRUB?", "Update GRUB boot settings?", "Mettre à jour le démarrage de GRUB ?", "更新 GRUB 启动设置？"),
+    ("Los cambios se aplicarán en el próximo arranque.", "The changes take effect on the next boot.",
+     "Les modifications prendront effet au prochain démarrage.", "更改将在下次启动时生效。"),
+    ("Instala o actualiza la integración del anfitrión para gestionar GRUB.",
+     "Install or update the host integration to manage GRUB.",
+     "Installez ou mettez à jour l’intégration au système hôte pour gérer GRUB.", "请安装或更新主机集成组件以管理 GRUB。"),
+    ("No se pudo gestionar el arranque de GRUB", "Could not manage GRUB boot settings",
+     "Impossible de gérer le démarrage de GRUB", "无法管理 GRUB 启动设置"),
+    ("Entrada no disponible", "Entry unavailable", "Entrée indisponible", "启动项不可用"),
+    ("Ajustes de GRUB cargados.", "GRUB settings loaded.", "Paramètres de GRUB chargés.", "GRUB 设置已加载。"),
+]
+for language, column in (("en", 1), ("fr", 2), ("zh", 3)):
+    TRADUCCIONES[language].update({row[0]: row[column] for row in GRUB_LABELS})

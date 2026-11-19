@@ -33,6 +33,7 @@ python3 scripts/test-testing-release.py && bien "versionado y paquete de testing
 python3 scripts/test-history.py && bien "historial de mantenimiento y persistencia" || fallo "pruebas del historial"
 python3 scripts/test-scheduler.py && bien "programación automática de mantenimiento" || fallo "pruebas de programación"
 python3 scripts/test-preflight.py && bien "modo de mantenimiento seguro" || fallo "pruebas de mantenimiento seguro"
+python3 scripts/test-grub-settings.py && bien "ajustes de arranque de GRUB y restauración" || fallo "pruebas de GRUB"
 bash scripts/test-upgrade-safety.sh && bien "actualización APT protegida" || fallo "pruebas de actualización APT segura"
 python3 scripts/test-diagnostics.py && bien "diagnóstico preventivo de solo lectura" || fallo "pruebas del diagnóstico"
 (umask 022 && python3 scripts/test-host-integration.py) && bien "guía de integración del anfitrión" || fallo "pruebas de integración del anfitrión"

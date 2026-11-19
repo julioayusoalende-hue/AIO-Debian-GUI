@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+"""Exercise GRUB settings against an isolated boot/configuration fixture."""
+import importlib.machinery
+import importlib.util
+from pathlib import Path
+import subprocess
+import tempfile
+import unittest
+from unittest.mock import Mock, patch
+
+
+helper_path = Path(__file__).resolve().parents[1] / "package/usr/lib/aio-debian-gui/aio-grub-settings"
+loader = importlib.machinery.SourceFileLoader("grub_settings", str(helper_path))
+spec = importlib.util.spec_from_loader(loader.name, loader)
+grub = importlib.util.module_from_spec(spec)
+loader.exec_module(grub)
+
+
+class BootSettingsTests(unittest.TestCase):
+    def setUp(self):
+        directory = self.enterContext(tempfile.TemporaryDirectory())
+        self.defaults = Path(directory) / "grub"
+        self.defaults.write_text("GRUB_TIMEOUT=5\nGRUB_CMDLINE_LINUX_DEFAULT='quiet'\n")
+        self.config = Path(directory) / "grub.cfg"
+        self.config.write_text(
+            "menuentry 'Debian GNU/Linux' $menuentry_id_option 'gnulinux-simple-disk' {\n"
+            "}\n"
+            "submenu 'Opciones avanzadas' $menuentry_id_option 'gnulinux-advanced-disk' {\n"
+            "\tmenuentry 'Debian, con Linux 6.12' --id=linux-6.12 {\n"
+            "\t}\n"
+            "}\n"
+            "if [ x = x ]; then\n"
+            "  menuentry 'Windows Boot Manager' --id 'osprober-efi-disk' {\n"
+            "  }\n"
+            "fi\n"
+        )
+        self.fragment = self.defaults.with_name("grub.d") / grub.DROP_IN
+        self.regenerate = Mock()
+
+    def manage(self, action, request=None):
+        return grub.manage(self.defaults, self.config, self.regenerate, action, request)
+
+    def test_apply_and_restore(self):
+        old_defaults = self.defaults.read_text()
+        status = self.manage("status")
+        entries = status["entries"]
+        self.assertEqual([entry["id"] for entry in entries],
+                         ["gnulinux-simple-disk", "gnulinux-advanced-disk>linux-6.12",
+                          "osprober-efi-disk"])
+        self.assertEqual(entries[1]["title"], "Opciones avanzadas › Debian, con Linux 6.12")
+        settings = {"GRUB_DEFAULT": entries[1]["id"], "GRUB_TIMEOUT": "-1",
+                    "GRUB_TIMEOUT_STYLE": "menu"}
+        updated = self.manage("apply", {"revision": status["revision"], "settings": settings})
+        self.assertEqual(updated["settings"], settings)
+        self.assertEqual(self.fragment.read_text(), grub.render(settings))
+        self.assertEqual(self.defaults.read_text(), old_defaults)
+        self.manage("apply", {"revision": updated["revision"], "settings": {}})
+        self.assertFalse(self.fragment.exists())
+        self.assertEqual(self.defaults.read_text(), old_defaults)
+        self.assertEqual(self.regenerate.call_count, 2)
+
+    def test_reject_invalid_request_without_mutation(self):
+        revision = self.manage("status")["revision"]
+        for settings in (
+            {"GRUB_DEFAULT": "missing"},
+            {"GRUB_DEFAULT": "';touch /tmp/invalid;#"},
+            {"GRUB_TIMEOUT": "1\n"},
+            {"GRUB_TIMEOUT_STYLE": "arbitrary"},
+            {"OTHER_VARIABLE": "42"},
+            [],
+        ):
+            with self.subTest(settings=settings), self.assertRaises(ValueError):
+                self.manage("apply", {"revision": revision, "settings": settings})
+        with self.assertRaisesRegex(ValueError, "Reload"):
+            self.manage("apply", {"revision": "stale", "settings": {"GRUB_TIMEOUT": "8"}})
+        self.assertFalse(self.fragment.exists())
+        self.regenerate.assert_not_called()
+
+    def test_restore_previous_fragment_on_update_failure(self):
+        initial = self.manage("status")
+        self.regenerate.side_effect = subprocess.CalledProcessError(1, ["update-grub"], stderr="simulated failure")
+        with self.assertRaisesRegex(ValueError, "Previous settings restored"):
+            self.manage("apply", {"revision": initial["revision"], "settings": {"GRUB_TIMEOUT": "5"}})
+        self.assertFalse(self.fragment.exists())
+        self.fragment.write_text(grub.render({"GRUB_TIMEOUT": "10"}))
+        before = self.manage("status")
+        with self.assertRaisesRegex(ValueError, "simulated failure"):
+            self.manage("apply", {"revision": before["revision"], "settings": {}})
+        self.assertEqual(self.manage("status"), before)
+
+    def test_validate_generated_menu_before_replacing_boot_configuration(self):
+        original = self.config.read_text()
+
+        def generate(argv, **_kwargs):
+            Path(argv[-1]).write_text("menuentry 'Debian' --id=debian {\n}\n")
+
+        with patch.object(grub.subprocess, "run", side_effect=generate):
+            with self.assertRaisesRegex(ValueError, "selected entry is missing"):
+                grub.regenerate(self.config, "missing")
+            self.assertEqual(self.config.read_text(), original)
+            grub.regenerate(self.config, "debian")
+        self.assertIn("--id=debian", self.config.read_text())
+
+    def test_decline_modified_fragment_and_missing_grub(self):
+        self.fragment.parent.mkdir()
+        self.fragment.write_text("GRUB_TIMEOUT=20\n")
+        with self.assertRaisesRegex(ValueError, "modified outside"):
+            self.manage("status")
+        self.config.unlink()
+        with self.assertRaisesRegex(ValueError, "generated GRUB"):
+            self.manage("status")
+
+
+if __name__ == "__main__":
+    unittest.main()

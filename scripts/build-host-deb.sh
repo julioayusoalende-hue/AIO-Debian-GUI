@@ -39,7 +39,7 @@ mkdir -p "$STAGE/DEBIAN" "$STAGE/usr/lib/aio-debian-gui/aio_core" \
 cat host-package/DEBIAN/control > "$STAGE/DEBIAN/control"
 printf 'Version: %s\n' "$VERSION" >> "$STAGE/DEBIAN/control"
 install -m 755 host-package/DEBIAN/postinst host-package/DEBIAN/postrm "$STAGE/DEBIAN/"
-install -m 755 package/usr/lib/aio-debian-gui/{aio-debian-gui-helper,aio-apt-sources-backup} "$STAGE/usr/lib/aio-debian-gui/"
+install -m 755 package/usr/lib/aio-debian-gui/{aio-debian-gui-helper,aio-apt-sources-backup,aio-grub-settings} "$STAGE/usr/lib/aio-debian-gui/"
 install -m 755 host-package/usr/lib/aio-debian-gui/aio-host-scheduler "$STAGE/usr/lib/aio-debian-gui/"
 install -m 644 package/usr/lib/aio-debian-gui/aio_core/{__init__,scheduler,preflight}.py \
     "$STAGE/usr/lib/aio-debian-gui/aio_core/"
