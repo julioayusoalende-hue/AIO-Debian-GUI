@@ -96,18 +96,19 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
 Releases:
-- version: 1.1.0
+- version: 1.1.1
   type: stable
   unix-timestamp: 1795046400
   description:
     C: >-
-      <ul><li>Agrupa los accesos de la terminal en un único menú Comandos para dejar más espacio a la consola.</li><li>Añade
-      un botón para abrir btop desde la terminal e instalarlo por APT si falta.</li><li>Añade la pestaña Inicio para elegir
-      la entrada predeterminada de GRUB, el tiempo de espera y la visibilidad del menú, con restauración de los ajustes del
-      sistema.</li><li>Permite separar la terminal en una ventana redimensionable y volver a acoplarla conservando la sesión,
-      los comandos en curso y la salida.</li><li>Permite seleccionar varias aplicaciones, elegir DEB (APT) o Flatpak por aplicación
-      e iniciar todas las instalaciones con un solo botón.</li><li>Añade instalación por Flatpak desde Flathub para Deluge,
-      Google Chrome y qBittorrent.</li><li>Añade Deluge, qBittorrent, btop, htop y GParted a Apps recomendadas con instalación
-      vía APT.</li></ul>
+      <ul><li>Ajusta la cabecera para mantener el nombre y el icono del sistema dentro de la barra de título.</li><li>Permite
+      elegir entre Estable y Testing para actualizar AiO desde repositorios APT firmados.</li><li>Añade Steam y RetroArch
+      a Apps recomendadas con sus iconos.</li><li>Añade Audacity, Kdenlive y Heroic Games Launcher a Apps recomendadas con
+      sus iconos oficiales.</li><li>Añade metadatos AppStream, capturas, licencia y novedades para GNOME Software, y declara
+      el tamaño instalado del paquete DEB.</li><li>El mantenimiento programado notifica las tareas pendientes o con error
+      y ofrece abrir AiO para revisarlas y ejecutarlas manualmente.</li><li>Añade la purga opcional de dependencias huérfanas,
+      con vista previa y revisión del plan dentro del mismo mantenimiento si cambia.</li><li>Actualiza los paquetes con APT
+      sin eliminarlos y detiene la operación si no se pueden actualizar todos los índices.</li><li>Deja la limpieza de dependencias
+      desmarcada por defecto y comprueba que el plan sigue siendo el aprobado antes de aplicarlo.</li></ul>
 ContentRating:
   oars-1.1: {}

@@ -5,35 +5,35 @@ Origin: aio-debian-gui
 Label: aio-debian-gui
 Suite: stable
 Codename: stable
-Date: Thu, 19 Nov 2026 11:26:40 GMT
+Date: Thu, 19 Nov 2026 20:43:27 UTC
 Architectures: all
 Components: main
 Description: Repositorio APT de aio-debian-gui
 MD5Sum:
- 4e39a7601579baccd7a1461cfe85a165             5397 main/dep11/Components-all.yml
- 582645b289661464a6c8dff59295a204             2240 main/dep11/Components-all.yml.gz
- 6abc5f6f56dc410f6125b827333a7c77             1314 main/binary-all/Packages
- 353cc59592c3a478be9001e9337196f5              807 main/binary-all/Packages.gz
- 0b6e82f44c6e6758ad0ee108e55eb65d              888 main/binary-all/Packages.xz
+ 9df7689605fa7ba309e199331c9a02c0             1296 main/binary-all/Packages
+ 6ee92baa81c18053a982f96567563269              789 main/binary-all/Packages.gz
+ 4f4554254d244fa311bd946e975bfd32              872 main/binary-all/Packages.xz
+ a426f474370390fe2551b152f0a21284             5592 main/dep11/Components-all.yml
+ 597dcc78468bbfc4f8f490c3fa26520d             2349 main/dep11/Components-all.yml.gz
 SHA256:
- 5b71d7778713e137f440f034d7336a2baa04899c8946e7f482a9cf2ff302b87d             5397 main/dep11/Components-all.yml
- e5de7c4836fb149f3ca185be2cbdd1e1ace0d46b5cd444796fb935893ad940fc             2240 main/dep11/Components-all.yml.gz
- e1036d0773128e8e61eb0399895f9b092485c0d39ac88f998039c105f4318d14             1314 main/binary-all/Packages
- cbac40ec687ed706c66f9a16989e771429381a0c4ac686c70575a5728045c479              807 main/binary-all/Packages.gz
- 02d0986ce59e56953220cd30357465bd007c3d9dcbe272fc76f4663edbae856f              888 main/binary-all/Packages.xz
+ 7bb3dfa175c558c9506c7fc2b952f349156257852dbd7c2ff41e8f77fa272a59             1296 main/binary-all/Packages
+ 9e9930e22f152ce64d6474cdea25c04034252bca817c8b1d2a72d3fa85077e98              789 main/binary-all/Packages.gz
+ 9859689af82082b7e3e0909ec20f4082eb89517419646c418264e198aa94f90d              872 main/binary-all/Packages.xz
+ 06d972df642d2dab4d11bd41d0a18f1c85551e87d71a647c57579aa06718f7c0             5592 main/dep11/Components-all.yml
+ 7e304289fb1318dc54653e31cedf87dcdbb78017679f7e7e05d667d6884f8c05             2349 main/dep11/Components-all.yml.gz
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEBKUjgaIDXVuVJMpq4OZLjuD5AAwFAmr+3PAACgkQ4OZLjuD5
-AAzsQA//auVy0eVHgLgKqV/HItYnJDijGIf3iSnRaXJCuB2hhGdvrduRe4U1GVyJ
-f7jg/SwZGSi0oMOTH3Fo7HDEWk+y5Z51yLensns2mCHm6kCOI16A2qvB/9HZZW3t
-EBJRfXAIVDRXsVr8VJQ/fm8DpMBv+XD64SgvQ3hCcNjIvYlmYEqDjVoeNlD3rNlI
-N5fUZrsTneyj5b/Xz6ul1rIeNEHJ0IuE4xLnnbteljSbdT7iX3gq8l+3VqZI+kRj
-RsQmhWta4V5K6jfEcrTEhATGrNd8wtU/fn4a7IOVsZFllfCeBVQ4t3aOrE5OMtwe
-wQ4dktAxm+XgOpTwFqhHxbVWGRYdTCUcFPY7c3GRXd2g4rIPYUBGluSt8UIsuDgq
-cSBX2lnCAKgwCeKMJ4pzXPDxF4Hdit8E9QoHV0v0F5a8nDK3o1b+HXQRjqDegJ3K
-Vjt1QICYab5qBEWuxKUNDG/TMYHXYf7afVp8AqF5v8PodFxZkU3J5ScNFeyyHV6t
-roqxm7SBhup31tIrt7psCpybqaRWP0CmGZf/pX7uOswkBQDztxcR3dv3xPnli5ox
-R4QyKVkgMDzTdDF5HNf4w/ztGgNERqASb+WcSCRPekRf59nljVoBV5/BjkP9cckI
-ya4NT4G6gEPtz0DTIAEzdpPQ5fm8BqEHReip4H7YGaD5yDMGpPc=
-=H5vm
+iQIzBAEBCgAdFiEEBKUjgaIDXVuVJMpq4OZLjuD5AAwFAmr/X28ACgkQ4OZLjuD5
+AAyxHRAAvNsL3Aja6ohRposNp5/AYLtLYHRrsodQRtQSeMKn/grYEniamWOVkzjg
+TAoqZfdg+GxNKxwxqbeljko6NwdOVX09JhrqzD64A3/KpRRSW12izfOn954dOUlX
+W78Sa9rUdBqh7b6haZYB1mt73eFGzr/v4tvGVBkVMzNpKmFIZtiv78+LvGX62z1b
+Ar4dJ5RnblUdIO/Yzc4bEn+yMniyp2vCTQAGDWrC57n40/s5j2fPDS27+6C4Q0XY
+0ah6EAPN7KCMYDPU+K/c0opkBI8/xeIbim/s9UuGeuk/E2KXMS9cqN7V4/aCG5Vk
+XpqQz18gsthv0LqMBaUKanTJ9uRJJUlYgoeq1iB3klDuCLfqRjGBCMH10a7AEH8S
+8AM1maBQRBpsuaoGO8bIMr4NOmcuEe38tc/9XbEEgLMBhJcyOZEM+k/ja8WOM43G
+fwkx1obVd6cZhFb3SWkxJcjtAiL/ZBIsVN5o15Nf0XT3ehFMXEgAyl261drgH7Xw
+GIOD9S5mlcB6ag4tSm/EsijYqeT0jvK5hAYKtO1GvldjM6X/FVAUH/5NLbfzVTnH
+4b2fy+Vu8qfhFOyhQHlLvQLM5X3Sce3YLshqYcRrWakh5agMsMLpcLQf/Kt1fuHQ
+J/hLOi4f5Fv83R0w+5vn8r7BbLJFSSfVCuUmudPYhWqVlhc1JaY=
+=Ycn4
 -----END PGP SIGNATURE-----
