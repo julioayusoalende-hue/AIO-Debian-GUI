@@ -263,7 +263,7 @@ for language in ('es', 'en', 'fr', 'zh'):
     settle()
     assert w.get_size()[0] <= 601, (language, w.get_size())
     assert all(button.get_mapped() for button in w.recommended_buttons.values())
-    assert len(w.recommended_grid.get_children()) == 19
+    assert len(w.recommended_grid.get_children()) == 24
     first = w.recommended_grid.get_child_at_index(0)
     second = w.recommended_grid.get_child_at_index(1)
     assert first.get_allocation().x == second.get_allocation().x
@@ -271,8 +271,8 @@ for language in ('es', 'en', 'fr', 'zh'):
     settle()
     assert first.get_allocation().y == second.get_allocation().y
     assert first.get_allocation().x < second.get_allocation().x
-    expected_names = ['Brave', 'btop', 'Celluloid', 'Deluge', 'Feishin', 'Gear Lever', 'Ghostty', 'GIMP',
-                      'Google Chrome', 'GParted', 'HandBrake', 'htop', 'Kitty', 'Plex', 'qBittorrent', 'Spotify', 'Switcheroo', 'Video Downloader', 'VLC']
+    expected_names = ['Audacity', 'Brave', 'btop', 'Celluloid', 'Deluge', 'Feishin', 'Gear Lever', 'Ghostty', 'GIMP',
+                      'Google Chrome', 'GParted', 'HandBrake', 'Heroic Games Launcher', 'htop', 'Kdenlive', 'Kitty', 'Plex', 'qBittorrent', 'RetroArch', 'Spotify', 'Steam', 'Switcheroo', 'Video Downloader', 'VLC']
     assert [item['name'] for item in app.APPS_RECOMENDADAS] == expected_names
     for index, name in enumerate(expected_names):
         card = w.recommended_grid.get_child_at_index(index).get_child()
@@ -299,10 +299,12 @@ for language in ('es', 'en', 'fr', 'zh'):
             fallback_theme,
         ) == app.APPS_RECOMENDADAS[index]['fallback_icon']
     assert {key for key in w.recommended_buttons if key[1] == 'deb'} == {
-        ('btop', 'deb'), ('celluloid', 'deb'), ('deluge', 'deb'), ('gimp', 'deb'), ('gparted', 'deb'), ('handbrake', 'deb'),
-        ('htop', 'deb'), ('kitty', 'deb'), ('qbittorrent', 'deb'), ('vlc', 'deb')
+        ('audacity', 'deb'), ('btop', 'deb'), ('celluloid', 'deb'), ('deluge', 'deb'), ('gimp', 'deb'), ('gparted', 'deb'), ('handbrake', 'deb'),
+        ('htop', 'deb'), ('kdenlive', 'deb'), ('kitty', 'deb'), ('qbittorrent', 'deb'), ('retroarch', 'deb'), ('vlc', 'deb')
     }
     assert ('feishin', 'flatpak') in w.recommended_buttons
+    assert ('steam', 'deb-download') in w.recommended_buttons
+    assert ('heroic', 'deb-download') in w.recommended_buttons
     assert ('feishin', 'deb-download') in w.recommended_buttons
     assert ('brave', 'flatpak') in w.recommended_buttons
     assert ('brave', 'deb-download') in w.recommended_buttons
@@ -310,6 +312,11 @@ for language in ('es', 'en', 'fr', 'zh'):
     assert ('plex', 'flatpak') in w.recommended_buttons
     assert ('google-chrome', 'deb-download') in w.recommended_buttons
     for app_id, flatpak_id in (
+        ('audacity', 'org.audacityteam.Audacity'),
+        ('heroic', 'com.heroicgameslauncher.hgl'),
+        ('kdenlive', 'org.kde.kdenlive'),
+        ('retroarch', 'org.libretro.RetroArch'),
+        ('steam', 'com.valvesoftware.Steam'),
         ('deluge', 'org.deluge_torrent.deluge'),
         ('google-chrome', 'com.google.Chrome'),
         ('qbittorrent', 'org.qbittorrent.qBittorrent'),

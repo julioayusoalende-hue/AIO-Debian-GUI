@@ -2,6 +2,8 @@
 
 ## 1.1.1
 
+- Añade Steam y RetroArch a Apps recomendadas con sus iconos.
+- Añade Audacity, Kdenlive y Heroic Games Launcher a Apps recomendadas con sus iconos oficiales.
 - Añade metadatos AppStream, capturas, licencia y novedades para GNOME Software, y declara el tamaño instalado del paquete DEB.
 - El mantenimiento programado notifica las tareas pendientes o con error y ofrece abrir AiO para revisarlas y ejecutarlas manualmente.
 - Añade la purga opcional de dependencias huérfanas, con vista previa y revisión del plan dentro del mismo mantenimiento si cambia.

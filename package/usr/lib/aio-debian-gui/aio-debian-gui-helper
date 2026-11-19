@@ -343,6 +343,7 @@ instalar_aplicacion_recomendada() {
     local identificador paquete
     identificador="$1"
     case "$identificador" in
+        audacity) paquete=audacity ;;
         btop) paquete=btop ;;
         celluloid) paquete=celluloid ;;
         deluge) paquete=deluge ;;
@@ -357,8 +358,10 @@ instalar_aplicacion_recomendada() {
         gparted) paquete=gparted ;;
         handbrake) paquete=handbrake ;;
         htop) paquete=htop ;;
+        kdenlive) paquete=kdenlive ;;
         kitty) paquete=kitty ;;
         qbittorrent) paquete=qbittorrent ;;
+        retroarch) paquete=retroarch ;;
         vlc) paquete=vlc ;;
         *) err "Aplicación recomendada no permitida."; return 2 ;;
     esac
@@ -1596,7 +1599,7 @@ main() {
             exit $?
             ;;
         --recommended-install)
-            [ "$#" -eq 2 ] || { err "Uso: $0 [--lang LOCALE] --recommended-install btop|celluloid|deluge|ghostty|gimp|gparted|handbrake|htop|kitty|qbittorrent|vlc"; exit 2; }
+            [ "$#" -eq 2 ] || { err "Uso: $0 [--lang LOCALE] --recommended-install audacity|btop|celluloid|deluge|ghostty|gimp|gparted|handbrake|htop|kdenlive|kitty|qbittorrent|retroarch|vlc"; exit 2; }
             instalar_aplicacion_recomendada "$2"
             exit $?
             ;;

@@ -261,6 +261,16 @@ APLICACIONES_BACKUP = {
 }
 APPS_RECOMENDADAS = [
     {
+        "id": "audacity", "name": "Audacity",
+        "icon": "org.audacityteam.Audacity", "bundled_icon": "audacity.png",
+        "fallback_icon": "audio-x-generic",
+        "description": "Graba y edita audio con varias pistas y efectos.",
+        "channels": [
+            {"type": "deb", "package": "audacity", "command": "audacity"},
+            {"type": "flatpak", "app_id": "org.audacityteam.Audacity"},
+        ],
+    },
+    {
         "id": "brave", "name": "Brave",
         "icon": "com.brave.Browser", "bundled_icon": "brave.png",
         "fallback_icon": "web-browser",
@@ -371,12 +381,32 @@ APPS_RECOMENDADAS = [
         ],
     },
     {
+        "id": "heroic", "name": "Heroic Games Launcher",
+        "icon": "com.heroicgameslauncher.hgl", "bundled_icon": "heroic.png",
+        "fallback_icon": "applications-games",
+        "description": "Instala y ejecuta juegos de Epic Games, GOG y Amazon Games.",
+        "channels": [
+            {"type": "deb-download", "package": "heroic", "uri": "https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/latest"},
+            {"type": "flatpak", "app_id": "com.heroicgameslauncher.hgl"},
+        ],
+    },
+    {
         "id": "htop", "name": "htop",
         "icon": "htop", "bundled_icon": "htop.png",
         "fallback_icon": "utilities-system-monitor",
         "description": "Visor interactivo de procesos y del uso de CPU y memoria en terminal.",
         "channels": [
             {"type": "deb", "package": "htop", "command": "htop"},
+        ],
+    },
+    {
+        "id": "kdenlive", "name": "Kdenlive",
+        "icon": "org.kde.kdenlive", "bundled_icon": "kdenlive.png",
+        "fallback_icon": "applications-multimedia",
+        "description": "Edita vídeo con una línea de tiempo multipista, transiciones y efectos.",
+        "channels": [
+            {"type": "deb", "package": "kdenlive", "command": "kdenlive"},
+            {"type": "flatpak", "app_id": "org.kde.kdenlive"},
         ],
     },
     {
@@ -409,6 +439,16 @@ APPS_RECOMENDADAS = [
         ],
     },
     {
+        "id": "retroarch", "name": "RetroArch",
+        "icon": "org.libretro.RetroArch", "bundled_icon": "retroarch.png",
+        "fallback_icon": "applications-games",
+        "description": "Interfaz unificada para emular consolas clásicas con núcleos Libretro.",
+        "channels": [
+            {"type": "deb", "package": "retroarch", "command": "retroarch"},
+            {"type": "flatpak", "app_id": "org.libretro.RetroArch"},
+        ],
+    },
+    {
         "id": "spotify", "name": "Spotify",
         "icon": "spotify-client",
         "bundled_icon": "spotify.png",
@@ -417,6 +457,16 @@ APPS_RECOMENDADAS = [
         "channels": [
             {"type": "deb-download", "package": "spotify-client", "uri": "https://www.spotify.com/download/linux/"},
             {"type": "flatpak", "app_id": "com.spotify.Client"},
+        ],
+    },
+    {
+        "id": "steam", "name": "Steam",
+        "icon": "com.valvesoftware.Steam", "bundled_icon": "steam.png",
+        "fallback_icon": "applications-games",
+        "description": "Gestiona tu biblioteca de juegos de Steam y juega en Linux con Proton.",
+        "channels": [
+            {"type": "deb-download", "package": "steam-launcher", "uri": "https://store.steampowered.com/about/"},
+            {"type": "flatpak", "app_id": "com.valvesoftware.Steam"},
         ],
     },
     {

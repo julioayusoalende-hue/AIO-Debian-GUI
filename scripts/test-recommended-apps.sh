@@ -15,7 +15,7 @@ asegurar_listas() {
     printf '%s\n' update >> "$TEST_DIR/calls"
 }
 
-for app in btop celluloid deluge gimp gparted handbrake htop kitty qbittorrent vlc; do
+for app in audacity btop celluloid deluge gimp gparted handbrake htop kdenlive kitty qbittorrent retroarch vlc; do
     EXPECTED_PACKAGE="$app"
     : > "$TEST_DIR/calls"
     INSTALLED=1
