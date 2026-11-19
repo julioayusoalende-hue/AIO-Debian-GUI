@@ -1716,7 +1716,10 @@ class VentanaPrincipal(Gtk.Window):
         consola = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.contenido_terminal = consola
         consola.set_border_width(12)
-        accesos_terminal = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        accesos_terminal = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE,
+                                       column_spacing=8, row_spacing=6,
+                                       min_children_per_line=1, max_children_per_line=4,
+                                       halign=Gtk.Align.START)
         self.terminal_buttons = {}
         for clave, texto in (("clear", "Limpiar"), ("fastfetch", "Fastfetch"), ("btop", "btop"),
                              ("nautilus", "Abrir archivos como administrador")):
@@ -1725,7 +1728,8 @@ class VentanaPrincipal(Gtk.Window):
                 boton.connect("clicked", self._comprobar_btop)
             else:
                 boton.connect("clicked", self._ejecutar_acceso_terminal, clave)
-            accesos_terminal.pack_start(boton, False, False, 0)
+            accesos_terminal.add(boton)
+            boton.get_parent().set_can_focus(False)
             self.terminal_buttons[clave] = boton
         consola.pack_start(accesos_terminal, False, False, 0)
         opciones_terminal = Gtk.Box(spacing=8)
