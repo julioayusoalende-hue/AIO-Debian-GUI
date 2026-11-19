@@ -24,12 +24,6 @@ AiO reúne las tareas habituales de administración en una sola aplicación: eli
 
 Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplicaciones y guardar la configuración de tus repositorios o de tu escritorio.
 
-## Vídeo promocional
-
-<a href="docs/media/aio-debian-gui-promo-vertical.mp4"><img src="docs/media/aio-debian-gui-promo.jpg" width="240" alt="Ver el vídeo promocional de AiO Debian GUI"></a>
-
-[Ver vídeo promocional](docs/media/aio-debian-gui-promo-vertical.mp4) · 34 segundos · MP4
-
 ## Capturas de pantalla
 
 ![Configuración y mantenimiento de AiO Debian GUI 1.1.0](docs/capturas/mantenimiento.png)
