@@ -198,7 +198,7 @@ for language in ('es', 'en', 'fr', 'zh'):
     w.show_all()
     settle()
     assert w.notebook.get_n_pages() == 5
-    assert w.notebook.get_nth_page(4) == w.grub_pagina
+    assert w.notebook.get_nth_page(1) == w.grub_pagina
     assert w.notebook.get_tab_label_text(w.grub_pagina) == app.traducir('Inicio')
     assert w.grub_pagina.get_style_context().has_class("aio-page")
     grub_card = w.grub_formulario.get_ancestor(Gtk.Frame)
@@ -234,14 +234,10 @@ for language in ('es', 'en', 'fr', 'zh'):
             thread.return_value.start.assert_called_once()
         w._grub_finalizado('apply', grub_status, None)
         assert w.grub_pagina.get_sensitive()
-    assert [w.notebook.get_tab_label_text(w.notebook.get_nth_page(i))
-            for i in range(2)] == [
-                app.traducir('Configuración y mantenimiento'), app.traducir('Backup')
-            ]
-    assert w.notebook.get_tab_label_text(w.notebook.get_nth_page(2)) == \
-        app.traducir('Apps recomendadas')
-    assert w.notebook.get_tab_label_text(w.notebook.get_nth_page(3)) == \
-        app.traducir('Terminal')
+    assert [w.notebook.get_tab_label_text(page) for page in w.notebook.get_children()] == [
+        app.traducir(name) for name in
+        ('Configuración y mantenimiento', 'Inicio', 'Backup', 'Apps recomendadas', 'Terminal')
+    ]
     assert set(w.backup_buttons) == {
         'timeshift', 'deja-dup', 'backup', 'restore', 'folder',
         'desktop-backup', 'desktop-restore',
@@ -258,12 +254,12 @@ for language in ('es', 'en', 'fr', 'zh'):
         name, description = text.get_children()
         assert name.get_text() == app.APLICACIONES_BACKUP[app_id]['name']
         assert description.get_text() == app.traducir(app.APLICACIONES_BACKUP[app_id]['description'])
-    w.notebook.set_current_page(1)
+    w.notebook.set_current_page(2)
     w.resize(600, 900)
     settle()
     assert w.get_size()[0] <= 601, (language, w.get_size())
     assert all(button.get_mapped() for button in w.backup_buttons.values())
-    w.notebook.set_current_page(2)
+    w.notebook.set_current_page(3)
     settle()
     assert w.get_size()[0] <= 601, (language, w.get_size())
     assert all(button.get_mapped() for button in w.recommended_buttons.values())
@@ -645,7 +641,7 @@ with patch.object(w, '_comprobar_deb_recomendada',
                   side_effect=lambda package: package in {'gimp', 'google-chrome-stable'}), \
      patch.object(w, '_flatpaks_recomendadas_instaladas', return_value={video_id}), \
      patch.object(app.threading, 'Thread', ImmediateThread):
-    w._cambiar_pestana_recomendadas(None, None, 2)
+    w._cambiar_pestana_recomendadas(None, w.pagina_recomendadas, 3)
     settle()
     assert w.recommended_indicators[('gimp', 'deb')].get_visible()
     assert not w.recommended_indicators[('gimp', 'flatpak')].get_visible()
@@ -660,7 +656,7 @@ with patch.object(w, '_comprobar_deb_recomendada',
 with patch.object(w, '_comprobar_deb_recomendada', return_value=False), \
      patch.object(w, '_flatpaks_recomendadas_instaladas', side_effect=RuntimeError('test error')), \
      patch.object(app.threading, 'Thread', ImmediateThread):
-    w._cambiar_pestana_recomendadas(None, None, 2)
+    w._cambiar_pestana_recomendadas(None, w.pagina_recomendadas, 3)
     settle()
     assert not w.recommended_indicators[('video-downloader', 'flatpak')].get_visible()
     assert w.recommended_status.get_text() == app.traducir(
@@ -674,10 +670,10 @@ w._recomendadas_comprobadas(w.recommended_scan_generation - 1, {}, [])
 assert w.recommended_indicators[('video-downloader', 'flatpak')].get_visible()
 
 with patch.object(w, '_cambiar_pestana_recomendadas') as refresh:
-    w.notebook.set_current_page(2)
+    w.notebook.set_current_page(3)
     refresh.reset_mock()
     w._refrescar_recomendadas_al_volver(None, None)
-    refresh.assert_called_once_with(w.notebook, None, 2)
+    refresh.assert_called_once_with(w.notebook, w.pagina_recomendadas, 3)
 w.notebook.set_current_page(0)
 
 # Selección múltiple: puede mezclar formatos, cambiar de formato y reintentar los fallos.
@@ -855,7 +851,7 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
                 while not started.called and time.monotonic() < deadline:
                     settle()
                 assert started.called and started.call_args.args[2] is None
-            assert w.notebook.get_current_page() == 3
+            assert w.notebook.get_current_page() == 4
 
             def terminal_contains(text):
                 deadline = time.monotonic() + 8
@@ -898,17 +894,29 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
                 w.btn_ver_terminal.clicked()
                 present.assert_called_once_with()
                 assert w.notebook.get_current_page() == 0
-                w.notebook.set_current_page(3)
+                w.notebook.set_current_page(4)
                 w.boton_mostrar_terminal.clicked()
                 assert present.call_count == 2
             w.terminal.feed_child(b'printf "%s%s\\n" AIO_DETACHED_ "$AIO_DOCK_STATE"\n')
             assert terminal_contains('AIO_DETACHED_preserved')
             assert list(w.terminal_buttons) == ['clear', 'fastfetch', 'btop', 'nautilus']
+            assert w.btn_comandos_terminal.get_label() == 'Comandos'
+            assert w.btn_comandos_terminal.get_toplevel() == detached
+            command_menu = w.btn_comandos_terminal.get_popover()
+            assert all(button.get_ancestor(Gtk.Popover) == command_menu
+                       for button in (*w.terminal_buttons.values(), w.terminal_restart))
+            assert w.boton_separar_terminal.get_parent() == w.btn_comandos_terminal.get_parent()
+            assert all(button.get_label() != 'Copiar'
+                       for button in command_menu.get_child().get_children())
+            w.btn_comandos_terminal.set_active(True)
+            settle()
+            assert command_menu.get_mapped()
             w.terminal_buttons['btop'].clicked()
             deadline = time.monotonic() + 8
             while not btop_marker.exists() and time.monotonic() < deadline:
                 settle()
             assert btop_marker.read_text().strip() == 'yes'
+            assert not command_menu.get_mapped()
             assert w.terminal.get_pty() == pty
             visor_btop = w.ventana_btop.get_child()
             visor_btop.feed_child(b'q\n')
@@ -1016,7 +1024,7 @@ with patch.dict(os.environ, {'PATH': '/nonexistent'}):
     w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
     w.show_all()
     with patch.object(w, '_terminal_iniciada', wraps=w._terminal_iniciada) as started:
-        w.notebook.set_current_page(3)
+        w.notebook.set_current_page(4)
         deadline = time.monotonic() + 8
         while not started.called and time.monotonic() < deadline:
             settle()

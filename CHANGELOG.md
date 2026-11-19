@@ -2,6 +2,7 @@
 
 ## 1.0.11
 
+- Agrupa los accesos de la terminal en un único menú Comandos para dejar más espacio a la consola.
 - Añade un botón para abrir btop desde la terminal e instalarlo por APT si falta.
 - Añade la pestaña Inicio para elegir la entrada predeterminada de GRUB, el tiempo de espera y la visibilidad del menú, con restauración de los ajustes del sistema.
 - Permite separar la terminal en una ventana redimensionable y volver a acoplarla conservando la sesión, los comandos en curso y la salida.

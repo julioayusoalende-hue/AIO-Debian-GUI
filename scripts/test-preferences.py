@@ -104,7 +104,7 @@ if Gtk.init_check([])[0]:
         inicio, fin = ventana.buf.get_bounds()
         assert ventana.buf.get_text(inicio, fin, True) == "visible output"
         ventana.btn_ver_terminal.clicked()
-        assert ventana.notebook.get_current_page() == 3
+        assert ventana.notebook.get_current_page() == ventana.notebook.page_num(ventana.pagina_terminal)
         ventana._escribir(" - terminal")
         inicio, fin = ventana.buf.get_bounds()
         assert ventana.buf.get_text(inicio, fin, True) == "visible output - terminal"
