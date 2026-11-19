@@ -24,6 +24,36 @@ AiO reúne las tareas habituales de administración en una sola aplicación: eli
 
 Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplicaciones y guardar la configuración de tus repositorios o de tu escritorio.
 
+## Capturas de pantalla
+
+![Configuración y mantenimiento de AiO Debian GUI 1.1.0](docs/capturas/mantenimiento.png)
+
+<details>
+<summary><strong>Inicio, Backup, Apps recomendadas y Terminal</strong></summary>
+
+| Inicio de GRUB | Ajustes de GRUB cargados |
+| --- | --- |
+| ![Configuración de GRUB antes de cargar los ajustes](docs/capturas/grub-antes-de-cargar.png) | ![Configuración de GRUB con los ajustes cargados](docs/capturas/grub-ajustes-cargados.png) |
+| **Backup** | **Apps recomendadas** |
+| ![Opciones para copiar y restaurar repositorios y ajustes](docs/capturas/backup.png) | ![Catálogo de aplicaciones con opciones DEB y Flatpak](docs/capturas/apps-recomendadas.png) |
+
+![Terminal integrada con el menú Comandos abierto](docs/capturas/terminal.png)
+
+</details>
+
+<details>
+<summary><strong>Diagnóstico, novedades y preferencias</strong></summary>
+
+| Diagnóstico preventivo | Detalles técnicos |
+| --- | --- |
+| ![Resultados del diagnóstico preventivo del sistema](docs/capturas/diagnostico.png) | ![Información de la distribución, el hardware y el escritorio](docs/capturas/detalles-tecnicos.png) |
+| **Novedades de la versión** | **Preferencias** |
+| ![Ventana de novedades de AiO Debian GUI 1.1.0](docs/capturas/novedades.png) | ![Preferencias de idioma, apariencia e interfaz simple](docs/capturas/preferencias.png) |
+| **Programación** | **Acerca de** |
+| ![Configuración del mantenimiento automático y última ejecución](docs/capturas/programacion.png) | ![Versión y licencia de AiO Debian GUI](docs/capturas/acerca-de.png) |
+
+</details>
+
 ## Qué puedes hacer
 
 | Área | Funciones |
