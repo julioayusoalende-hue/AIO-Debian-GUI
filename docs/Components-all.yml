@@ -1,0 +1,113 @@
+---
+File: DEP-11
+Version: '1.0'
+Origin: aio-debian-gui
+---
+Type: desktop-application
+ID: io.github.julioayusoalende_hue.aio_debian_gui
+Package: aio-debian-gui
+ProjectLicense: GPL-3.0-or-later
+Name:
+  C: AiO Debian GUI
+Summary:
+  fr: Entretenez et configurez Debian et Ubuntu LTS
+  zh: 维护和配置 Debian 与 Ubuntu LTS
+  C: Maintain and configure Debian and Ubuntu LTS
+  es: Mantén y configura Debian y Ubuntu LTS
+Description:
+  C: >-
+    <p>AiO Debian GUI brings system maintenance, diagnostics and configuration together in a graphical interface for Debian
+    and Ubuntu LTS. Review package changes before applying them and schedule maintenance to run with the app closed.</p>
+
+    <p>Back up APT repositories and desktop settings, install recommended apps in DEB or Flatpak format, or work in the detachable
+    terminal. The startup tab lets you configure GRUB on supported systems.</p>
+
+    <p xml:lang="es">AiO Debian GUI reúne el mantenimiento, el diagnóstico y la configuración de Debian y Ubuntu LTS en una
+    interfaz gráfica. Revisa los cambios de paquetes antes de aplicarlos y programa el mantenimiento para que se ejecute con
+    la aplicación cerrada.</p>
+
+    <p xml:lang="es">Haz copias de repositorios APT y ajustes del escritorio, instala aplicaciones recomendadas en formato
+    DEB o Flatpak y trabaja con una terminal separable. En los sistemas compatibles también puedes configurar GRUB desde la
+    pestaña Inicio.</p>
+
+    <p xml:lang="fr">AiO Debian GUI réunit la maintenance, le diagnostic et la configuration de Debian et Ubuntu LTS dans
+    une interface graphique. Examinez les changements de paquets et planifiez la maintenance même lorsque l’application est
+    fermée.</p>
+
+    <p xml:lang="fr">Sauvegardez les dépôts APT et les réglages du bureau, installez des applications au format DEB ou Flatpak
+    et utilisez le terminal détachable. Configurez GRUB sur les systèmes compatibles.</p>
+
+    <p xml:lang="zh">AiO Debian GUI 为 Debian 与 Ubuntu LTS 提供图形化的系统维护、诊断和配置功能。应用软件包更改前可先预览，也可安排关闭应用后自动执行维护。</p>
+
+    <p xml:lang="zh">备份 APT 软件源和桌面设置，安装 DEB 或 Flatpak 应用，并使用可分离的终端。在支持的系统上还可配置 GRUB 启动设置。</p>
+Developer:
+  id: io.github.julioayusoalende_hue
+  name:
+    C: Julio Ayuso
+Categories:
+- System
+- PackageManager
+Url:
+  homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
+  bugtracker: https://github.com/julioayusoalende-hue/AIO-Debian-GUI/issues
+  help: https://github.com/julioayusoalende-hue/AIO-Debian-GUI/blob/main/docs/guia-de-uso.md
+  vcs-browser: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
+Icon:
+  remote:
+  - url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/package/usr/share/icons/hicolor/128x128/apps/aio-debian-gui.png
+    width: 128
+    height: 128
+Launchable:
+  desktop-id:
+  - aio-debian-gui.desktop
+Provides:
+  binaries:
+  - aio-debian-gui
+Screenshots:
+- default: true
+  caption:
+    C: Select system maintenance tasks
+    es: Selecciona las tareas de mantenimiento
+  thumbnails: []
+  source-image:
+    url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/mantenimiento.png
+- caption:
+    C: Review the preventive diagnosis
+    es: Revisa el diagnóstico preventivo
+  thumbnails: []
+  source-image:
+    url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/diagnostico.png
+- caption:
+    C: Back up repositories and desktop settings
+    es: Copia repositorios y ajustes del escritorio
+  thumbnails: []
+  source-image:
+    url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/backup.png
+- caption:
+    C: Browse recommended apps in DEB and Flatpak formats
+    es: Consulta apps recomendadas en formato DEB y Flatpak
+  thumbnails: []
+  source-image:
+    url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/apps-recomendadas.png
+- caption:
+    C: Schedule automatic maintenance
+    es: Programa el mantenimiento automático
+  thumbnails: []
+  source-image:
+    url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
+Releases:
+- version: 1.1.0
+  type: stable
+  unix-timestamp: 1795046400
+  description:
+    C: >-
+      <ul><li>Agrupa los accesos de la terminal en un único menú Comandos para dejar más espacio a la consola.</li><li>Añade
+      un botón para abrir btop desde la terminal e instalarlo por APT si falta.</li><li>Añade la pestaña Inicio para elegir
+      la entrada predeterminada de GRUB, el tiempo de espera y la visibilidad del menú, con restauración de los ajustes del
+      sistema.</li><li>Permite separar la terminal en una ventana redimensionable y volver a acoplarla conservando la sesión,
+      los comandos en curso y la salida.</li><li>Permite seleccionar varias aplicaciones, elegir DEB (APT) o Flatpak por aplicación
+      e iniciar todas las instalaciones con un solo botón.</li><li>Añade instalación por Flatpak desde Flathub para Deluge,
+      Google Chrome y qBittorrent.</li><li>Añade Deluge, qBittorrent, btop, htop y GParted a Apps recomendadas con instalación
+      vía APT.</li></ul>
+ContentRating:
+  oars-1.1: {}

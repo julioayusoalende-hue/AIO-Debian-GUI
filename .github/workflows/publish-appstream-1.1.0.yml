@@ -1,0 +1,90 @@
+name: Publish AiO Debian APT catalog
+
+on:
+  push:
+    branches: [maintenance/publish-appstream-1.1.0]
+    paths: [.github/workflows/publish-appstream-1.1.0.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aio-gh-pages-publication
+  cancel-in-progress: false
+
+jobs:
+  catalog:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: source
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: site
+      - name: Add DEP-11 without replacing packages
+        run: |
+          set -euo pipefail
+          cd site/dists/stable
+          grep -Fxq 'Version: 1:1.1.0' main/binary-all/Packages
+          test "$(grep -c '^Version:' main/binary-all/Packages)" -eq 1
+          mkdir -p main/dep11
+          install -m 0644 ../../../source/docs/Components-all.yml main/dep11/Components-all.yml
+          gzip -9nkf main/dep11/Components-all.yml
+          python3 - <<'PY'
+          from datetime import datetime, timezone
+          from email.utils import format_datetime
+          from hashlib import md5, sha256
+          from pathlib import Path
+
+          release = Path("Release")
+          raw = release.read_text(encoding="utf-8").splitlines()
+          catalog = [Path("main/dep11/Components-all.yml"), Path("main/dep11/Components-all.yml.gz")]
+          lines = []
+          for line in raw:
+              if " main/dep11/Components-all.yml" in line:
+                  continue
+              if line.startswith("Date:"):
+                  line = "Date: " + format_datetime(datetime.now(timezone.utc), usegmt=True)
+              lines.append(line)
+              if line in ("MD5Sum:", "SHA256:"):
+                  digest = md5 if line == "MD5Sum:" else sha256
+                  for path in catalog:
+                      content = path.read_bytes()
+                      lines.append(f" {digest(content).hexdigest()} {len(content):16} {path}")
+          release.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
+      - name: Sign and verify APT index
+        env:
+          PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          export GNUPGHOME="$RUNNER_TEMP/catalog-gnupg"
+          mkdir -m 0700 -p "$GNUPGHOME"
+          printf '%s\n' allow-loopback-pinentry > "$GNUPGHOME/gpg-agent.conf"
+          test -n "$PRIVATE_KEY"
+          printf '%s' "$PRIVATE_KEY" | gpg --batch --import
+          keyring="$GITHUB_WORKSPACE/source/package/usr/share/keyrings/aio-debian-gui.gpg"
+          fingerprint="$(gpg --show-keys --with-colons "$keyring" | awk -F: '$1 == "fpr" && !seen++ { print $10 }')"
+          test -n "$fingerprint"
+          cd site/dists/stable
+          args=(--batch --yes --local-user "$fingerprint")
+          if [ -n "$PASSPHRASE" ]; then
+            args+=(--pinentry-mode loopback --passphrase-fd 0)
+          fi
+          printf '%s\n' "$PASSPHRASE" | gpg "${args[@]}" --clearsign --output InRelease Release
+          printf '%s\n' "$PASSPHRASE" | gpg "${args[@]}" --armor --detach-sign --output Release.gpg Release
+          gpgv --keyring "$keyring" InRelease
+          gpgv --keyring "$keyring" Release.gpg Release
+      - name: Publish signed catalog
+        run: |
+          set -euo pipefail
+          cd site
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dists/stable/{Release,Release.gpg,InRelease,main/dep11}
+          git commit -m 'Publicar catálogo AppStream de AiO Debian GUI 1.1.0'
+          git push origin HEAD:gh-pages
