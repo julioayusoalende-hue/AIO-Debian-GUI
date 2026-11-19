@@ -1861,3 +1861,9 @@ GRUB_LABELS = [
 ]
 for language, column in (("en", 1), ("fr", 2), ("zh", 3)):
     TRADUCCIONES[language].update({row[0]: row[column] for row in GRUB_LABELS})
+
+TRADUCCIONES["en"].update({"Hay otra operación en curso.": "Another operation is in progress.", "No se pudo instalar %s.": "Could not install %s."})
+
+TRADUCCIONES["fr"].update({"Hay otra operación en curso.": "Une autre opération est en cours.", "No se pudo instalar %s.": "Impossible d’installer %s."})
+
+TRADUCCIONES["zh"].update({"Hay otra operación en curso.": "另一项操作正在进行。", "No se pudo instalar %s.": "无法安装 %s。"})

@@ -2,6 +2,7 @@
 
 ## 1.0.11
 
+- Añade un botón para abrir btop desde la terminal e instalarlo por APT si falta.
 - Añade la pestaña Inicio para elegir la entrada predeterminada de GRUB, el tiempo de espera y la visibilidad del menú, con restauración de los ajustes del sistema.
 - Permite separar la terminal en una ventana redimensionable y volver a acoplarla conservando la sesión, los comandos en curso y la salida.
 - Permite seleccionar varias aplicaciones, elegir DEB (APT) o Flatpak por aplicación e iniciar todas las instalaciones con un solo botón.

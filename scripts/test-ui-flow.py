@@ -838,6 +838,10 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
         fastfetch = Path(directory) / 'fastfetch'
         fastfetch.write_text('#!/bin/sh\nprintf "run\\n" >> "' + directory + '/fastfetch-runs"\nprintf "AIO_FASTFETCH_TEST\\n"\n')
         fastfetch.chmod(0o755)
+        btop = Path(directory) / 'btop'
+        btop_marker = Path(directory) / 'btop-ran'
+        btop.write_text(f'#!/bin/sh\n[ -t 0 ] && echo yes > "{btop_marker}"\nread -r salir\n')
+        btop.chmod(0o755)
         nautilus = Path(directory) / 'nautilus'
         nautilus.write_text('#!/bin/sh\nprintf "%s" "$1" > "' + directory + '/nautilus-arg"\n')
         nautilus.chmod(0o755)
@@ -899,7 +903,39 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
                 assert present.call_count == 2
             w.terminal.feed_child(b'printf "%s%s\\n" AIO_DETACHED_ "$AIO_DOCK_STATE"\n')
             assert terminal_contains('AIO_DETACHED_preserved')
-            assert set(w.terminal_buttons) == {'clear', 'fastfetch', 'nautilus'}
+            assert list(w.terminal_buttons) == ['clear', 'fastfetch', 'btop', 'nautilus']
+            w.terminal_buttons['btop'].clicked()
+            deadline = time.monotonic() + 8
+            while not btop_marker.exists() and time.monotonic() < deadline:
+                settle()
+            assert btop_marker.read_text().strip() == 'yes'
+            assert w.terminal.get_pty() == pty
+            visor_btop = w.ventana_btop.get_child()
+            visor_btop.feed_child(b'q\n')
+            deadline = time.monotonic() + 8
+            while w.ventana_btop is not None and time.monotonic() < deadline:
+                settle()
+            assert w.ventana_btop is None
+
+            btop.unlink()
+            (Path(directory) / 'sh').symlink_to('/bin/sh')
+            with patch.dict(os.environ, {'PATH': directory}), \
+                 patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK), \
+                 patch.object(w, '_instalar_app_recomendada') as install:
+                w.terminal_buttons['btop'].clicked()
+                deadline = time.monotonic() + 8
+                while not install.called and time.monotonic() < deadline:
+                    settle()
+                install.assert_called_once()
+                application, channel, callback = install.call_args.args
+                assert application['id'] == 'btop'
+                assert channel['type'] == 'deb'
+                assert callback == w._btop_instalado
+            w._btop_instalado(application, channel, 'error simulado')
+            assert 'No se pudo instalar btop.' in w.terminal_status.get_text()
+            with patch.object(w, '_abrir_btop') as open_btop:
+                w._btop_instalado(application, channel, None)
+                open_btop.assert_called_once()
             w.terminal_buttons['clear'].clicked()
             wait_button('clear')
             assert not w.terminal_status.get_text()
