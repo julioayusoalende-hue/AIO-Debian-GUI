@@ -71,6 +71,9 @@ for distro, version, texto in (('debian', '13', 'Debian 13'), ('ubuntu', '26.04'
 
         ventana.show_all()
         settle()
+        cabecera = ventana.get_titlebar()
+        _, y_sistema = sistema.translate_coordinates(cabecera, 0, 0)
+        assert y_sistema + sistema.get_allocated_height() <= cabecera.get_allocated_height() - 3
         assert boton_version.get_can_focus()
         boton_version.clicked()
         settle()

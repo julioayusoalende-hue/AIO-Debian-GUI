@@ -941,6 +941,7 @@ button.aio-header-version-button {
     min-width: 0;
     min-height: 0;
     padding: 0 4px;
+    margin: 0;
 }
 .aio-header-system {
     font-size: 0.90em;
@@ -1196,7 +1197,8 @@ class VentanaPrincipal(Gtk.Window):
         return popover, menu
 
     def _titulo_cabecera(self):
-        titulo = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        titulo = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2,
+                         valign=Gtk.Align.CENTER, margin_top=3, margin_bottom=3)
         principal = Gtk.Box(spacing=8, halign=Gtk.Align.CENTER)
         nombre = Gtk.Label(label="AiO Debian")
         nombre.get_style_context().add_class("aio-header-title")

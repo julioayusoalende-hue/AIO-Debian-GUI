@@ -2,6 +2,7 @@
 
 ## 1.1.1
 
+- Ajusta la cabecera para mantener el nombre y el icono del sistema dentro de la barra de título.
 - Permite elegir entre Estable y Testing para actualizar AiO desde repositorios APT firmados.
 - Añade Steam y RetroArch a Apps recomendadas con sus iconos.
 - Añade Audacity, Kdenlive y Heroic Games Launcher a Apps recomendadas con sus iconos oficiales.
