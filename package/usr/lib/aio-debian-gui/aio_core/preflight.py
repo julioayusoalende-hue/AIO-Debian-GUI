@@ -18,6 +18,7 @@ class Report:
     messages: list
     preview: list = None
     upgrade_plan: str = None
+    autoremove_plan: str = None
 
 
 def _run(command, timeout=25):
@@ -97,8 +98,8 @@ def _check_host(tasks):
                 or (data.get("preview") is not None and (
                     not isinstance(data["preview"], list)
                     or not all(isinstance(item, str) for item in data["preview"])))
-                or (data.get("upgrade_plan") is not None and not re.fullmatch(
-                    r"[0-9a-f]{64}", str(data["upgrade_plan"])))):
+                or any(data.get(key) is not None and not re.fullmatch(r"[0-9a-f]{64}", str(data[key]))
+                       for key in ("upgrade_plan", "autoremove_plan"))):
             raise ValueError("invalid host report")
         return Report(**data)
     except (OSError, subprocess.SubprocessError, ValueError, TypeError, AttributeError):
@@ -112,6 +113,7 @@ def _check_local(tasks):
     messages = []
     preview = []
     upgrade_plan = None
+    autoremove_plan = None
     blocked = False
     locks = _apt_locks()
     if locks:
@@ -155,7 +157,7 @@ def _check_local(tasks):
         # paquetes aún no disponibles en índices: la simulación sería engañosa.
         simulations = []
         if "upgrade" in tasks:
-            simulations.append(["apt-get", "-s", "-o", "Debug::NoLocking=1", "dist-upgrade"])
+            simulations.append(["apt-get", "-s", "-o", "Debug::NoLocking=1", "upgrade", "--with-new-pkgs", "--no-remove"])
         if "autoremove" in tasks:
             simulations.append(["apt-get", "-s", "-o", "Debug::NoLocking=1", "autoremove", *autoremove_keep()])
         for cmd in simulations:
@@ -180,19 +182,26 @@ def _check_local(tasks):
             installs = [line.split()[1] for line in result.stdout.splitlines() if line.startswith("Inst ") and len(line.split()) > 1]
             removed = [line for line in result.stdout.splitlines()
                        if line.startswith(("Remv ", "Purg "))]
-            if "dist-upgrade" in cmd:
-                plan = "".join(line + "\n" for line in result.stdout.splitlines()
-                               if line.startswith(("Inst ", "Remv ", "Purg ")))
-                upgrade_plan = hashlib.sha256(plan.encode("utf-8")).hexdigest()
+            plan_lines = [line for line in result.stdout.splitlines()
+                          if line.startswith(("Inst ", "Remv ", "Purg "))]
+            plan = hashlib.sha256("".join(line + "\n" for line in plan_lines).encode("utf-8")).hexdigest()
+            action = cmd[4]
+            if action == "upgrade":
+                upgrade_plan = plan
+                if removed:
+                    blocked = True
+                    messages.append("La actualización propone eliminar paquetes y se ha bloqueado.")
+                    continue
+            else:
+                autoremove_plan = plan
             if installs:
                 messages.append("Paquetes previstos para instalar/actualizar (" + str(len(installs)) + "): " + ", ".join(installs[:15]))
             if removed:
-                action = "autoremove" if "autoremove" in cmd else "dist-upgrade"
                 messages.append("Aviso: la simulación de " + action +
                                 " propone eliminar paquetes: " +
                                 ", ".join(line.split()[1] for line in removed[:12]))
             else:
-                messages.append("Simulación APT correcta: " + cmd[4] +
+                messages.append("Simulación APT correcta: " + action +
                                 " (sin eliminaciones previstas).")
     elif tasks:
         blocked = True
@@ -206,4 +215,4 @@ def _check_local(tasks):
             messages.append("Hay módulos DKMS registrados; comprueba su compatibilidad.")
     if any(any(marker in item.lower() for marker in ("linux-image", "linux-headers", "mesa", "nvidia")) for item in preview):
         messages.append("ATENCIÓN: la simulación afecta a kernel, Mesa o NVIDIA; revisa las versiones y la compatibilidad.")
-    return Report(blocked, messages, preview, upgrade_plan)
+    return Report(blocked, messages, preview, upgrade_plan, autoremove_plan)

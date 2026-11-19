@@ -32,6 +32,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 
 LISTAS_ACTUALIZADAS=0
 UPGRADE_PLAN=""
+AUTOREMOVE_PLAN=""
 REINICIO_REQUERIDO=0
 HELPER_VERSION=1.1.0
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
@@ -386,7 +387,7 @@ instalar_aplicacion_recomendada() {
 asegurar_listas() {
     [ "$LISTAS_ACTUALIZADAS" -eq 1 ] && return 0
     info "Sincronizando listas de paquetes (apt-get update)..."
-    if apt-get update; then
+    if apt-get --error-on=any update; then
         LISTAS_ACTUALIZADAS=1
         return 0
     fi
@@ -612,9 +613,12 @@ paso_clock() {
     # Activar NTP; si no hay servicio de hora instalado, instalar systemd-timesyncd
     if ! timedatectl set-ntp true &> /dev/null; then
         info "Servicio de hora no disponible. Instalando systemd-timesyncd..."
-        apt-get update &> /dev/null
-        apt-get -y install systemd-timesyncd &> /dev/null
-        timedatectl set-ntp true &> /dev/null
+        asegurar_listas || return 1
+        if ! apt-get "${APT_OPTS[@]}" --no-remove install systemd-timesyncd ||
+           ! timedatectl set-ntp true; then
+            err "No se pudo activar el servicio de sincronización horaria."
+            return 1
+        fi
     fi
 
     # Esperar hasta 30 segundos a que se sincronice
@@ -1006,25 +1010,31 @@ estado_ext_manager() {
     paquete_instalado gnome-shell-extension-manager
 }
 
+huella_plan_apt() {
+    local plan
+    plan=$(LC_ALL=C awk '/^(Inst|Remv|Purg) /' | sha256sum) || return 1
+    printf '%s\n' "${plan%% *}"
+}
+
 paso_upgrade() {
     asegurar_listas || return 1
     local simulation plan
-    if ! simulation=$(LC_ALL=C apt-get -s -o Debug::NoLocking=1 dist-upgrade 2>&1); then
+    if ! simulation=$(LC_ALL=C apt-get -s -o Debug::NoLocking=1 upgrade --with-new-pkgs --no-remove 2>&1); then
         err "No se pudo simular la actualización con los índices actuales."
         printf '%s\n' "$simulation"
         return 1
     fi
     if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
-        warn "La actualización propone eliminar paquetes; se continuará con los cambios previstos."
+        err "La actualización propone eliminar paquetes y se ha bloqueado."
+        return 1
     fi
-    plan=$(printf '%s\n' "$simulation" | LC_ALL=C awk '/^(Inst|Remv|Purg) /' | sha256sum)
-    plan=${plan%% *}
+    plan=$(huella_plan_apt <<< "$simulation") || return 1
     if [ -n "$UPGRADE_PLAN" ] && [ "$plan" != "$UPGRADE_PLAN" ]; then
         err "El plan APT ha cambiado. Repite las comprobaciones y revisa la nueva vista previa antes de actualizar."
         return 1
     fi
-    info "Actualizando los paquetes del sistema (apt-get dist-upgrade)..."
-    if ! apt-get "${APT_OPTS[@]}" dist-upgrade; then
+    info "Actualizando los paquetes del sistema (apt-get upgrade --with-new-pkgs --no-remove)..."
+    if ! apt-get "${APT_OPTS[@]}" upgrade --with-new-pkgs --no-remove; then
         err "Error durante la actualización de paquetes."
         return 1
     fi
@@ -1039,6 +1049,17 @@ paso_autoremove() {
     for paquete in libnotify-bin needrestart; do
         paquete_instalado "$paquete" && conservar+=("${paquete}+")
     done
+    local simulation plan
+    if ! simulation=$(LC_ALL=C apt-get -s -o Debug::NoLocking=1 autoremove "${conservar[@]}" 2>&1); then
+        err "No se pudo simular la limpieza de dependencias."
+        printf '%s\n' "$simulation"
+        return 1
+    fi
+    plan=$(huella_plan_apt <<< "$simulation") || return 1
+    if [ "$plan" != "$AUTOREMOVE_PLAN" ]; then
+        err "Limpieza detenida: revisa y confirma de nuevo el plan de autoremove antes de eliminar paquetes."
+        return 1
+    fi
     if ! apt-get "${APT_OPTS[@]}" autoremove "${conservar[@]}"; then
         err "No se pudieron eliminar las dependencias huérfanas."
         return 1
@@ -1458,6 +1479,12 @@ main() {
     if [ "${1:-}" = "--upgrade-plan" ]; then
         [[ "${2:-}" =~ ^[0-9a-f]{64}$ ]] || { err "Plan APT no válido."; exit 2; }
         UPGRADE_PLAN="$2"
+        shift 2
+    fi
+
+    if [ "${1:-}" = "--autoremove-plan" ]; then
+        [[ "${2:-}" =~ ^[0-9a-f]{64}$ ]] || { err "Plan de autoremove no válido."; exit 2; }
+        AUTOREMOVE_PLAN="$2"
         shift 2
     fi
 

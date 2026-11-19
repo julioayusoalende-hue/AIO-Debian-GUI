@@ -1,5 +1,10 @@
 # Cambios
 
+## 1.1.1
+
+- Actualiza los paquetes con APT sin eliminarlos y detiene la operación si no se pueden actualizar todos los índices.
+- Deja la limpieza de dependencias desmarcada por defecto y comprueba que el plan sigue siendo el aprobado antes de aplicarlo.
+
 ## 1.1.0
 
 - Agrupa los accesos de la terminal en un único menú Comandos para dejar más espacio a la consola.

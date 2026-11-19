@@ -11,6 +11,16 @@ SIMULATION="$PLAN"
 SIMULATION_STATUS=0
 UPDATE_STATUS=0
 INSTALL_STATUS=0
+(
+    apt-get() { [ "$*" = '--error-on=any update' ]; }
+    asegurar_listas
+    [ "$LISTAS_ACTUALIZADAS" -eq 1 ]
+)
+(
+    apt-get() { return 100; }
+    if asegurar_listas; then echo 'ERROR: se aceptó un fallo parcial de índices'; exit 1; fi
+    [ "$LISTAS_ACTUALIZADAS" -eq 0 ]
+)
 asegurar_listas() { echo update >> "$TEST_DIR/calls"; return "$UPDATE_STATUS"; }
 apt-get() {
     printf '%s\n' "$*" >> "$TEST_DIR/calls"
@@ -22,7 +32,7 @@ apt-get() {
 }
 reset_calls() { : > "$TEST_DIR/calls"; }
 assert_no_install() {
-    if grep -qE '^-y .*dist-upgrade$' "$TEST_DIR/calls"; then
+    if grep -qE '^-y .*upgrade --with-new-pkgs --no-remove$' "$TEST_DIR/calls"; then
         echo 'ERROR: se ejecutó APT pese al rechazo del plan'; exit 1
     fi
 }
@@ -44,8 +54,8 @@ assert_no_install() {
 reset_calls
 paso_upgrade
 [ "$(head -n 1 "$TEST_DIR/calls")" = update ]
-grep -q -- '^-s -o Debug::NoLocking=1 dist-upgrade$' "$TEST_DIR/calls"
-grep -qE '^-y .*dist-upgrade$' "$TEST_DIR/calls"
+grep -q -- '^-s -o Debug::NoLocking=1 upgrade --with-new-pkgs --no-remove$' "$TEST_DIR/calls"
+grep -qE '^-y .*upgrade --with-new-pkgs --no-remove$' "$TEST_DIR/calls"
 
 for SIMULATION in 'Remv old-package [1]' 'Purg old-package [1]' 'Inst nano [7.2] (7.4 Debian:stable)'; do
     reset_calls
@@ -66,17 +76,31 @@ UPDATE_STATUS=0
 INSTALL_STATUS=1
 if paso_upgrade; then echo 'ERROR: fallo real de APT ignorado'; exit 1; fi
 
-# Las eliminaciones siguen adelante cuando la comprobación aprobó el plan.
+# Una actualización rutinaria nunca autoriza eliminaciones.
 UPGRADE_PLAN=''
 INSTALL_STATUS=0
 SIMULATION='Remv old-package [1]'
 reset_calls
-paso_upgrade
-grep -qE '^-y .*dist-upgrade$' "$TEST_DIR/calls"
-UPGRADE_PLAN=$(python3 -c 'import hashlib, sys; print(hashlib.sha256((sys.argv[1]+"\n").encode()).hexdigest())' "$SIMULATION")
+if paso_upgrade; then echo 'ERROR: se aceptó una eliminación durante upgrade'; exit 1; fi
+assert_no_install
+
+# La limpieza requiere el mismo plan que aprobó el usuario.
+paquete_instalado() { return 1; }
+AUTOREMOVE_PLAN=$(huella_plan_apt <<< "$SIMULATION")
 reset_calls
-paso_upgrade
-grep -qE '^-y .*dist-upgrade$' "$TEST_DIR/calls"
+paso_autoremove
+grep -Fxq -- '-s -o Debug::NoLocking=1 autoremove' "$TEST_DIR/calls"
+grep -qE '^-y .*autoremove$' "$TEST_DIR/calls"
+for SIMULATION in 'Remv other-package [1]' 'Remv old-package [2]' ''; do
+    reset_calls
+    if paso_autoremove; then echo 'ERROR: se aceptó una limpieza distinta'; exit 1; fi
+    if grep -qE '^-y .*autoremove$' "$TEST_DIR/calls"; then
+        echo 'ERROR: se ejecutó la limpieza pese al rechazo del plan'; exit 1
+    fi
+done
+AUTOREMOVE_PLAN=''
+reset_calls
+if paso_autoremove; then echo 'ERROR: se limpió sin plan aprobado'; exit 1; fi
 
 # La comprobación no debe anunciar éxito cuando falta o falla needrestart.
 (
@@ -102,4 +126,4 @@ grep -qE '^-y .*dist-upgrade$' "$TEST_DIR/calls"
     output=$(paso_rebootcheck)
     [[ "$output" == *'##REBOOT:1'* ]]
 )
-echo 'Actualización segura: índices, simulación, plan aprobado y eliminaciones confirmadas OK'
+echo 'Actualización segura: índices, simulación, planes aprobados y limpieza opcional OK'

@@ -381,8 +381,8 @@ for language in ('es', 'en', 'fr', 'zh'):
         w.switches['revertir-backports'][0].set_active(False)
         assert w.switches['upgrade'][0].get_sensitive()
     w._preset_completo(None)
-    assert 'autoremove' in w._pasos_seleccionados()
-    assert w.switches['autoremove'][0].get_active()
+    assert 'autoremove' not in w._pasos_seleccionados()
+    assert not w.switches['autoremove'][0].get_active()
     assert 'upgrade' in w._pasos_seleccionados()
 
     ok = {'name': 'Estado de dpkg', 'status': 'ok', 'detail': 'ok', 'advice': ''}
@@ -421,12 +421,12 @@ for language in ('es', 'en', 'fr', 'zh'):
         w._terminar_preflight(['upgrade'], app.core_preflight.Report(False, []), None)
     assert not w.en_curso
     for tarea, package in (('autoremove', 'old-kernel'), ('upgrade', 'unsafe-package')):
-        warning = f'Aviso: la simulación de {tarea if tarea == "autoremove" else "dist-upgrade"} propone eliminar paquetes: {package}'
+        warning = f'Aviso: la simulación de {tarea if tarea == "autoremove" else "upgrade"} propone eliminar paquetes: {package}'
         w.en_curso = True
         with patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK), \
              patch.object(w, '_continuar_mantenimiento') as continue_maintenance:
             w._terminar_preflight([tarea], app.core_preflight.Report(False, [warning]), None)
-        continue_maintenance.assert_called_once_with([tarea], upgrade_plan=None)
+        continue_maintenance.assert_called_once_with([tarea], upgrade_plan=None, autoremove_plan=None)
     w.en_curso = True
     with patch.object(w, '_mensaje') as blocked_message, \
          patch.object(w, '_continuar_mantenimiento') as continue_maintenance:

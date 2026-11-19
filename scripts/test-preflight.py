@@ -16,7 +16,7 @@ sys.modules[spec.name] = mod
 spec.loader.exec_module(mod)
 
 def run(cmd, timeout=25):
-    if "dist-upgrade" in cmd:
+    if "upgrade" in cmd:
         return SimpleNamespace(returncode=0, stdout="Remv linux-image-old [1]\n", stderr="")
     return SimpleNamespace(returncode=0, stdout="", stderr="")
 
@@ -24,7 +24,7 @@ with patch.object(mod, "_apt_locks", return_value=[]), \
      patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), \
      patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), \
      patch.object(mod, "_run", side_effect=run):
-    assert not mod.check(["upgrade"]).blocked
+    assert mod.check(["upgrade"]).blocked
     assert not mod.check(["flatpak-update"]).blocked
     assert not mod.check(["autoclean"]).blocked
 with patch.object(mod, "_apt_locks", return_value=[]), \
@@ -56,47 +56,34 @@ with patch.object(mod, "_apt_locks", return_value=[]), \
     mocked.assert_not_called()
 
 # Vista previa detallada de versiones sin escrituras
-with patch.object(mod, "_apt_locks", return_value=[]), patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), patch.object(mod, "_run", side_effect=lambda cmd, timeout=25: SimpleNamespace(returncode=0, stdout="Inst nano [7.2] (7.3 Debian:stable)\nInst vim (9.1 Debian:stable)\n" if "dist-upgrade" in cmd else "", stderr="")):
+with patch.object(mod, "_apt_locks", return_value=[]), patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), patch.object(mod, "_run", side_effect=lambda cmd, timeout=25: SimpleNamespace(returncode=0, stdout="Inst nano [7.2] (7.3 Debian:stable)\nInst vim (9.1 Debian:stable)\n" if "upgrade" in cmd else "", stderr="")):
     report = mod.check(["upgrade"])
     assert not report.blocked
     assert any("ACTUALIZAR: nano 7.2 → 7.3" in x for x in report.preview)
     assert any("INSTALAR: vim 9.1" in x for x in report.preview)
 
 # Avisar de cambios en componentes críticos.
-with patch.object(mod, "_apt_locks", return_value=[]), patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), patch.object(mod, "_run", side_effect=lambda cmd, timeout=25: SimpleNamespace(returncode=0, stdout="Inst linux-image-amd64 [6.1] (6.12 Debian:stable)\n" if "dist-upgrade" in cmd else "", stderr="")):
+with patch.object(mod, "_apt_locks", return_value=[]), patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), patch.object(mod, "_run", side_effect=lambda cmd, timeout=25: SimpleNamespace(returncode=0, stdout="Inst linux-image-amd64 [6.1] (6.12 Debian:stable)\n" if "upgrade" in cmd else "", stderr="")):
     report = mod.check(["upgrade"])
     assert any("kernel, Mesa o NVIDIA" in m for m in report.messages)
 
-# Marcadores reales de APT, tanto al actualizar como al eliminar huérfanos.
+# Las eliminaciones se bloquean durante upgrade y se revisan para autoremove.
 for task in ("upgrade", "autoremove"):
     for marker in ("Remv", "Purg"):
+        plan = f"{marker} old-package [1]\n"
         with patch.object(mod, "_apt_locks", return_value=[]), \
              patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), \
              patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), \
              patch.object(mod, "_run", side_effect=lambda cmd, timeout=25: SimpleNamespace(
-                 returncode=0, stdout=f"{marker} old-package [1]\n" if "-s" in cmd else "", stderr="")):
+                 returncode=0, stdout=plan if "-s" in cmd else "", stderr="")):
             report = mod.check([task])
-            assert not report.blocked
             assert "ELIMINAR: old-package" in report.preview
-            action = "dist-upgrade" if task == "upgrade" else "autoremove"
-            expected = "Aviso: la simulación de " + action + " propone eliminar paquetes:"
-            assert expected in report.messages[-1]
-            assert not any("sin eliminaciones" in item for item in report.messages)
-
-# Las eliminaciones previstas por ambas simulaciones son avisos confirmables.
-with patch.object(mod, "_apt_locks", return_value=[]), \
-     patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), \
-     patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), \
-     patch.object(mod, "_run", side_effect=lambda cmd, timeout=25: SimpleNamespace(
-         returncode=0,
-         stdout=("Remv old-kernel [1]\n" if "autoremove" in cmd
-                 else "Remv unsafe-package [1]\n" if "dist-upgrade" in cmd
-                 else ""),
-         stderr="")):
-    report = mod.check(["upgrade", "autoremove"])
-    assert not report.blocked
-    assert any("Aviso: la simulación de autoremove" in item for item in report.messages)
-    assert any("Aviso: la simulación de dist-upgrade propone eliminar" in item for item in report.messages)
+            if task == "upgrade":
+                assert report.blocked
+            else:
+                assert not report.blocked
+                assert report.autoremove_plan == hashlib.sha256(plan.encode()).hexdigest()
+                assert "Aviso: la simulación de autoremove propone eliminar paquetes:" in report.messages[-1]
 
 plan = "Inst nano [7.2] (7.3 Debian:stable)\n"
 with patch.object(mod, "_apt_locks", return_value=[]), \

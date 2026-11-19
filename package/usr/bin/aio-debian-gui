@@ -834,9 +834,9 @@ PASOS = [
      "Instala el metapaquete HWE de Ubuntu LTS solo si está disponible en los repositorios oficiales; puede requerir reinicio.",
      False, "apt"),
     ("upgrade", "Actualizar los paquetes del sistema",
-     "apt-get update y apt-get dist-upgrade.", True, "apt"),
+     "Actualiza con APT y admite dependencias nuevas. No elimina paquetes.", True, "apt"),
     ("autoremove", "Eliminar dependencias huérfanas",
-     "apt-get autoremove; puede quitar paquetes que APT considera huérfanos.", True, "apt"),
+     "apt-get autoremove; puede quitar paquetes que APT considera huérfanos.", False, "apt"),
     ("autoclean", "Limpiar la caché de paquetes obsoletos",
      "apt-get autoclean.", True, "apt"),
     ("flatpak-setup", "Instalar soporte Flatpak y añadir Flathub",
@@ -4043,12 +4043,13 @@ class VentanaPrincipal(Gtk.Window):
             if not aceptado:
                 self._poner_ocupado(False)
                 return False
-        self._continuar_mantenimiento(pasos, upgrade_plan=informe.upgrade_plan)
+        self._continuar_mantenimiento(pasos, upgrade_plan=informe.upgrade_plan,
+                                      autoremove_plan=informe.autoremove_plan)
         if self.proceso is None:
             self._poner_ocupado(False)
         return False
 
-    def _continuar_mantenimiento(self, pasos, upgrade_plan=None):
+    def _continuar_mantenimiento(self, pasos, upgrade_plan=None, autoremove_plan=None):
         if not self._confirmar_tareas(pasos):
             self.estado.set_text(traducir("Mantenimiento cancelado antes de comenzar."))
             return
@@ -4210,8 +4211,12 @@ class VentanaPrincipal(Gtk.Window):
         if solo_flatpak_usuario:
             cmd = comando_host(helper, "--flatpak-user-update")
         else:
-            argumentos = (["--upgrade-plan", upgrade_plan] if upgrade_plan else []) + pasos
-            cmd = comando_pkexec(helper, lang, *argumentos)
+            argumentos = []
+            if upgrade_plan:
+                argumentos.extend(("--upgrade-plan", upgrade_plan))
+            if autoremove_plan:
+                argumentos.extend(("--autoremove-plan", autoremove_plan))
+            cmd = comando_pkexec(helper, lang, *argumentos, *pasos)
 
         self.buf.set_text("")
         self.necesita_reinicio = False
