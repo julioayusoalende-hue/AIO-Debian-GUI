@@ -5,31 +5,35 @@ Origin: aio-debian-gui
 Label: aio-debian-gui
 Suite: stable
 Codename: stable
-Date: Thu, 19 Nov 2026 08:15:12 UTC
+Date: Thu, 19 Nov 2026 11:26:40 GMT
 Architectures: all
 Components: main
 Description: Repositorio APT de aio-debian-gui
 MD5Sum:
+ 4e39a7601579baccd7a1461cfe85a165             5397 main/dep11/Components-all.yml
+ 582645b289661464a6c8dff59295a204             2240 main/dep11/Components-all.yml.gz
  6abc5f6f56dc410f6125b827333a7c77             1314 main/binary-all/Packages
  353cc59592c3a478be9001e9337196f5              807 main/binary-all/Packages.gz
  0b6e82f44c6e6758ad0ee108e55eb65d              888 main/binary-all/Packages.xz
 SHA256:
+ 5b71d7778713e137f440f034d7336a2baa04899c8946e7f482a9cf2ff302b87d             5397 main/dep11/Components-all.yml
+ e5de7c4836fb149f3ca185be2cbdd1e1ace0d46b5cd444796fb935893ad940fc             2240 main/dep11/Components-all.yml.gz
  e1036d0773128e8e61eb0399895f9b092485c0d39ac88f998039c105f4318d14             1314 main/binary-all/Packages
  cbac40ec687ed706c66f9a16989e771429381a0c4ac686c70575a5728045c479              807 main/binary-all/Packages.gz
  02d0986ce59e56953220cd30357465bd007c3d9dcbe272fc76f4663edbae856f              888 main/binary-all/Packages.xz
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEBKUjgaIDXVuVJMpq4OZLjuD5AAwFAmr+sBAACgkQ4OZLjuD5
-AAyWCRAAm4lCyLi8t9ZmMjvtUexCthdjQpRJe4iy2yxGjMtBH1gAK/h7AJBdvOh4
-QnUYIa2RIjE/n5F8sPBIHy8dfvzv3V+gVrZU7SeSAJicKJKtyyXAbxDbggcDk83W
-vZyO/n+5EAARAdo//84UV135PSl+ZjXpLfGe7J45HyJ638XpnayzV0SiTzQMkQPv
-YxyA4LY41Bv7ln2zeh1IZ9CxHZpUStkhgs6CR3kjqmHPC0w//nKd5dboXMLUP8+I
-wUU5qg2T8dOVnvRUb9LZeL2Z/7yJi1ptV/fPQx+uLyMe6P9LUl+Kik047vX0hsj0
-uLvSpXi7XaSRX+/61cSPn+Zjtg9GFUFN4MNkMgPCg/mBXh0+1dlttOiKZT4b9Wfj
-90vEevEYQKhSepyyuL5Qd9mEkiBrNho9pUiRiKCU6W40Q68jFKNwdW47wugsOrmL
-jy1O02HGpgCghazvxWhC0s3NlICanShz+28t0aAHVKBO3rVCRN6O5IygF5BEF3jB
-8nv4ereyfqn5iqBNEZ8W0nlZ7dFkVKMG4IEPMVpBFzM1ImhAYGl1Lg/r/zowu8zp
-IgBaKHICxgW01Dg8jRD/Sk0yFJmuMdPcYC3nyPZLbv8XDcWCe2Myk4omolVfxU+n
-bSnJYMAWW6BQ2QaOyKplTxcYyEt9IcGojDpWqRz8CEC7PKyaK6Q=
-=ZckY
+iQIzBAEBCgAdFiEEBKUjgaIDXVuVJMpq4OZLjuD5AAwFAmr+3PAACgkQ4OZLjuD5
+AAzsQA//auVy0eVHgLgKqV/HItYnJDijGIf3iSnRaXJCuB2hhGdvrduRe4U1GVyJ
+f7jg/SwZGSi0oMOTH3Fo7HDEWk+y5Z51yLensns2mCHm6kCOI16A2qvB/9HZZW3t
+EBJRfXAIVDRXsVr8VJQ/fm8DpMBv+XD64SgvQ3hCcNjIvYlmYEqDjVoeNlD3rNlI
+N5fUZrsTneyj5b/Xz6ul1rIeNEHJ0IuE4xLnnbteljSbdT7iX3gq8l+3VqZI+kRj
+RsQmhWta4V5K6jfEcrTEhATGrNd8wtU/fn4a7IOVsZFllfCeBVQ4t3aOrE5OMtwe
+wQ4dktAxm+XgOpTwFqhHxbVWGRYdTCUcFPY7c3GRXd2g4rIPYUBGluSt8UIsuDgq
+cSBX2lnCAKgwCeKMJ4pzXPDxF4Hdit8E9QoHV0v0F5a8nDK3o1b+HXQRjqDegJ3K
+Vjt1QICYab5qBEWuxKUNDG/TMYHXYf7afVp8AqF5v8PodFxZkU3J5ScNFeyyHV6t
+roqxm7SBhup31tIrt7psCpybqaRWP0CmGZf/pX7uOswkBQDztxcR3dv3xPnli5ox
+R4QyKVkgMDzTdDF5HNf4w/ztGgNERqASb+WcSCRPekRf59nljVoBV5/BjkP9cckI
+ya4NT4G6gEPtz0DTIAEzdpPQ5fm8BqEHReip4H7YGaD5yDMGpPc=
+=H5vm
 -----END PGP SIGNATURE-----
