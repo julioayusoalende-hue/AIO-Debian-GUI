@@ -59,7 +59,8 @@ for distro, version, texto in (('debian', '13', 'Debian 13'), ('ubuntu', '26.04'
          patch.object(app, 'novedades_version', return_value='• Mejora <GTK>'):
         ventana = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
         titulo, sistema = ventana.get_titlebar().get_custom_title().get_children()
-        nombre, boton_version = titulo.get_children()
+        nombre, boton_version, canal = titulo.get_children()
+        assert canal is ventana.etiqueta_canal_actualizaciones
         version_app = boton_version.get_child()
         assert nombre.get_text() == 'AiO Debian'
         assert version_app.get_text() == '1.0.2~preview3'

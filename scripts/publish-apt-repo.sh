@@ -4,6 +4,7 @@
 # Variables:
 #   GPG_PASSPHRASE   contraseña de la clave privada (opcional)
 #   EXPECTED_FPR     si se indica, debe coincidir con la clave del proyecto
+#   APT_CHANNEL      stable (por defecto) o testing
 #   KEEP_VERSIONS    versiones a conservar de cada paquete (por defecto 5)
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -12,6 +13,17 @@ SITE=${2:?Uso: $0 <paquete-principal.deb> <carpeta-del-sitio> [paquete-host.deb]
 HOST_DEB=${3:-}
 [ "$#" -le 3 ] || { echo "Demasiados argumentos." >&2; exit 1; }
 KEEP=${KEEP_VERSIONS:-5}
+CHANNEL=${APT_CHANNEL:-stable}
+VERSION_PATTERN='^([0-9]+:)?[0-9]+\.[0-9]+\.[0-9]+$'
+case "$CHANNEL" in
+    stable) ;;
+    testing)
+        [ -z "$HOST_DEB" ] || exit 1
+        SITE="$SITE/apt-testing"
+        VERSION_PATTERN='^[0-9]+:[0-9]+\.[0-9]+\.[0-9]+~testing\.[1-9][0-9]*\.[1-9][0-9]*$'
+        ;;
+    *) echo "APT_CHANNEL no válido." >&2; exit 1 ;;
+esac
 KEYRING="$ROOT/package/usr/share/keyrings/aio-debian-gui.gpg"
 [[ "$KEEP" =~ ^[1-9][0-9]{0,2}$ ]] || { echo "KEEP_VERSIONS no válido." >&2; exit 1; }
 
@@ -31,7 +43,7 @@ gpg --batch --list-secret-keys "$FPR" >/dev/null 2>&1 || {
 }
 VERSION=$(dpkg-deb -f "$DEB" Version)
 PUBLIC_VERSION=${VERSION#*:}
-[[ "$VERSION" =~ ^([0-9]+:)?[0-9]+\.[0-9]+\.[0-9]+$ ]] &&
+[[ "$VERSION" =~ $VERSION_PATTERN ]] &&
     [ "$(basename "$DEB")" = "aio-debian-gui_${PUBLIC_VERSION}_all.deb" ] || {
     echo "Nombre o versión del paquete principal no válidos." >&2; exit 1;
 }
@@ -64,7 +76,7 @@ fi
 publish_repo() {
     local site=$1 deb=$2 package=$3 label=$4
     local pool="$site/pool/main/a/aio-debian-gui"
-    local dist="$site/dists/stable"
+    local dist="$site/dists/$CHANNEL"
     local bin="$dist/main/binary-all"
     local files=() debs=() old
     mkdir -p "$pool" "$bin"
@@ -84,7 +96,7 @@ publish_repo() {
         for old in "${debs[@]:0:${#debs[@]}-KEEP}"; do rm -f -- "$old"; done
     fi
     shopt -u nullglob
-    ( cd "$site" && dpkg-scanpackages --arch all pool/main /dev/null > dists/stable/main/binary-all/Packages 2>/dev/null )
+    ( cd "$site" && dpkg-scanpackages --arch all pool/main /dev/null > "dists/$CHANNEL/main/binary-all/Packages" 2>/dev/null )
     gzip -9nkf "$bin/Packages"
     xz -9ekf "$bin/Packages"
     hashes() {
@@ -95,8 +107,8 @@ publish_repo() {
     {
         echo "Origin: $label"
         echo "Label: $label"
-        echo "Suite: stable"
-        echo "Codename: stable"
+        echo "Suite: $CHANNEL"
+        echo "Codename: $CHANNEL"
         echo "Date: $(LC_ALL=C date -Ru | sed 's/+0000/UTC/')"
         echo "Architectures: all"
         echo "Components: main"
@@ -115,7 +127,9 @@ if [ -n "$HOST_DEB" ]; then
 fi
 
 # --- Clave pública y portada -----------------------------------------------------------
-cp -f "$KEYRING" "$SITE/aio-debian-gui.gpg"
-touch "$SITE/.nojekyll"
-cp -f "$ROOT/scripts/site-index.html" "$SITE/index.html"
+if [ "$CHANNEL" = stable ]; then
+    cp -f "$KEYRING" "$SITE/aio-debian-gui.gpg"
+    touch "$SITE/.nojekyll"
+    cp -f "$ROOT/scripts/site-index.html" "$SITE/index.html"
+fi
 echo "Repositorio actualizado en $SITE (firmado con $FPR)"

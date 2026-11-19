@@ -2,6 +2,7 @@
 
 ## 1.1.1
 
+- Permite elegir entre Estable y Testing para actualizar AiO desde repositorios APT firmados.
 - Añade Steam y RetroArch a Apps recomendadas con sus iconos.
 - Añade Audacity, Kdenlive y Heroic Games Launcher a Apps recomendadas con sus iconos oficiales.
 - Añade metadatos AppStream, capturas, licencia y novedades para GNOME Software, y declara el tamaño instalado del paquete DEB.

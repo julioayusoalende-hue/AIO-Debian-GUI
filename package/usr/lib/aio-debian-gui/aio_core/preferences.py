@@ -22,6 +22,9 @@ def cargar_preferencias(ruta, defaults=None):
         raise ValueError("Tema de interfaz no válido en las preferencias.")
     if type(preferencias["modo_simple"]) is not bool:
         raise ValueError("El modo simple de las preferencias debe ser verdadero o falso.")
+    if ("canal_actualizaciones" in preferencias
+            and preferencias["canal_actualizaciones"] not in ("stable", "testing")):
+        preferencias["canal_actualizaciones"] = "stable"
     carpeta = preferencias.get("carpeta_repositorios")
     if carpeta is not None and (not isinstance(carpeta, str)
                                 or (carpeta and not os.path.isabs(carpeta))

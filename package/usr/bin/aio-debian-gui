@@ -97,6 +97,7 @@ PREFERENCIAS_DEFECTO = {
     "tema": "sistema",
     "modo_simple": False,
     "carpeta_repositorios": "",
+    "canal_actualizaciones": "stable",
 }
 IDIOMAS = {"es", "en", "fr", "zh"}
 TEMAS = {"sistema", "claro", "oscuro"}
@@ -1201,6 +1202,10 @@ class VentanaPrincipal(Gtk.Window):
         nombre.get_style_context().add_class("aio-header-title")
         principal.pack_start(nombre, False, False, 0)
         principal.pack_start(self._boton_novedades(version_app()), False, False, 0)
+        self.etiqueta_canal_actualizaciones = etiqueta("")
+        self.etiqueta_canal_actualizaciones.get_style_context().add_class("dim-label")
+        self._mostrar_canal_actualizaciones()
+        principal.pack_start(self.etiqueta_canal_actualizaciones, False, False, 0)
         titulo.pack_start(principal, False, False, 0)
 
         sistema = Gtk.Box(spacing=5, halign=Gtk.Align.CENTER)
@@ -1222,6 +1227,11 @@ class VentanaPrincipal(Gtk.Window):
         sistema.pack_start(etiqueta_sistema, False, False, 0)
         titulo.pack_start(sistema, False, False, 0)
         return titulo
+
+    def _mostrar_canal_actualizaciones(self):
+        canal = self.preferencias.get("canal_actualizaciones", "stable")
+        texto = traducir("Testing" if canal == "testing" else "Estable")
+        self.etiqueta_canal_actualizaciones.set_text(texto if formato_actualizacion() == "deb" else "")
 
     def _boton_novedades(self, version):
         texto = version if version_numerica(version.split("~", 1)[0]) else traducir("Desarrollo")
@@ -1367,13 +1377,15 @@ class VentanaPrincipal(Gtk.Window):
         self.comprobando_actualizacion = True
         self._actualizar_sensibilidad()
         formato = formato_actualizacion()
+        testing = self.preferencias.get("canal_actualizaciones") == "testing"
 
         def comprobar():
             try:
                 if formato == "deb":
                     # Refresca la información APT de forma autorizada, sin instalar nada.
                     resultado = subprocess.run(
-                        comando_pkexec(HELPER_SISTEMA, "C.UTF-8", "--check-update-self"),
+                        comando_pkexec(HELPER_SISTEMA, "C.UTF-8",
+                                       "--check-update-self-testing" if testing else "--check-update-self"),
                         capture_output=True, text=True, timeout=180,
                     )
                     if resultado.returncode:
@@ -1392,7 +1404,7 @@ class VentanaPrincipal(Gtk.Window):
                                       "Ya tienes la última versión", f"Versión instalada: {actual}.")
                         return
                     detalle = f"Versión instalada: {actual}.\nVersión disponible: {nueva}.\n\n¿Actualizar mediante APT?"
-                    datos = None
+                    datos = nueva if testing else None
                 elif formato == "flatpak":
                     # Sin privilegios: actualizar metadatos y consultar revisiones pendientes.
                     metadatos = subprocess.run(
@@ -1466,8 +1478,9 @@ class VentanaPrincipal(Gtk.Window):
         def aplicar():
             try:
                 if formato == "deb":
+                    argumentos = ("--update-self-testing", datos) if datos else ("--update-self",)
                     resultado = subprocess.run(
-                        comando_pkexec(HELPER_SISTEMA, "C.UTF-8", "--update-self"),
+                        comando_pkexec(HELPER_SISTEMA, "C.UTF-8", *argumentos),
                         capture_output=True, text=True, timeout=300,
                     )
                     if resultado.returncode:
@@ -1673,6 +1686,16 @@ class VentanaPrincipal(Gtk.Window):
             etiqueta("Muestra solo Configuración y mantenimiento y oculta la columna de información del sistema y la salida de la consola.", dim=True),
             0, 3, 2, 1,
         )
+        combo_canal = Gtk.ComboBoxText()
+        combo_canal.append("stable", traducir("Estable"))
+        combo_canal.append("testing", traducir("Testing"))
+        combo_canal.set_active_id(self.preferencias.get("canal_actualizaciones", "stable"))
+        if formato_actualizacion() == "deb":
+            grid.attach(etiqueta("Canal de actualizaciones"), 0, 4, 1, 1)
+            grid.attach(combo_canal, 1, 4, 1, 1)
+            grid.attach(etiqueta(
+                "Afecta solo a Buscar actualizaciones de AiO Debian GUI.", dim=True),
+                0, 5, 2, 1)
         dialogo.show_all()
         respuesta = dialogo.run()
         if respuesta != Gtk.ResponseType.OK:
@@ -1684,6 +1707,7 @@ class VentanaPrincipal(Gtk.Window):
             "idioma": combo_idioma.get_active_id(),
             "tema": combo_tema.get_active_id(),
             "modo_simple": simple.get_active(),
+            "canal_actualizaciones": combo_canal.get_active_id(),
         }
         try:
             guardar_preferencias(nuevas)
@@ -1698,6 +1722,7 @@ class VentanaPrincipal(Gtk.Window):
 
         idioma_cambiado = nuevas["idioma"] != self.preferencias["idioma"]
         self.preferencias = nuevas
+        self._mostrar_canal_actualizaciones()
         aplicar_tema(nuevas["tema"])
         dialogo.destroy()
         if idioma_cambiado:

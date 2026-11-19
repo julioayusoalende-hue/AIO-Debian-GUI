@@ -1437,6 +1437,51 @@ mostrar_estados() {
 }
 
 
+# Consulta un origen firmado solo para esta operación. El APT del equipo
+# conserva sus fuentes y la instalación resuelve allí las dependencias.
+actualizar_aiodebian_testing() (
+    local accion=$1 aprobada=${2:-} temporal instalada disponible archivo
+    local patron='^[0-9]+:[0-9]+\.[0-9]+\.[0-9]+~testing\.[1-9][0-9]*\.[1-9][0-9]*$'
+    paquete_instalado aio-debian-gui || { err "AiO Debian GUI no está instalado como DEB."; return 1; }
+    instalada=$(dpkg-query -W -f='${Version}' aio-debian-gui) || return 1
+    temporal=$(mktemp -d /var/tmp/aio-testing.XXXXXXXX) || return 1
+    trap 'rm -rf -- "$temporal"' EXIT
+    chmod 0755 "$temporal" || return 1
+    mkdir "$temporal/lists" "$temporal/download" || return 1
+    printf '%s\n' 'deb [signed-by=/usr/share/keyrings/aio-debian-gui.gpg] https://julioayusoalende-hue.github.io/AIO-Debian-GUI/apt-testing/ testing main' > "$temporal/testing.list" || return 1
+    local opciones=(-o "Dir::Etc::sourcelist=$temporal/testing.list"
+                    -o 'Dir::Etc::sourceparts=-' -o "Dir::State::lists=$temporal/lists"
+                    -o 'Dir::Cache::pkgcache=' -o 'Dir::Cache::srcpkgcache=')
+    apt-get "${opciones[@]}" -o APT::Update::Error-Mode=any update || return 1
+    disponible=$(LC_ALL=C apt-cache "${opciones[@]}" madison aio-debian-gui |
+        awk -F '|' 'NR == 1 { gsub(/[[:space:]]/, "", $2); print $2 }')
+    [[ "$disponible" =~ $patron ]] || { err "No hay una versión válida en el canal Testing."; return 1; }
+    if ! dpkg --compare-versions "$disponible" gt "$instalada"; then
+        if [ "$accion" = comprobar ]; then
+            printf '##NOUPDATE:%s:%s\n' "${instalada#*:}" "${disponible#*:}"
+            return 0
+        fi
+        err "La actualización Testing ya no es aplicable."
+        return 1
+    fi
+    if [ "$accion" = comprobar ]; then
+        printf '##UPDATE:%s:%s\n' "${instalada#*:}" "${disponible#*:}"
+        return 0
+    fi
+    if [ "$aprobada" != "${disponible#*:}" ]; then
+        err "La versión Testing ha cambiado. Vuelve a buscar actualizaciones."
+        return 1
+    fi
+    cd "$temporal/download" || return 1
+    apt-get "${opciones[@]}" download "aio-debian-gui=$disponible" || return 1
+    local paquetes=(./*.deb)
+    [ "${#paquetes[@]}" -eq 1 ] || return 1
+    archivo=${paquetes[0]}
+    [ "$(dpkg-deb -f "$archivo" Package)" = aio-debian-gui ] &&
+        [ "$(dpkg-deb -f "$archivo" Version)" = "$disponible" ] || return 1
+    apt-get "${APT_OPTS[@]}" --only-upgrade --no-remove install "$archivo"
+)
+
 main() {
     if [ "${1:-}" = "--version" ] && [ "$#" -eq 1 ]; then
         printf '%s\n' "$HELPER_VERSION"
@@ -1558,6 +1603,16 @@ main() {
             schedule_uid=$(pkexec_uid) || exit 1
             echo "##SCHEDULE:authorized"
             ejecutar_programador --remove "$schedule_uid"
+            exit $?
+            ;;
+        --check-update-self-testing)
+            [ "$#" -eq 1 ] || exit 2
+            actualizar_aiodebian_testing comprobar
+            exit $?
+            ;;
+        --update-self-testing)
+            [ "$#" -eq 2 ] || exit 2
+            actualizar_aiodebian_testing instalar "$2"
             exit $?
             ;;
         --check-update-self)

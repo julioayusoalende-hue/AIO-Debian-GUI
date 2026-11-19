@@ -91,7 +91,7 @@ Las pruebas se publican por separado como preversiones de la rama [`testing`](ht
 
 **[Consultar las publicaciones testing →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases?q=testing&expanded=true)**
 
-Las versiones testing se descargan manualmente; no se distribuyen mediante el repositorio APT estable.
+En el paquete DEB, selecciona **Testing** en **Preferencias → Canal de actualizaciones** y usa **Buscar actualizaciones** para consultar el repositorio firmado de pruebas. También puedes descargar las preversiones desde GitHub. Si vuelves a **Estable**, AiO esperará a una versión estable más reciente que la instalada.
 
 ## Instalación
 

@@ -1906,3 +1906,24 @@ TRADUCCIONES["en"].update({"Hay otra operación en curso.": "Another operation i
 TRADUCCIONES["fr"].update({"Hay otra operación en curso.": "Une autre opération est en cours.", "No se pudo instalar %s.": "Impossible d’installer %s."})
 
 TRADUCCIONES["zh"].update({"Hay otra operación en curso.": "另一项操作正在进行。", "No se pudo instalar %s.": "无法安装 %s。"})
+
+TRADUCCIONES["en"].update({
+    "Estable": "Stable",
+    "Testing": "Testing",
+    "Canal de actualizaciones": "Update channel",
+    "Afecta solo a Buscar actualizaciones de AiO Debian GUI.": "Applies only to Check for updates in AiO Debian GUI.",
+})
+
+TRADUCCIONES["fr"].update({
+    "Estable": "Stable",
+    "Testing": "Test",
+    "Canal de actualizaciones": "Canal de mise à jour",
+    "Afecta solo a Buscar actualizaciones de AiO Debian GUI.": "S’applique uniquement à la recherche de mises à jour dans AiO Debian GUI.",
+})
+
+TRADUCCIONES["zh"].update({
+    "Estable": "稳定版",
+    "Testing": "测试版",
+    "Canal de actualizaciones": "更新渠道",
+    "Afecta solo a Buscar actualizaciones de AiO Debian GUI.": "仅影响 AiO Debian GUI 中的检查更新功能。",
+})

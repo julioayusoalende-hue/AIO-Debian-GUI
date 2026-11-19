@@ -11,6 +11,9 @@ jobs:
   testing:
     if: github.ref == 'refs/heads/testing'
     runs-on: ubuntu-24.04
+    concurrency:
+      group: aio-gh-pages-publication
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:
@@ -20,7 +23,7 @@ jobs:
       - name: Install build and test dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y dpkg-dev python3 python3-gi gir1.2-gtk-3.0 gir1.2-vte-2.91 librsvg2-common shellcheck desktop-file-utils pkexec xvfb xauth
+          sudo apt-get install -y dpkg-dev python3 python3-gi gir1.2-gtk-3.0 gir1.2-vte-2.91 librsvg2-common shellcheck desktop-file-utils pkexec xvfb xauth gnupg
       - name: Run checks
         run: xvfb-run -a bash scripts/check.sh
       - name: Calculate testing version from latest stable release
@@ -47,7 +50,7 @@ jobs:
           set -euo pipefail
           bash scripts/build-deb.sh --testing-version "$VERSION"
           cd dist
-          mv "aio-debian-gui_${VERSION}_all.deb" "aio-debian-gui_${VERSION/\~/-}_all.deb"
+          cp "aio-debian-gui_${VERSION}_all.deb" "aio-debian-gui_${VERSION/\~/-}_all.deb"
           sha256sum "aio-debian-gui_${VERSION/\~/-}_all.deb" > SHA256SUMS
           sha256sum --check SHA256SUMS
           dpkg-deb --fsys-tarfile "aio-debian-gui_${VERSION/\~/-}_all.deb" |
@@ -64,3 +67,31 @@ jobs:
           gh release create "$TAG" "dist/aio-debian-gui_${VERSION/\~/-}_all.deb" dist/SHA256SUMS \
             --target "$GITHUB_SHA" --prerelease --title "AiO Debian GUI $VERSION (testing)" \
             --notes-file dist/testing-notes.md
+
+      - name: Checkout APT repository
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: apt-site
+      - name: Sign and deploy the Testing APT repository
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          test -n "$GPG_PRIVATE_KEY"
+          export GNUPGHOME
+          GNUPGHOME=$(mktemp -d "$RUNNER_TEMP/aio-testing-gpg.XXXXXXXX")
+          trap 'rm -rf -- "$GNUPGHOME"' EXIT
+          printf '%s\n' 'allow-loopback-pinentry' > "$GNUPGHOME/gpg-agent.conf"
+          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          APT_CHANNEL=testing bash scripts/publish-apt-repo.sh \
+            "dist/aio-debian-gui_${VERSION}_all.deb" apt-site
+          git -C apt-site config user.name 'github-actions[bot]'
+          git -C apt-site config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C apt-site add -- apt-testing
+          if ! git -C apt-site diff --cached --quiet; then
+            git -C apt-site commit -m "Publish Testing APT ${VERSION}"
+            git -C apt-site push origin HEAD:gh-pages
+          fi
