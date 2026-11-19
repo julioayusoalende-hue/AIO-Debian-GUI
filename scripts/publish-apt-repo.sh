@@ -73,6 +73,40 @@ if [ -d "$SITE/pool/main" ]; then
     fi
 fi
 
+publish_appstream() (
+    local deb=$1 dist=$2 origin=$3
+    local stage
+    stage=$(mktemp -d)
+    trap 'rm -rf -- "$stage"' EXIT
+    dpkg-deb -x "$deb" "$stage"
+    local metainfo="$stage/usr/share/metainfo/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml"
+    [ -f "$metainfo" ] || return 0
+
+    # DEP-11 ofrece la ficha a GNOME Software incluso antes de instalar.
+    python3 - "$metainfo" "$origin" "$stage/catalog.xml" <<'PYMETA'
+import sys
+import xml.etree.ElementTree as ET
+
+metainfo, origin, destination = sys.argv[1:]
+component = ET.parse(metainfo).getroot()
+ET.SubElement(component, "pkgname").text = "aio-debian-gui"
+ET.SubElement(component, "icon", type="remote", width="128", height="128").text = (
+    "https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/"
+    "package/usr/share/icons/hicolor/128x128/apps/aio-debian-gui.png"
+)
+categories = ET.SubElement(component, "categories")
+ET.SubElement(categories, "category").text = "System"
+ET.SubElement(categories, "category").text = "PackageManager"
+catalog = ET.Element("components", version="1.0", origin=origin)
+catalog.append(component)
+ET.ElementTree(catalog).write(destination, encoding="utf-8", xml_declaration=True)
+PYMETA
+    mkdir -p "$dist/main/dep11"
+    appstreamcli convert --format=yaml "$stage/catalog.xml" "$stage/Components-all.yml"
+    install -m 0644 "$stage/Components-all.yml" "$dist/main/dep11/Components-all.yml"
+    gzip -9nkf "$dist/main/dep11/Components-all.yml"
+)
+
 publish_repo() {
     local site=$1 deb=$2 package=$3 label=$4
     local pool="$site/pool/main/a/aio-debian-gui"
@@ -99,8 +133,15 @@ publish_repo() {
     ( cd "$site" && dpkg-scanpackages --arch all pool/main /dev/null > "dists/$CHANNEL/main/binary-all/Packages" 2>/dev/null )
     gzip -9nkf "$bin/Packages"
     xz -9ekf "$bin/Packages"
+    local indices=(main/binary-all/Packages main/binary-all/Packages.gz main/binary-all/Packages.xz)
+    if [ "$CHANNEL" = stable ] && [ "$package" = aio-debian-gui ]; then
+        publish_appstream "$deb" "$dist" "$label"
+        if [ -f "$dist/main/dep11/Components-all.yml.gz" ]; then
+            indices+=(main/dep11/Components-all.yml main/dep11/Components-all.yml.gz)
+        fi
+    fi
     hashes() {
-        ( cd "$dist" && for f in main/binary-all/Packages main/binary-all/Packages.gz main/binary-all/Packages.xz; do
+        ( cd "$dist" && for f in "${indices[@]}"; do
             printf ' %s %16d %s\n' "$($1 "$f" | cut -d' ' -f1)" "$(stat -c %s "$f")" "$f"
         done )
     }
