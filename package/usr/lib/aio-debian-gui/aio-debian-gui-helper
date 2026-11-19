@@ -33,6 +33,7 @@ APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confo
 LISTAS_ACTUALIZADAS=0
 UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
+REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
 HELPER_VERSION=1.1.0
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
@@ -1042,25 +1043,58 @@ paso_upgrade() {
 }
 
 paso_autoremove() {
-    info "Eliminando dependencias huérfanas (apt-get autoremove)..."
+    limpiar_dependencias --no-purge
+}
+
+paso_autopurge() {
+    limpiar_dependencias --purge
+}
+
+limpiar_dependencias() {
+    local modo="$1"
+    info "Limpiando dependencias huérfanas (apt-get autoremove $modo)..."
     local -a conservar=()
     local paquete
     # needrestart y libnotify-bin son necesarios para el programador en AppImage/Flatpak.
     for paquete in libnotify-bin needrestart; do
         paquete_instalado "$paquete" && conservar+=("${paquete}+")
     done
-    local simulation plan
-    if ! simulation=$(LC_ALL=C apt-get -s -o Debug::NoLocking=1 autoremove "${conservar[@]}" 2>&1); then
-        err "No se pudo simular la limpieza de dependencias."
-        printf '%s\n' "$simulation"
-        return 1
-    fi
-    plan=$(huella_plan_apt <<< "$simulation") || return 1
-    if [ "$plan" != "$AUTOREMOVE_PLAN" ]; then
-        err "Limpieza detenida: revisa y confirma de nuevo el plan de autoremove antes de eliminar paquetes."
-        return 1
-    fi
-    if ! apt-get "${APT_OPTS[@]}" autoremove "${conservar[@]}"; then
+    local simulation plan cambios respuesta aprobado="$AUTOREMOVE_PLAN"
+    while :; do
+        if ! simulation=$(LC_ALL=C apt-get -s -o Debug::NoLocking=1 autoremove "$modo" "${conservar[@]}" </dev/null 2>&1); then
+            err "No se pudo simular la limpieza de dependencias."
+            printf '%s\n' "$simulation"
+            return 1
+        fi
+        plan=$(huella_plan_apt <<< "$simulation") || return 1
+        [ "$plan" = "$aprobado" ] && break
+        if [ "$REVISAR_LIMPIEZA" -ne 1 ] || [ -z "$aprobado" ]; then
+            err "Limpieza detenida: revisa y confirma de nuevo el plan de autoremove antes de eliminar paquetes."
+            return 1
+        fi
+        cambios=$(LC_ALL=C awk '/^(Inst|Remv|Purg) /' <<< "$simulation") || return 1
+        if [ -z "$cambios" ]; then
+            ok "No quedan dependencias huérfanas que limpiar."
+            return 0
+        fi
+        local detalle
+        detalle=$(printf '%s' "$cambios" | base64 -w0) || return 1
+        printf '##CLEANUP-REVIEW:%s:%s:%s\n' "$modo" "$plan" "$detalle"
+        if ! IFS= read -r -t 300 respuesta; then
+            err "No se recibió una respuesta para el nuevo plan de limpieza."
+            return 1
+        fi
+        if [ "$respuesta" = "omitir" ]; then
+            warn "Se omitió la limpieza de dependencias por decisión del usuario."
+            return 3
+        fi
+        if [ "$respuesta" != "$plan" ]; then
+            err "La respuesta no coincide con el plan de limpieza."
+            return 1
+        fi
+        aprobado="$plan"
+    done
+    if ! apt-get "${APT_OPTS[@]}" autoremove "$modo" "${conservar[@]}" </dev/null; then
         err "No se pudieron eliminar las dependencias huérfanas."
         return 1
     fi
@@ -1363,6 +1397,7 @@ declare -A TITULOS=(
     [ext-manager]="Extension Manager de GNOME"
     [upgrade]="Actualizar paquetes del sistema"
     [autoremove]="Eliminar dependencias huérfanas"
+    [autopurge]="Purgar dependencias huérfanas"
     [autoclean]="Limpiar caché de paquetes"
     [snap-update]="Actualizar y limpiar Snap"
     [flatpak-update]="Actualizar aplicaciones Flatpak"
@@ -1487,6 +1522,10 @@ main() {
         AUTOREMOVE_PLAN="$2"
         shift 2
     fi
+    if [ "${1:-}" = "--review-cleanup" ]; then
+        REVISAR_LIMPIEZA=1
+        shift
+    fi
 
     case "${1:-}" in
         --refresh-diagnostic-apt)
@@ -1582,6 +1621,10 @@ main() {
         pasos+=("$s")
     done
     [ ${#pasos[@]} -gt 0 ] || { err "No se indicó ningún paso." >&2; exit 2; }
+    if [[ " ${pasos[*]} " == *" autoremove "* && " ${pasos[*]} " == *" autopurge "* ]]; then
+        err "Selecciona una sola tarea de limpieza de dependencias."
+        exit 2
+    fi
     local distro
     distro=$(leer_distribucion) || exit 1
     for s in "${pasos[@]}"; do
@@ -1606,11 +1649,15 @@ main() {
         exit 1
     fi
 
-    local total=${#pasos[@]} i=0 fallos=0
+    local total=${#pasos[@]} i=0 fallos=0 resultado
     for s in "${pasos[@]}"; do
         i=$((i + 1))
         echo "##STEP:${i}:${total}:${TITULOS[$s]}"
-        if ! "paso_${s//-/_}"; then
+        resultado=0
+        "paso_${s//-/_}" || resultado=$?
+        if [ "$resultado" -eq 3 ] && [[ "$s" == autoremove || "$s" == autopurge ]]; then
+            echo "##RESULT:${s}:2"
+        elif [ "$resultado" -ne 0 ]; then
             echo "##RESULT:${s}:1"
             fallos=1
             if [[ "$CRITICOS" == *" $s "* ]]; then

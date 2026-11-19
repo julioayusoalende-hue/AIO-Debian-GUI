@@ -8,6 +8,8 @@
 # privilegios las realiza /usr/lib/aio-debian-gui/aio-debian-gui-helper mediante pkexec
 # (una sola autenticación para todos los pasos seleccionados).
 
+import base64
+import binascii
 import calendar
 import hashlib
 import datetime
@@ -837,6 +839,8 @@ PASOS = [
      "Actualiza con APT y admite dependencias nuevas. No elimina paquetes.", True, "apt"),
     ("autoremove", "Eliminar dependencias huérfanas",
      "apt-get autoremove; puede quitar paquetes que APT considera huérfanos.", False, "apt"),
+    ("autopurge", "Purgar dependencias huérfanas",
+     "Elimina dependencias sin uso y sus archivos de configuración del sistema.", False, "apt"),
     ("autoclean", "Limpiar la caché de paquetes obsoletos",
      "apt-get autoclean.", True, "apt"),
     ("flatpak-setup", "Instalar soporte Flatpak y añadir Flathub",
@@ -3565,7 +3569,7 @@ class VentanaPrincipal(Gtk.Window):
         )
 
         grupos = (
-            ("Mantenimiento habitual", "view-refresh-symbolic", {"clock", "upgrade", "autoremove", "autoclean", "flatpak-update", "snap-update", "rebootcheck"}, True),
+            ("Mantenimiento habitual", "view-refresh-symbolic", {"clock", "upgrade", "autoremove", "autopurge", "autoclean", "flatpak-update", "snap-update", "rebootcheck"}, True),
             ("Aplicaciones y repositorios", "system-software-install-symbolic", {"repos", "tools", "flatpak-setup", "gnome-plugin", "ext-manager"}, True),
             ("Kernel y controladores · Avanzado", "preferences-system-symbolic", {"backports-kernel-mesa", "revertir-backports", "nvidia-driver", "ubuntu-hwe"}, False),
         )
@@ -3864,6 +3868,9 @@ class VentanaPrincipal(Gtk.Window):
         sw.add(textos)
         caja.pack_start(sw, False, False, 0)
         caja.pack_start(indicador, False, False, 0)
+        otra_limpieza = {"autoremove": "autopurge", "autopurge": "autoremove"}.get(pid)
+        if otra_limpieza:
+            sw.connect("notify::active", self._alternar_limpieza_apt, otra_limpieza)
         sw.connect("notify::active", self._cambio_switch_preset)
         self._estilo_tarea(sw)
         if pid == "revertir-backports":
@@ -3906,6 +3913,10 @@ class VentanaPrincipal(Gtk.Window):
             self.actualizando_preset = False
         self._marcar_preset_seleccionado(self.botones_preset[1])
         self._actualizar_sensibilidad()
+
+    def _alternar_limpieza_apt(self, switch, _propiedad, otra_tarea):
+        if switch.get_active():
+            self.switches[otra_tarea][0].set_active(False)
 
     def _alternar_reversion_stable(self, switch, _propiedad):
         # La reversión de kernel/Mesa nunca se mezcla con tareas ordinarias.
@@ -4215,7 +4226,7 @@ class VentanaPrincipal(Gtk.Window):
             if upgrade_plan:
                 argumentos.extend(("--upgrade-plan", upgrade_plan))
             if autoremove_plan:
-                argumentos.extend(("--autoremove-plan", autoremove_plan))
+                argumentos.extend(("--autoremove-plan", autoremove_plan, "--review-cleanup"))
             cmd = comando_pkexec(helper, lang, *argumentos, *pasos)
 
         self.buf.set_text("")
@@ -4242,10 +4253,11 @@ class VentanaPrincipal(Gtk.Window):
         self.barra.set_text("")
         self.barra.set_show_text(False)
 
+        banderas = Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE
+        if autoremove_plan:
+            banderas |= Gio.SubprocessFlags.STDIN_PIPE
         try:
-            self.proceso = Gio.Subprocess.new(
-                cmd, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE
-            )
+            self.proceso = Gio.Subprocess.new(cmd, banderas)
         except GLib.Error as e:
             self._poner_ocupado(False)
             self._mensaje(Gtk.MessageType.ERROR, "No se pudo iniciar", str(e.message))
@@ -4454,7 +4466,48 @@ class VentanaPrincipal(Gtk.Window):
             return
         self._leer_linea()
 
+    def _revisar_limpieza(self, linea):
+        canal = self.proceso.get_stdin_pipe() if self.proceso else None
+        if canal is None:
+            return
+        respuesta = "omitir"
+        try:
+            _, modo, huella, detalle = linea.split(":", 3)
+            if modo not in ("--purge", "--no-purge") or not re.fullmatch(r"[0-9a-f]{64}", huella):
+                raise ValueError("invalid cleanup plan")
+            cambios = base64.b64decode(detalle, validate=True).decode("utf-8")
+        except (ValueError, binascii.Error):
+            cambios = ""
+        if cambios:
+            dialogo = Gtk.Dialog(title=traducir("El plan de limpieza ha cambiado"),
+                                 transient_for=self, modal=True)
+            dialogo.set_default_size(620, 390)
+            dialogo.add_button(traducir("Omitir limpieza"), Gtk.ResponseType.CANCEL)
+            dialogo.add_button(traducir("Continuar"), Gtk.ResponseType.OK)
+            dialogo.set_default_response(Gtk.ResponseType.CANCEL)
+            contenido = dialogo.get_content_area()
+            contenido.set_border_width(12)
+            contenido.set_spacing(8)
+            texto = ("La purga también elimina los archivos de configuración del sistema."
+                     if modo == "--purge" else "Revisa los cambios antes de continuar la limpieza.")
+            contenido.pack_start(etiqueta(texto), False, False, 0)
+            detalle = Gtk.TextView(editable=False, cursor_visible=False, monospace=True)
+            detalle.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+            detalle.get_buffer().set_text(cambios)
+            contenido.pack_start(self._scroll_tarjetas(detalle), True, True, 0)
+            dialogo.show_all()
+            if dialogo.run() == Gtk.ResponseType.OK:
+                respuesta = huella
+            dialogo.destroy()
+        try:
+            canal.write_all((respuesta + "\n").encode("ascii"), None)
+        except GLib.Error as error:
+            self._escribir("[-] %s\n" % error.message, "error")
+
     def _procesar(self, linea):
+        if linea.startswith("##CLEANUP-REVIEW:"):
+            self._revisar_limpieza(linea)
+            return
         if linea.startswith("##STEP:"):
             _, n, total, titulo = linea.split(":", 3)
             n, total = int(n), int(total)
@@ -4468,7 +4521,7 @@ class VentanaPrincipal(Gtk.Window):
             return
         if linea.startswith("##RESULT:"):
             _, tarea, codigo = linea.split(":", 2)
-            self._resultado_tarea(tarea, "Completada" if codigo == "0" else "Error")
+            self._resultado_tarea(tarea, {"0": "Completada", "2": "No ejecutada"}.get(codigo, "Error"))
             return
         if linea.startswith("##REBOOT:"):
             self.necesita_reinicio = linea.endswith(":1")
@@ -4580,7 +4633,13 @@ class VentanaPrincipal(Gtk.Window):
             return
         if codigo == 0 and self.fin_recibido and not self.hubo_errores:
             self.barra.set_fraction(1.0)
-            self.estado.set_text(traducir("✔ ¡Mantenimiento completado con éxito!"))
+            limpieza_omitida = any(
+                tarea in ("autoremove", "autopurge") and estado == "No ejecutada"
+                for tarea, (_etiqueta, estado) in self.resultados_tareas.items()
+            )
+            mensaje = ("Mantenimiento completado. Limpieza omitida." if limpieza_omitida
+                       else "✔ ¡Mantenimiento completado con éxito!")
+            self.estado.set_text(traducir(mensaje))
             self._escribir("\n==================================================\n"
                            "  [✔] ¡Mantenimiento completado con éxito!\n"
                            "==================================================\n"

@@ -2,6 +2,9 @@
 
 ## 1.1.1
 
+- Añade metadatos AppStream, capturas, licencia y novedades para GNOME Software, y declara el tamaño instalado del paquete DEB.
+- El mantenimiento programado notifica las tareas pendientes o con error y ofrece abrir AiO para revisarlas y ejecutarlas manualmente.
+- Añade la purga opcional de dependencias huérfanas, con vista previa y revisión del plan dentro del mismo mantenimiento si cambia.
 - Actualiza los paquetes con APT sin eliminarlos y detiene la operación si no se pueden actualizar todos los índices.
 - Deja la limpieza de dependencias desmarcada por defecto y comprueba que el plan sigue siendo el aprobado antes de aplicarlo.
 

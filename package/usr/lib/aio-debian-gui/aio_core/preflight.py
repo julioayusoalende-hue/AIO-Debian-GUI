@@ -110,6 +110,8 @@ def _check_local(tasks):
     """Bloquear errores conocidos; avisar de comprobaciones no concluyentes."""
     if tasks and set(tasks) <= {"flatpak-update", "snap-update"}:
         return Report(False, [])
+    if {"autoremove", "autopurge"}.issubset(tasks):
+        return Report(True, ["Selecciona una sola tarea de limpieza de dependencias."])
     messages = []
     preview = []
     upgrade_plan = None
@@ -158,20 +160,21 @@ def _check_local(tasks):
         simulations = []
         if "upgrade" in tasks:
             simulations.append(["apt-get", "-s", "-o", "Debug::NoLocking=1", "upgrade", "--with-new-pkgs", "--no-remove"])
-        if "autoremove" in tasks:
-            simulations.append(["apt-get", "-s", "-o", "Debug::NoLocking=1", "autoremove", *autoremove_keep()])
+        if "autoremove" in tasks or "autopurge" in tasks:
+            mode = "--purge" if "autopurge" in tasks else "--no-purge"
+            simulations.append(["apt-get", "-s", "-o", "Debug::NoLocking=1", "autoremove", mode, *autoremove_keep()])
         for cmd in simulations:
             result = _run(cmd, timeout=45)
             if result is None or result.returncode != 0:
                 blocked = True
-                messages.append("No se pudo simular APT: " + cmd[4])
+                messages.append("No se pudo simular APT: " + " ".join(cmd[4:6]))
                 continue
             for line in result.stdout.splitlines():
                 parts = line.split()
                 if len(parts) < 2 or parts[0] not in ("Inst", "Remv", "Purg"):
                     continue
                 if parts[0] in ("Remv", "Purg"):
-                    preview.append("ELIMINAR: " + parts[1])
+                    preview.append(("PURGAR: " if parts[0] == "Purg" else "ELIMINAR: ") + parts[1])
                 elif "[" in line and "]" in line:
                     previous = line.split("[", 1)[1].split("]", 1)[0]
                     new = line.split("(", 1)[1].split(" ", 1)[0] if "(" in line else "?"
@@ -196,6 +199,9 @@ def _check_local(tasks):
                 autoremove_plan = plan
             if installs:
                 messages.append("Paquetes previstos para instalar/actualizar (" + str(len(installs)) + "): " + ", ".join(installs[:15]))
+            if "--purge" in cmd:
+                action = "autoremove --purge"
+                messages.append("La purga elimina los archivos de configuración del sistema de los paquetes retirados.")
             if removed:
                 messages.append("Aviso: la simulación de " + action +
                                 " propone eliminar paquetes: " +

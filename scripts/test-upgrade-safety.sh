@@ -89,18 +89,55 @@ paquete_instalado() { return 1; }
 AUTOREMOVE_PLAN=$(huella_plan_apt <<< "$SIMULATION")
 reset_calls
 paso_autoremove
-grep -Fxq -- '-s -o Debug::NoLocking=1 autoremove' "$TEST_DIR/calls"
-grep -qE '^-y .*autoremove$' "$TEST_DIR/calls"
+grep -Fxq -- '-s -o Debug::NoLocking=1 autoremove --no-purge' "$TEST_DIR/calls"
+grep -qE '^-y .*autoremove --no-purge$' "$TEST_DIR/calls"
 for SIMULATION in 'Remv other-package [1]' 'Remv old-package [2]' ''; do
     reset_calls
     if paso_autoremove; then echo 'ERROR: se aceptó una limpieza distinta'; exit 1; fi
-    if grep -qE '^-y .*autoremove$' "$TEST_DIR/calls"; then
+    if grep -qE '^-y .*autoremove --no-purge$' "$TEST_DIR/calls"; then
         echo 'ERROR: se ejecutó la limpieza pese al rechazo del plan'; exit 1
     fi
 done
 AUTOREMOVE_PLAN=''
 reset_calls
 if paso_autoremove; then echo 'ERROR: se limpió sin plan aprobado'; exit 1; fi
+
+SIMULATION='Purg old-package [1]'
+AUTOREMOVE_PLAN=$(huella_plan_apt <<< "$SIMULATION")
+reset_calls
+paso_autopurge
+grep -Fxq -- '-s -o Debug::NoLocking=1 autoremove --purge' "$TEST_DIR/calls"
+grep -qE '^-y .*autoremove --purge$' "$TEST_DIR/calls"
+SIMULATION='Purg other-package [1]'
+reset_calls
+if paso_autopurge; then echo 'ERROR: se aceptó una purga distinta'; exit 1; fi
+if grep -qE '^-y .*autoremove --purge$' "$TEST_DIR/calls"; then
+    echo 'ERROR: se ejecutó una purga sin aprobar'; exit 1
+fi
+
+# La GUI puede aprobar una nueva lista sin reiniciar el mantenimiento.
+REVISAR_LIMPIEZA=1
+AUTOREMOVE_PLAN=$(huella_plan_apt <<< 'Purg old-package [1]')
+SIMULATION='Purg another-package [1]'
+UPDATED_PLAN=$(huella_plan_apt <<< "$SIMULATION")
+reset_calls
+output=$(paso_autopurge <<< "$UPDATED_PLAN")
+[[ "$output" == *"##CLEANUP-REVIEW:--purge:$UPDATED_PLAN:"* ]]
+grep -qE '^-y .*autoremove --purge$' "$TEST_DIR/calls"
+reset_calls
+result=0
+output=$(paso_autopurge <<< omitir) || result=$?
+[ "$result" -eq 3 ]
+if grep -qE '^-y .*autoremove --purge$' "$TEST_DIR/calls"; then
+    echo 'ERROR: se aplicó la purga omitida'; exit 1
+fi
+SIMULATION=''
+reset_calls
+output=$(paso_autopurge </dev/null)
+[[ "$output" == *'No quedan dependencias huérfanas'* ]]
+if grep -qE '^-y .*autoremove --purge$' "$TEST_DIR/calls"; then
+    echo 'ERROR: se ejecutó una purga vacía'; exit 1
+fi
 
 # La comprobación no debe anunciar éxito cuando falta o falla needrestart.
 (

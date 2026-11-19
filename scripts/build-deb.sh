@@ -63,6 +63,55 @@ awk -v version="${PUBLIC_VERSION}" -v seccion="${PUBLIC_VERSION%%~*}" '
     exit 1
 }
 
+# La misma versión y las mismas notas alimentan AiO y los centros de software.
+export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git log -1 --format=%ct 2>/dev/null || date +%s)}"
+python3 - "$STAGE" "$PUBLIC_VERSION" <<'PYMETA'
+from datetime import datetime, timezone
+import os
+from pathlib import Path
+import stat
+import sys
+import xml.etree.ElementTree as ET
+
+stage, version = Path(sys.argv[1]), sys.argv[2]
+component = stage / "usr/share/metainfo/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml"
+tree = ET.parse(component)
+releases = ET.SubElement(tree.getroot(), "releases")
+date = datetime.fromtimestamp(int(os.environ["SOURCE_DATE_EPOCH"]), timezone.utc).date()
+release = ET.SubElement(releases, "release", version=version, date=date.isoformat(),
+                        type="development" if "~" in version or "+preview" in version else "stable")
+description = ET.SubElement(release, "description")
+points = ET.SubElement(description, "ul")
+notes = stage / "usr/share/aio-debian-gui/release-notes.txt"
+for line in notes.read_text(encoding="utf-8").splitlines()[1:]:
+    if line.strip():
+        ET.SubElement(points, "li").text = line.removeprefix("• ").strip()
+ET.indent(tree, space="  ")
+tree.write(component, encoding="utf-8", xml_declaration=True)
+
+size = 0
+seen = set()
+for top in stage.iterdir():
+    if top.name == "DEBIAN":
+        continue
+    for path in (top, *top.rglob("*")):
+        info = path.lstat()
+        if stat.S_ISREG(info.st_mode) or stat.S_ISLNK(info.st_mode):
+            inode = (info.st_dev, info.st_ino)
+            if inode in seen:
+                continue
+            seen.add(inode)
+            size += (info.st_size + 1023) // 1024
+        else:
+            size += 1
+control = stage / "DEBIAN/control"
+fields = control.read_text(encoding="utf-8").splitlines()
+fields = [field for field in fields if not field.startswith("Installed-Size:")]
+description_index = next(i for i, field in enumerate(fields) if field.startswith("Description:"))
+fields.insert(description_index, f"Installed-Size: {size}")
+control.write_text("\n".join(fields) + "\n", encoding="utf-8")
+PYMETA
+
 # Permisos normalizados (git/zip no los conservan siempre)
 find "$STAGE" -type d -exec chmod 755 {} +
 find "$STAGE" -type f -exec chmod 644 {} +
@@ -70,7 +119,6 @@ chmod 755 "$STAGE/DEBIAN/postinst" "$STAGE/DEBIAN/prerm" "$STAGE/usr/bin/aio-deb
           "$STAGE/usr/lib/aio-debian-gui/"{aio-debian-gui-helper,aio-apt-sources-backup,aio-grub-settings}
 
 # Fecha fija = fecha del último commit (o la actual si no hay git)
-export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git log -1 --format=%ct 2>/dev/null || date +%s)}"
 find "$STAGE" -exec touch -h -d "@${SOURCE_DATE_EPOCH}" {} +
 
 mkdir -p dist

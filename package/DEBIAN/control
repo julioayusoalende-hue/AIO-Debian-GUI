@@ -9,9 +9,10 @@ Replaces: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
 Maintainer: Julio Ayuso <epdc@msn.com>
 Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
 Description: Interfaz gráfica de mantenimiento y configuración para Debian y Ubuntu LTS
- Aplicación gráfica que actualiza el sistema con apt (update, dist-upgrade,
- autoremove, autoclean), configura repositorios de Debian o Ubuntu LTS, sincroniza el reloj,
- añade soporte Flatpak con Flathub y FUSE para AppImage, ofrece complementos
- para GNOME y comprueba si hace falta reiniciar.
- Este paquete configura su propio repositorio APT para recibir actualizaciones.
- Incluye el icono original en tonos rojos de Debian.
+ Aplicación gráfica para actualizar paquetes, revisar el estado del sistema,
+ programar el mantenimiento y guardar o restaurar copias de repositorios APT
+ y ajustes del escritorio.
+ .
+ También permite instalar aplicaciones recomendadas por APT o Flatpak,
+ configurar GRUB en sistemas compatibles y usar una terminal separable.
+ Este paquete configura el repositorio APT de AiO Debian GUI.

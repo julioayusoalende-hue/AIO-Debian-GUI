@@ -383,6 +383,15 @@ for language in ('es', 'en', 'fr', 'zh'):
     w._preset_completo(None)
     assert 'autoremove' not in w._pasos_seleccionados()
     assert not w.switches['autoremove'][0].get_active()
+    assert not w.switches['autopurge'][0].get_active()
+    w.switches['autoremove'][0].set_active(True)
+    w.switches['autopurge'][0].set_active(True)
+    assert 'autopurge' in w._pasos_seleccionados()
+    assert 'autoremove' not in w._pasos_seleccionados()
+    w.switches['autoremove'][0].set_active(True)
+    assert 'autoremove' in w._pasos_seleccionados()
+    assert 'autopurge' not in w._pasos_seleccionados()
+    w._preset_completo(None)
     assert 'upgrade' in w._pasos_seleccionados()
 
     ok = {'name': 'Estado de dpkg', 'status': 'ok', 'detail': 'ok', 'advice': ''}
@@ -405,6 +414,19 @@ for language in ('es', 'en', 'fr', 'zh'):
     w._procesar('##RESULT:upgrade:0')
     assert w.resultados_tareas['upgrade'][1] == 'Completada'
     w._procesar('##RESULT:autoclean:1')
+    if language == 'es':
+        huella = 'a' * 64
+        cambios = app.base64.b64encode(b'Purg old-package [1]').decode()
+        peticion = f'##CLEANUP-REVIEW:--purge:{huella}:{cambios}'
+        with patch.object(w, 'proceso', Mock()) as proceso:
+            canal = proceso.get_stdin_pipe.return_value
+            with patch.object(Gtk.Dialog, 'run', return_value=Gtk.ResponseType.OK):
+                w._procesar(peticion)
+            canal.write_all.assert_called_once_with((huella + '\n').encode(), None)
+            canal.reset_mock()
+            with patch.object(Gtk.Dialog, 'run', return_value=Gtk.ResponseType.CANCEL):
+                w._procesar(peticion)
+            canal.write_all.assert_called_once_with(b'omitir\n', None)
     assert w.resultados_tareas['autoclean'][1] == 'Error'
     assert w.expansor_consola.get_expanded()
     w.expansor_consola.set_expanded(False)

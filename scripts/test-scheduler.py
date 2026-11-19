@@ -162,6 +162,31 @@ with patch.object(Path, 'is_dir', return_value=True), \
     assert '--setenv=DISPLAY=:0' in command and '--setenv=WAYLAND_DISPLAY=wayland-0' in command
     launch.assert_not_called()
 
+    s._notify_incomplete('1000', {'format': 'deb', 'path': ''}, {
+        'detail': 'El plan APT ha cambiado <APT>',
+        'tasks': {'upgrade': 'error', 'autoclean': 'not-run', 'rebootcheck': 'success'},
+    })
+    command = session_env.call_args.args[0]
+    assert '--no-block' in command
+    assert s._NOTIFICATION_ACTION in command
+    assert command[-3] == 'Mantenimiento programado incompleto'
+    assert '&lt;APT&gt;' in command[-2] and 'mantenimiento manual' in command[-2]
+    assert 'Actualizar los paquetes del sistema · Error' in command[-2]
+    assert 'Limpiar la caché de paquetes · Pendiente' in command[-2]
+    assert 'Comprobar si hace falta reiniciar' not in command[-2]
+    assert command[-1] == '/usr/bin/aio-debian-gui'
+
+# El usuario debe activar la acción para abrir la aplicación.
+for action, calls in [('open', 2), ('', 1)]:
+    argv = ['-c', '/usr/bin/notify-send', 'Título', 'Detalle', '/usr/bin/aio-debian-gui']
+    with patch.object(sys, 'argv', argv), patch.object(s.subprocess, 'run',
+            return_value=SimpleNamespace(returncode=0, stdout=action)) as simulated:
+        exec(s._NOTIFICATION_ACTION, {})
+        assert simulated.call_count == calls
+        assert '--action=open=Abrir AiO Debian' in simulated.call_args_list[0].args[0]
+        if action:
+            assert simulated.call_args.args[0] == ['/usr/bin/aio-debian-gui']
+
 with tempfile.TemporaryDirectory() as directory:
     root = Path(directory)
     with patch.multiple(s, CONFIG_DIR=root/'config', STATE_DIR=root/'state', UNIT_DIR=root/'units', LOCK=str(root/'run/maintenance.lock')), \
@@ -234,9 +259,11 @@ with tempfile.TemporaryDirectory() as directory:
              patch.object(s.subprocess, 'run', return_value=SimpleNamespace(returncode=0)) as run, \
              patch.object(s.subprocess, 'Popen', side_effect=Process) as popen, \
              patch.object(s, '_notify_success') as notify, \
+             patch.object(s, '_notify_incomplete') as incomplete, \
              patch.object(s, '_launch_for_reboot') as launch:
             assert s.run_schedule('1000') == 0
             notify.assert_called_once_with('1000')
+            incomplete.assert_not_called()
             launch.assert_called_once_with('1000', config['launcher'])
             result = s._read(s.STATE_DIR/'1000.json')
             assert result['status'] == 'success' and result['finished'] and result['reboot_required']
@@ -255,6 +282,7 @@ with tempfile.TemporaryDirectory() as directory:
                 result = s._read(s.STATE_DIR/'1000.json')
                 assert result['status'] == 'error' and 'needrestart' in result['detail']
                 assert result['reboot_required'] and result['tasks']['rebootcheck'] == 'error'
+                assert incomplete.call_args.args[2] == result
                 notify.assert_not_called()
                 launch.assert_called_once_with('1000', config['launcher'])
             with patch.object(preflight, '_check_local', return_value=preflight.Report(True, ['blocked'])):
@@ -266,11 +294,13 @@ with tempfile.TemporaryDirectory() as directory:
                 notify.assert_not_called()
                 launch.assert_not_called()
                 assert s._read(s.STATE_DIR/'1000.json')['status'] == 'blocked'
+                assert incomplete.call_args.args[2]['status'] == 'blocked'
             with patch.object(preflight, '_apt_locks', return_value=['/var/lib/dpkg/lock']):
                 run.reset_mock()
                 assert s.run_schedule('1000') == 0
                 run.assert_not_called()
                 assert s._read(s.STATE_DIR/'1000.json')['status'] == 'skipped'
+                assert incomplete.call_args.args[2]['status'] == 'skipped'
             with patch.object(s.shutil, 'disk_usage', return_value=SimpleNamespace(free=500*1024**2)):
                 run.reset_mock()
                 assert s.run_schedule('1000') == 1

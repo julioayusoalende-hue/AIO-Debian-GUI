@@ -77,13 +77,27 @@ for task in ("upgrade", "autoremove"):
              patch.object(mod, "_run", side_effect=lambda cmd, timeout=25: SimpleNamespace(
                  returncode=0, stdout=plan if "-s" in cmd else "", stderr="")):
             report = mod.check([task])
-            assert "ELIMINAR: old-package" in report.preview
+            assert ("PURGAR: " if marker == "Purg" else "ELIMINAR: ") + "old-package" in report.preview
             if task == "upgrade":
                 assert report.blocked
             else:
                 assert not report.blocked
                 assert report.autoremove_plan == hashlib.sha256(plan.encode()).hexdigest()
                 assert "Aviso: la simulación de autoremove propone eliminar paquetes:" in report.messages[-1]
+
+# La purga tiene una simulación explícita y una huella de las acciones mostradas.
+with patch.object(mod, "_apt_locks", return_value=[]), \
+     patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), \
+     patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), \
+     patch.object(mod, "_run", side_effect=lambda cmd, timeout=25: SimpleNamespace(
+         returncode=0, stdout="Purg old-package [1]\n" if "--purge" in cmd else "", stderr="")) as run:
+    report = mod.check(["autopurge"])
+    assert not report.blocked
+    assert "PURGAR: old-package" in report.preview
+    assert report.autoremove_plan == hashlib.sha256(b"Purg old-package [1]\n").hexdigest()
+    assert any("archivos de configuración" in message for message in report.messages)
+    assert any("--purge" in args[0] for args, _kwargs in run.call_args_list)
+    assert mod.check(["autoremove", "autopurge"]).blocked
 
 plan = "Inst nano [7.2] (7.3 Debian:stable)\n"
 with patch.object(mod, "_apt_locks", return_value=[]), \

@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parent.parent
 
@@ -62,6 +63,15 @@ with tempfile.TemporaryDirectory() as directory:
     run("dpkg-deb", "-x", str(deb), str(work / "extracted"), cwd=work)
     notes = work / "extracted/usr/share/aio-debian-gui/release-notes.txt"
     assert notes.read_text(encoding="utf-8") == "1.0.4~testing.1.1\n• Novedades testing\n"
+    metainfo = next((work / "extracted/usr/share/metainfo").glob("*.metainfo.xml"))
+    component = ET.parse(metainfo).getroot()
+    assert component.findtext("project_license") == "GPL-3.0-or-later"
+    assert component.findtext("launchable") == "aio-debian-gui.desktop"
+    release = component.find("releases/release")
+    assert release.get("version") == "1.0.4~testing.1.1"
+    assert release.get("type") == "development"
+    assert release.findtext("description/ul/li") == "Novedades testing"
+    assert int(run("dpkg-deb", "-f", str(deb), "Installed-Size", cwd=work).stdout) > 0
     core = work / "extracted/usr/lib/aio-debian-gui"
     assert "VERSION = '1.0.4~testing.1.1'" in (core / "aio_core/scheduler.py").read_text()
     assert "HELPER_VERSION=1.0.4~testing.1.1" in (core / "aio-debian-gui-helper").read_text()
@@ -70,5 +80,10 @@ with tempfile.TemporaryDirectory() as directory:
     run("bash", "scripts/build-deb.sh", cwd=work)
     stable_deb = work / "dist/aio-debian-gui_1.0.3_all.deb"
     assert run("dpkg-deb", "-f", str(stable_deb), "Version", cwd=work).stdout.strip() == "1:1.0.3"
+    run("dpkg-deb", "-x", str(stable_deb), str(work / "stable"), cwd=work)
+    stable_metainfo = work / "stable/usr/share/metainfo" / metainfo.name
+    stable_release = ET.parse(stable_metainfo).find("releases/release")
+    assert stable_release.get("version") == "1.0.3" and stable_release.get("type") == "stable"
+    assert stable_release.findtext("description/ul/li") == "Novedades estables"
 
 print("✔ versionado testing y aislamiento del paquete estable")

@@ -3,6 +3,7 @@ import argparse
 from contextlib import contextmanager, suppress
 from datetime import datetime, timezone
 import fcntl
+from html import escape
 import json
 import os
 from pathlib import Path
@@ -311,7 +312,49 @@ def _notify_success(uid):
         print(f'No se pudo notificar el mantenimiento: {detail}', file=sys.stderr)
 
 
+# Se ejecuta como el usuario, en una unidad independiente del trabajo de mantenimiento.
+_NOTIFICATION_ACTION = """\
+import subprocess
+import sys
+
+sender, title, body, *launcher = sys.argv[1:]
+try:
+    result = subprocess.run(
+        [sender, '--app-name=AiO Debian GUI', '--urgency=normal',
+         '--expire-time=300000', '--action=open=Abrir AiO Debian',
+         title, body],
+        capture_output=True, text=True, check=False, timeout=310,
+    )
+    if result.returncode == 0 and result.stdout.strip() == 'open':
+        subprocess.run(launcher, check=False)
+except (OSError, subprocess.SubprocessError) as error:
+    print(f'No se pudo completar la notificación: {error}', file=sys.stderr)
+"""
+
+
+def _notify_incomplete(uid, launcher, result):
+    names = {
+        'upgrade': 'Actualizar los paquetes del sistema',
+        'autoclean': 'Limpiar la caché de paquetes',
+        'flatpak-update': 'Actualizar aplicaciones Flatpak',
+        'snap-update': 'Actualizar aplicaciones Snap',
+        'rebootcheck': 'Comprobar si hace falta reiniciar',
+    }
+    lines = [escape(result['detail'][:320])]
+    for task, status in result['tasks'].items():
+        if status != 'success':
+            label = 'Error' if status == 'error' else 'Pendiente'
+            lines.append(f'• {names[task]} · {label}')
+    lines.append('Abre AiO Debian para revisar el resultado y ejecutar el mantenimiento manual.')
+    _launch_in_session(uid, launcher, notification=(
+        'Mantenimiento programado incompleto', '\n'.join(lines)))
+
+
 def _launch_for_reboot(uid, launcher):
+    _launch_in_session(uid, launcher)
+
+
+def _launch_in_session(uid, launcher, notification=None):
     uid = validate_uid(uid)
     runtime = USER_RUNTIME_DIR / uid
     bus = runtime / 'bus'
@@ -348,7 +391,7 @@ def _launch_for_reboot(uid, launcher):
             elif os.access(deb, os.X_OK):
                 command = [deb]
             else:
-                print('No se encontró una edición instalada de AiO para avisar del reinicio.', file=sys.stderr)
+                print('No se encontró una edición instalada de AiO para abrir.', file=sys.stderr)
                 return
         session_env = subprocess.run(
             [runuser, '-u', username, '--', '/usr/bin/env',
@@ -371,14 +414,22 @@ def _launch_for_reboot(uid, launcher):
             return
         launch = [runuser, '-u', username, '--', '/usr/bin/env', *env,
                   systemd_run, '--user', '--no-block', '--collect']
-        launch.extend('--setenv=' + value for value in env[2:])
-        launch.extend(['--', *command, '--scheduled-reboot-required'])
+        launch.extend('--setenv=' + value for value in env)
+        if notification:
+            notify_send = shutil.which('notify-send')
+            if not notify_send:
+                print('No se pudo notificar el mantenimiento: falta notify-send.', file=sys.stderr)
+                return
+            launch.extend(['--', '/usr/bin/python3', '-c', _NOTIFICATION_ACTION,
+                           notify_send, *notification, *command])
+        else:
+            launch.extend(['--', *command, '--scheduled-reboot-required'])
         result = subprocess.run(launch, capture_output=True, text=True, timeout=15, check=False)
         if result.returncode:
             detail = (result.stderr or result.stdout or 'systemd-run falló.').strip()[-300:]
-            print(f'No se pudo abrir AiO para avisar del reinicio: {detail}', file=sys.stderr)
+            print(f'No se pudo ejecutar la acción de AiO: {detail}', file=sys.stderr)
     except (OSError, subprocess.SubprocessError) as exc:
-        print(f'No se pudo abrir AiO para avisar del reinicio: {str(exc)[:300]}', file=sys.stderr)
+        print(f'No se pudo ejecutar la acción de AiO: {str(exc)[:300]}', file=sys.stderr)
 
 
 def run_schedule(uid):
@@ -398,6 +449,8 @@ def run_schedule(uid):
         _atomic(path, json.dumps(result) + '\n')
         if state == 'success':
             _notify_success(uid)
+        else:
+            _notify_incomplete(uid, config.get('launcher'), result)
         if result['reboot_required']:
             _launch_for_reboot(uid, config.get('launcher'))
         return 0 if state in ('success', 'skipped') else 1
@@ -432,10 +485,13 @@ def run_schedule(uid):
             command += ['--upgrade-plan', report.upgrade_plan]
         command += config['tasks']
         environment = {**os.environ, 'PKEXEC_UID': uid, 'LC_ALL': 'C'}
+        last_error = ''
         with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               text=True, env=environment, pass_fds=(fd,)) as process:
             for line in process.stdout:
                 print(line, end='', flush=True)
+                if line.startswith('[-] '):
+                    last_error = line[4:].strip()
                 if line.strip() == '##REBOOT:1':
                     result['reboot_required'] = True
                 match = re.fullmatch(r'##RESULT:([a-z-]+):([01])\n?', line)
@@ -447,7 +503,7 @@ def run_schedule(uid):
             return finish('success', 'Mantenimiento completado.')
         if result['tasks'].get('rebootcheck') == 'error':
             return finish('error', 'No se pudo comprobar si hace falta reiniciar; revisa needrestart y el journal.')
-        return finish('error', 'El mantenimiento terminó con errores; revisa los resultados de las tareas.')
+        return finish('error', last_error[:600] or 'El mantenimiento terminó con errores; revisa los resultados de las tareas.')
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
         return finish('error', str(exc)[:600])
     finally:
