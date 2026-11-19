@@ -37,9 +37,11 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.0.10
+### Lo nuevo en la 1.1.0
 
-- **Comprobaciones de seguridad:** el informe de APT aprovecha la altura disponible de la ventana y mantiene los botones a la vista.
+- **Inicio:** configura la entrada predeterminada, el tiempo de espera y la visibilidad del menú de GRUB.
+- **Terminal:** separa la consola sin perder la sesión. El menú Comandos incluye Fastfetch y btop, que se puede instalar desde la propia terminal.
+- **Apps recomendadas:** selecciona varias aplicaciones e instala cada una con el formato disponible que elijas.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -47,7 +49,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.0.10**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.1.0**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -71,10 +73,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.0.10:
+Para la versión 1.1.0:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.0.10_all.deb
+sudo apt install ./aio-debian-gui_1.1.0_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.
@@ -148,9 +150,9 @@ Las comprobaciones gráficas requieren PyGObject, GTK 3, VTE y una pantalla disp
 <details>
 <summary><strong>Cómo se numeran las versiones testing</strong></summary>
 
-Cada cambio en `testing` que supera las comprobaciones publica una preversión sin modificar `main` ni el repositorio APT estable. Parte de la siguiente versión respecto a la última estable: por ejemplo, tras `1.0.10`, `1.0.11~testing.N.INTENTO`.
+Cada cambio en `testing` que supera las comprobaciones publica una preversión sin modificar `main` ni el repositorio APT estable. Parte de la siguiente versión respecto a la última estable: por ejemplo, tras `1.1.0`, `1.1.1~testing.N.INTENTO`.
 
-El contador se aplica al paquete construido. Debian considera esa preversión anterior a `1.0.11`. La publicación estable se realiza por separado, sin arrastrar el contador.
+El contador se aplica al paquete construido. Debian considera esa preversión anterior a `1.1.1`. La publicación estable se realiza por separado, sin arrastrar el contador.
 
 </details>
 

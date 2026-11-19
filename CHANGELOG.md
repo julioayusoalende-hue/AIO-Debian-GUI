@@ -1,6 +1,6 @@
 # Cambios
 
-## 1.0.11
+## 1.1.0
 
 - Agrupa los accesos de la terminal en un único menú Comandos para dejar más espacio a la consola.
 - Añade un botón para abrir btop desde la terminal e instalarlo por APT si falta.
@@ -481,7 +481,7 @@
 - El asistente privilegiado valida la distribución y rechaza tareas cruzadas aunque se le llame sin interfaz gráfica.
 - Pruebas con perfiles Debian y Ubuntu simulados, sin modificar repositorios del equipo de pruebas.
 
-## 1.1.0
+## 1.1.0 (serie histórica)
 
 - Extrae la lógica de versiones/AppImage, historial y preferencias a `aio_core`, sin dependencias GTK.
 - Mantiene una capa de compatibilidad para la interfaz y el asistente Polkit.
