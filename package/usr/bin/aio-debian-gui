@@ -1075,7 +1075,7 @@ class VentanaPrincipal(Gtk.Window):
         self.recommended_scan_generation = 0
         self.terminal_started = False
         self.ventana_terminal = None
-        self.ventana_btop = None
+        self.terminal_btop = None
         self.programando = False
         self.programacion = ControladorProgramacion(self)
         self.diagnostico_en_curso = False
@@ -1125,8 +1125,6 @@ class VentanaPrincipal(Gtk.Window):
 
     def _ventana_destruida(self, _ventana):
         self.destruida = True
-        if self.ventana_btop is not None:
-            self.ventana_btop.destroy()
         if self.ventana_terminal is not None:
             self.ventana_terminal.destroy()
             self.ventana_terminal = None
@@ -1747,9 +1745,9 @@ class VentanaPrincipal(Gtk.Window):
         if simple:
             self.panel_derecho.hide()
         else:
+            if not self.panel_derecho.get_visible():
+                self.restaurar_proporcion_paneles = True
             self.panel_derecho.show_all()
-        self.separador_paneles.set_no_show_all(simple)
-        self.separador_paneles.set_visible(not simple)
         self.expansor_consola.set_expanded(False)
         self.expansor_consola.set_no_show_all(simple)
         self.expansor_consola.set_visible(not simple)
@@ -1802,7 +1800,12 @@ class VentanaPrincipal(Gtk.Window):
         self.contenido_terminal = consola
         consola.set_border_width(12)
         opciones_terminal = Gtk.Box(spacing=8)
-        self.btn_comandos_terminal = Gtk.MenuButton(label=traducir("Comandos"))
+        self.btn_comandos_terminal = Gtk.MenuButton()
+        self.btn_comandos_terminal.set_image(Gtk.Image.new_from_icon_name(
+            "utilities-terminal-symbolic", Gtk.IconSize.BUTTON))
+        nombre_comandos = traducir("Comandos")
+        self.btn_comandos_terminal.set_tooltip_text(nombre_comandos)
+        self.btn_comandos_terminal.get_accessible().set_name(nombre_comandos)
         opciones_terminal.pack_start(self.btn_comandos_terminal, False, False, 0)
         self.terminal_status = etiqueta("")
         opciones_terminal.pack_start(self.terminal_status, True, True, 0)
@@ -1835,15 +1838,19 @@ class VentanaPrincipal(Gtk.Window):
         terminal_scroll.set_vexpand(True)
         self.terminal = Vte.Terminal()
         self.terminal.set_scrollback_lines(10000)
-        self._construir_edicion_terminal()
+        self._construir_edicion_terminal(self.terminal)
         comandos.show_all()
         self.terminal.connect("child-exited", self._terminal_finalizada)
         terminal_scroll.add(self.terminal)
-        consola.pack_start(terminal_scroll, True, True, 0)
+        self.vistas_terminal = Gtk.Stack()
+        self.vistas_terminal.set_hhomogeneous(False)
+        self.vistas_terminal.set_vhomogeneous(False)
+        self.vistas_terminal.add_named(terminal_scroll, "bash")
+        consola.pack_start(self.vistas_terminal, True, True, 0)
         self.pagina_terminal.pack_start(consola, True, True, 0)
         notebook.append_page(self.pagina_terminal, Gtk.Label(label=traducir("Terminal")))
         notebook.connect("switch-page", self._cambiar_pestana_terminal)
-        paneles = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        paneles = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL, wide_handle=True)
         self.paneles_principales = paneles
         principal.pack_start(paneles, True, True, 0)
 
@@ -1852,10 +1859,7 @@ class VentanaPrincipal(Gtk.Window):
         tareas.set_min_content_width(220)
         tareas.set_min_content_height(220)
         tareas.add(self._tarjeta_opciones())
-        paneles.pack_start(tareas, True, True, 0)
-
-        separador = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
-        paneles.pack_start(separador, False, False, 0)
+        paneles.pack1(tareas, True, False)
 
         contexto = Gtk.ScrolledWindow()
         contexto.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
@@ -1865,11 +1869,13 @@ class VentanaPrincipal(Gtk.Window):
         lateral.pack_start(self._tarjeta_info(), False, False, 0)
         lateral.pack_start(self._tarjeta_seleccion(), False, False, 0)
         contexto.add(lateral)
-        paneles.pack_start(contexto, False, True, 0)
-        self.separador_paneles = separador
+        paneles.pack2(contexto, True, False)
         self.panel_izquierdo = tareas
         self.panel_derecho = contexto
         self.adaptacion_paneles = None
+        self.proporcion_paneles = 0.6
+        self.restaurar_proporcion_paneles = True
+        paneles.connect_after("size-allocate", self._ajustar_proporcion_paneles)
         self.connect("size-allocate", self._adaptar_paneles)
 
         inf = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
@@ -2689,12 +2695,12 @@ class VentanaPrincipal(Gtk.Window):
             raise RuntimeError((proc.stderr or "No se pudo consultar Flatpak.").strip()[-1000:])
         return set(proc.stdout.splitlines())
 
-    def _construir_edicion_terminal(self):
+    def _construir_edicion_terminal(self, terminal):
         acciones = (
-            (Gdk.KEY_c, "Copiar", lambda: self.terminal.copy_clipboard_format(Vte.Format.TEXT)),
-            (Gdk.KEY_v, "Pegar", self.terminal.paste_clipboard),
-            (Gdk.KEY_a, "Seleccionar todo", self.terminal.select_all),
-            (None, "Quitar selección", self.terminal.unselect_all),
+            (Gdk.KEY_c, "Copiar", lambda: terminal.copy_clipboard_format(Vte.Format.TEXT)),
+            (Gdk.KEY_v, "Pegar", terminal.paste_clipboard),
+            (Gdk.KEY_a, "Seleccionar todo", terminal.select_all),
+            (None, "Quitar selección", terminal.unselect_all),
         )
         menu = Gtk.Menu()
         atajos = {}
@@ -2708,7 +2714,7 @@ class VentanaPrincipal(Gtk.Window):
             item.add(texto)
             def ejecutar(_item, operacion=accion):
                 operacion()
-                self.terminal.grab_focus()
+                terminal.grab_focus()
 
             item.connect("activate", ejecutar)
             menu.append(item)
@@ -2728,19 +2734,19 @@ class VentanaPrincipal(Gtk.Window):
                     return False
                 menu.popup_at_pointer(evento)
             else:
-                menu.popup_at_widget(self.terminal, Gdk.Gravity.CENTER, Gdk.Gravity.CENTER, None)
+                menu.popup_at_widget(terminal, Gdk.Gravity.CENTER, Gdk.Gravity.CENTER, None)
             return True
 
-        self.terminal.connect("key-press-event", pulsar_tecla)
-        self.terminal.connect("button-press-event", mostrar_menu)
-        self.terminal.connect("popup-menu", mostrar_menu)
+        terminal.connect("key-press-event", pulsar_tecla)
+        terminal.connect("button-press-event", mostrar_menu)
+        terminal.connect("popup-menu", mostrar_menu)
 
     def _cambiar_pestana_terminal(self, _notebook, pagina, _numero):
         if pagina != self.pagina_terminal or self.ventana_terminal is not None:
             return
         if not self.terminal_started:
             self._iniciar_terminal()
-        self.terminal.grab_focus()
+        (self.terminal_btop or self.terminal).grab_focus()
 
     def _alternar_ventana_terminal(self, _boton):
         if self.ventana_terminal is not None:
@@ -2758,7 +2764,7 @@ class VentanaPrincipal(Gtk.Window):
         # Se mueve la terminal existente para conservar la sesión y su salida.
         self.contenido_terminal.reparent(ventana)
         ventana.present()
-        self.terminal.grab_focus()
+        (self.terminal_btop or self.terminal).grab_focus()
 
     def _acoplar_terminal(self, *_args):
         ventana = self.ventana_terminal
@@ -2772,12 +2778,12 @@ class VentanaPrincipal(Gtk.Window):
         if not self.preferencias["modo_simple"]:
             self.notebook.set_current_page(self.notebook.page_num(self.pagina_terminal))
             self.present()
-            self.terminal.grab_focus()
+            (self.terminal_btop or self.terminal).grab_focus()
         return True
 
     def _comprobar_btop(self, boton):
-        if self.ventana_btop is not None:
-            self.ventana_btop.present()
+        if self.terminal_btop is not None:
+            self.terminal_btop.grab_focus()
             return
         boton.set_sensitive(False)
         self.terminal_status.set_text(traducir("Comprobando %s…") % "btop")
@@ -2845,23 +2851,29 @@ class VentanaPrincipal(Gtk.Window):
         return GLib.SOURCE_REMOVE
 
     def _abrir_btop(self):
-        ventana = Gtk.Window(title="btop")
-        ventana.set_icon_name("aio-debian-gui")
-        ventana.set_default_size(940, 580)
         visor = Vte.Terminal()
-        ventana.add(visor)
-        self.ventana_btop = ventana
-        ventana.connect("destroy", lambda _ventana: setattr(self, "ventana_btop", None))
-        visor.connect("child-exited", lambda *_args: ventana.destroy())
-        ventana.show_all()
+        self.terminal_btop = visor
+        self._construir_edicion_terminal(visor)
+        self.vistas_terminal.add_named(visor, "btop")
+        visor.show()
+        self.vistas_terminal.set_visible_child(visor)
         visor.grab_focus()
+
+        def cerrar(_terminal, _estado=None):
+            if not self.destruida and self.terminal_btop is visor:
+                self.terminal_btop = None
+                self.vistas_terminal.set_visible_child_name("bash")
+                visor.destroy()
+                self.terminal.grab_focus()
+
+        visor.connect("child-exited", cerrar)
         argv = comando_host("btop")
         if es_flatpak():
             argv = comando_host("script", "-qefc", "exec btop", "/dev/null")
 
         def iniciado(_terminal, _pid, error, _data):
-            if error is not None and self.ventana_btop is ventana:
-                ventana.destroy()
+            if error is not None and not self.destruida and self.terminal_btop is visor:
+                cerrar(visor)
                 self.terminal_status.set_text(
                     traducir("No se pudo ejecutar %s.") % "btop" + " " + error.message)
 
@@ -2881,7 +2893,11 @@ class VentanaPrincipal(Gtk.Window):
         def ejecutar():
             try:
                 # clear necesita TERM también cuando se ejecuta en el anfitrión.
-                argv = comando_host("env", "TERM=xterm-256color", *comando)
+                argumentos = comando
+                if clave == "fastfetch":
+                    # La captura por tubería desactiva los colores de Fastfetch por defecto.
+                    argumentos += ("--pipe", "false")
+                argv = comando_host("env", "TERM=xterm-256color", *argumentos)
                 if clave == "nautilus":
                     proceso = subprocess.Popen(
                         argv, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
@@ -3232,6 +3248,27 @@ class VentanaPrincipal(Gtk.Window):
         self._marcar_recomendada_instalada(app["id"], canal["type"])
         return GLib.SOURCE_REMOVE
 
+    def _ajustar_proporcion_paneles(self, paneles, _allocation):
+        if (paneles.get_orientation() != Gtk.Orientation.HORIZONTAL
+                or self.get_allocated_width() < 900 or self.preferencias["modo_simple"]):
+            return
+        izquierda = paneles.get_position()
+        ancho = self.panel_izquierdo.get_allocated_width() + self.panel_derecho.get_allocated_width()
+        if self.restaurar_proporcion_paneles:
+            GLib.idle_add(self._restaurar_separador_paneles)
+        elif ancho > 0:
+            self.proporcion_paneles = izquierda / ancho
+
+    def _restaurar_separador_paneles(self):
+        if (not self.destruida and self.restaurar_proporcion_paneles
+                and self.paneles_principales.get_orientation() == Gtk.Orientation.HORIZONTAL
+                and not self.preferencias["modo_simple"]):
+            ancho = (self.panel_izquierdo.get_allocated_width()
+                     + self.panel_derecho.get_allocated_width())
+            self.restaurar_proporcion_paneles = False
+            self.paneles_principales.set_position(round(ancho * self.proporcion_paneles))
+        return GLib.SOURCE_REMOVE
+
     def _adaptar_paneles(self, _ventana, allocation):
         estrecha = allocation.width < 900
         apilados = self.paneles_principales.get_orientation() == Gtk.Orientation.VERTICAL
@@ -3249,8 +3286,9 @@ class VentanaPrincipal(Gtk.Window):
         orientacion = Gtk.Orientation.VERTICAL if estrecha else Gtk.Orientation.HORIZONTAL
         if self.paneles_principales.get_orientation() != orientacion:
             self.paneles_principales.set_orientation(orientacion)
-            self.separador_paneles.set_orientation(
-                Gtk.Orientation.HORIZONTAL if estrecha else Gtk.Orientation.VERTICAL)
+            self.restaurar_proporcion_paneles = not estrecha
+            paneles = self.paneles_principales
+            paneles.set_position(-1)
             self.seleccion_detalle.set_expanded(not estrecha)
         self._ajustar_consola()
         return GLib.SOURCE_REMOVE
@@ -3327,7 +3365,7 @@ class VentanaPrincipal(Gtk.Window):
     def _abrir_terminal(self, _boton=None):
         if self.ventana_terminal is not None:
             self.ventana_terminal.present()
-            self.terminal.grab_focus()
+            (self.terminal_btop or self.terminal).grab_focus()
         elif not self.preferencias["modo_simple"]:
             self.notebook.set_current_page(self.notebook.page_num(self.pagina_terminal))
 

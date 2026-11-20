@@ -119,18 +119,15 @@ if Gtk.init_check([])[0]:
     assert not ventana.expansor_consola.get_expanded()
     assert [p.get_visible() for p in ventana.notebook.get_children()] == [True, False, False, False, False]
     assert not ventana.panel_derecho.get_visible()
-    assert not ventana.separador_paneles.get_visible()
     assert ventana.panel_izquierdo.get_visible()
     ventana.preferencias["modo_simple"] = False
     ventana._aplicar_modo_simple()
     assert ventana.panel_derecho.get_visible()
     assert ventana.btn_diagnostico.get_visible()
-    assert ventana.separador_paneles.get_visible()
     ventana.preferencias["modo_simple"] = True
     ventana._aplicar_modo_simple()
     ventana.show_all()
     assert not ventana.panel_derecho.get_visible()
-    assert not ventana.separador_paneles.get_visible()
     ventana._abrir_terminal()
     assert ventana.notebook.get_current_page() == 0
     ventana._escribir("hidden output", "error")

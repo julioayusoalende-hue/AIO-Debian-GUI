@@ -2,6 +2,9 @@
 
 ## 1.1.2
 
+- Abre btop en la propia consola y recupera la sesión de Bash al salir.
+- Conserva los colores de Fastfetch al ejecutarlo desde el menú Comandos de la terminal.
+- Permite arrastrar el separador de la pestaña principal y conserva el reparto de ancho al redimensionar la ventana.
 - Explica cuándo volver a iniciar sesión tras restaurar GNOME y ofrece el botón «Cerrar sesión…» en el aviso final.
 
 ## 1.1.1

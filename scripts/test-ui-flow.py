@@ -499,22 +499,38 @@ for language in ('es', 'en', 'fr', 'zh'):
         panels = w.paneles_principales
         if actual < 900:
             assert panels.get_orientation() == Gtk.Orientation.VERTICAL, (language, width, actual)
-            assert w.separador_paneles.get_orientation() == Gtk.Orientation.HORIZONTAL
         else:
             assert panels.get_orientation() == Gtk.Orientation.HORIZONTAL, (language, width, actual)
             left, right = w.panel_izquierdo, w.panel_derecho
             assert left.get_allocated_width() > right.get_allocated_width(), (
                 language, width, actual, left.get_allocated_width(), right.get_allocated_width())
-            sx = w.separador_paneles.translate_coordinates(w, 0, 0)[0]
             lx = left.translate_coordinates(w, 0, 0)[0]
             rx = right.translate_coordinates(w, 0, 0)[0]
-            assert lx < sx < rx
+            assert panels.get_handle_window().is_visible()
+            assert lx + left.get_allocated_width() < rx
         if os.environ.get('AIO_UI_SCREENSHOTS') and width in (600, 1160) and language == 'es':
             directory = Path(os.environ['AIO_UI_SCREENSHOTS'])
             directory.mkdir(parents=True, exist_ok=True)
             window = w.get_window()
             shot = app.Gdk.pixbuf_get_from_window(window, 0, 0, window.get_width(), window.get_height())
             shot.savev(str(directory / f'ui-{width}.png'), 'png', [], [])
+    if language == 'es':
+        panels.set_position(730)
+        settle()
+        ancho_izq = left.get_allocated_width()
+        ancho_der = right.get_allocated_width()
+        assert abs(ancho_izq - 730) <= 1
+        ratio = ancho_izq / (ancho_izq + ancho_der)
+        w.resize(1520, 900)
+        settle()
+        assert left.get_allocated_width() > ancho_izq
+        assert right.get_allocated_width() > ancho_der
+        assert abs(panels.get_position() / (left.get_allocated_width() + right.get_allocated_width()) - ratio) < 0.005
+        w.resize(700, 900)
+        settle()
+        w.resize(1520, 900)
+        settle()
+        assert abs(panels.get_position() / (left.get_allocated_width() + right.get_allocated_width()) - ratio) < 0.005
     w.destroy()
     settle()
 
@@ -865,7 +881,15 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
     # La terminal abre Bash sin ejecutar Fastfetch y conserva los accesos manuales.
     with tempfile.TemporaryDirectory() as directory:
         fastfetch = Path(directory) / 'fastfetch'
-        fastfetch.write_text('#!/bin/sh\nprintf "run\\n" >> "' + directory + '/fastfetch-runs"\nprintf "AIO_FASTFETCH_TEST\\n"\n')
+        fastfetch.write_text(
+            '#!/bin/sh\n'
+            'printf "run\\n" >> "' + directory + '/fastfetch-runs"\n'
+            'if [ "$*" = "--pipe false" ]; then\n'
+            '    printf "\\033[36mAIO_FASTFETCH_TEST\\033[0m\\n"\n'
+            'else\n'
+            '    printf "AIO_FASTFETCH_TEST\\n"\n'
+            'fi\n'
+        )
         fastfetch.chmod(0o755)
         btop = Path(directory) / 'btop'
         btop_marker = Path(directory) / 'btop-ran'
@@ -933,7 +957,10 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
             w.terminal.feed_child(b'printf "%s%s\\n" AIO_DETACHED_ "$AIO_DOCK_STATE"\n')
             assert terminal_contains('AIO_DETACHED_preserved')
             assert list(w.terminal_buttons) == ['clear', 'fastfetch', 'btop', 'nautilus']
-            assert w.btn_comandos_terminal.get_label() == 'Comandos'
+            assert not w.btn_comandos_terminal.get_label()
+            assert w.btn_comandos_terminal.get_image().get_icon_name()[0] == 'utilities-terminal-symbolic'
+            assert w.btn_comandos_terminal.get_accessible().get_name() == 'Comandos'
+            assert w.btn_comandos_terminal.get_tooltip_text() == 'Comandos'
             assert w.btn_comandos_terminal.get_toplevel() == detached
             command_menu = w.btn_comandos_terminal.get_popover()
             assert all(button.get_ancestor(Gtk.Popover) == command_menu
@@ -951,12 +978,24 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
             assert btop_marker.read_text().strip() == 'yes'
             assert not command_menu.get_mapped()
             assert w.terminal.get_pty() == pty
-            visor_btop = w.ventana_btop.get_child()
+            visor_btop = w.terminal_btop
+            assert visor_btop.get_toplevel() == detached
+            assert w.vistas_terminal.get_visible_child() == visor_btop
+            w.boton_separar_terminal.clicked()
+            settle()
+            assert visor_btop.get_toplevel() == w
+            assert w.vistas_terminal.get_visible_child() == visor_btop
+            w.boton_separar_terminal.clicked()
+            settle()
+            detached = w.ventana_terminal
+            assert visor_btop.get_toplevel() == detached
             visor_btop.feed_child(b'q\n')
             deadline = time.monotonic() + 8
-            while w.ventana_btop is not None and time.monotonic() < deadline:
+            while w.terminal_btop is not None and time.monotonic() < deadline:
                 settle()
-            assert w.ventana_btop is None
+            assert w.terminal_btop is None
+            assert w.vistas_terminal.get_visible_child_name() == 'bash'
+            assert w.terminal.get_pty() == pty
 
             btop.unlink()
             (Path(directory) / 'sh').symlink_to('/bin/sh')
@@ -987,8 +1026,11 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
             w.terminal.feed_child(b"printf '%s%s\\n' AIO_PENDING_")
             w._escribir('AIO_LOG_DURING_INPUT\n')
             assert terminal_contains('AIO_LOG_DURING_INPUT')
-            w.terminal_buttons['fastfetch'].clicked()
-            wait_button('fastfetch')
+            with patch.object(w.terminal, 'feed', wraps=w.terminal.feed) as feed:
+                w.terminal_buttons['fastfetch'].clicked()
+                wait_button('fastfetch')
+                assert any(b'\x1b[36mAIO_FASTFETCH_TEST\x1b[0m' in llamada.args[0]
+                           for llamada in feed.call_args_list)
             assert terminal_contains('AIO_FASTFETCH_TEST')
             assert (Path(directory) / 'fastfetch-runs').read_text() == 'run\n'
             w.terminal.feed_child(b'INPUT_OK\n')
