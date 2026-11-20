@@ -2,19 +2,19 @@ Origin: aio-debian-gui
 Label: aio-debian-gui
 Suite: stable
 Codename: stable
-Date: Thu, 19 Nov 2026 20:43:27 UTC
+Date: Fri, 20 Nov 2026 09:39:22 UTC
 Architectures: all
 Components: main
 Description: Repositorio APT de aio-debian-gui
 MD5Sum:
- 9df7689605fa7ba309e199331c9a02c0             1296 main/binary-all/Packages
- 6ee92baa81c18053a982f96567563269              789 main/binary-all/Packages.gz
- 4f4554254d244fa311bd946e975bfd32              872 main/binary-all/Packages.xz
- a426f474370390fe2551b152f0a21284             5592 main/dep11/Components-all.yml
- 597dcc78468bbfc4f8f490c3fa26520d             2349 main/dep11/Components-all.yml.gz
+ 4814eff6b5891017488e365fdbf9afc7             1296 main/binary-all/Packages
+ 22564b83a94a328ceae78eac74a3012b              789 main/binary-all/Packages.gz
+ 3da726d8878aa186801260c583084d9a              872 main/binary-all/Packages.xz
+ 78bfdfe2d3c93fdd3da2599668ced00b             5536 main/dep11/Components-all.yml
+ e66008eef853251433b9d90960b2d35d             2341 main/dep11/Components-all.yml.gz
 SHA256:
- 7bb3dfa175c558c9506c7fc2b952f349156257852dbd7c2ff41e8f77fa272a59             1296 main/binary-all/Packages
- 9e9930e22f152ce64d6474cdea25c04034252bca817c8b1d2a72d3fa85077e98              789 main/binary-all/Packages.gz
- 9859689af82082b7e3e0909ec20f4082eb89517419646c418264e198aa94f90d              872 main/binary-all/Packages.xz
- 06d972df642d2dab4d11bd41d0a18f1c85551e87d71a647c57579aa06718f7c0             5592 main/dep11/Components-all.yml
- 7e304289fb1318dc54653e31cedf87dcdbb78017679f7e7e05d667d6884f8c05             2349 main/dep11/Components-all.yml.gz
+ fdf3bd2d55be0684d714c584ed005c0b926feb2cba24408ee9d1e22ded1972a0             1296 main/binary-all/Packages
+ ea352fb41e1e0ef2471c15beb2a430c72c1cb87c19eef6e5e18d31c64d2daa2c              789 main/binary-all/Packages.gz
+ 66c4dc4a72fbc2a3ab8cabe34838ec787dad8b3509e657cc9f496d8e14afdf61              872 main/binary-all/Packages.xz
+ 8469123e1a0e2340da06a661748c838eabf762119960feb1abc9ef087aba0b5c             5536 main/dep11/Components-all.yml
+ a2175c9bfae58e06a20705d23792a731caf2f779be0f21ce8644b26fc21d236e             2341 main/dep11/Components-all.yml.gz

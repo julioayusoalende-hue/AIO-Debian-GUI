@@ -96,19 +96,18 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
 Releases:
-- version: 1.1.1
+- version: 1.1.2
   type: stable
-  unix-timestamp: 1795046400
+  unix-timestamp: 1795132800
   description:
     C: >-
-      <ul><li>Ajusta la cabecera para mantener el nombre y el icono del sistema dentro de la barra de título.</li><li>Permite
-      elegir entre Estable y Testing para actualizar AiO desde repositorios APT firmados.</li><li>Añade Steam y RetroArch
-      a Apps recomendadas con sus iconos.</li><li>Añade Audacity, Kdenlive y Heroic Games Launcher a Apps recomendadas con
-      sus iconos oficiales.</li><li>Añade metadatos AppStream, capturas, licencia y novedades para GNOME Software, y declara
-      el tamaño instalado del paquete DEB.</li><li>El mantenimiento programado notifica las tareas pendientes o con error
-      y ofrece abrir AiO para revisarlas y ejecutarlas manualmente.</li><li>Añade la purga opcional de dependencias huérfanas,
-      con vista previa y revisión del plan dentro del mismo mantenimiento si cambia.</li><li>Actualiza los paquetes con APT
-      sin eliminarlos y detiene la operación si no se pueden actualizar todos los índices.</li><li>Deja la limpieza de dependencias
-      desmarcada por defecto y comprueba que el plan sigue siendo el aprobado antes de aplicarlo.</li></ul>
+      <ul><li>Añade el perfil Estándar como selección predeterminada y la purga de dependencias huérfanas al perfil Completo.</li><li>Muestra
+      la RAM física instalada y traduce los encabezados de tareas e información del sistema.</li><li>Organiza los comandos
+      de la terminal en categorías y añade un acceso rápido para limpiar la consola.</li><li>Mueve los ajustes de diseño de
+      Fastfetch a la terminal y resume el kernel, la arquitectura, el procesador y la RAM en Información del sistema.</li><li>Añade
+      Htop y Análisis del arranque al menú de comandos de la terminal.</li><li>Abre btop en la propia consola y recupera la
+      sesión de Bash al salir.</li><li>Conserva los colores de Fastfetch al ejecutarlo desde el menú Comandos de la terminal.</li><li>Permite
+      arrastrar el separador de la pestaña principal y conserva el reparto de ancho al redimensionar la ventana.</li><li>Explica
+      cuándo volver a iniciar sesión tras restaurar GNOME y ofrece el botón «Cerrar sesión…» en el aviso final.</li></ul>
 ContentRating:
   oars-1.1: {}
