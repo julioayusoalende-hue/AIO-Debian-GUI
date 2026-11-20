@@ -149,10 +149,10 @@ def ruta_historial():
 def leer_historial(ruta=None):
     return core_history.leer_historial(ruta or ruta_historial())
 
-def guardar_registro_mantenimiento(tareas, resultado, reinicio=False, ruta=None):
+def guardar_registro_mantenimiento(tareas, resultado, reinicio=False, ruta=None, **detalle):
     return core_history.guardar_registro_mantenimiento(
         tareas, resultado, reinicio, ruta or ruta_historial(),
-        formato=formato_actualizacion() or "desarrollo", version=version_app(),
+        formato=formato_actualizacion() or "desarrollo", version=version_app(), **detalle,
     )
 
 def ruta_preferencias():
@@ -1143,7 +1143,11 @@ class VentanaPrincipal(Gtk.Window):
         self.switches = {}
         self.filas = {}
         self.indicadores = {}
+        self.reintento_en_ejecucion = None
+        self.flatpak_sistema_en_ejecucion = False
         self.resultados_tareas = {}
+        self.errores_tareas = {}
+        self.salida_error_tarea = []
         self.estado_diagnostico = "No comprobado"
 
         self.distribucion = distribucion_anfitrion()
@@ -1634,11 +1638,11 @@ class VentanaPrincipal(Gtk.Window):
         Gtk.main_quit()
 
 
-    def _confirmar_tareas(self, pasos):
+    def _confirmar_tareas(self, pasos, titulo="Vista previa del mantenimiento", avisos=()):
         nombres = {pid: titulo for pid, titulo, *_ in PASOS}
         dialogo = Gtk.MessageDialog(
             transient_for=self, modal=True, message_type=Gtk.MessageType.QUESTION,
-            buttons=Gtk.ButtonsType.NONE, text=traducir("Vista previa del mantenimiento"),
+            buttons=Gtk.ButtonsType.NONE, text=traducir(titulo),
         )
         dialogo.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
         dialogo.add_button(traducir("Continuar"), Gtk.ResponseType.OK)
@@ -1650,6 +1654,8 @@ class VentanaPrincipal(Gtk.Window):
             "APT puede instalar, actualizar o eliminar dependencias. "
             "Comprueba especialmente las tareas de Backports y eliminación de paquetes."
         ))
+        if avisos:
+            detalle += "\n\n" + "\n\n".join(avisos)
         dialogo.format_secondary_text(detalle)
         aceptado = dialogo.run() == Gtk.ResponseType.OK
         dialogo.destroy()
@@ -1657,32 +1663,148 @@ class VentanaPrincipal(Gtk.Window):
 
     def _mostrar_historial(self, _boton):
         self.menu_popover.popdown()
-        registros = leer_historial()
+        registros_manuales = leer_historial()
+        registros = []
         dialogo = Gtk.Dialog(title=traducir("Historial de mantenimiento"), transient_for=self,
                              modal=True)
-        dialogo.set_default_size(700, 430)
+        dialogo.set_default_size(760, 500)
         dialogo.add_button(traducir("Cerrar"), Gtk.ResponseType.CLOSE)
-        dialogo.add_button(traducir("Exportar historial"), Gtk.ResponseType.APPLY)
+        exportar = dialogo.add_button(traducir("Exportar historial"), Gtk.ResponseType.APPLY)
+        reintentar = dialogo.add_button(traducir("Reintentar tareas fallidas"), Gtk.ResponseType.YES)
         area = dialogo.get_content_area()
+        area.set_border_width(12)
+        area.set_spacing(8)
+        ejecuciones = Gtk.ComboBoxText()
+        area.pack_start(ejecuciones, False, False, 0)
+        original = Gtk.Button(label=traducir("Ver ejecución original"))
+        original.set_no_show_all(True)
+        area.pack_start(original, False, False, 0)
         vista = Gtk.TextView(editable=False, cursor_visible=False)
-        vista.set_monospace(True)
-        vista.set_wrap_mode(Gtk.WrapMode.WORD)
-        texto = []
-        for registro in reversed(registros):
-            texto.append(f"{registro['fecha']} — {registro['resultado']} — "
-                         f"{registro.get('formato', '?')} {registro.get('version', '?')}")
-            texto.append("  " + ", ".join(registro["tareas"]))
-            if registro.get("reinicio_recomendado"):
-                texto.append("  " + traducir("Reinicio recomendado"))
-            texto.append("")
-        vista.get_buffer().set_text("\n".join(texto) if texto else
-                                    traducir("Todavía no hay operaciones registradas."))
+        vista.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        vista.set_left_margin(10)
+        vista.set_right_margin(10)
+        vista.set_top_margin(10)
         scroll = Gtk.ScrolledWindow()
-        scroll.set_min_content_height(320)
         scroll.add(vista)
-        area.pack_start(scroll, True, True, 8)
+        area.pack_start(scroll, True, True, 0)
+        estado = etiqueta("Consultando el historial programado…")
+        area.pack_start(estado, False, False, 0)
+        nombres = {p[0]: traducir(p[1]) for p in PASOS}
+
+        def id_registro(registro):
+            referencia = core_history.referencia(registro)
+            return f'{referencia["origen"]}:{referencia["fecha"]}'
+
+        def fecha_local(fecha):
+            try:
+                return datetime.datetime.fromisoformat(fecha).astimezone().strftime("%x %X")
+            except (OverflowError, ValueError):
+                return fecha
+
+        def ver_original(_boton):
+            ref = registros[ejecuciones.get_active()]["reintento_de"]
+            ejecuciones.set_active_id(id_registro(ref))
+
+        original.connect("clicked", ver_original)
+        reintentar.get_style_context().add_class("suggested-action")
+
+        def mostrar_detalle(selector):
+            indice = selector.get_active()
+            original.hide()
+            reintentar.set_sensitive(False)
+            if indice < 0:
+                vista.get_buffer().set_text(traducir("Todavía no hay operaciones registradas."))
+                return
+            registro = registros[indice]
+            detalles = registro.get("detalles")
+            reintentar.set_sensitive(
+                not (self.en_curso or self.programando)
+                and bool(core_history.tareas_fallidas(registro, self._tareas_disponibles_para_reintento()))
+            )
+            texto = []
+            ref = registro.get("reintento_de")
+            if isinstance(ref, dict) and isinstance(ref.get("fecha"), str):
+                texto.extend((traducir("Reintento de la ejecución del %s") % fecha_local(ref["fecha"]), ""))
+                original.set_visible(any(id_registro(r) == id_registro(ref) for r in registros))
+            mensaje = registro.get("mensaje")
+            if isinstance(mensaje, str) and mensaje.strip():
+                texto.extend((traducir(mensaje), ""))
+            if not isinstance(detalles, dict):
+                detalles = {}
+                texto.extend((traducir("Esta ejecución se guardó sin resultados por tarea."), ""))
+            for tarea in registro["tareas"]:
+                if not isinstance(tarea, str):
+                    continue
+                info = detalles.get(tarea)
+                info = info if isinstance(info, dict) else {}
+                estado_tarea = str(info.get("estado", "Sin datos"))
+                texto.append(nombres.get(tarea, tarea) + " · " + traducir(estado_tarea))
+                if estado_tarea == "Error":
+                    error = info.get("mensaje")
+                    texto.append(error if isinstance(error, str) and error.strip() else
+                                 traducir("Sin mensaje de error registrado."))
+                texto.append("")
+            if registro.get("reinicio_recomendado"):
+                texto.append(traducir("Reinicio recomendado"))
+            vista.get_buffer().set_text("\n".join(texto).rstrip())
+            scroll.get_vadjustment().set_value(0)
+
+        def actualizar(programados):
+            fecha_anterior = ejecuciones.get_active_id()
+            registros[:] = sorted(registros_manuales + programados,
+                                  key=lambda registro: registro["fecha"], reverse=True)
+            ejecuciones.remove_all()
+            for registro in registros:
+                fecha = fecha_local(registro["fecha"])
+                origen = registro.get("origen", "Manual")
+                version = " ".join(str(registro[campo]) for campo in ("formato", "version")
+                                   if campo in registro)
+                resumen = [fecha, traducir(origen), traducir(registro["resultado"])]
+                if version:
+                    resumen.append(version)
+                ejecuciones.append(id_registro(registro), " — ".join(resumen))
+            if not fecha_anterior or not ejecuciones.set_active_id(fecha_anterior):
+                ejecuciones.set_active(0)
+            ejecuciones.set_sensitive(bool(registros))
+            exportar.set_sensitive(bool(registros))
+            mostrar_detalle(ejecuciones)
+
+        abierto = True
+
+        def cerrar(_dialogo):
+            nonlocal abierto
+            abierto = False
+
+        def cargar_programados(programados, error):
+            if abierto:
+                actualizar(programados)
+                if error:
+                    estado.set_text(traducir("No se pudo consultar el historial programado."))
+                else:
+                    estado.hide()
+            return GLib.SOURCE_REMOVE
+
+        def consultar_programados():
+            try:
+                try:
+                    informe = core_host_integration.read_scheduler_report(
+                        comando_host(HELPER_SISTEMA, "--schedule-history"))
+                except RuntimeError:
+                    informe = core_host_integration.read_scheduler_report(
+                        comando_host(HELPER_SISTEMA, "--schedule-status"))
+                programados = core_history.registros_programados(informe)
+            except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+                GLib.idle_add(cargar_programados, [], True)
+            else:
+                GLib.idle_add(cargar_programados, programados, False)
+
+        dialogo.connect("destroy", cerrar)
+        ejecuciones.connect("changed", mostrar_detalle)
+        actualizar([])
         dialogo.show_all()
-        while dialogo.run() == Gtk.ResponseType.APPLY:
+        threading.Thread(target=consultar_programados, daemon=True).start()
+        respuesta = dialogo.run()
+        while respuesta == Gtk.ResponseType.APPLY:
             selector = Gtk.FileChooserDialog(
                 title=traducir("Exportar historial"), transient_for=dialogo,
                 action=Gtk.FileChooserAction.SAVE,
@@ -1701,7 +1823,54 @@ class VentanaPrincipal(Gtk.Window):
                     self._mensaje(Gtk.MessageType.ERROR, "No se pudo exportar el historial",
                                   str(error))
             selector.destroy()
+            respuesta = dialogo.run()
+        indice = ejecuciones.get_active()
+        registro = registros[indice] if respuesta == Gtk.ResponseType.YES and indice >= 0 else None
         dialogo.destroy()
+        if registro is not None:
+            self._reintentar_mantenimiento(registro)
+
+    def _tareas_disponibles_para_reintento(self):
+        if self.distribucion == "no-soportada":
+            return set()
+        return {tarea for tarea, *_ in PASOS
+                if tarea in self.switches and tarea not in self.estados_tareas and self._visible(tarea)}
+
+    def _reintentar_mantenimiento(self, registro):
+        if self.en_curso or self.programando:
+            return
+        fallidas = core_history.tareas_fallidas(registro, {tarea for tarea, *_ in PASOS})
+        disponibles = self._tareas_disponibles_para_reintento()
+        pasos = [tarea for tarea in fallidas if tarea in disponibles]
+        if not pasos:
+            self._mensaje(Gtk.MessageType.INFO, "Reintentar tareas fallidas",
+                          "Las tareas fallidas de esta ejecución ya no están disponibles.")
+            return
+
+        nombres = {tarea: traducir(titulo) for tarea, titulo, *_ in PASOS}
+        avisos = []
+        omitidas = [nombres[tarea] for tarea in fallidas if tarea not in disponibles]
+        if omitidas:
+            avisos.append(traducir("Tareas que ya no están disponibles: %s") % ", ".join(omitidas))
+        estados = registro["detalles"]
+        if any(isinstance(info, dict) and info.get("estado") == "No ejecutada"
+               for info in estados.values()):
+            avisos.append(traducir(
+                "Las tareas pendientes seguirán sin ejecutarse. Si alguna es necesaria, revísala en Mantenimiento."
+            ))
+        upgrade = estados.get("upgrade")
+        if isinstance(upgrade, dict) and upgrade.get("estado") == "No ejecutada" and any(
+                tarea in pasos for tarea in ("autoclean", "autoremove", "autopurge")):
+            avisos.append(traducir(
+                "La actualización de APT quedó pendiente. Revisa si debes ejecutarla antes de repetir la limpieza."
+            ))
+        flatpak_sistema = "flatpak-update" in pasos and core_history.flatpak_del_sistema(registro)
+        if flatpak_sistema:
+            avisos.append(traducir("Flatpak incluye las instalaciones del sistema."))
+
+        if self._confirmar_tareas(pasos, titulo="Reintentar tareas fallidas", avisos=avisos):
+            self._comprobar_mantenimiento(pasos, reintento_de=core_history.referencia(registro),
+                                          flatpak_sistema=flatpak_sistema)
 
     def _abrir_preferencias(self, _boton):
         self.menu_popover.popdown()
@@ -3514,6 +3683,8 @@ class VentanaPrincipal(Gtk.Window):
         for widget in self.resumen_ejecucion.get_children():
             widget.destroy()
         self.resultados_tareas = {}
+        self.errores_tareas = {}
+        self.salida_error_tarea = []
         nombres = {p[0]: traducir(p[1]) for p in PASOS}
         for tarea in pasos:
             linea = etiqueta("")
@@ -4318,18 +4489,23 @@ class VentanaPrincipal(Gtk.Window):
         if not pasos:
             self._mensaje(Gtk.MessageType.INFO, "Nada que hacer", "Activa al menos una tarea.")
             return
+        self._comprobar_mantenimiento(pasos)
+
+    def _comprobar_mantenimiento(self, pasos, **opciones):
+        if self.en_curso or self.programando:
+            return
         self._poner_ocupado(True)
         self.estado.set_text(traducir("Comprobando seguridad del mantenimiento…"))
         def verificar():
             try:
                 informe = core_preflight.check(pasos)
-                GLib.idle_add(self._terminar_preflight, pasos, informe, None)
+                GLib.idle_add(self._terminar_preflight, pasos, informe, None, opciones)
             except Exception as error:
-                GLib.idle_add(self._terminar_preflight, pasos, None, str(error))
+                GLib.idle_add(self._terminar_preflight, pasos, None, str(error), opciones)
         threading.Thread(target=verificar, daemon=True).start()
         return
 
-    def _terminar_preflight(self, pasos, informe, error):
+    def _terminar_preflight(self, pasos, informe, error, opciones=None):
         if not self.en_curso:
             return False
         if error:
@@ -4384,17 +4560,18 @@ class VentanaPrincipal(Gtk.Window):
                 self._poner_ocupado(False)
                 return False
         self._continuar_mantenimiento(pasos, upgrade_plan=informe.upgrade_plan,
-                                      autoremove_plan=informe.autoremove_plan)
+                                      autoremove_plan=informe.autoremove_plan, **(opciones or {}))
         if self.proceso is None:
             self._poner_ocupado(False)
         return False
 
-    def _continuar_mantenimiento(self, pasos, upgrade_plan=None, autoremove_plan=None):
-        if not self._confirmar_tareas(pasos):
+    def _continuar_mantenimiento(self, pasos, upgrade_plan=None, autoremove_plan=None,
+                                 reintento_de=None, flatpak_sistema=False):
+        if reintento_de is None and not self._confirmar_tareas(pasos):
             self.estado.set_text(traducir("Mantenimiento cancelado antes de comenzar."))
             return
-        if pasos == ["flatpak-update"]:
-            self._iniciar_flatpak_usuario()
+        if pasos == ["flatpak-update"] and not flatpak_sistema:
+            self._iniciar_flatpak_usuario(reintento_de)
             return
         try:
             helper = helper_mantenimiento()
@@ -4546,17 +4723,14 @@ class VentanaPrincipal(Gtk.Window):
                 return
 
         lang = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or "C"
-        # Si solo se actualiza Flatpak del usuario no se invoca pkexec.
-        solo_flatpak_usuario = pasos == ["flatpak-update"]
-        if solo_flatpak_usuario:
-            cmd = comando_host(helper, "--flatpak-user-update")
-        else:
-            argumentos = []
-            if upgrade_plan:
-                argumentos.extend(("--upgrade-plan", upgrade_plan))
-            if autoremove_plan:
-                argumentos.extend(("--autoremove-plan", autoremove_plan, "--review-cleanup"))
-            cmd = comando_pkexec(helper, lang, *argumentos, *pasos)
+        argumentos = []
+        if upgrade_plan:
+            argumentos.extend(("--upgrade-plan", upgrade_plan))
+        if autoremove_plan:
+            argumentos.extend(("--autoremove-plan", autoremove_plan, "--review-cleanup"))
+        cmd = comando_pkexec(helper, lang, *argumentos, *pasos)
+        self.reintento_en_ejecucion = reintento_de
+        self.flatpak_sistema_en_ejecucion = "flatpak-update" in pasos
 
         self.buf.set_text("")
         self.necesita_reinicio = False
@@ -4568,16 +4742,12 @@ class VentanaPrincipal(Gtk.Window):
         self._preparar_resultados(pasos)
         self.total_pasos = len(pasos)
         self._poner_ocupado(True)
-        if solo_flatpak_usuario:
-            self.estado.set_text("Actualizando Flatpak de usuario sin privilegios…")
-            self._escribir("[*] Flatpak --user, sin contraseña de administrador.\\n", "info")
-        else:
-            self.estado.set_text(traducir("Esperando autenticación de administrador…"))
-            self._escribir("[*] Solicitando autorización de administrador…\n", "info")
-            self._escribir(
-                "[*] Si no aparece el diálogo, cancela la espera y comprueba el agente de Polkit.\n",
-                "info",
-            )
+        self.estado.set_text(traducir("Esperando autenticación de administrador…"))
+        self._escribir("[*] Solicitando autorización de administrador…\n", "info")
+        self._escribir(
+            "[*] Si no aparece el diálogo, cancela la espera y comprueba el agente de Polkit.\n",
+            "info",
+        )
         self.barra.set_fraction(0)
         self.barra.set_text("")
         self.barra.set_show_text(False)
@@ -4593,11 +4763,10 @@ class VentanaPrincipal(Gtk.Window):
             return
 
         self.flujo = Gio.DataInputStream.new(self.proceso.get_stdout_pipe())
-        if not solo_flatpak_usuario:
-            self._iniciar_espera_autorizacion()
+        self._iniciar_espera_autorizacion()
         self._leer_linea()
 
-    def _iniciar_flatpak_usuario(self):
+    def _iniciar_flatpak_usuario(self, reintento_de=None):
         """Actualización de Flatpak del usuario sin helper root ni pkexec."""
         script = (
             'printf "##STEP:1:1:Actualizar Flatpak del usuario\\n"; '
@@ -4607,6 +4776,8 @@ class VentanaPrincipal(Gtk.Window):
             'echo "##RESULT:flatpak-update:0"; echo "##DONE:0"; '
             'else echo "##RESULT:flatpak-update:1"; echo "##DONE:1"; exit 1; fi'
         )
+        self.reintento_en_ejecucion = reintento_de
+        self.flatpak_sistema_en_ejecucion = False
         self.buf.set_text("")
         self.necesita_reinicio = False
         self.hubo_errores = False
@@ -4838,6 +5009,7 @@ class VentanaPrincipal(Gtk.Window):
             self._revisar_limpieza(linea)
             return
         if linea.startswith("##STEP:"):
+            self.salida_error_tarea.clear()
             _, n, total, titulo = linea.split(":", 3)
             n, total = int(n), int(total)
             self.barra.set_show_text(True)
@@ -4850,6 +5022,9 @@ class VentanaPrincipal(Gtk.Window):
             return
         if linea.startswith("##RESULT:"):
             _, tarea, codigo = linea.split(":", 2)
+            if codigo not in ("0", "2") and self.salida_error_tarea:
+                self.errores_tareas[tarea] = core_scheduler.mensaje_error("\n".join(self.salida_error_tarea))
+            self.salida_error_tarea.clear()
             self._resultado_tarea(tarea, {"0": "Completada", "2": "No ejecutada"}.get(codigo, "Error"))
             return
         if linea.startswith("##REBOOT:"):
@@ -4860,6 +5035,7 @@ class VentanaPrincipal(Gtk.Window):
             self.fin_recibido = True
             return
 
+        core_scheduler.registrar_salida_error(self.salida_error_tarea, linea)
         tag = None
         if linea.startswith("[✔]"):
             tag = "ok"
@@ -4942,12 +5118,20 @@ class VentanaPrincipal(Gtk.Window):
         self._poner_ocupado(False)
         self.barra.set_show_text(False)
         for tarea, (_etiqueta, estado) in list(self.resultados_tareas.items()):
+            if estado == "En curso" and self.salida_error_tarea:
+                self.errores_tareas[tarea] = core_scheduler.mensaje_error("\n".join(self.salida_error_tarea))
             if estado in ("Pendiente", "En curso"):
                 self._resultado_tarea(tarea, "No ejecutada" if estado == "Pendiente" else "Error")
 
+        detalles = {
+            tarea: {"estado": estado, "mensaje": self.errores_tareas.get(tarea, "")}
+            for tarea, (_etiqueta, estado) in self.resultados_tareas.items()
+        }
+        metadatos = {"detalles": detalles, "reintento_de": self.reintento_en_ejecucion,
+                     "flatpak_sistema": self.flatpak_sistema_en_ejecucion}
         if cancelacion:
             try:
-                guardar_registro_mantenimiento(self.tareas_en_ejecucion, "cancelado")
+                guardar_registro_mantenimiento(self.tareas_en_ejecucion, "cancelado", **metadatos)
             except OSError:
                 pass
             self.estado.set_text(
@@ -4975,7 +5159,7 @@ class VentanaPrincipal(Gtk.Window):
                            "         ❤️ Made by JULIO AYUSO\n", "ok")
         elif codigo in (126, 127) and self.barra.get_fraction() == 0:
             try:
-                guardar_registro_mantenimiento(self.tareas_en_ejecucion, "autorización denegada")
+                guardar_registro_mantenimiento(self.tareas_en_ejecucion, "autorización denegada", **metadatos)
             except OSError:
                 pass
             self.estado.set_text(traducir("No se obtuvo autorización de administrador."))
@@ -4986,11 +5170,14 @@ class VentanaPrincipal(Gtk.Window):
             self._escribir("\n[-] El proceso terminó con errores (código %s).\n" % codigo, "error")
 
         # Registrar el resultado incluso si el mantenimiento terminó con errores.
+        mensaje_general = ""
+        if not any(info["estado"] == "Error" for info in detalles.values()):
+            mensaje_general = "\n".join(self.salida_error_tarea)
         try:
             guardar_registro_mantenimiento(
                 self.tareas_en_ejecucion,
                 "correcto" if codigo == 0 and self.fin_recibido and not self.hubo_errores
-                else "error", self.necesita_reinicio,
+                else "error", self.necesita_reinicio, mensaje=mensaje_general, **metadatos,
             )
         except OSError as error:
             self._escribir("[!] No se pudo guardar el historial: %s\n" % error, "aviso")

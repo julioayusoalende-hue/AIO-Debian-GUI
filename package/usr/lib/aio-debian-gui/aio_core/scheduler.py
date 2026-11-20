@@ -39,6 +39,7 @@ SERVICE = Path('/usr/lib/systemd/system/aio-debian-gui-maintenance@.service')
 HELPER = '/usr/lib/aio-debian-gui/aio-debian-gui-helper'
 LOCK = '/run/aio-debian-gui/maintenance.lock'
 USER_RUNTIME_DIR = Path('/run/user')
+HISTORY_LIMIT = 100
 TASKS = ('upgrade', 'autoclean', 'flatpak-update', 'snap-update', 'rebootcheck')
 DAYS = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 DEFAULT = {'enabled': False, 'frequency': 'weekly', 'weekday': 6,
@@ -105,18 +106,18 @@ def timer_text(uid, config):
             '[Install]\nWantedBy=timers.target\n')
 
 
-def _read(path):
+def _read(path, limit=32768):
     try:
         with path.open(encoding='utf-8') as stream:
-            text = stream.read(32769)
-        if len(text) > 32768:
+            text = stream.read(limit + 1)
+        if len(text) > limit:
             raise ValueError('Archivo de programación demasiado grande.')
         return json.loads(text)
     except FileNotFoundError:
         return None
 
 
-def _atomic(path, text):
+def _atomic(path, text, owner=None):
     path.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix='.aio-', dir=path.parent)
     try:
@@ -124,7 +125,9 @@ def _atomic(path, text):
             stream.write(text)
             stream.flush()
             os.fsync(stream.fileno())
-        os.chmod(temporary, 0o644)
+        if owner is not None and os.geteuid() == 0:
+            os.chown(temporary, owner, -1)
+        os.chmod(temporary, 0o644 if owner is None else 0o400)
         os.replace(temporary, path)
     finally:
         if os.path.exists(temporary):
@@ -253,7 +256,49 @@ def _remove(uid):
     _systemctl('daemon-reload')
 
 
-def status(uid):
+def mensaje_error(texto):
+    """Limita el texto de diagnóstico antes de guardarlo o mostrarlo."""
+    return "".join(c for c in texto if c.isprintable() or c in "\n\t").strip()[:2000]
+
+
+def registrar_salida_error(mensajes, linea):
+    if linea.startswith(("[-] ", "E: ", "error: ", "Error: ")):
+        mensaje = mensaje_error(linea[4:] if linea.startswith("[-] ") else linea)[:480]
+        if mensaje and mensaje not in mensajes:
+            mensajes.append(mensaje)
+            del mensajes[:-4]
+
+
+def _history_paths(uid):
+    directory = STATE_DIR / (uid + '.history')
+    return sorted(directory.glob('*.json'), reverse=True)
+
+
+def _archive_result(uid, result, preserve=False):
+    # Root owns the directory. Only the corresponding user can read each file.
+    # Rotation uses file names; root never reads the user-owned files.
+    directory = STATE_DIR / (uid + '.history')
+    stamp = datetime.fromisoformat(result['started']).strftime('%Y%m%dT%H%M%S%f')
+    path = directory / (stamp + '.json')
+    if not preserve or not path.exists():
+        _atomic(path, json.dumps(result) + '\n', owner=int(uid))
+    for path in _history_paths(uid)[HISTORY_LIMIT:]:
+        path.unlink(missing_ok=True)
+
+
+def _history(uid):
+    entries = []
+    for path in _history_paths(uid)[:HISTORY_LIMIT]:
+        try:
+            entry = _read(path, limit=131072)
+        except (OSError, ValueError):
+            continue
+        if isinstance(entry, dict):
+            entries.append(entry)
+    return entries
+
+
+def status(uid, include_history=False):
     uid = validate_uid(uid)
     config = _read(CONFIG_DIR / (uid + '.json'))
     if config is not None:
@@ -274,6 +319,8 @@ def status(uid):
                     result['last_result'] = {**last, 'status': 'interrupted'}
         except (OSError, RuntimeError, subprocess.SubprocessError):
             pass
+    if include_history:
+        result['history'] = _history(uid)
     return result
 
 
@@ -440,12 +487,21 @@ def run_schedule(uid):
         return 0
     pwd.getpwuid(int(uid))
     config = validate_config(config)
+    errors = {}
     result = {'started': datetime.now(timezone.utc).isoformat(), 'finished': None,
               'status': 'running', 'detail': '', 'reboot_required': False, 'tasks': {t: 'not-run' for t in config['tasks']}}
     path = STATE_DIR / (uid + '.json')
 
-    def finish(state, detail):
+    def archive_previous():
+        previous = _read(path)
+        if isinstance(previous, dict) and previous.get('finished') and previous.get('started'):
+            _archive_result(uid, previous, preserve=True)
+
+    def finish(state, detail, private_detail=""):
+        archive_previous()
         result.update(status=state, detail=detail, finished=datetime.now(timezone.utc).isoformat())
+        _archive_result(uid, {**result, 'errors': errors,
+                              'detail': private_detail or detail})
         _atomic(path, json.dumps(result) + '\n')
         if state == 'success':
             _notify_success(uid)
@@ -465,6 +521,7 @@ def run_schedule(uid):
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             return finish('skipped', 'Ya hay otro mantenimiento de AiO en curso.')
+        archive_previous()
         _atomic(path, json.dumps(result) + '\n')
         from aio_core import preflight
         if set(config['tasks']) - {'flatpak-update', 'snap-update'} and preflight._apt_locks() != []:
@@ -474,9 +531,15 @@ def run_schedule(uid):
         if shutil.disk_usage('/').free < 1024**3:
             return finish('blocked', 'Espacio insuficiente en /: menos de 1 GiB disponible.')
         if 'upgrade' in config['tasks']:
-            update = subprocess.run(['apt-get', '-o', 'APT::Update::Error-Mode=any', 'update'], check=False)
+            update = subprocess.run(['apt-get', '-o', 'APT::Update::Error-Mode=any', 'update'],
+                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                    text=True, errors='replace', check=False)
+            output = update.stdout or ''
+            if output:
+                print(output, end='', flush=True)
             if update.returncode:
-                return finish('blocked', 'No se pudieron actualizar los índices APT.')
+                detail = 'No se pudieron actualizar los índices APT.'
+                return finish('blocked', detail, detail + '\n' + mensaje_error(output[-1600:]))
         report = preflight._check_local(config['tasks'])
         if report.blocked:
             return finish('blocked', '\n'.join(report.messages)[:2000])
@@ -485,25 +548,40 @@ def run_schedule(uid):
             command += ['--upgrade-plan', report.upgrade_plan]
         command += config['tasks']
         environment = {**os.environ, 'PKEXEC_UID': uid, 'LC_ALL': 'C'}
-        last_error = ''
+        messages = []
+        active = None
         with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                              text=True, env=environment, pass_fds=(fd,)) as process:
+                              text=True, errors='replace', env=environment, pass_fds=(fd,)) as process:
             for line in process.stdout:
                 print(line, end='', flush=True)
-                if line.startswith('[-] '):
-                    last_error = line[4:].strip()
+                if line.startswith('##STEP:'):
+                    step = line.split(':', 3)[1]
+                    active = config['tasks'][int(step) - 1] if (
+                        step.isdecimal() and 0 < int(step) <= len(config['tasks'])) else None
+                    messages.clear()
+                registrar_salida_error(messages, line)
                 if line.strip() == '##REBOOT:1':
                     result['reboot_required'] = True
-                match = re.fullmatch(r'##RESULT:([a-z-]+):([01])\n?', line)
+                match = re.fullmatch(r'##RESULT:([a-z-]+):([012])\n?', line)
                 if match and match[1] in result['tasks']:
-                    result['tasks'][match[1]] = 'success' if match[2] == '0' else 'error'
+                    task, code = match.groups()
+                    result['tasks'][task] = {'0': 'success', '1': 'error', '2': 'not-run'}[code]
+                    if code == '1' and messages:
+                        errors[task] = mensaje_error('\n'.join(messages))
+                    active = None
+                    messages.clear()
                     _atomic(path, json.dumps(result) + '\n')
             code = process.wait()
+        if active:
+            result['tasks'][active] = 'error'
+            if messages:
+                errors[active] = mensaje_error('\n'.join(messages))
         if code == 0 and all(v == 'success' for v in result['tasks'].values()):
             return finish('success', 'Mantenimiento completado.')
         if result['tasks'].get('rebootcheck') == 'error':
             return finish('error', 'No se pudo comprobar si hace falta reiniciar; revisa needrestart y el journal.')
-        return finish('error', last_error[:600] or 'El mantenimiento terminó con errores; revisa los resultados de las tareas.')
+        return finish('error', 'El mantenimiento terminó con errores; revisa los resultados de las tareas.',
+                      mensaje_error('\n'.join(messages)) if not active else '')
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
         return finish('error', str(exc)[:600])
     finally:
@@ -512,13 +590,13 @@ def run_schedule(uid):
 
 def main(argv=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('action', choices=('--status', '--configure', '--remove', '--run'))
+    parser.add_argument('action', choices=('--status', '--history', '--configure', '--remove', '--run'))
     # Acciones con prefijo -- se analizan después de un separador de opciones.
     parser.add_argument('uid')
     parser.add_argument('config', nargs='?')
     args = parser.parse_args(['--', *(sys.argv[1:] if argv is None else argv)])
-    if args.action == '--status':
-        print(json.dumps(status(args.uid)))
+    if args.action in ('--status', '--history'):
+        print(json.dumps(status(args.uid, include_history=args.action == '--history')))
     elif args.action == '--configure':
         configure(args.uid, json.loads(args.config or '{}'))
     elif args.action == '--remove':

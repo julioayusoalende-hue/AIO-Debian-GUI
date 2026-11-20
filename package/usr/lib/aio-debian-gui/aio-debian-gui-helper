@@ -1523,9 +1523,9 @@ main() {
         return 0
     fi
 
-    if [ "${1:-}" = "--schedule-status" ] && [ "$#" -eq 1 ]; then
+    if [[ "${1:-}" == "--schedule-status" || "${1:-}" == "--schedule-history" ]] && [ "$#" -eq 1 ]; then
         [ -r "$SCHEDULER_MODULE" ] || { err "Instala la integración de programación de AiO en el anfitrión."; return 1; }
-        /usr/bin/python3 -I "$SCHEDULER_MODULE" --status "$(id -u)"
+        /usr/bin/python3 -I "$SCHEDULER_MODULE" "--${1#--schedule-}" "$(id -u)"
         return $?
     fi
 

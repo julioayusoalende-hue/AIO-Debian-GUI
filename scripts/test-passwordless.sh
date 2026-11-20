@@ -28,8 +28,8 @@ import sys
 from pathlib import Path
 source = Path(sys.argv[1]).read_text(encoding="utf-8")
 ast.parse(source)
-assert 'if pasos == ["flatpak-update"]:' in source
-assert 'self._iniciar_flatpak_usuario()' in source
+assert 'if pasos == ["flatpak-update"] and not flatpak_sistema:' in source
+assert 'self._iniciar_flatpak_usuario(reintento_de)' in source
 assert 'comando_host("bash", "-c", script)' in source
 assert 'flatpak --user update -y' in source
 assert 'flatpak --user uninstall --unused -y' in source

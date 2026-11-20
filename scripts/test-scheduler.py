@@ -256,7 +256,7 @@ with tempfile.TemporaryDirectory() as directory:
         with patch.object(preflight, '_apt_locks', return_value=[]), \
              patch.object(preflight, '_check_local', return_value=report) as check, \
              patch.object(s.shutil, 'disk_usage', return_value=SimpleNamespace(free=4*1024**3)), \
-             patch.object(s.subprocess, 'run', return_value=SimpleNamespace(returncode=0)) as run, \
+             patch.object(s.subprocess, 'run', return_value=SimpleNamespace(returncode=0, stdout='')) as run, \
              patch.object(s.subprocess, 'Popen', side_effect=Process) as popen, \
              patch.object(s, '_notify_success') as notify, \
              patch.object(s, '_notify_incomplete') as incomplete, \
@@ -272,8 +272,11 @@ with tempfile.TemporaryDirectory() as directory:
             class FailedRebootProcess(Process):
                 def __init__(self, command, **kwargs):
                     super().__init__(command, **kwargs)
-                    self.stdout = iter(['##REBOOT:1\n', '##RESULT:upgrade:0\n',
-                                        '##RESULT:autoclean:0\n', '##RESULT:rebootcheck:1\n'])
+                    self.stdout = iter(['##STEP:1:3:APT\n', '##RESULT:upgrade:0\n',
+                                        '##STEP:2:3:Limpieza\n', 'E: Error de APT\n',
+                                        '##RESULT:autoclean:1\n',
+                                        '##STEP:3:3:Reinicio\n', '[-] Error de needrestart\n',
+                                        '##REBOOT:1\n', '##RESULT:rebootcheck:1\n'])
                 def wait(self): return 1
             with patch.object(s.subprocess, 'Popen', side_effect=FailedRebootProcess):
                 notify.reset_mock()
@@ -282,6 +285,13 @@ with tempfile.TemporaryDirectory() as directory:
                 result = s._read(s.STATE_DIR/'1000.json')
                 assert result['status'] == 'error' and 'needrestart' in result['detail']
                 assert result['reboot_required'] and result['tasks']['rebootcheck'] == 'error'
+                runs = s.status('1000', include_history=True)['history']
+                assert [r['status'] for r in runs] == ['error', 'success']
+                assert runs[0]['errors'] == {
+                    'autoclean': 'E: Error de APT', 'rebootcheck': 'Error de needrestart',
+                }
+                assert 'errors' not in result
+                assert all(p.stat().st_mode & 0o777 == 0o400 for p in s._history_paths('1000'))
                 assert incomplete.call_args.args[2] == result
                 notify.assert_not_called()
                 launch.assert_called_once_with('1000', config['launcher'])
@@ -305,11 +315,12 @@ with tempfile.TemporaryDirectory() as directory:
                 run.reset_mock()
                 assert s.run_schedule('1000') == 1
                 run.assert_not_called()
-            run.return_value = SimpleNamespace(returncode=1)
+            run.return_value = SimpleNamespace(returncode=1, stdout='E: Repositorio inaccesible\n')
             popen.reset_mock()
             assert s.run_schedule('1000') == 1
             popen.assert_not_called()
-            run.return_value = SimpleNamespace(returncode=0)
+            assert 'Repositorio inaccesible' in s.status('1000', include_history=True)['history'][0]['detail']
+            run.return_value = SimpleNamespace(returncode=0, stdout='')
             with patch.object(s.subprocess, 'Popen', side_effect=OSError('missing helper')):
                 assert s.run_schedule('1000') == 1
                 assert s._read(s.STATE_DIR/'1000.json')['status'] == 'error'

@@ -2,6 +2,9 @@
 
 ## 1.1.3
 
+- Añade el reintento de tareas fallidas desde el historial con una referencia a la ejecución original.
+- El historial permite abrir ejecuciones manuales y programadas, revisar el estado de cada tarea y consultar los mensajes de error registrados.
+
 - Añade filtros por categoría, una revisión de la selección y el reintento de instalaciones fallidas en Apps recomendadas.
 - Añade una búsqueda por nombre y descripción en Apps recomendadas, compatible con la selección múltiple.
 - Corrige el ajuste de la ventana al separar la terminal con btop o htop en ejecución.

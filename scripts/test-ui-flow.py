@@ -467,10 +467,58 @@ for language in ('es', 'en', 'fr', 'zh'):
     w._preparar_resultados(w.tareas_en_ejecucion)
     w._procesar('##STEP:1:2:Actualizar paquetes')
     assert w.resultados_tareas['upgrade'][1] == 'En curso'
+    w._procesar('[-] Aviso de un paso que se completó')
     w._procesar('##RESULT:upgrade:0')
     assert w.resultados_tareas['upgrade'][1] == 'Completada'
+    w._procesar('##STEP:2:2:Limpiar paquetes')
+    w._procesar('E: Fallo en la limpieza')
     w._procesar('##RESULT:autoclean:1')
+    assert w.errores_tareas == {'autoclean': 'E: Fallo en la limpieza'}
     if language == 'es':
+        manual = {"fecha": "2026-11-19T10:00:00+00:00", "tareas": ["upgrade"],
+                  "resultado": "correcto", "detalles": {"upgrade": {"estado": "Completada"}}}
+        scheduled = {"started": "2026-11-20T09:00:00+00:00", "status": "error",
+                     "tasks": {"autoclean": "error"},
+                     "errors": {"autoclean": "E: Fallo en la limpieza"}}
+
+        def revisar_historial(dialogo):
+            hijos = dialogo.get_content_area().get_children()
+            selector = next(hijo for hijo in hijos if isinstance(hijo, Gtk.ComboBoxText))
+            panel = next(hijo for hijo in hijos if isinstance(hijo, Gtk.ScrolledWindow))
+            limite = time.monotonic() + 3
+            while len(selector.get_model()) < 2 and time.monotonic() < limite:
+                settle()
+            assert len(selector.get_model()) == 2
+            buffer = panel.get_child().get_buffer()
+            selector.set_active(0)
+            assert "Programada" in selector.get_active_text()
+            assert "E: Fallo en la limpieza" in buffer.get_text(*buffer.get_bounds(), False)
+            selector.set_active(1)
+            assert "Manual" in selector.get_active_text()
+            assert "Completada" in buffer.get_text(*buffer.get_bounds(), False)
+            return Gtk.ResponseType.CLOSE
+
+        with patch.object(app, 'leer_historial', return_value=[manual]), \
+             patch.object(app.core_host_integration, 'read_scheduler_report',
+                          return_value={"history": [scheduled]}), \
+             patch.object(Gtk.Dialog, 'run', revisar_historial):
+            w._mostrar_historial(None)
+
+        for tareas, esperada, alcance in (
+                ({"autoclean": "error"}, "autoclean", False),
+                ({"upgrade": "success", "flatpak-update": "error",
+                  "rebootcheck": "not-run"}, "flatpak-update", True)):
+            ejecucion = {**scheduled, "tasks": tareas}
+            fallo_programado = app.core_history.registros_programados({"history": [ejecucion]})[0]
+            with patch.object(Gtk.Dialog, 'run', return_value=Gtk.ResponseType.OK), \
+                 patch.object(w, '_tareas_disponibles_para_reintento', return_value=set(tareas)), \
+                 patch.object(w, '_comprobar_mantenimiento') as comprobar:
+                w._reintentar_mantenimiento(fallo_programado)
+            comprobar.assert_called_once_with(
+                [esperada], reintento_de={'fecha': scheduled['started'], 'origen': 'Programada'},
+                flatpak_sistema=alcance,
+            )
+
         huella = 'a' * 64
         cambios = app.base64.b64encode(b'Purg old-package [1]').decode()
         peticion = f'##CLEANUP-REVIEW:--purge:{huella}:{cambios}'
