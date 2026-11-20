@@ -2,6 +2,7 @@
 
 ## 1.1.3
 
+- Corrige el ajuste de la ventana al separar la terminal con btop o htop en ejecución.
 - Añade HPLIP con HP Toolbox y Zoom Workplace a Apps recomendadas, con sus iconos.
 
 ## 1.1.2

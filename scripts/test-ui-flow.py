@@ -1007,19 +1007,31 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
             while not btop_marker.exists() and time.monotonic() < deadline:
                 settle()
             assert btop_marker.read_text().strip() == 'yes'
+            deadline = time.monotonic() + 2
+            while command_menu.get_mapped() and time.monotonic() < deadline:
+                settle()
             assert not command_menu.get_mapped()
             assert w.terminal.get_pty() == pty
             visor_btop = w.terminal_monitor
+            pty_btop = visor_btop.get_pty()
+            assert pty_btop is not None
             assert visor_btop.get_toplevel() == detached
-            assert w.vistas_terminal.get_visible_child() == visor_btop
+            assert w.vistas_terminal.get_visible_child().get_child() == visor_btop
             w.boton_separar_terminal.clicked()
             settle()
             assert visor_btop.get_toplevel() == w
-            assert w.vistas_terminal.get_visible_child() == visor_btop
+            assert w.vistas_terminal.get_visible_child().get_child() == visor_btop
             w.boton_separar_terminal.clicked()
             settle()
             detached = w.ventana_terminal
             assert visor_btop.get_toplevel() == detached
+            for width, height in ((640, 420), (1020, 680)):
+                detached.resize(width, height)
+                settle()
+                assert detached.get_size() == (width, height)
+                assert 0 < visor_btop.get_allocated_width() < width
+                assert 0 < visor_btop.get_allocated_height() < height
+                assert visor_btop.get_pty() == pty_btop
             visor_btop.feed_child(b'q\n')
             deadline = time.monotonic() + 8
             while w.terminal_monitor is not None and time.monotonic() < deadline:

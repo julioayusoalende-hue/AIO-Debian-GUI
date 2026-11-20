@@ -2809,17 +2809,17 @@ class VentanaPrincipal(Gtk.Window):
         self.ventana_terminal = ventana
         self.boton_mostrar_terminal.show()
         self.boton_separar_terminal.set_label(traducir("Volver a acoplar"))
-        ventana.realize()
-        # Se mueve la terminal existente para conservar la sesión y su salida.
-        self.contenido_terminal.reparent(ventana)
+        # Volver a montar la consola recalcula su geometría en la nueva ventana
+        # y conserva los widgets VTE y sus sesiones.
+        self.pagina_terminal.remove(self.contenido_terminal)
+        ventana.add(self.contenido_terminal)
         ventana.present()
         (self.terminal_monitor or self.terminal).grab_focus()
 
     def _acoplar_terminal(self, *_args):
         ventana = self.ventana_terminal
-        self.contenido_terminal.reparent(self.pagina_terminal)
-        self.pagina_terminal.set_child_packing(
-            self.contenido_terminal, True, True, 0, Gtk.PackType.START)
+        ventana.remove(self.contenido_terminal)
+        self.pagina_terminal.pack_start(self.contenido_terminal, True, True, 0)
         self.boton_mostrar_terminal.hide()
         self.boton_separar_terminal.set_label(traducir("Separar terminal"))
         self.ventana_terminal = None
@@ -2907,16 +2907,19 @@ class VentanaPrincipal(Gtk.Window):
         visor = Vte.Terminal()
         self.terminal_monitor = visor
         self._construir_edicion_terminal(visor)
-        self.vistas_terminal.add_named(visor, clave)
-        visor.show()
-        self.vistas_terminal.set_visible_child(visor)
+        marco = Gtk.ScrolledWindow()
+        marco.set_policy(Gtk.PolicyType.EXTERNAL, Gtk.PolicyType.EXTERNAL)
+        marco.add(visor)
+        self.vistas_terminal.add_named(marco, clave)
+        marco.show_all()
+        self.vistas_terminal.set_visible_child(marco)
         visor.grab_focus()
 
         def cerrar(_terminal, _estado=None):
             if not self.destruida and self.terminal_monitor is visor:
                 self.terminal_monitor = None
                 self.vistas_terminal.set_visible_child_name("bash")
-                visor.destroy()
+                marco.destroy()
                 self.terminal.grab_focus()
 
         visor.connect("child-exited", cerrar)
