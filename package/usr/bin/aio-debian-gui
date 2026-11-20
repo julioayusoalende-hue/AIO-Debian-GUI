@@ -22,6 +22,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import unicodedata
 import urllib.request
 import urllib.error
 import zipfile
@@ -263,6 +264,7 @@ APLICACIONES_BACKUP = {
 APPS_RECOMENDADAS = [
     {
         "id": "audacity", "name": "Audacity",
+        "category": "Multimedia",
         "icon": "org.audacityteam.Audacity", "bundled_icon": "audacity.png",
         "fallback_icon": "audio-x-generic",
         "description": "Graba y edita audio con varias pistas y efectos.",
@@ -273,6 +275,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "brave", "name": "Brave",
+        "category": "Internet",
         "icon": "com.brave.Browser", "bundled_icon": "brave.png",
         "fallback_icon": "web-browser",
         "description": "Navegador web con bloqueo de anuncios y rastreadores integrado.",
@@ -283,6 +286,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "btop", "name": "btop",
+        "category": "Sistema",
         "icon": "btop", "bundled_icon": "btop.png",
         "fallback_icon": "utilities-system-monitor",
         "description": "Monitor de recursos en terminal con gráficos de CPU, memoria, disco y red.",
@@ -292,6 +296,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "celluloid", "name": "Celluloid",
+        "category": "Multimedia",
         "icon": "io.github.celluloid_player.Celluloid",
         "bundled_icon": "celluloid.png",
         "fallback_icon": "media-playback-start",
@@ -303,6 +308,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "deluge", "name": "Deluge",
+        "category": "Internet",
         "icon": "deluge", "bundled_icon": "deluge.png",
         "fallback_icon": "folder-download",
         "description": "Cliente BitTorrent con complementos y gestión remota.",
@@ -313,6 +319,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "feishin", "name": "Feishin",
+        "category": "Multimedia",
         "icon": "org.jeffvli.feishin",
         "bundled_icon": "feishin.png",
         "light_icon_background": True,
@@ -325,6 +332,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "gearlever", "name": "Gear Lever",
+        "category": "Sistema",
         "icon": "it.mijorus.gearlever", "bundled_icon": "gearlever.png",
         "fallback_icon": "application-x-executable",
         "description": "Organiza e integra aplicaciones AppImage en el menú del escritorio y gestiona sus actualizaciones.",
@@ -334,6 +342,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "ghostty", "name": "Ghostty",
+        "category": "Sistema",
         "icon": "com.mitchellh.ghostty", "bundled_icon": "ghostty.svg",
         "fallback_icon": "utilities-terminal",
         "description": "Terminal con aceleración por GPU, pestañas y paneles divididos.",
@@ -341,6 +350,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "gimp", "name": "GIMP",
+        "category": "Gráficos",
         "icon": "gimp",
         "bundled_icon": "gimp.png",
         "fallback_icon": "applications-graphics-symbolic",
@@ -352,6 +362,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "google-chrome", "name": "Google Chrome",
+        "category": "Internet",
         "icon": "google-chrome",
         "bundled_icon": "google-chrome.png",
         "fallback_icon": "web-browser",
@@ -363,6 +374,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "gparted", "name": "GParted",
+        "category": "Sistema",
         "icon": "gparted", "bundled_icon": "gparted.png",
         "fallback_icon": "drive-harddisk",
         "description": "Editor gráfico para crear, redimensionar y gestionar particiones de disco.",
@@ -372,6 +384,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "handbrake", "name": "HandBrake",
+        "category": "Multimedia",
         "icon": "fr.handbrake.ghb",
         "bundled_icon": "handbrake.png",
         "fallback_icon": "video-x-generic",
@@ -383,6 +396,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "heroic", "name": "Heroic Games Launcher",
+        "category": "Juegos",
         "icon": "com.heroicgameslauncher.hgl", "bundled_icon": "heroic.png",
         "fallback_icon": "applications-games",
         "description": "Instala y ejecuta juegos de Epic Games, GOG y Amazon Games.",
@@ -393,6 +407,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "hplip-gui", "name": "HPLIP (HP Toolbox)",
+        "category": "Sistema",
         "icon": "hp_logo", "bundled_icon": "hplip.png",
         "fallback_icon": "printer",
         "description": "Controladores y herramientas gráficas para configurar impresoras y multifunción HP.",
@@ -402,6 +417,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "htop", "name": "htop",
+        "category": "Sistema",
         "icon": "htop", "bundled_icon": "htop.png",
         "fallback_icon": "utilities-system-monitor",
         "description": "Visor interactivo de procesos y del uso de CPU y memoria en terminal.",
@@ -411,6 +427,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "kdenlive", "name": "Kdenlive",
+        "category": "Multimedia",
         "icon": "org.kde.kdenlive", "bundled_icon": "kdenlive.png",
         "fallback_icon": "applications-multimedia",
         "description": "Edita vídeo con una línea de tiempo multipista, transiciones y efectos.",
@@ -421,6 +438,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "kitty", "name": "Kitty",
+        "category": "Sistema",
         "icon": "kitty", "bundled_icon": "kitty.svg",
         "fallback_icon": "utilities-terminal",
         "description": "Terminal con aceleración por GPU, atajos configurables y soporte para imágenes.",
@@ -430,6 +448,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "plex", "name": "Plex",
+        "category": "Multimedia",
         "icon": "tv.plex.PlexDesktop",
         "bundled_icon": "plex.png",
         "fallback_icon": "video-x-generic",
@@ -440,6 +459,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "qbittorrent", "name": "qBittorrent",
+        "category": "Internet",
         "icon": "qbittorrent", "bundled_icon": "qbittorrent.png",
         "fallback_icon": "folder-download",
         "description": "Cliente BitTorrent con gestión de colas y límites de velocidad.",
@@ -450,9 +470,10 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "retroarch", "name": "RetroArch",
+        "category": "Juegos",
         "icon": "org.libretro.RetroArch", "bundled_icon": "retroarch.png",
         "fallback_icon": "applications-games",
-        "description": "Interfaz unificada para emular consolas clásicas con núcleos Libretro.",
+        "description": "Emula juegos de consolas clásicas con núcleos Libretro.",
         "channels": [
             {"type": "deb", "package": "retroarch", "command": "retroarch"},
             {"type": "flatpak", "app_id": "org.libretro.RetroArch"},
@@ -460,6 +481,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "spotify", "name": "Spotify",
+        "category": "Multimedia",
         "icon": "spotify-client",
         "bundled_icon": "spotify.png",
         "fallback_icon": "audio-x-generic",
@@ -471,6 +493,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "steam", "name": "Steam",
+        "category": "Juegos",
         "icon": "com.valvesoftware.Steam", "bundled_icon": "steam.png",
         "fallback_icon": "applications-games",
         "description": "Gestiona tu biblioteca de juegos de Steam y juega en Linux con Proton.",
@@ -481,6 +504,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "switcheroo", "name": "Switcheroo",
+        "category": "Multimedia",
         "icon": "io.gitlab.adhami3310.Converter",
         "bundled_icon": "switcheroo.png",
         "fallback_icon": "image-x-generic",
@@ -491,6 +515,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "video-downloader", "name": "Video Downloader",
+        "category": "Multimedia",
         "icon": "com.github.unrud.VideoDownloader",
         "bundled_icon": "video-downloader.png",
         "fallback_icon": "folder-download",
@@ -501,6 +526,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "vlc", "name": "VLC",
+        "category": "Multimedia",
         "icon": "vlc",
         "bundled_icon": "vlc.png",
         "fallback_icon": "multimedia-player",
@@ -512,6 +538,7 @@ APPS_RECOMENDADAS = [
     },
     {
         "id": "zoom", "name": "Zoom Workplace",
+        "category": "Comunicación",
         "icon": "us.zoom.Zoom", "bundled_icon": "zoom.png",
         "fallback_icon": "camera-video",
         "description": "Videollamadas, reuniones en línea y uso compartido de pantalla.",
@@ -2293,7 +2320,22 @@ class VentanaPrincipal(Gtk.Window):
         caja.pack_start(etiqueta(
             "APT requiere autorización de administrador. Flatpak instala para tu usuario y añade Flathub si hace falta. Para los DEB de la web oficial, usa el gestor de software."
         ), False, False, 0)
+        self.recommended_search = Gtk.SearchEntry()
+        texto_busqueda = traducir("Buscar aplicaciones")
+        self.recommended_search.set_placeholder_text(texto_busqueda)
+        self.recommended_search.get_accessible().set_name(texto_busqueda)
+        self.recommended_category = Gtk.ComboBoxText()
+        self.recommended_category.append("", traducir("Todas las categorías"))
+        for categoria in sorted({app["category"] for app in APPS_RECOMENDADAS}, key=traducir):
+            self.recommended_category.append(categoria, traducir(categoria))
+        self.recommended_category.set_active(0)
+        self.recommended_category.get_accessible().set_name(traducir("Categoría"))
+        filtro = Gtk.Box(spacing=8)
+        filtro.pack_start(self.recommended_search, True, True, 0)
+        filtro.pack_start(self.recommended_category, False, False, 0)
+        caja.pack_start(filtro, False, False, 0)
         self.recommended_selection = {}
+        self.recommended_failed = {}
         self.recommended_multi = Gtk.ToggleButton(label=traducir("Seleccionar varias"))
         self.recommended_multi.connect("toggled", self._alternar_seleccion_recomendada)
         self.recommended_install = Gtk.Button(label=traducir("Instalar selección"))
@@ -2301,8 +2343,16 @@ class VentanaPrincipal(Gtk.Window):
         self.recommended_install.connect("clicked", self._instalar_seleccion_recomendada)
         barra = Gtk.Box(spacing=8)
         barra.pack_start(self.recommended_multi, False, False, 0)
+        self.recommended_review = Gtk.Button(label=traducir("Ver selección"))
+        self.recommended_review.connect("clicked", self._ver_seleccion_recomendada)
+        barra.pack_start(self.recommended_review, False, False, 0)
         barra.pack_end(self.recommended_install, False, False, 0)
         caja.pack_start(barra, False, False, 0)
+        self.recommended_retry = Gtk.Button(label=traducir("Reintentar fallidas"))
+        self.recommended_retry.set_halign(Gtk.Align.START)
+        self.recommended_retry.set_no_show_all(True)
+        self.recommended_retry.connect("clicked", self._instalar_seleccion_recomendada, True)
+        caja.pack_start(self.recommended_retry, False, False, 0)
         self.recommended_status = self._etiqueta_estado()
         caja.pack_start(self.recommended_status, False, False, 0)
         pagina.pack_start(introduccion, False, False, 0)
@@ -2313,8 +2363,28 @@ class VentanaPrincipal(Gtk.Window):
         self.recommended_grid = self._rejilla_tarjetas()
         for app in APPS_RECOMENDADAS:
             self.recommended_grid.add(self._tarjeta_recomendada(app))
+        sin_resultados = etiqueta("No se encontraron aplicaciones.", dim=True)
+        sin_resultados.set_no_show_all(True)
+        pagina.pack_start(sin_resultados, False, False, 0)
+        self.recommended_search.connect("changed", self._filtrar_recomendadas, sin_resultados)
+        self.recommended_category.connect("changed", self._filtrar_recomendadas, sin_resultados)
         pagina.pack_start(self._scroll_tarjetas(self.recommended_grid), True, True, 0)
         return pagina
+
+    def _filtrar_recomendadas(self, _control, sin_resultados):
+        def normalizar(texto):
+            return "".join(caracter for caracter in unicodedata.normalize("NFD", texto.casefold())
+                           if not unicodedata.combining(caracter))
+
+        palabras = normalizar(self.recommended_search.get_text()).split()
+        categoria = self.recommended_category.get_active_id()
+        coincidencias = []
+        for app in APPS_RECOMENDADAS:
+            texto = normalizar(traducir(app["name"]) + " " + traducir(app["description"]))
+            coincidencias.append((not categoria or categoria == app["category"])
+                                 and all(palabra in texto for palabra in palabras))
+        self.recommended_grid.set_filter_func(lambda tarjeta: coincidencias[tarjeta.get_index()])
+        sin_resultados.set_visible(not any(coincidencias))
 
     def _tarjeta_recomendada(self, app):
         tarjeta, contenido = tarjeta_mantenimiento(8)
@@ -3082,19 +3152,62 @@ class VentanaPrincipal(Gtk.Window):
                 "Elige DEB (APT) o Flatpak para cada aplicación que quieras instalar."))
         else:
             self.recommended_selection.clear()
+            self.recommended_failed.clear()
             self.recommended_status.set_text("")
         self._actualizar_sensibilidad()
 
-    def _instalar_seleccion_recomendada(self, boton):
-        if not boton.get_sensitive():
-            return
-        seleccion = [
+    def _lote_recomendadas(self, solo_fallidas=False):
+        return [
             (app, canal)
             for app in APPS_RECOMENDADAS if app["id"] in self.recommended_selection
             for canal in self.canales_recomendados[app["id"]]
             if canal["type"] == self.recommended_selection[app["id"]]
             and not self.recommended_installed.get((app["id"], canal["type"]))
+            and (not solo_fallidas or self.recommended_failed.get(app["id"]) == canal["type"])
         ]
+
+    def _ver_seleccion_recomendada(self, boton):
+        if not boton.get_sensitive():
+            return
+        dialogo = Gtk.Dialog(title=traducir("Aplicaciones seleccionadas"),
+                             transient_for=self, modal=True, destroy_with_parent=True)
+        dialogo.add_button(traducir("Cerrar"), Gtk.ResponseType.CLOSE)
+        dialogo.set_default_size(460, 300)
+        lista = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        lista.set_border_width(12)
+        lista.set_valign(Gtk.Align.START)
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.add(lista)
+        dialogo.get_content_area().pack_start(scroll, True, True, 0)
+
+        def quitar(_boton, app_id, fila):
+            self.recommended_selection.pop(app_id, None)
+            self.recommended_failed.pop(app_id, None)
+            fila.destroy()
+            self._actualizar_sensibilidad()
+            if not lista.get_children():
+                dialogo.response(Gtk.ResponseType.CLOSE)
+
+        for app, canal in self._lote_recomendadas():
+            fila = Gtk.Box(spacing=12)
+            formato = "DEB (APT)" if canal["type"] == "deb" else "Flatpak"
+            fila.pack_start(etiqueta(app["name"]), True, True, 0)
+            fila.pack_start(etiqueta(formato, dim=True), False, False, 0)
+            quitar_boton = Gtk.Button(label=traducir("Quitar"))
+            quitar_boton.get_accessible().set_name(f'{traducir("Quitar")} · {app["name"]}')
+            quitar_boton.connect("clicked", quitar, app["id"], fila)
+            fila.pack_end(quitar_boton, False, False, 0)
+            lista.pack_start(fila, False, False, 0)
+
+        dialogo.show_all()
+        dialogo.run()
+        dialogo.destroy()
+
+    def _instalar_seleccion_recomendada(self, boton, solo_fallidas=False):
+        if not boton.get_sensitive():
+            return
+        seleccion = self._lote_recomendadas(solo_fallidas)
         if not seleccion:
             return
         self.recommended_scan_generation += 1
@@ -3116,10 +3229,12 @@ class VentanaPrincipal(Gtk.Window):
             return GLib.SOURCE_REMOVE
         errores = []
         for app, canal, error in resultados:
+            self.recommended_failed.pop(app["id"], None)
             if error is None:
                 self.recommended_selection.pop(app["id"], None)
                 self._marcar_recomendada_instalada(app["id"], canal["type"])
             else:
+                self.recommended_failed[app["id"]] = canal["type"]
                 errores.append(f'{app["name"]}: {error}')
         self.backup_action_in_progress = False
         if errores:
@@ -3149,6 +3264,7 @@ class VentanaPrincipal(Gtk.Window):
             return
         if self.recommended_multi.get_active():
             if tipo_canal in ("deb", "flatpak"):
+                self.recommended_failed.pop(app_id, None)
                 if self.recommended_selection.get(app_id) == tipo_canal:
                     del self.recommended_selection[app_id]
                 else:
@@ -4040,6 +4156,10 @@ class VentanaPrincipal(Gtk.Window):
                  else traducir("Instalar selección"))
         self.recommended_install.set_label(texto)
         self.recommended_install.set_sensitive(recomendaciones_disponibles and seleccionables > 0)
+        self.recommended_review.set_sensitive(recomendaciones_disponibles and seleccionables > 0)
+        hay_fallidas = modo_multiple and bool(self._lote_recomendadas(solo_fallidas=True))
+        self.recommended_retry.set_visible(hay_fallidas)
+        self.recommended_retry.set_sensitive(recomendaciones_disponibles and hay_fallidas)
 
     def _visible(self, pid):
         if pid == "snap-update":

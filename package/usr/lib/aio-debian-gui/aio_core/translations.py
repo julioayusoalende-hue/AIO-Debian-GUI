@@ -915,7 +915,7 @@ TRADUCCIONES["en"].update({
     "Se instalaron las aplicaciones seleccionadas.": "The selected applications were installed.",
     "Editor gráfico para crear, redimensionar y gestionar particiones de disco.": "Graphical editor for creating, resizing, and managing disk partitions.",
     "Controladores y herramientas gráficas para configurar impresoras y multifunción HP.": "Drivers and graphical tools for setting up HP printers and all-in-one devices.",
-    "Interfaz unificada para emular consolas clásicas con núcleos Libretro.": "Unified interface for emulating classic consoles with Libretro cores.",
+    "Emula juegos de consolas clásicas con núcleos Libretro.": "Emulate classic console games with Libretro cores.",
     "Gestiona tu biblioteca de juegos de Steam y juega en Linux con Proton.": "Manage your Steam library and play on Linux with Proton.",
     "Graba y edita audio con varias pistas y efectos.": "Record and edit audio with multiple tracks and effects.",
     "Instala y ejecuta juegos de Epic Games, GOG y Amazon Games.": "Install and launch games from Epic Games, GOG and Amazon Games.",
@@ -985,7 +985,7 @@ TRADUCCIONES["fr"].update({
     "Se instalaron las aplicaciones seleccionadas.": "Les applications sélectionnées ont été installées.",
     "Editor gráfico para crear, redimensionar y gestionar particiones de disco.": "Éditeur graphique pour créer, redimensionner et gérer les partitions de disque.",
     "Controladores y herramientas gráficas para configurar impresoras y multifunción HP.": "Pilotes et outils graphiques pour configurer les imprimantes et les appareils multifonctions HP.",
-    "Interfaz unificada para emular consolas clásicas con núcleos Libretro.": "Interface unifiée pour émuler des consoles classiques avec les cœurs Libretro.",
+    "Emula juegos de consolas clásicas con núcleos Libretro.": "Émulez les jeux des consoles classiques avec les cœurs Libretro.",
     "Gestiona tu biblioteca de juegos de Steam y juega en Linux con Proton.": "Gérez votre bibliothèque Steam et jouez sous Linux avec Proton.",
     "Graba y edita audio con varias pistas y efectos.": "Enregistrez et montez du son avec plusieurs pistes et effets.",
     "Instala y ejecuta juegos de Epic Games, GOG y Amazon Games.": "Installez et lancez les jeux d’Epic Games, GOG et Amazon Games.",
@@ -1055,7 +1055,7 @@ TRADUCCIONES["zh"].update({
     "Se instalaron las aplicaciones seleccionadas.": "已安装所选应用。",
     "Editor gráfico para crear, redimensionar y gestionar particiones de disco.": "用于创建、调整大小和管理磁盘分区的图形编辑器。",
     "Controladores y herramientas gráficas para configurar impresoras y multifunción HP.": "用于配置惠普打印机和多功能一体机的驱动程序及图形工具。",
-    "Interfaz unificada para emular consolas clásicas con núcleos Libretro.": "通过 Libretro 核心模拟经典游戏机的统一界面。",
+    "Emula juegos de consolas clásicas con núcleos Libretro.": "通过 Libretro 核心模拟经典游戏机游戏。",
     "Gestiona tu biblioteca de juegos de Steam y juega en Linux con Proton.": "管理 Steam 游戏库，并通过 Proton 在 Linux 上玩游戏。",
     "Graba y edita audio con varias pistas y efectos.": "录制和编辑音频，支持多轨和效果。",
     "Instala y ejecuta juegos de Epic Games, GOG y Amazon Games.": "安装和运行 Epic Games、GOG 和 Amazon Games 的游戏。",
@@ -1961,3 +1961,63 @@ TRADUCCIONES["zh"]["Análisis del arranque"] = "启动分析"
 TRADUCCIONES["fr"]["Sistema"] = "Système"
 
 TRADUCCIONES["zh"]["Sistema"] = "系统"
+
+TRADUCCIONES["en"].update({
+    "Buscar aplicaciones": "Search applications",
+    "No se encontraron aplicaciones.": "No applications found.",
+})
+
+TRADUCCIONES["fr"].update({
+    "Buscar aplicaciones": "Rechercher des applications",
+    "No se encontraron aplicaciones.": "Aucune application trouvée.",
+})
+
+TRADUCCIONES["zh"].update({
+    "Buscar aplicaciones": "搜索应用",
+    "No se encontraron aplicaciones.": "未找到应用。",
+})
+
+TRADUCCIONES["en"].update({
+    "Todas las categorías": "All categories",
+    "Categoría": "Category",
+    "Multimedia": "Multimedia",
+    "Internet": "Internet",
+    "Sistema": "System",
+    "Juegos": "Games",
+    "Gráficos": "Graphics",
+    "Comunicación": "Communication",
+    "Ver selección": "View selection",
+    "Aplicaciones seleccionadas": "Selected applications",
+    "Quitar": "Remove",
+    "Reintentar fallidas": "Retry failed installations",
+})
+
+TRADUCCIONES["fr"].update({
+    "Todas las categorías": "Toutes les catégories",
+    "Categoría": "Catégorie",
+    "Multimedia": "Multimédia",
+    "Internet": "Internet",
+    "Sistema": "Système",
+    "Juegos": "Jeux",
+    "Gráficos": "Graphisme",
+    "Comunicación": "Communication",
+    "Ver selección": "Voir la sélection",
+    "Aplicaciones seleccionadas": "Applications sélectionnées",
+    "Quitar": "Retirer",
+    "Reintentar fallidas": "Réessayer les installations échouées",
+})
+
+TRADUCCIONES["zh"].update({
+    "Todas las categorías": "所有类别",
+    "Categoría": "类别",
+    "Multimedia": "多媒体",
+    "Internet": "互联网",
+    "Sistema": "系统",
+    "Juegos": "游戏",
+    "Gráficos": "图形",
+    "Comunicación": "通信",
+    "Ver selección": "查看所选应用",
+    "Aplicaciones seleccionadas": "已选应用",
+    "Quitar": "移除",
+    "Reintentar fallidas": "重试失败的安装",
+})

@@ -29,6 +29,26 @@ def settle():
             Gtk.main_iteration()
         time.sleep(.005)
 
+def esperar_disposicion(ventana, ancho):
+    paneles = ventana.paneles_principales
+    orientacion = Gtk.Orientation.VERTICAL if ancho < 900 else Gtk.Orientation.HORIZONTAL
+    limite = time.monotonic() + 2
+    while time.monotonic() < limite:
+        settle()
+        actual = ventana.get_size()[0]
+        if abs(actual - ancho) > 1 or paneles.get_orientation() != orientacion:
+            continue
+        if orientacion == Gtk.Orientation.VERTICAL:
+            return
+        if (not ventana.restaurar_proporcion_paneles
+                and abs(ventana.panel_izquierdo.get_allocated_width() - paneles.get_position()) <= 1):
+            return
+    raise AssertionError(
+        f"GTK no completó el redimensionado a {ancho}px "
+        f"(ventana={ventana.get_size()[0]}, posición={paneles.get_position()}, "
+        f"columna={ventana.panel_izquierdo.get_allocated_width()})")
+
+
 for distro, version, expected in (
     ('debian', '13', ['appimage']),
     ('ubuntu', '24.04', ['appimage']),
@@ -518,7 +538,7 @@ for language in ('es', 'en', 'fr', 'zh'):
 
     for width in (1160, 700, 600, 1161, 1400):
         w.resize(width, 900)
-        settle()
+        esperar_disposicion(w, width)
         actual = w.get_size()[0]
         assert actual <= width + 1, (language, width, actual)
         panels = w.paneles_principales
@@ -541,20 +561,20 @@ for language in ('es', 'en', 'fr', 'zh'):
             shot.savev(str(directory / f'ui-{width}.png'), 'png', [], [])
     if language == 'es':
         panels.set_position(730)
-        settle()
+        esperar_disposicion(w, 1400)
         ancho_izq = left.get_allocated_width()
         ancho_der = right.get_allocated_width()
         assert abs(ancho_izq - 730) <= 1
         ratio = ancho_izq / (ancho_izq + ancho_der)
         w.resize(1520, 900)
-        settle()
+        esperar_disposicion(w, 1520)
         assert left.get_allocated_width() > ancho_izq
         assert right.get_allocated_width() > ancho_der
         assert abs(panels.get_position() / (left.get_allocated_width() + right.get_allocated_width()) - ratio) < 0.005
         w.resize(700, 900)
-        settle()
+        esperar_disposicion(w, 700)
         w.resize(1520, 900)
-        settle()
+        esperar_disposicion(w, 1520)
         assert abs(panels.get_position() / (left.get_allocated_width() + right.get_allocated_width()) - ratio) < 0.005
     w.destroy()
     settle()
@@ -756,10 +776,47 @@ assert not w.recommended_install.get_sensitive()
 assert not w.recommended_buttons[('google-chrome', 'deb-download')].get_sensitive()
 for key in (('deluge', 'deb'), ('deluge', 'flatpak'), ('gparted', 'deb')):
     w.recommended_buttons[key].clicked()
+def resultados_recomendados():
+    return {item['id'] for item, tarjeta in zip(app.APPS_RECOMENDADAS, w.recommended_grid.get_children())
+            if tarjeta.get_child_visible()}
+
+w.recommended_search.set_text('  KDEN  ')
+assert resultados_recomendados() == {'kdenlive'}
+w.recommended_search.set_text('juegos')
+assert {'steam', 'heroic', 'retroarch'} <= resultados_recomendados()
+w.recommended_category.set_active_id('Juegos')
+assert resultados_recomendados() == {'steam', 'heroic', 'retroarch'}
+w.recommended_search.set_text('steam')
+assert resultados_recomendados() == {'steam'}
+w.recommended_category.set_active_id('Multimedia')
+assert not resultados_recomendados()
+w.recommended_category.set_active(0)
+w.recommended_search.set_text('nucleos libretro')
+assert resultados_recomendados() == {'retroarch'}
+w.recommended_search.set_text('sin-coincidencias-xyz')
+assert not resultados_recomendados()
+assert w.recommended_install.get_sensitive()
 assert w.recommended_selection == {'deluge': 'flatpak', 'gparted': 'deb'}
+w.recommended_search.set_text('')
+assert len(resultados_recomendados()) == len(app.APPS_RECOMENDADAS)
 assert w.recommended_install.get_label() == app.traducir('Instalar selección (%d)') % 2
 assert w.recommended_buttons[('deluge', 'flatpak')].get_label().startswith('✓ ')
 assert not w.recommended_buttons[('deluge', 'deb')].get_label().startswith('✓ ')
+
+def revisar_seleccion(dialogo):
+    scroll = next(widget for widget in dialogo.get_content_area().get_children()
+                  if isinstance(widget, Gtk.ScrolledWindow))
+    filas = scroll.get_child().get_child().get_children()
+    assert [[widget.get_text() for widget in fila.get_children() if isinstance(widget, Gtk.Label)]
+            for fila in filas] == [['Deluge', 'Flatpak'], ['GParted', 'DEB (APT)']]
+    filas[1].get_children()[-1].clicked()
+    assert w.recommended_selection == {'deluge': 'flatpak'}
+    return Gtk.ResponseType.CLOSE
+
+with patch.object(Gtk.Dialog, 'run', revisar_seleccion):
+    w.recommended_review.clicked()
+w.recommended_buttons[('gparted', 'deb')].clicked()
+
 with patch.object(app.threading, 'Thread', ImmediateThread), \
      patch.object(w, '_ejecutar_instalacion_recomendada', side_effect=['falló Deluge', None, None]) as install, \
      patch.object(w, '_mensaje') as message:
@@ -771,11 +828,15 @@ with patch.object(app.threading, 'Thread', ImmediateThread), \
     assert w.recommended_selection == {'deluge': 'flatpak'}
     assert w.recommended_indicators[('gparted', 'deb')].get_visible()
     assert 'falló Deluge' in message.call_args.args[2]
-    w.recommended_install.clicked()
+    assert w.recommended_retry.get_visible()
+    w.recommended_buttons[('audacity', 'deb')].clicked()
+    w.recommended_retry.clicked()
     settle()
-    assert not w.recommended_selection
+    assert install.call_count == 3
+    assert install.call_args.args[0]['id'] == 'deluge'
+    assert w.recommended_selection == {'audacity': 'deb'}
     assert w.recommended_indicators[('deluge', 'flatpak')].get_visible()
-    assert not w.recommended_install.get_sensitive()
+    assert not w.recommended_retry.get_visible()
 w.recommended_multi.set_active(False)
 
 for app_id, definition in app.APLICACIONES_BACKUP.items():

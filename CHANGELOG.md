@@ -2,6 +2,8 @@
 
 ## 1.1.3
 
+- Añade filtros por categoría, una revisión de la selección y el reintento de instalaciones fallidas en Apps recomendadas.
+- Añade una búsqueda por nombre y descripción en Apps recomendadas, compatible con la selección múltiple.
 - Corrige el ajuste de la ventana al separar la terminal con btop o htop en ejecución.
 - Añade HPLIP con HP Toolbox y Zoom Workplace a Apps recomendadas, con sus iconos.
 
