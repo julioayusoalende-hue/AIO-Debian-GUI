@@ -1948,3 +1948,7 @@ TRADUCCIONES["en"]["Análisis del arranque"] = "Boot analysis"
 TRADUCCIONES["fr"]["Análisis del arranque"] = "Analyse du démarrage"
 
 TRADUCCIONES["zh"]["Análisis del arranque"] = "启动分析"
+
+TRADUCCIONES["fr"]["Sistema"] = "Système"
+
+TRADUCCIONES["zh"]["Sistema"] = "系统"

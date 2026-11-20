@@ -139,7 +139,14 @@ with patch.object(app.Vte.Terminal, 'copy_clipboard_format') as copiar, \
         config.parent.mkdir()
         config.write_text('// Configuración anterior\n', encoding='utf-8')
         menu = ventana.btn_comandos_terminal.get_popover().get_child()
-        separador, aplicar, restaurar = menu.get_children()[-3:]
+        elementos = menu.get_children()
+        assert [getattr(item, 'get_label', lambda: None)() for item in elementos[:-1]] == [
+            'Limpiar', None, 'Fastfetch', 'Fastfetch', 'Aplicar diseño de Fastfetch',
+            'Restaurar diseño anterior de Fastfetch', None, 'Sistema',
+            'Abrir archivos como administrador', 'Análisis del arranque', 'Htop', 'Btop',
+        ]
+        separador, aplicar, restaurar = elementos[1], elementos[4], elementos[5]
+        assert isinstance(elementos[6], Gtk.Separator)
         assert isinstance(separador, Gtk.Separator)
         assert aplicar.get_label() == 'Aplicar diseño de Fastfetch'
         assert restaurar.get_label() == 'Restaurar diseño anterior de Fastfetch'
@@ -967,7 +974,7 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
                 assert present.call_count == 2
             w.terminal.feed_child(b'printf "%s%s\\n" AIO_DETACHED_ "$AIO_DOCK_STATE"\n')
             assert terminal_contains('AIO_DETACHED_preserved')
-            assert list(w.terminal_buttons) == ['clear', 'fastfetch', 'btop', 'htop', 'arranque', 'nautilus']
+            assert list(w.terminal_buttons) == ['clear', 'fastfetch', 'nautilus', 'arranque', 'htop', 'btop']
             assert not w.btn_comandos_terminal.get_label()
             assert w.btn_comandos_terminal.get_image().get_icon_name()[0] == 'utilities-terminal-symbolic'
             assert w.btn_comandos_terminal.get_accessible().get_name() == 'Comandos'
@@ -1046,7 +1053,10 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
             with patch.object(w, '_abrir_monitor') as open_btop:
                 w._monitor_instalado(application, channel, None)
                 open_btop.assert_called_once_with('btop')
-            w.terminal_buttons['clear'].clicked()
+            limpiar_rapido = w.btn_comandos_terminal.get_parent().get_children()[1]
+            assert limpiar_rapido.get_image().get_icon_name()[0] == 'edit-clear-symbolic'
+            assert limpiar_rapido.get_accessible().get_name() == 'Limpiar'
+            limpiar_rapido.clicked()
             wait_button('clear')
             assert not w.terminal_status.get_text()
             stream = app.Gio.MemoryOutputStream.new_resizable()

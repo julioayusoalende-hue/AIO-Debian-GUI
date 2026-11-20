@@ -34,7 +34,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("Vte", "2.91")
-from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango, Vte  # noqa: E402
+from gi.repository import GObject, Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango, Vte  # noqa: E402
 
 # Ruta equivalente en DEB (/usr), AppImage (AppDir/usr) y Flatpak (/app).
 CORE_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -1814,7 +1814,6 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_comandos_terminal.get_accessible().set_name(nombre_comandos)
         opciones_terminal.pack_start(self.btn_comandos_terminal, False, False, 0)
         self.terminal_status = etiqueta("")
-        opciones_terminal.pack_start(self.terminal_status, True, True, 0)
         consola.pack_start(opciones_terminal, False, False, 0)
 
         popover, comandos = self._crear_menu_acciones(self.btn_comandos_terminal)
@@ -1826,25 +1825,40 @@ class VentanaPrincipal(Gtk.Window):
             comandos.pack_start(boton, False, False, 0)
             return boton
 
-        self.terminal_buttons = {}
-        for clave, texto in (("clear", "Limpiar"), ("fastfetch", "Fastfetch"), ("btop", "Btop"),
-                             ("htop", "Htop"), ("arranque", "Análisis del arranque"),
-                             ("nautilus", "Abrir archivos como administrador")):
-            if clave in ("btop", "htop"):
-                boton = agregar_comando(texto, self._comprobar_monitor, clave)
-            else:
-                boton = agregar_comando(texto, self._ejecutar_acceso_terminal, clave)
-            self.terminal_buttons[clave] = boton
+        def agregar_categoria(nombre):
+            comandos.pack_start(Gtk.Separator(), False, False, 0)
+            titulo = etiqueta(nombre, dim=True)
+            comandos.pack_start(titulo, False, False, 0)
+
+        limpiar = agregar_comando("Limpiar", self._ejecutar_acceso_terminal, "clear")
+        self.terminal_buttons = {"clear": limpiar}
+        limpiar_rapido = Gtk.Button.new_from_icon_name("edit-clear-symbolic", Gtk.IconSize.BUTTON)
+        nombre_limpiar = traducir("Limpiar")
+        limpiar_rapido.set_tooltip_text(nombre_limpiar)
+        limpiar_rapido.get_accessible().set_name(nombre_limpiar)
+        limpiar_rapido.connect("clicked", lambda _: limpiar.clicked())
+        limpiar.bind_property("sensitive", limpiar_rapido, "sensitive", GObject.BindingFlags.SYNC_CREATE)
+        opciones_terminal.pack_start(limpiar_rapido, False, False, 0)
+        opciones_terminal.pack_start(self.terminal_status, True, True, 0)
+
+        agregar_categoria("Fastfetch")
+        self.terminal_buttons["fastfetch"] = agregar_comando(
+            "Fastfetch", self._ejecutar_acceso_terminal, "fastfetch")
+        fastfetch = agregar_comando("Aplicar diseño de Fastfetch", self._aplicar_diseno_fastfetch)
+        fastfetch.set_tooltip_text(traducir("Guarda una copia de la configuración anterior de Fastfetch."))
+        agregar_comando("Restaurar diseño anterior de Fastfetch", self._restaurar_diseno_fastfetch)
+
+        agregar_categoria("Sistema")
+        for clave, texto in (("nautilus", "Abrir archivos como administrador"),
+                             ("arranque", "Análisis del arranque"), ("htop", "Htop"), ("btop", "Btop")):
+            callback = self._comprobar_monitor if clave in ("btop", "htop") else self._ejecutar_acceso_terminal
+            self.terminal_buttons[clave] = agregar_comando(texto, callback, clave)
 
         self.boton_separar_terminal = Gtk.Button(label=traducir("Separar terminal"))
         self.boton_separar_terminal.connect("clicked", self._alternar_ventana_terminal)
         opciones_terminal.pack_end(self.boton_separar_terminal, False, False, 0)
         self.terminal_restart = agregar_comando("Abrir nueva sesión", self._iniciar_terminal)
         self.terminal_restart.set_no_show_all(True)
-        comandos.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 0)
-        fastfetch = agregar_comando("Aplicar diseño de Fastfetch", self._aplicar_diseno_fastfetch)
-        fastfetch.set_tooltip_text(traducir("Guarda una copia de la configuración anterior de Fastfetch."))
-        agregar_comando("Restaurar diseño anterior de Fastfetch", self._restaurar_diseno_fastfetch)
         terminal_scroll = Gtk.ScrolledWindow()
         terminal_scroll.set_vexpand(True)
         self.terminal = Vte.Terminal()

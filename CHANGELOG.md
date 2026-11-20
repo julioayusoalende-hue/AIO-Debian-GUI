@@ -2,6 +2,7 @@
 
 ## 1.1.2
 
+- Organiza los comandos de la terminal en categorías y añade un acceso rápido para limpiar la consola.
 - Mueve los ajustes de diseño de Fastfetch a la terminal y resume el kernel, la arquitectura, el procesador y la RAM en Información del sistema.
 - Añade Htop y Análisis del arranque al menú de comandos de la terminal.
 - Abre btop en la propia consola y recupera la sesión de Bash al salir.
