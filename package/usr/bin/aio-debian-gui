@@ -1075,7 +1075,7 @@ class VentanaPrincipal(Gtk.Window):
         self.recommended_scan_generation = 0
         self.terminal_started = False
         self.ventana_terminal = None
-        self.terminal_btop = None
+        self.terminal_monitor = None
         self.programando = False
         self.programacion = ControladorProgramacion(self)
         self.diagnostico_en_curso = False
@@ -1821,10 +1821,11 @@ class VentanaPrincipal(Gtk.Window):
             return boton
 
         self.terminal_buttons = {}
-        for clave, texto in (("clear", "Limpiar"), ("fastfetch", "Fastfetch"), ("btop", "btop"),
+        for clave, texto in (("clear", "Limpiar"), ("fastfetch", "Fastfetch"), ("btop", "Btop"),
+                             ("htop", "Htop"), ("arranque", "Análisis del arranque"),
                              ("nautilus", "Abrir archivos como administrador")):
-            if clave == "btop":
-                boton = agregar_comando(texto, self._comprobar_btop)
+            if clave in ("btop", "htop"):
+                boton = agregar_comando(texto, self._comprobar_monitor, clave)
             else:
                 boton = agregar_comando(texto, self._ejecutar_acceso_terminal, clave)
             self.terminal_buttons[clave] = boton
@@ -2746,7 +2747,7 @@ class VentanaPrincipal(Gtk.Window):
             return
         if not self.terminal_started:
             self._iniciar_terminal()
-        (self.terminal_btop or self.terminal).grab_focus()
+        (self.terminal_monitor or self.terminal).grab_focus()
 
     def _alternar_ventana_terminal(self, _boton):
         if self.ventana_terminal is not None:
@@ -2764,7 +2765,7 @@ class VentanaPrincipal(Gtk.Window):
         # Se mueve la terminal existente para conservar la sesión y su salida.
         self.contenido_terminal.reparent(ventana)
         ventana.present()
-        (self.terminal_btop or self.terminal).grab_focus()
+        (self.terminal_monitor or self.terminal).grab_focus()
 
     def _acoplar_terminal(self, *_args):
         ventana = self.ventana_terminal
@@ -2778,20 +2779,20 @@ class VentanaPrincipal(Gtk.Window):
         if not self.preferencias["modo_simple"]:
             self.notebook.set_current_page(self.notebook.page_num(self.pagina_terminal))
             self.present()
-            (self.terminal_btop or self.terminal).grab_focus()
+            (self.terminal_monitor or self.terminal).grab_focus()
         return True
 
-    def _comprobar_btop(self, boton):
-        if self.terminal_btop is not None:
-            self.terminal_btop.grab_focus()
+    def _comprobar_monitor(self, boton, clave):
+        if self.terminal_monitor is not None:
+            self.terminal_monitor.grab_focus()
             return
         boton.set_sensitive(False)
-        self.terminal_status.set_text(traducir("Comprobando %s…") % "btop")
+        self.terminal_status.set_text(traducir("Comprobando %s…") % clave)
 
         def comprobar():
             try:
                 resultado = subprocess.run(
-                    comando_host("sh", "-c", "command -v btop >/dev/null || exit 1"),
+                    comando_host("sh", "-c", 'command -v "$1" >/dev/null || exit 1', "sh", clave),
                     capture_output=True, text=True, timeout=10,
                 )
                 ausente = resultado.returncode == 1 and not resultado.stderr.strip()
@@ -2799,19 +2800,19 @@ class VentanaPrincipal(Gtk.Window):
                     resultado.stderr.strip() or str(resultado.returncode))
             except (OSError, subprocess.SubprocessError) as exc:
                 ausente, error = False, str(exc)
-            GLib.idle_add(self._btop_comprobado, ausente, error)
+            GLib.idle_add(self._monitor_comprobado, clave, ausente, error)
 
         threading.Thread(target=comprobar, daemon=True).start()
 
-    def _btop_comprobado(self, ausente, error):
+    def _monitor_comprobado(self, clave, ausente, error):
         if self.destruida:
             return GLib.SOURCE_REMOVE
-        self.terminal_buttons["btop"].set_sensitive(True)
+        self.terminal_buttons[clave].set_sensitive(True)
         self.terminal_status.set_text("")
         if error:
-            self.terminal_status.set_text(traducir("No se pudo ejecutar %s.") % "btop" + " " + error)
+            self.terminal_status.set_text(traducir("No se pudo ejecutar %s.") % clave + " " + error)
         elif not ausente:
-            self._abrir_btop()
+            self._abrir_monitor(clave)
         elif (self.backup_action_in_progress or self.en_curso or self.diagnostico_en_curso
               or self.comprobando_actualizacion or self.programando or self.grub_action_in_progress):
             self.terminal_status.set_text(traducir("Hay otra operación en curso."))
@@ -2819,7 +2820,7 @@ class VentanaPrincipal(Gtk.Window):
             dialogo = Gtk.MessageDialog(
                 transient_for=self.terminal.get_toplevel(), modal=True,
                 message_type=Gtk.MessageType.QUESTION, buttons=Gtk.ButtonsType.NONE,
-                text=traducir("¿Quieres instalar %s en formato %s?") % ("btop", traducir("DEB (APT)")),
+                text=traducir("¿Quieres instalar %s en formato %s?") % (clave, traducir("DEB (APT)")),
             )
             dialogo.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
             dialogo.add_button(traducir("Instalar"), Gtk.ResponseType.OK)
@@ -2827,55 +2828,59 @@ class VentanaPrincipal(Gtk.Window):
             instalar = dialogo.run() == Gtk.ResponseType.OK
             dialogo.destroy()
             if instalar:
-                app = next(item for item in APPS_RECOMENDADAS if item["id"] == "btop")
-                self.terminal_buttons["btop"].set_sensitive(False)
-                self.terminal_status.set_text(traducir("Instalando %s…") % "btop")
-                self._instalar_app_recomendada(app, self.canales_recomendados["btop"][0],
-                                               self._btop_instalado)
+                app = next(item for item in APPS_RECOMENDADAS if item["id"] == clave)
+                self.terminal_buttons[clave].set_sensitive(False)
+                self.terminal_status.set_text(traducir("Instalando %s…") % clave)
+                self._instalar_app_recomendada(app, self.canales_recomendados[clave][0],
+                                               self._monitor_instalado)
         return GLib.SOURCE_REMOVE
 
-    def _btop_instalado(self, app, canal, error):
+    def _monitor_instalado(self, app, canal, error):
+        clave = app["id"]
         self.backup_action_in_progress = False
         if self.destruida:
             return GLib.SOURCE_REMOVE
         self.recommended_status.set_text("")
         self._actualizar_sensibilidad()
-        self.terminal_buttons["btop"].set_sensitive(True)
+        self.terminal_buttons[clave].set_sensitive(True)
         if error:
             self.terminal_status.set_text(
-                traducir("No se pudo instalar %s.") % "btop" + " " + error)
+                traducir("No se pudo instalar %s.") % clave + " " + error)
         else:
             self._marcar_recomendada_instalada(app["id"], canal["type"])
             self.terminal_status.set_text("")
-            self._abrir_btop()
+            self._abrir_monitor(clave)
         return GLib.SOURCE_REMOVE
 
-    def _abrir_btop(self):
+    def _abrir_monitor(self, clave):
+        if self.terminal_monitor is not None:
+            self.terminal_monitor.grab_focus()
+            return
         visor = Vte.Terminal()
-        self.terminal_btop = visor
+        self.terminal_monitor = visor
         self._construir_edicion_terminal(visor)
-        self.vistas_terminal.add_named(visor, "btop")
+        self.vistas_terminal.add_named(visor, clave)
         visor.show()
         self.vistas_terminal.set_visible_child(visor)
         visor.grab_focus()
 
         def cerrar(_terminal, _estado=None):
-            if not self.destruida and self.terminal_btop is visor:
-                self.terminal_btop = None
+            if not self.destruida and self.terminal_monitor is visor:
+                self.terminal_monitor = None
                 self.vistas_terminal.set_visible_child_name("bash")
                 visor.destroy()
                 self.terminal.grab_focus()
 
         visor.connect("child-exited", cerrar)
-        argv = comando_host("btop")
+        argv = comando_host(clave)
         if es_flatpak():
-            argv = comando_host("script", "-qefc", "exec btop", "/dev/null")
+            argv = comando_host("script", "-qefc", f"exec {clave}", "/dev/null")
 
         def iniciado(_terminal, _pid, error, _data):
-            if error is not None and not self.destruida and self.terminal_btop is visor:
+            if error is not None and not self.destruida and self.terminal_monitor is visor:
                 cerrar(visor)
                 self.terminal_status.set_text(
-                    traducir("No se pudo ejecutar %s.") % "btop" + " " + error.message)
+                    traducir("No se pudo ejecutar %s.") % clave + " " + error.message)
 
         visor.spawn_async(Vte.PtyFlags.DEFAULT, None, argv, None, GLib.SpawnFlags.SEARCH_PATH,
                           None, None, -1, None, iniciado, None)
@@ -2884,6 +2889,7 @@ class VentanaPrincipal(Gtk.Window):
         comandos = {
             "clear": ("clear",),
             "fastfetch": ("fastfetch",),
+            "arranque": ("systemd-analyze", "--no-pager", "time"),
             "nautilus": ("nautilus", "admin:/"),
         }
         comando = comandos[clave]
@@ -2925,7 +2931,7 @@ class VentanaPrincipal(Gtk.Window):
                     (traducir("No se pudo ejecutar %s.") % " ".join(comando)) + " " + error
                 )
             elif salida:
-                if clave == "fastfetch":
+                if clave in ("fastfetch", "arranque"):
                     salida = b"\r\n" + salida.replace(b"\n", b"\r\n")
                 self.terminal.feed(salida)
             return False
@@ -3365,7 +3371,7 @@ class VentanaPrincipal(Gtk.Window):
     def _abrir_terminal(self, _boton=None):
         if self.ventana_terminal is not None:
             self.ventana_terminal.present()
-            (self.terminal_btop or self.terminal).grab_focus()
+            (self.terminal_monitor or self.terminal).grab_focus()
         elif not self.preferencias["modo_simple"]:
             self.notebook.set_current_page(self.notebook.page_num(self.pagina_terminal))
 

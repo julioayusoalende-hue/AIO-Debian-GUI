@@ -1942,3 +1942,9 @@ TRADUCCIONES["zh"].update({
     "Canal de actualizaciones": "更新渠道",
     "Afecta solo a Buscar actualizaciones de AiO Debian GUI.": "仅影响 AiO Debian GUI 中的检查更新功能。",
 })
+
+TRADUCCIONES["en"]["Análisis del arranque"] = "Boot analysis"
+
+TRADUCCIONES["fr"]["Análisis del arranque"] = "Analyse du démarrage"
+
+TRADUCCIONES["zh"]["Análisis del arranque"] = "启动分析"

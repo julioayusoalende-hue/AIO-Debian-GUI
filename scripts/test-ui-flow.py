@@ -895,6 +895,12 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
         btop_marker = Path(directory) / 'btop-ran'
         btop.write_text(f'#!/bin/sh\n[ -t 0 ] && echo yes > "{btop_marker}"\nread -r salir\n')
         btop.chmod(0o755)
+        htop = Path(directory) / 'htop'
+        htop.write_bytes(btop.read_bytes())
+        htop.chmod(0o755)
+        analyze = Path(directory) / 'systemd-analyze'
+        analyze.write_text('#!/bin/sh\n[ "$*" = "--no-pager time" ] && echo AIO_BOOT_TEST\n')
+        analyze.chmod(0o755)
         nautilus = Path(directory) / 'nautilus'
         nautilus.write_text('#!/bin/sh\nprintf "%s" "$1" > "' + directory + '/nautilus-arg"\n')
         nautilus.chmod(0o755)
@@ -956,7 +962,7 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
                 assert present.call_count == 2
             w.terminal.feed_child(b'printf "%s%s\\n" AIO_DETACHED_ "$AIO_DOCK_STATE"\n')
             assert terminal_contains('AIO_DETACHED_preserved')
-            assert list(w.terminal_buttons) == ['clear', 'fastfetch', 'btop', 'nautilus']
+            assert list(w.terminal_buttons) == ['clear', 'fastfetch', 'btop', 'htop', 'arranque', 'nautilus']
             assert not w.btn_comandos_terminal.get_label()
             assert w.btn_comandos_terminal.get_image().get_icon_name()[0] == 'utilities-terminal-symbolic'
             assert w.btn_comandos_terminal.get_accessible().get_name() == 'Comandos'
@@ -978,7 +984,7 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
             assert btop_marker.read_text().strip() == 'yes'
             assert not command_menu.get_mapped()
             assert w.terminal.get_pty() == pty
-            visor_btop = w.terminal_btop
+            visor_btop = w.terminal_monitor
             assert visor_btop.get_toplevel() == detached
             assert w.vistas_terminal.get_visible_child() == visor_btop
             w.boton_separar_terminal.clicked()
@@ -991,11 +997,30 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
             assert visor_btop.get_toplevel() == detached
             visor_btop.feed_child(b'q\n')
             deadline = time.monotonic() + 8
-            while w.terminal_btop is not None and time.monotonic() < deadline:
+            while w.terminal_monitor is not None and time.monotonic() < deadline:
                 settle()
-            assert w.terminal_btop is None
+            assert w.terminal_monitor is None
             assert w.vistas_terminal.get_visible_child_name() == 'bash'
             assert w.terminal.get_pty() == pty
+
+            assert w.terminal_buttons['btop'].get_label() == 'Btop'
+            assert w.terminal_buttons['htop'].get_label() == 'Htop'
+            assert w.terminal_buttons['arranque'].get_label() == 'Análisis del arranque'
+            btop_marker.unlink()
+            w.terminal_buttons['htop'].clicked()
+            deadline = time.monotonic() + 8
+            while not btop_marker.exists() and time.monotonic() < deadline:
+                settle()
+            assert btop_marker.exists()
+            assert w.vistas_terminal.get_visible_child_name() == 'htop'
+            w.terminal_monitor.feed_child(b'q\n')
+            deadline = time.monotonic() + 8
+            while w.terminal_monitor is not None and time.monotonic() < deadline:
+                settle()
+            assert w.vistas_terminal.get_visible_child_name() == 'bash'
+            w.terminal_buttons['arranque'].clicked()
+            wait_button('arranque')
+            assert terminal_contains('AIO_BOOT_TEST')
 
             btop.unlink()
             (Path(directory) / 'sh').symlink_to('/bin/sh')
@@ -1010,12 +1035,12 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
                 application, channel, callback = install.call_args.args
                 assert application['id'] == 'btop'
                 assert channel['type'] == 'deb'
-                assert callback == w._btop_instalado
-            w._btop_instalado(application, channel, 'error simulado')
+                assert callback == w._monitor_instalado
+            w._monitor_instalado(application, channel, 'error simulado')
             assert 'No se pudo instalar btop.' in w.terminal_status.get_text()
-            with patch.object(w, '_abrir_btop') as open_btop:
-                w._btop_instalado(application, channel, None)
-                open_btop.assert_called_once()
+            with patch.object(w, '_abrir_monitor') as open_btop:
+                w._monitor_instalado(application, channel, None)
+                open_btop.assert_called_once_with('btop')
             w.terminal_buttons['clear'].clicked()
             wait_button('clear')
             assert not w.terminal_status.get_text()

@@ -2,6 +2,7 @@
 
 ## 1.1.2
 
+- Añade Htop y Análisis del arranque al menú de comandos de la terminal.
 - Abre btop en la propia consola y recupera la sesión de Bash al salir.
 - Conserva los colores de Fastfetch al ejecutarlo desde el menú Comandos de la terminal.
 - Permite arrastrar el separador de la pestaña principal y conserva el reparto de ancho al redimensionar la ventana.
