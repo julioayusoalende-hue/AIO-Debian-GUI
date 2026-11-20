@@ -798,27 +798,33 @@ def informacion_grafica():
     return filas
 
 
-def informacion_sistema():
+def memoria_sistema(meminfo, campo):
+    memoria = re.search(rf"^{campo}:[ \t]*(\d+) kB$", meminfo, re.MULTILINE)
+    return "%.1f GiB" % (int(memoria.group(1)) / 1024 ** 2) if memoria else ""
+
+
+def informacion_hardware_basica(meminfo):
     uname = os.uname()
-    filas = [
-        ("Sistema operativo", sistema_operativo()),
+    cpuinfo = leer_texto("/proc/cpuinfo") or ""
+    procesador = re.search(r"^(?:model name|Hardware)[ \t]*:[ \t]*(.+)$", cpuinfo, re.MULTILINE)
+    return [
         ("Kernel actual", uname.release),
         ("Arquitectura", uname.machine),
+        ("Procesador", procesador.group(1).strip() if procesador else ""),
+        ("Memoria RAM total", memoria_sistema(meminfo, "MemTotal")),
     ]
-    cpuinfo = leer_texto("/proc/cpuinfo") or ""
-    procesador = re.search(r"^(?:model name|Hardware)\s*:\s*(.+)$", cpuinfo, re.MULTILINE)
-    if procesador:
-        filas.append(("Procesador", procesador.group(1).strip()))
+
+
+def informacion_sistema():
+    meminfo = leer_texto("/proc/meminfo") or ""
+    filas = [("Sistema operativo", sistema_operativo())]
+    filas.extend((nombre, valor) for nombre, valor in informacion_hardware_basica(meminfo) if valor)
     hilos = os.cpu_count()
     if hilos is not None:
         filas.append(("Procesadores lógicos", str(hilos)))
-
-    meminfo = leer_texto("/proc/meminfo") or ""
-    for campo, nombre in (("MemTotal", "Memoria RAM total"),
-                          ("MemAvailable", "Memoria RAM disponible")):
-        memoria = re.search(rf"^{campo}:\s*(\d+) kB$", meminfo, re.MULTILINE)
-        if memoria:
-            filas.append((nombre, "%.1f GiB" % (int(memoria.group(1)) / 1024 ** 2)))
+    disponible = memoria_sistema(meminfo, "MemAvailable")
+    if disponible:
+        filas.append(("Memoria RAM disponible", disponible))
 
     filas.extend(informacion_grafica())
 
@@ -1835,6 +1841,10 @@ class VentanaPrincipal(Gtk.Window):
         opciones_terminal.pack_end(self.boton_separar_terminal, False, False, 0)
         self.terminal_restart = agregar_comando("Abrir nueva sesión", self._iniciar_terminal)
         self.terminal_restart.set_no_show_all(True)
+        comandos.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 0)
+        fastfetch = agregar_comando("Aplicar diseño de Fastfetch", self._aplicar_diseno_fastfetch)
+        fastfetch.set_tooltip_text(traducir("Guarda una copia de la configuración anterior de Fastfetch."))
+        agregar_comando("Restaurar diseño anterior de Fastfetch", self._restaurar_diseno_fastfetch)
         terminal_scroll = Gtk.ScrolledWindow()
         terminal_scroll.set_vexpand(True)
         self.terminal = Vte.Terminal()
@@ -3254,9 +3264,11 @@ class VentanaPrincipal(Gtk.Window):
         self._marcar_recomendada_instalada(app["id"], canal["type"])
         return GLib.SOURCE_REMOVE
 
-    def _ajustar_proporcion_paneles(self, paneles, _allocation):
+    def _ajustar_proporcion_paneles(self, paneles, allocation):
+        # El ancho de la ventana puede seguir mostrando la asignación anterior.
+        ancho_minimo = 900 - 2 * paneles.get_parent().get_border_width() - 2
         if (paneles.get_orientation() != Gtk.Orientation.HORIZONTAL
-                or self.get_allocated_width() < 900 or self.preferencias["modo_simple"]):
+                or allocation.width < ancho_minimo or self.preferencias["modo_simple"]):
             return
         izquierda = paneles.get_position()
         ancho = self.panel_izquierdo.get_allocated_width() + self.panel_derecho.get_allocated_width()
@@ -3404,23 +3416,23 @@ class VentanaPrincipal(Gtk.Window):
         self.salud_sistema = etiqueta("No comprobado")
         self.salud_sistema.get_style_context().add_class("dim-label")
         caja.pack_start(etiqueta(sistema_operativo()), False, False, 0)
+        hardware = Gtk.Grid(column_spacing=10, row_spacing=4)
+        meminfo = leer_texto("/proc/meminfo") or ""
+        for fila, (nombre, dato) in enumerate(informacion_hardware_basica(meminfo)):
+            nombre_label = etiqueta(nombre, dim=True)
+            nombre_label.set_valign(Gtk.Align.START)
+            valor = Gtk.Label(label=dato or "—", xalign=0, selectable=True)
+            valor.set_hexpand(True)
+            valor.set_line_wrap(True)
+            valor.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+            hardware.attach(nombre_label, 0, fila, 1, 1)
+            hardware.attach(valor, 1, fila, 1, 1)
+        caja.pack_start(hardware, False, False, 0)
         caja.pack_start(self.salud_sistema, False, False, 0)
         self.consejo_sistema = etiqueta("Ejecuta el diagnóstico para revisar el estado del sistema.", dim=True)
         caja.pack_start(self.consejo_sistema, False, False, 0)
         caja.pack_start(self.btn_diagnostico, False, False, 0)
         caja.pack_start(self.btn_detalles_sistema, False, False, 0)
-        fastfetch = Gtk.Button(label=traducir("Aplicar diseño de Fastfetch"))
-        fastfetch.set_tooltip_text(traducir("Guarda una copia de la configuración anterior de Fastfetch."))
-        fastfetch.set_halign(Gtk.Align.START)
-        fastfetch.connect("clicked", self._aplicar_diseno_fastfetch)
-        caja.pack_start(fastfetch, False, False, 0)
-        restaurar = Gtk.Button(label=traducir("Restaurar diseño anterior de Fastfetch"))
-        restaurar.set_halign(Gtk.Align.START)
-        restaurar.get_child().set_line_wrap(True)
-        restaurar.get_child().set_max_width_chars(26)
-        restaurar.connect("clicked", self._restaurar_diseno_fastfetch)
-        caja.pack_start(restaurar, False, False, 0)
-
         if self.distribucion == "debian":
             self.nvidia_info_label = etiqueta("Buscando GPU NVIDIA…", dim=True)
         return marco
@@ -3494,12 +3506,12 @@ class VentanaPrincipal(Gtk.Window):
             copia = instalar_layout(FASTFETCH_LAYOUT, GLib.get_user_config_dir())
         except (OSError, RuntimeError) as error:
             self._mensaje(Gtk.MessageType.ERROR, titulo,
-                          traducir("No se pudo aplicar el diseño de Fastfetch.") + "\n" + str(error))
+                          traducir("No se pudo aplicar el diseño de Fastfetch.") + "\n" + str(error), parent=self.ventana_terminal)
             return
         mensaje = traducir("El diseño de Fastfetch está activo.")
         if copia:
             mensaje += "\n" + traducir("Copia de la configuración anterior: %s") % copia
-        self._mensaje(Gtk.MessageType.INFO, titulo, mensaje)
+        self._mensaje(Gtk.MessageType.INFO, titulo, mensaje, parent=self.ventana_terminal)
 
     def _restaurar_diseno_fastfetch(self, _boton):
         titulo = traducir("Diseño de Fastfetch")
@@ -3507,11 +3519,11 @@ class VentanaPrincipal(Gtk.Window):
             restaurado = restaurar_layout(FASTFETCH_LAYOUT, GLib.get_user_config_dir())
         except (OSError, RuntimeError, ValueError) as error:
             self._mensaje(Gtk.MessageType.ERROR, titulo,
-                          traducir("No se pudo restaurar el diseño de Fastfetch.") + "\n" + str(error))
+                          traducir("No se pudo restaurar el diseño de Fastfetch.") + "\n" + str(error), parent=self.ventana_terminal)
             return
         mensaje = ("Se restauró el diseño anterior de Fastfetch." if restaurado
                    else "El diseño de AiO no está activo o se ha modificado.")
-        self._mensaje(Gtk.MessageType.INFO, titulo, traducir(mensaje))
+        self._mensaje(Gtk.MessageType.INFO, titulo, traducir(mensaje), parent=self.ventana_terminal)
 
     def _tarjeta_seleccion(self):
         marco, caja = tarjeta_mantenimiento(8)
@@ -4856,8 +4868,8 @@ class VentanaPrincipal(Gtk.Window):
             self._escribir("[*] Reinicio omitido. Recuerda reiniciar más tarde.\n", "info")
 
     # -- Varios ----------------------------------------------------------------
-    def _mensaje(self, tipo, titulo, texto):
-        d = Gtk.MessageDialog(transient_for=self, modal=True, message_type=tipo,
+    def _mensaje(self, tipo, titulo, texto, *, parent=None):
+        d = Gtk.MessageDialog(transient_for=parent or self, modal=True, message_type=tipo,
                               buttons=Gtk.ButtonsType.NONE, text=traducir(titulo))
         d.add_button(traducir("Aceptar"), Gtk.ResponseType.OK)
         d.format_secondary_text(traducir(texto))

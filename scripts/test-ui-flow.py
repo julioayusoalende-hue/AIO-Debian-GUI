@@ -138,14 +138,19 @@ with patch.object(app.Vte.Terminal, 'copy_clipboard_format') as copiar, \
         config = Path(directorio) / 'fastfetch/config.jsonc'
         config.parent.mkdir()
         config.write_text('// Configuración anterior\n', encoding='utf-8')
-        ventana._aplicar_diseno_fastfetch(None)
+        menu = ventana.btn_comandos_terminal.get_popover().get_child()
+        separador, aplicar, restaurar = menu.get_children()[-3:]
+        assert isinstance(separador, Gtk.Separator)
+        assert aplicar.get_label() == 'Aplicar diseño de Fastfetch'
+        assert restaurar.get_label() == 'Restaurar diseño anterior de Fastfetch'
+        aplicar.clicked()
         assert config.read_bytes() == Path(app.FASTFETCH_LAYOUT).read_bytes()
         (copia,) = config.parent.glob('config.jsonc.*.bak')
         assert copia.read_text(encoding='utf-8') == '// Configuración anterior\n'
         assert str(copia) in mensaje.call_args.args[-1]
         ventana._aplicar_diseno_fastfetch(None)
         assert list(config.parent.glob('*.bak')) == [copia]
-        ventana._restaurar_diseno_fastfetch(None)
+        restaurar.clicked()
         assert config.read_text(encoding='utf-8') == '// Configuración anterior\n'
         assert copia.exists()
         config.unlink()
@@ -972,7 +977,7 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
             assert all(button.get_ancestor(Gtk.Popover) == command_menu
                        for button in (*w.terminal_buttons.values(), w.terminal_restart))
             assert w.boton_separar_terminal.get_parent() == w.btn_comandos_terminal.get_parent()
-            assert all(button.get_label() != 'Copiar'
+            assert all(not isinstance(button, Gtk.Button) or button.get_label() != 'Copiar'
                        for button in command_menu.get_child().get_children())
             w.btn_comandos_terminal.set_active(True)
             settle()
