@@ -347,6 +347,7 @@ instalar_aplicacion_recomendada() {
         btop) paquete=btop ;;
         celluloid) paquete=celluloid ;;
         deluge) paquete=deluge ;;
+        flameshot) paquete=flameshot ;;
         ghostty)
             ubuntu_compatible_con_ghostty || {
                 err "La instalación de Ghostty desde APT requiere Ubuntu 26.04 o posterior."
@@ -1655,7 +1656,7 @@ main() {
             exit $?
             ;;
         --recommended-install)
-            [ "$#" -eq 2 ] || { err "Uso: $0 [--lang LOCALE] --recommended-install audacity|btop|celluloid|deluge|ghostty|gimp|gparted|handbrake|hplip-gui|htop|kdenlive|kitty|qbittorrent|retroarch|vlc"; exit 2; }
+            [ "$#" -eq 2 ] || { err "Uso: $0 [--lang LOCALE] --recommended-install audacity|btop|celluloid|deluge|flameshot|ghostty|gimp|gparted|handbrake|hplip-gui|htop|kdenlive|kitty|qbittorrent|retroarch|vlc"; exit 2; }
             instalar_aplicacion_recomendada "$2"
             exit $?
             ;;

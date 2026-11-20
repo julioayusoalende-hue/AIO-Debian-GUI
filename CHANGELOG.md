@@ -2,6 +2,7 @@
 
 ## 1.1.3
 
+- Añade Gradia, Flameshot, ONLYOFFICE Desktop Editors y Bitwarden a Apps recomendadas, con sus iconos.
 - Añade el reintento de tareas fallidas desde el historial con una referencia a la ejecución original.
 - El historial permite abrir ejecuciones manuales y programadas, revisar el estado de cada tarea y consultar los mensajes de error registrados.
 

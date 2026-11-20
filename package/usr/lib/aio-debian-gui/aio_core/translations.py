@@ -1013,6 +1013,11 @@ TRADUCCIONES["en"].update({
     "Editor de imágenes para crear, retocar y componer gráficos y fotografías.": "Image editor for creating, retouching, and composing graphics and photos.",
     "Reproduce vídeos con mpv desde una interfaz GTK sencilla.": "Plays videos with mpv through a simple GTK interface.",
     "Reproductor multimedia para vídeos, música y transmisiones de red.": "Media player for videos, music, and network streams.",
+    "Ofimática": "Office",
+    "Gestiona contraseñas y claves de acceso en una bóveda cifrada.": "Manage passwords and passkeys in an encrypted vault.",
+    "Captura áreas de la pantalla y añade anotaciones antes de guardar o compartir.": "Capture areas of the screen and add annotations before saving or sharing.",
+    "Edita capturas con anotaciones, fondos y herramientas para ocultar datos sensibles.": "Edit screenshots with annotations, backgrounds and tools to hide sensitive data.",
+    "Edita documentos, hojas de cálculo, presentaciones y PDF.": "Edit documents, spreadsheets, presentations and PDFs.",
     "Videollamadas, reuniones en línea y uso compartido de pantalla.": "Video calls, online meetings, and screen sharing.",
 })
 TRADUCCIONES["fr"].update({
@@ -1083,6 +1088,11 @@ TRADUCCIONES["fr"].update({
     "Editor de imágenes para crear, retocar y componer gráficos y fotografías.": "Éditeur d’images pour créer, retoucher et composer des graphismes et des photos.",
     "Reproduce vídeos con mpv desde una interfaz GTK sencilla.": "Lit des vidéos avec mpv grâce à une interface GTK simple.",
     "Reproductor multimedia para vídeos, música y transmisiones de red.": "Lecteur multimédia pour vidéos, musique et flux réseau.",
+    "Ofimática": "Bureautique",
+    "Gestiona contraseñas y claves de acceso en una bóveda cifrada.": "Gérez mots de passe et clés d’accès dans un coffre chiffré.",
+    "Captura áreas de la pantalla y añade anotaciones antes de guardar o compartir.": "Capturez des zones de l’écran et annotez-les avant de les enregistrer ou de les partager.",
+    "Edita capturas con anotaciones, fondos y herramientas para ocultar datos sensibles.": "Éditez vos captures avec des annotations, des arrière-plans et des outils de masquage.",
+    "Edita documentos, hojas de cálculo, presentaciones y PDF.": "Éditez des documents, des feuilles de calcul, des présentations et des PDF.",
     "Videollamadas, reuniones en línea y uso compartido de pantalla.": "Appels vidéo, réunions en ligne et partage d’écran.",
 })
 TRADUCCIONES["zh"].update({
@@ -1153,6 +1163,11 @@ TRADUCCIONES["zh"].update({
     "Editor de imágenes para crear, retocar y componer gráficos y fotografías.": "用于创建、修饰和合成图形与照片的图像编辑器。",
     "Reproduce vídeos con mpv desde una interfaz GTK sencilla.": "通过简洁的 GTK 界面使用 mpv 播放视频。",
     "Reproductor multimedia para vídeos, música y transmisiones de red.": "用于播放视频、音乐和网络流的多媒体播放器。",
+    "Ofimática": "办公",
+    "Gestiona contraseñas y claves de acceso en una bóveda cifrada.": "在加密保险库中管理密码和通行密钥。",
+    "Captura áreas de la pantalla y añade anotaciones antes de guardar o compartir.": "截取屏幕区域，并在保存或分享前添加标注。",
+    "Edita capturas con anotaciones, fondos y herramientas para ocultar datos sensibles.": "使用标注、背景和遮盖工具编辑截图。",
+    "Edita documentos, hojas de cálculo, presentaciones y PDF.": "编辑文档、电子表格、演示文稿和 PDF。",
     "Videollamadas, reuniones en línea y uso compartido de pantalla.": "视频通话、在线会议和屏幕共享。",
 })
 

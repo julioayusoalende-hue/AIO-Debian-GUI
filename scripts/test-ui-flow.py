@@ -310,7 +310,7 @@ for language in ('es', 'en', 'fr', 'zh'):
     settle()
     assert w.get_size()[0] <= 601, (language, w.get_size())
     assert all(button.get_mapped() for button in w.recommended_buttons.values())
-    assert len(w.recommended_grid.get_children()) == 26
+    assert len(w.recommended_grid.get_children()) == 30
     first = w.recommended_grid.get_child_at_index(0)
     second = w.recommended_grid.get_child_at_index(1)
     assert first.get_allocation().x == second.get_allocation().x
@@ -318,8 +318,8 @@ for language in ('es', 'en', 'fr', 'zh'):
     settle()
     assert first.get_allocation().y == second.get_allocation().y
     assert first.get_allocation().x < second.get_allocation().x
-    expected_names = ['Audacity', 'Brave', 'btop', 'Celluloid', 'Deluge', 'Feishin', 'Gear Lever', 'Ghostty', 'GIMP',
-                      'Google Chrome', 'GParted', 'HandBrake', 'Heroic Games Launcher', 'HPLIP (HP Toolbox)', 'htop', 'Kdenlive', 'Kitty', 'Plex', 'qBittorrent', 'RetroArch', 'Spotify', 'Steam', 'Switcheroo', 'Video Downloader', 'VLC', 'Zoom Workplace']
+    expected_names = ['Audacity', 'Bitwarden', 'Brave', 'btop', 'Celluloid', 'Deluge', 'Feishin', 'Flameshot', 'Gear Lever', 'Ghostty', 'GIMP',
+                      'Google Chrome', 'GParted', 'Gradia', 'HandBrake', 'Heroic Games Launcher', 'HPLIP (HP Toolbox)', 'htop', 'Kdenlive', 'Kitty', 'ONLYOFFICE Desktop Editors', 'Plex', 'qBittorrent', 'RetroArch', 'Spotify', 'Steam', 'Switcheroo', 'Video Downloader', 'VLC', 'Zoom Workplace']
     assert [item['name'] for item in app.APPS_RECOMENDADAS] == expected_names
     for index, name in enumerate(expected_names):
         card = w.recommended_grid.get_child_at_index(index).get_child()
@@ -346,7 +346,7 @@ for language in ('es', 'en', 'fr', 'zh'):
             fallback_theme,
         ) == app.APPS_RECOMENDADAS[index]['fallback_icon']
     assert {key for key in w.recommended_buttons if key[1] == 'deb'} == {
-        ('audacity', 'deb'), ('btop', 'deb'), ('celluloid', 'deb'), ('deluge', 'deb'), ('gimp', 'deb'), ('gparted', 'deb'), ('handbrake', 'deb'),
+        ('audacity', 'deb'), ('btop', 'deb'), ('celluloid', 'deb'), ('deluge', 'deb'), ('flameshot', 'deb'), ('gimp', 'deb'), ('gparted', 'deb'), ('handbrake', 'deb'),
         ('hplip-gui', 'deb'), ('htop', 'deb'), ('kdenlive', 'deb'), ('kitty', 'deb'), ('qbittorrent', 'deb'), ('retroarch', 'deb'), ('vlc', 'deb')
     }
     assert ('feishin', 'flatpak') in w.recommended_buttons
@@ -359,8 +359,13 @@ for language in ('es', 'en', 'fr', 'zh'):
     assert ('plex', 'flatpak') in w.recommended_buttons
     assert ('google-chrome', 'deb-download') in w.recommended_buttons
     assert ('zoom', 'deb-download') in w.recommended_buttons
+    assert ('onlyoffice', 'deb-download') in w.recommended_buttons
     for app_id, flatpak_id in (
         ('audacity', 'org.audacityteam.Audacity'),
+        ('bitwarden', 'com.bitwarden.desktop'),
+        ('flameshot', 'org.flameshot.Flameshot'),
+        ('gradia', 'be.alexandervanhee.gradia'),
+        ('onlyoffice', 'org.onlyoffice.desktopeditors'),
         ('heroic', 'com.heroicgameslauncher.hgl'),
         ('kdenlive', 'org.kde.kdenlive'),
         ('retroarch', 'org.libretro.RetroArch'),
