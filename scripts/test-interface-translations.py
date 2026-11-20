@@ -25,6 +25,7 @@ essential = (
     "Eliminar programación", "Pausar", "Frecuencia", "Hora local", "Programación activa",
     "Próxima ejecución: %s", "Última ejecución: %s · %s",
     "Detalles técnicos", "No comprobado", "Sin incidencias",
+    "Información del sistema", "Tareas a realizar", "RAM instalada",
     "Mantenimiento habitual", "Aplicaciones y repositorios",
     "apt-get autoremove; puede quitar paquetes que APT considera huérfanos.",
     "Kernel y controladores · Avanzado", "Ejecutar 1 tarea", "Ejecutar %d tareas",

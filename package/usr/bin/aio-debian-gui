@@ -798,12 +798,21 @@ def informacion_grafica():
     return filas
 
 
-def memoria_sistema(meminfo, campo):
-    memoria = re.search(rf"^{campo}:[ \t]*(\d+) kB$", meminfo, re.MULTILINE)
-    return "%.1f GiB" % (int(memoria.group(1)) / 1024 ** 2) if memoria else ""
+def memoria_ram_instalada():
+    salida = _ejecutar(comando_host(
+        "udevadm", "info", "--query=property", "--path=/sys/devices/virtual/dmi/id"))
+    modulos = re.findall(r"^MEMORY_DEVICE_([0-9]+)_(SIZE|PRESENT)=([0-9]+)$",
+                         salida, re.MULTILINE)
+    capacidades = {indice: int(valor) for indice, campo, valor in modulos if campo == "SIZE"}
+    vacias = {indice for indice, campo, valor in modulos if campo == "PRESENT" and valor == "0"}
+    cantidad = re.search(r"^MEMORY_ARRAY_NUM_DEVICES=([0-9]+)$", salida, re.MULTILINE)
+    if not cantidad or len(capacidades.keys() | vacias) != int(cantidad.group(1)):
+        return ""
+    total = sum(capacidades.values())
+    return "%.1f GiB" % (total / 1024 ** 3) if total else ""
 
 
-def informacion_hardware_basica(meminfo):
+def informacion_hardware_basica():
     uname = os.uname()
     cpuinfo = leer_texto("/proc/cpuinfo") or ""
     procesador = re.search(r"^(?:model name|Hardware)[ \t]*:[ \t]*(.+)$", cpuinfo, re.MULTILINE)
@@ -811,20 +820,16 @@ def informacion_hardware_basica(meminfo):
         ("Kernel actual", uname.release),
         ("Arquitectura", uname.machine),
         ("Procesador", procesador.group(1).strip() if procesador else ""),
-        ("Memoria RAM total", memoria_sistema(meminfo, "MemTotal")),
+        ("RAM instalada", memoria_ram_instalada() or "—"),
     ]
 
 
 def informacion_sistema():
-    meminfo = leer_texto("/proc/meminfo") or ""
     filas = [("Sistema operativo", sistema_operativo())]
-    filas.extend((nombre, valor) for nombre, valor in informacion_hardware_basica(meminfo) if valor)
+    filas.extend((nombre, valor) for nombre, valor in informacion_hardware_basica() if valor)
     hilos = os.cpu_count()
     if hilos is not None:
         filas.append(("Procesadores lógicos", str(hilos)))
-    disponible = memoria_sistema(meminfo, "MemAvailable")
-    if disponible:
-        filas.append(("Memoria RAM disponible", disponible))
 
     filas.extend(informacion_grafica())
 
@@ -3431,8 +3436,7 @@ class VentanaPrincipal(Gtk.Window):
         self.salud_sistema.get_style_context().add_class("dim-label")
         caja.pack_start(etiqueta(sistema_operativo()), False, False, 0)
         hardware = Gtk.Grid(column_spacing=10, row_spacing=4)
-        meminfo = leer_texto("/proc/meminfo") or ""
-        for fila, (nombre, dato) in enumerate(informacion_hardware_basica(meminfo)):
+        for fila, (nombre, dato) in enumerate(informacion_hardware_basica()):
             nombre_label = etiqueta(nombre, dim=True)
             nombre_label.set_valign(Gtk.Align.START)
             valor = Gtk.Label(label=dato or "—", xalign=0, selectable=True)
@@ -3718,18 +3722,19 @@ class VentanaPrincipal(Gtk.Window):
 
         presets = Gtk.Box()
         presets.get_style_context().add_class("linked")
-        b1 = Gtk.Button(label=traducir("Completo"))
-        b1.set_tooltip_text(traducir("Mantenimiento completo (valores por defecto)"))
-        b1.connect("clicked", self._preset_completo)
-        b2 = Gtk.Button(label=traducir("Solo Flatpak"))
-        b2.set_tooltip_text(
-            traducir("Saltarse el mantenimiento de APT y actualizar solo Flatpak")
-        )
-        b2.connect("clicked", self._preset_flatpak)
-        b2.set_no_show_all(not self.flatpak_presente)
-        presets.pack_start(b1, False, False, 0)
-        presets.pack_start(b2, False, False, 0)
-        self.botones_preset = (b1, b2)
+        self.botones_preset = {}
+        for perfil, titulo, ayuda in (
+            ("estandar", "Estándar", "Mantenimiento estándar (selección predeterminada)"),
+            ("completo", "Completo", "Mantenimiento estándar más purga de dependencias huérfanas"),
+            ("flatpak", "Solo Flatpak", "Saltarse el mantenimiento de APT y actualizar solo Flatpak"),
+        ):
+            boton = Gtk.Button(label=traducir(titulo))
+            boton.set_tooltip_text(traducir(ayuda))
+            boton.connect("clicked", self._aplicar_preset, perfil)
+            self.botones_preset[perfil] = boton
+            presets.pack_start(boton, False, False, 0)
+        self.botones_preset["flatpak"].set_no_show_all(not self.flatpak_presente)
+        self._marcar_preset_seleccionado(self.botones_preset["estandar"])
         presets.set_halign(Gtk.Align.START)
         tarjeta.pack_start(presets, False, False, 0)
 
@@ -3969,7 +3974,7 @@ class VentanaPrincipal(Gtk.Window):
         if self.btn_actualizar_diagnostico is not None:
             self.btn_actualizar_diagnostico.set_sensitive(
                 not self.en_curso and not self.comprobando_actualizacion)
-        for boton in self.botones_preset:
+        for boton in self.botones_preset.values():
             boton.set_sensitive(disponible)
         for pid, fila in self.filas.items():
             reversión = self.switches.get("revertir-backports")
@@ -4081,24 +4086,19 @@ class VentanaPrincipal(Gtk.Window):
             estilo.remove_class("aio-selected")
 
     # -- Presets ---------------------------------------------------------------
-    def _preset_completo(self, _b):
+    def _aplicar_preset(self, boton, perfil):
         self.actualizando_preset = True
         try:
             for pid, (sw, defecto) in self.switches.items():
-                sw.set_active(defecto and pid not in self.estados_tareas)
+                activo = defecto
+                if perfil == "flatpak":
+                    activo = pid == "flatpak-update"
+                elif perfil == "completo" and pid in ("autoremove", "autopurge"):
+                    activo = pid == "autopurge"
+                sw.set_active(activo and pid not in self.estados_tareas)
         finally:
             self.actualizando_preset = False
-        self._marcar_preset_seleccionado(self.botones_preset[0])
-        self._actualizar_sensibilidad()
-
-    def _preset_flatpak(self, _b):
-        self.actualizando_preset = True
-        try:
-            for pid, (sw, _d) in self.switches.items():
-                sw.set_active(pid == "flatpak-update" and pid not in self.estados_tareas)
-        finally:
-            self.actualizando_preset = False
-        self._marcar_preset_seleccionado(self.botones_preset[1])
+        self._marcar_preset_seleccionado(boton)
         self._actualizar_sensibilidad()
 
     def _alternar_limpieza_apt(self, switch, _propiedad, otra_tarea):
@@ -4126,7 +4126,7 @@ class VentanaPrincipal(Gtk.Window):
             self._actualizar_sensibilidad()
 
     def _marcar_preset_seleccionado(self, seleccionado):
-        for boton in self.botones_preset:
+        for boton in self.botones_preset.values():
             estilo = boton.get_style_context()
             if boton is seleccionado:
                 estilo.add_class("suggested-action")

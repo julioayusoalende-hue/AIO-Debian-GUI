@@ -204,8 +204,19 @@ for flatpak, snap in ((False, False), (True, False), (False, True), (True, True)
             assert (tarea in ventana.switches) is instalada
             if instalada:
                 assert ventana.filas[tarea].get_parent() is ventana.grupos_tareas[0].get_child()
-        assert ventana.botones_preset[1].get_visible() is flatpak
+        assert ventana.botones_preset["flatpak"].get_visible() is flatpak
         assert ('flatpak-setup' in ventana.switches) is not flatpak
+        estandar = ventana.botones_preset["estandar"]
+        assert estandar.get_style_context().has_class("suggested-action")
+        seleccion_inicial = ventana._pasos_seleccionados()
+        assert "autopurge" not in seleccion_inicial
+        ventana.botones_preset["completo"].clicked()
+        assert set(ventana._pasos_seleccionados()) == set(seleccion_inicial) | {"autopurge"}
+        if flatpak:
+            ventana.botones_preset["flatpak"].clicked()
+            assert ventana._pasos_seleccionados() == ["flatpak-update"]
+        estandar.clicked()
+        assert ventana._pasos_seleccionados() == seleccion_inicial
         ventana.destroy()
 
 for language in ('es', 'en', 'fr', 'zh'):
@@ -357,7 +368,7 @@ for language in ('es', 'en', 'fr', 'zh'):
     assert all(isinstance(check, Gtk.CheckButton) for check, _ in w.switches.values())
     assert isinstance(w.chk_sin_contrasena, Gtk.Switch)
     assert not any(t in w._pasos_seleccionados() for t in ('backports-kernel-mesa', 'revertir-backports', 'nvidia-driver', 'ubuntu-hwe'))
-    w._preset_flatpak(None)
+    w.botones_preset["flatpak"].clicked()
     assert w._pasos_seleccionados() == ['flatpak-update']
     assert w.btn_iniciar.get_label() == app.traducir('Ejecutar 1 tarea')
     if language == 'es':
@@ -403,7 +414,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         assert not w.switches['upgrade'][0].get_sensitive()
         w.switches['revertir-backports'][0].set_active(False)
         assert w.switches['upgrade'][0].get_sensitive()
-    w._preset_completo(None)
+    w.botones_preset["estandar"].clicked()
     assert 'autoremove' not in w._pasos_seleccionados()
     assert not w.switches['autoremove'][0].get_active()
     assert not w.switches['autopurge'][0].get_active()
@@ -414,7 +425,7 @@ for language in ('es', 'en', 'fr', 'zh'):
     w.switches['autoremove'][0].set_active(True)
     assert 'autoremove' in w._pasos_seleccionados()
     assert 'autopurge' not in w._pasos_seleccionados()
-    w._preset_completo(None)
+    w.botones_preset["estandar"].clicked()
     assert 'upgrade' in w._pasos_seleccionados()
 
     ok = {'name': 'Estado de dpkg', 'status': 'ok', 'detail': 'ok', 'advice': ''}

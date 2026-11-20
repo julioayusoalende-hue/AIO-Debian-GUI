@@ -2,6 +2,8 @@
 
 ## 1.1.2
 
+- Añade el perfil Estándar como selección predeterminada y la purga de dependencias huérfanas al perfil Completo.
+- Muestra la RAM física instalada y traduce los encabezados de tareas e información del sistema.
 - Organiza los comandos de la terminal en categorías y añade un acceso rápido para limpiar la consola.
 - Mueve los ajustes de diseño de Fastfetch a la terminal y resume el kernel, la arquitectura, el procesador y la RAM en Información del sistema.
 - Añade Htop y Análisis del arranque al menú de comandos de la terminal.
