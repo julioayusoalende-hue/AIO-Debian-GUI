@@ -67,13 +67,12 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.1.1
+### Lo nuevo en la 1.1.2
 
-- **APT:** actualización sin eliminar paquetes, comprobación estricta de índices y purga opcional con revisión del plan.
-- **Mantenimiento programado:** las notificaciones indican tareas pendientes o con error y permiten abrir AiO.
-- **GNOME Software:** capturas, novedades, licencia y tamaño del paquete.
-- **Apps recomendadas:** incorpora Steam, RetroArch, Audacity, Kdenlive y Heroic Games Launcher.
-- **Actualizaciones:** elige Estable o Testing desde AiO. La cabecera muestra el canal y mantiene el nombre del sistema dentro de la barra de título.
+- **Mantenimiento:** Estándar es el perfil predeterminado y Completo añade la purga de dependencias huérfanas con revisión previa.
+- **Información del sistema:** muestra la RAM física instalada y traduce los encabezados de la pestaña principal.
+- **Terminal:** organiza los comandos por categorías, incorpora Htop y el análisis del arranque y permite limpiar la consola con un acceso rápido.
+- **Backup:** al restaurar GNOME, explica cuándo volver a iniciar sesión y ofrece cerrar la sesión desde el aviso.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -81,7 +80,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.1.1**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.1.2**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -105,10 +104,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.1.1:
+Para la versión 1.1.2:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.1.1_all.deb
+sudo apt install ./aio-debian-gui_1.1.2_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.
