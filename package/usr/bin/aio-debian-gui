@@ -43,7 +43,7 @@ CORE_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file_
 if CORE_DIR not in sys.path:
     sys.path.insert(0, CORE_DIR)
 from aio_core import history as core_history, preferences as core_preferences, updates as core_updates, diagnostics as core_diagnostics, preflight as core_preflight, scheduler as core_scheduler, host_integration as core_host_integration  # noqa: E402
-from aio_core import desktop_backup as core_desktop_backup  # noqa: E402
+from aio_core import desktop_backup as core_desktop_backup, recommended_list as core_recommended_list  # noqa: E402
 from aio_core.fastfetch import instalar_layout, restaurar_layout  # noqa: E402
 from aio_core.gtk_appearance import aplicar_tema  # noqa: E402
 from aio_core.gtk_scheduler import ControladorProgramacion  # noqa: E402
@@ -2559,6 +2559,14 @@ class VentanaPrincipal(Gtk.Window):
         barra.pack_start(self.recommended_review, False, False, 0)
         barra.pack_end(self.recommended_install, False, False, 0)
         caja.pack_start(barra, False, False, 0)
+        archivos = Gtk.Box(spacing=8)
+        self.recommended_import = Gtk.Button(label=traducir("Importar lista"))
+        self.recommended_export = Gtk.Button(label=traducir("Exportar lista"))
+        self.recommended_import.connect("clicked", self._archivo_seleccion_recomendada, False)
+        self.recommended_export.connect("clicked", self._archivo_seleccion_recomendada, True)
+        archivos.pack_start(self.recommended_import, False, False, 0)
+        archivos.pack_start(self.recommended_export, False, False, 0)
+        caja.pack_start(archivos, False, False, 0)
         self.recommended_retry = Gtk.Button(label=traducir("Reintentar fallidas"))
         self.recommended_retry.set_halign(Gtk.Align.START)
         self.recommended_retry.set_no_show_all(True)
@@ -3303,8 +3311,10 @@ class VentanaPrincipal(Gtk.Window):
         return False
 
     def _cambiar_pestana_recomendadas(self, _notebook, pagina, _numero):
-        if pagina != self.pagina_recomendadas or self.backup_action_in_progress:
-            return
+        if pagina == self.pagina_recomendadas and not self.backup_action_in_progress:
+            self._consultar_estado_recomendadas()
+
+    def _consultar_estado_recomendadas(self, al_completar=None):
         self.recommended_scan_generation += 1
         generation = self.recommended_scan_generation
         self.recommended_installed.clear()
@@ -3332,12 +3342,12 @@ class VentanaPrincipal(Gtk.Window):
                             estados[clave] = self._comprobar_deb_recomendada(canal["package"])
                     except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
                         errores.append(str(exc))
-            GLib.idle_add(self._recomendadas_comprobadas, generation, estados, errores)
+            GLib.idle_add(self._recomendadas_comprobadas, generation, estados, errores, al_completar)
 
         threading.Thread(target=comprobar, daemon=True).start()
 
-    def _recomendadas_comprobadas(self, generation, estados, errores):
-        if generation != self.recommended_scan_generation:
+    def _recomendadas_comprobadas(self, generation, estados, errores, al_completar=None):
+        if self.destruida or generation != self.recommended_scan_generation:
             return GLib.SOURCE_REMOVE
         self.recommended_installed = estados
         for clave, indicador in self.recommended_indicators.items():
@@ -3349,6 +3359,8 @@ class VentanaPrincipal(Gtk.Window):
             self.recommended_status.set_text("")
             self.recommended_status.set_tooltip_text(None)
         self._actualizar_sensibilidad()
+        if al_completar is not None:
+            al_completar(estados)
         return GLib.SOURCE_REMOVE
 
     def _marcar_recomendada_instalada(self, app_id, tipo_canal):
@@ -3376,6 +3388,109 @@ class VentanaPrincipal(Gtk.Window):
             and not self.recommended_installed.get((app["id"], canal["type"]))
             and (not solo_fallidas or self.recommended_failed.get(app["id"]) == canal["type"])
         ]
+
+    def _archivo_seleccion_recomendada(self, boton, exportar):
+        if not boton.get_sensitive():
+            return
+        titulo = "Exportar lista" if exportar else "Importar lista"
+        selector = Gtk.FileChooserDialog(
+            title=traducir(titulo), transient_for=self, modal=True,
+            action=Gtk.FileChooserAction.SAVE if exportar else Gtk.FileChooserAction.OPEN,
+        )
+        selector.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
+        selector.add_button(traducir("Guardar" if exportar else "Abrir"), Gtk.ResponseType.OK)
+        filtro = Gtk.FileFilter()
+        filtro.set_name("JSON")
+        filtro.add_pattern("*.json")
+        selector.add_filter(filtro)
+        if exportar:
+            selector.set_do_overwrite_confirmation(True)
+            selector.set_current_name("aio-apps-recomendadas.json")
+        archivo = selector.get_file() if selector.run() == Gtk.ResponseType.OK else None
+        selector.destroy()
+        if archivo is None:
+            return
+        try:
+            if exportar:
+                contenido = core_recommended_list.exportar(self.recommended_selection)
+                archivo.replace_contents(contenido, None, False, Gio.FileCreateFlags.NONE, None)
+                self.recommended_status.set_text(traducir("Lista exportada."))
+                return
+            ruta = archivo.get_path()
+            if ruta is None or not Path(ruta).is_file():
+                raise ValueError(traducir("Selecciona un archivo JSON local."))
+            with open(ruta, "rb") as lista:
+                seleccion = core_recommended_list.importar(lista.read(core_recommended_list.LIMITE + 1))
+        except (OSError, ValueError, GLib.Error) as error:
+            titulo_error = "No se pudo exportar la lista" if exportar else "No se pudo importar la lista"
+            self._mensaje(Gtk.MessageType.ERROR, titulo_error, traducir(str(error)))
+            return
+        self._revisar_lista_importada(seleccion)
+
+    def _revisar_lista_importada(self, seleccion):
+        dialogo = Gtk.Dialog(title=traducir("Revisar lista importada"), transient_for=self,
+                             modal=True, destroy_with_parent=True)
+        dialogo.set_default_size(560, 365)
+        dialogo.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
+        aplicar = dialogo.add_button(traducir("Aplicar selección"), Gtk.ResponseType.OK)
+        aplicar.set_sensitive(False)
+        aplicar.get_style_context().add_class("suggested-action")
+        contenido = dialogo.get_content_area()
+        contenido.set_border_width(12)
+        contenido.set_spacing(8)
+        aviso = ("La lista importada sustituirá la selección actual." if self.recommended_selection
+                 else "Revisa las aplicaciones y el formato elegido para cada una.")
+        contenido.pack_start(etiqueta(aviso), False, False, 0)
+        vista = Gtk.TextView(editable=False, cursor_visible=False)
+        vista.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        vista.set_left_margin(8)
+        vista.set_right_margin(8)
+        vista.set_top_margin(8)
+        vista.get_buffer().set_text(traducir("Comprobando las aplicaciones de la lista…"))
+        scroll = Gtk.ScrolledWindow()
+        scroll.add(vista)
+        contenido.pack_start(scroll, True, True, 0)
+        disponibles = {}
+        abierto = True
+
+        def mostrar(estados):
+            if not abierto:
+                return
+            nombres = {app["id"]: app["name"] for app in APPS_RECOMENDADAS}
+            formatos = {"deb": "DEB (APT)", "flatpak": "Flatpak"}
+            filas = []
+            for app_id, tipo in seleccion.items():
+                soportados = {canal["type"] for canal in self.canales_recomendados.get(app_id, ())}
+                if (tipo not in formatos or tipo not in soportados
+                        or (tipo == "flatpak" and not self.flatpak_presente
+                            and (app_id, tipo) not in estados)):
+                    estado = "Formato no disponible"
+                else:
+                    disponibles[app_id] = tipo
+                    instalado = estados.get((app_id, tipo))
+                    if instalado is True:
+                        estado = "Ya instalada"
+                    elif any(estados.get((app_id, otro)) is True for otro in soportados if otro != tipo):
+                        estado = "Instalada en otro formato"
+                    elif instalado is False:
+                        estado = "Pendiente de instalar"
+                    else:
+                        estado = "Estado de instalación sin comprobar"
+                filas.append(f'{nombres.get(app_id, app_id)} · {formatos.get(tipo, tipo)} · {traducir(estado)}')
+            vista.get_buffer().set_text("\n".join(filas))
+            aplicar.set_sensitive(bool(disponibles))
+
+        dialogo.show_all()
+        self._consultar_estado_recomendadas(mostrar)
+        aceptado = dialogo.run() == Gtk.ResponseType.OK
+        abierto = False
+        dialogo.destroy()
+        if aceptado and disponibles:
+            self.recommended_selection = disponibles
+            self.recommended_failed.clear()
+            self.recommended_multi.set_active(True)
+            self.recommended_status.set_text(traducir("Lista aplicada a la selección."))
+            self._actualizar_sensibilidad()
 
     def _ver_seleccion_recomendada(self, boton):
         if not boton.get_sensitive():
@@ -4347,6 +4462,8 @@ class VentanaPrincipal(Gtk.Window):
                                        and not self.backup_action_in_progress
                                        and not self.grub_action_in_progress)
         modo_multiple = self.recommended_multi.get_active()
+        self.recommended_import.set_sensitive(recomendaciones_disponibles)
+        self.recommended_export.set_sensitive(recomendaciones_disponibles and bool(self.recommended_selection))
         self.recommended_multi.set_sensitive(recomendaciones_disponibles)
         seleccionables = 0
         for clave, boton in self.recommended_buttons.items():

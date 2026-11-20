@@ -892,6 +892,46 @@ with patch.object(app.threading, 'Thread', ImmediateThread), \
     assert not w.recommended_retry.get_visible()
 w.recommended_multi.set_active(False)
 
+# El archivo conserva los formatos y requiere aplicar la revisión explícitamente.
+seleccion_portable = {'deluge': 'flatpak', 'gparted': 'deb',
+                      'google-chrome': 'deb-download', 'app-antigua': 'flatpak'}
+codec = app.core_recommended_list
+assert codec.importar(codec.exportar(seleccion_portable)) == seleccion_portable
+for invalido in (b'{}', b'[' * (codec.LIMITE + 1), b'\xff',
+                 codec.exportar({'../fuera': 'deb'})):
+    try:
+        codec.importar(invalido)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Se aceptó una lista inválida")
+
+estado_portable = {('deluge', 'flatpak'): True, ('gparted', 'deb'): False}
+w._recomendadas_comprobadas(w.recommended_scan_generation, estado_portable, [])
+
+def revisar_importacion(dialogo):
+    scroll = next(widget for widget in dialogo.get_content_area().get_children()
+                  if isinstance(widget, Gtk.ScrolledWindow))
+    buffer = scroll.get_child().get_buffer()
+    texto = buffer.get_text(*buffer.get_bounds(), False)
+    assert 'Deluge · Flatpak · Ya instalada' in texto
+    assert 'GParted · DEB (APT) · Pendiente de instalar' in texto
+    assert texto.count('Formato no disponible') == 2
+    assert not w.recommended_selection
+    return Gtk.ResponseType.OK
+
+with patch.object(w, '_consultar_estado_recomendadas',
+                  side_effect=lambda mostrar: mostrar(estado_portable)), \
+     patch.object(Gtk.Dialog, 'run', revisar_importacion), \
+     patch.object(w, '_ejecutar_instalacion_recomendada') as instalar:
+    w._revisar_lista_importada(seleccion_portable)
+    instalar.assert_not_called()
+assert w.recommended_multi.get_active()
+assert w.recommended_export.get_sensitive()
+assert w.recommended_selection == {'deluge': 'flatpak', 'gparted': 'deb'}
+assert [(a['id'], c['type']) for a, c in w._lote_recomendadas()] == [('gparted', 'deb')]
+w.recommended_multi.set_active(False)
+
 for app_id, definition in app.APLICACIONES_BACKUP.items():
     installed = app.subprocess.CompletedProcess([], 0, stdout='installed', stderr='')
     with patch.object(app.subprocess, 'run', return_value=installed), \
