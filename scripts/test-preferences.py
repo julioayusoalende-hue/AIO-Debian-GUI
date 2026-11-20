@@ -149,7 +149,7 @@ if Gtk.init_check([])[0]:
     # Configuración de Polkit deshabilitada mientras hay una operación activa.
     assert not ventana.chk_sin_contrasena.get_sensitive()
     assert ventana.btn_menu.get_sensitive()
-    assert all(boton.get_sensitive() for boton in ventana.botones_preset)
+    assert all(boton.get_sensitive() for boton in ventana.botones_preset.values())
     assert all(fila.get_sensitive() for pid, fila in ventana.filas.items() if pid != "nvidia-driver")
     assert all(switch.get_sensitive() for pid, (switch, _) in ventana.switches.items() if pid != "nvidia-driver")
 
