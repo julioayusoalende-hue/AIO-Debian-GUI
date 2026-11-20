@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.1.4
+
+- Los paquetes Testing usan un icono azul para distinguirlos de la edición estable.
+
 ## 1.1.3
 
 - Permite exportar e importar una selección de Apps recomendadas con su formato de instalación.

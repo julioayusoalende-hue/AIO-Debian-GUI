@@ -5,11 +5,12 @@ Parte de assets/icon-original-512.png (fondo azul) y gira el tono de los píxele
 saturados (fondo y mango del destornillador); el remolino blanco y las herramientas
 plateadas no cambian. Requiere: python3-pil y python3-numpy.
 
-Uso: scripts/recolor-icon.py [TONO]
+Uso: scripts/recolor-icon.py [TONO] [--testing]
   TONO en grados (0-360). Por defecto 145 (verde).
+  --testing guarda los recursos del paquete Testing sin modificar el icono estable.
   Ejemplos: 145 verde · 28 naranja · 275 violeta · 350 rojo · 205 = azul original
 """
-import sys
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -56,10 +57,16 @@ def recolorear(img, tono):
 
 
 def main():
-    tono = float(sys.argv[1]) if len(sys.argv) > 1 else 145.0
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("tono", nargs="?", type=float)
+    parser.add_argument("--testing", action="store_true")
+    args = parser.parse_args()
+    tono = args.tono if args.tono is not None else (205 if args.testing else 145)
     base = recolorear(Image.open(ORIGEN), tono)
+    destino = RAIZ / "assets" / "testing-icons" if args.testing else DESTINO
+    nombre = "aio-debian-gui-testing.png" if args.testing else NOMBRE
     for t in TAMANOS:
-        ruta = DESTINO / f"{t}x{t}" / "apps" / NOMBRE
+        ruta = destino / f"{t}x{t}" / "apps" / nombre
         ruta.parent.mkdir(parents=True, exist_ok=True)
         img = base if t == 512 else base.resize((t, t), Image.LANCZOS)
         img.save(ruta, optimize=True)

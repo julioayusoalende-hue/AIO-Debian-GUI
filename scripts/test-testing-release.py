@@ -17,6 +17,7 @@ def run(*args, cwd, check=True):
 with tempfile.TemporaryDirectory() as directory:
     work = Path(directory)
     shutil.copytree(root / "package", work / "package")
+    shutil.copytree(root / "assets/testing-icons", work / "assets/testing-icons")
     control = work / "package/DEBIAN/control"
     original = control.read_text()
     current = re.search(r"^Version: (?:\d+:)?(.+)$", original, re.M)
@@ -75,6 +76,12 @@ with tempfile.TemporaryDirectory() as directory:
     core = work / "extracted/usr/lib/aio-debian-gui"
     assert "VERSION = '1.0.4~testing.1.1'" in (core / "aio_core/scheduler.py").read_text()
     assert "HELPER_VERSION=1.0.4~testing.1.1" in (core / "aio-debian-gui-helper").read_text()
+    testing_usr = work / "extracted/usr"
+    assert 'APP_ICON_NAME = "aio-debian-gui-testing"' in (testing_usr / "bin/aio-debian-gui").read_text()
+    desktop = Path("share/applications/aio-debian-gui.desktop")
+    policy = Path("share/polkit-1/actions/es.aiodebian.gui.policy")
+    assert "Icon=aio-debian-gui-testing" in (testing_usr / desktop).read_text().splitlines()
+    assert ET.parse(testing_usr / policy).findtext(".//icon_name") == "aio-debian-gui-testing"
     assert (work / "package/DEBIAN/control").read_text() == before
     assert run("bash", "scripts/build-deb.sh", "--testing-version", "1.0.4", cwd=work, check=False).returncode != 0
     run("bash", "scripts/build-deb.sh", cwd=work)
@@ -85,5 +92,20 @@ with tempfile.TemporaryDirectory() as directory:
     stable_release = ET.parse(stable_metainfo).find("releases/release")
     assert stable_release.get("version") == "1.0.3" and stable_release.get("type") == "stable"
     assert stable_release.findtext("description/ul/li") == "Novedades estables"
+
+    stable_usr = work / "stable/usr"
+    assert 'APP_ICON_NAME = "aio-debian-gui"' in (stable_usr / "bin/aio-debian-gui").read_text()
+    assert "Icon=aio-debian-gui" in (stable_usr / desktop).read_text().splitlines()
+    assert ET.parse(stable_usr / policy).findtext(".//icon_name") == "aio-debian-gui"
+    for size in (48, 64, 128, 256, 512):
+        folder = Path(f"share/icons/hicolor/{size}x{size}/apps")
+        stable_path = folder / "aio-debian-gui.png"
+        testing_path = folder / "aio-debian-gui-testing.png"
+        stable_icon = (stable_usr / stable_path).read_bytes()
+        testing_icon = (testing_usr / testing_path).read_bytes()
+        assert stable_icon == (root / "package/usr" / stable_path).read_bytes()
+        assert testing_icon == (root / "assets/testing-icons" / testing_path.relative_to("share/icons/hicolor")).read_bytes()
+        assert stable_icon != testing_icon
+        assert not (stable_usr / testing_path).exists() and not (testing_usr / stable_path).exists()
 
 print("✔ versionado testing y aislamiento del paquete estable")

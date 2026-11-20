@@ -28,22 +28,33 @@ trap 'rm -rf "$STAGE"' EXIT
 cp -a package/. "$STAGE/"
 
 if [ -n "$TESTING_VERSION" ]; then
-    python3 - "$STAGE" "$EPOCH" "$VERSION" "$TESTING_VERSION" <<'PY'
+    python3 - "$STAGE" "$EPOCH" "$VERSION" "$TESTING_VERSION" "assets/testing-icons" <<'PY'
 from pathlib import Path
+import shutil
 import sys
 
-stage, epoch, old, new = sys.argv[1:]
+stage, epoch, old, new, testing_icons = sys.argv[1:]
+stable_icon, testing_icon = "aio-debian-gui", "aio-debian-gui-testing"
 files = [
     ("DEBIAN/control", f"Version: {epoch}{old}\n", f"Version: {epoch}{new}\n"),
     ("usr/lib/aio-debian-gui/aio_core/scheduler.py", f"VERSION = '{old}'\n", f"VERSION = '{new}'\n"),
     ("usr/lib/aio-debian-gui/aio-debian-gui-helper", f"HELPER_VERSION={old}\n", f"HELPER_VERSION={new}\n"),
+    ("usr/bin/aio-debian-gui", f'APP_ICON_NAME = "{stable_icon}"\n', f'APP_ICON_NAME = "{testing_icon}"\n'),
+    ("usr/share/applications/aio-debian-gui.desktop", f"Icon={stable_icon}\n", f"Icon={testing_icon}\n"),
+    ("usr/share/polkit-1/actions/es.aiodebian.gui.policy",
+     f"<icon_name>{stable_icon}</icon_name>", f"<icon_name>{testing_icon}</icon_name>"),
 ]
 for name, original, replacement in files:
     path = Path(stage, name)
     text = path.read_text(encoding="utf-8")
     if text.count(original) != 1:
-        raise SystemExit(f"Versión ausente o incompatible en {name}")
+        raise SystemExit(f"No se pudo preparar el archivo de Testing: {name}")
     path.write_text(text.replace(original, replacement), encoding="utf-8")
+icon_root = Path(stage, "usr/share/icons/hicolor")
+for icon in sorted(icon_root.glob(f"*/apps/{stable_icon}.png")):
+    relative = icon.with_name(f"{testing_icon}.png").relative_to(icon_root)
+    shutil.copyfile(Path(testing_icons, relative), icon_root / relative)
+    icon.unlink()
 PY
 fi
 

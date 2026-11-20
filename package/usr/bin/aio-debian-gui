@@ -50,6 +50,7 @@ from aio_core.gtk_scheduler import ControladorProgramacion  # noqa: E402
 from aio_core.translations import TRADUCCIONES  # noqa: E402
 
 PRGNAME = "aio-debian-gui"
+APP_ICON_NAME = "aio-debian-gui"
 POLKIT_ACTION = "es.aiodebian.gui.mantenimiento"
 HELPER = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "../lib/aio-debian-gui/aio-debian-gui-helper")
@@ -1143,7 +1144,7 @@ class VentanaPrincipal(Gtk.Window):
         global IDIOMA_ACTUAL
         IDIOMA_ACTUAL = self.preferencias["idioma"]
         self.set_default_size(1160, 780)
-        self.set_icon_name("aio-debian-gui")
+        self.set_icon_name(APP_ICON_NAME)
 
         self.en_curso = False
         self.proceso = None
@@ -5428,7 +5429,7 @@ class VentanaPrincipal(Gtk.Window):
         # (AppImage, Flatpak y Snap). Mostrar el PNG incluido en el paquete.
         icono = os.path.normpath(os.path.join(
             os.path.dirname(__file__),
-            "../share/icons/hicolor/256x256/apps/aio-debian-gui.png",
+            f"../share/icons/hicolor/256x256/apps/{APP_ICON_NAME}.png",
         ))
         if os.path.isfile(icono):
             try:
