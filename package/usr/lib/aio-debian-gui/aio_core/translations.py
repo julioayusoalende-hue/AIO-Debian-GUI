@@ -914,6 +914,7 @@ TRADUCCIONES["en"].update({
     "Algunas aplicaciones no se pudieron instalar.": "Some applications could not be installed.",
     "Se instalaron las aplicaciones seleccionadas.": "The selected applications were installed.",
     "Editor gráfico para crear, redimensionar y gestionar particiones de disco.": "Graphical editor for creating, resizing, and managing disk partitions.",
+    "Controladores y herramientas gráficas para configurar impresoras y multifunción HP.": "Drivers and graphical tools for setting up HP printers and all-in-one devices.",
     "Interfaz unificada para emular consolas clásicas con núcleos Libretro.": "Unified interface for emulating classic consoles with Libretro cores.",
     "Gestiona tu biblioteca de juegos de Steam y juega en Linux con Proton.": "Manage your Steam library and play on Linux with Proton.",
     "Graba y edita audio con varias pistas y efectos.": "Record and edit audio with multiple tracks and effects.",
@@ -946,6 +947,7 @@ TRADUCCIONES["en"].update({
     "Editor de imágenes para crear, retocar y componer gráficos y fotografías.": "Image editor for creating, retouching, and composing graphics and photos.",
     "Reproduce vídeos con mpv desde una interfaz GTK sencilla.": "Plays videos with mpv through a simple GTK interface.",
     "Reproductor multimedia para vídeos, música y transmisiones de red.": "Media player for videos, music, and network streams.",
+    "Videollamadas, reuniones en línea y uso compartido de pantalla.": "Video calls, online meetings, and screen sharing.",
 })
 TRADUCCIONES["fr"].update({
     "Configuración y mantenimiento": "Configuration et maintenance",
@@ -982,6 +984,7 @@ TRADUCCIONES["fr"].update({
     "Algunas aplicaciones no se pudieron instalar.": "Certaines applications n’ont pas pu être installées.",
     "Se instalaron las aplicaciones seleccionadas.": "Les applications sélectionnées ont été installées.",
     "Editor gráfico para crear, redimensionar y gestionar particiones de disco.": "Éditeur graphique pour créer, redimensionner et gérer les partitions de disque.",
+    "Controladores y herramientas gráficas para configurar impresoras y multifunción HP.": "Pilotes et outils graphiques pour configurer les imprimantes et les appareils multifonctions HP.",
     "Interfaz unificada para emular consolas clásicas con núcleos Libretro.": "Interface unifiée pour émuler des consoles classiques avec les cœurs Libretro.",
     "Gestiona tu biblioteca de juegos de Steam y juega en Linux con Proton.": "Gérez votre bibliothèque Steam et jouez sous Linux avec Proton.",
     "Graba y edita audio con varias pistas y efectos.": "Enregistrez et montez du son avec plusieurs pistes et effets.",
@@ -1014,6 +1017,7 @@ TRADUCCIONES["fr"].update({
     "Editor de imágenes para crear, retocar y componer gráficos y fotografías.": "Éditeur d’images pour créer, retoucher et composer des graphismes et des photos.",
     "Reproduce vídeos con mpv desde una interfaz GTK sencilla.": "Lit des vidéos avec mpv grâce à une interface GTK simple.",
     "Reproductor multimedia para vídeos, música y transmisiones de red.": "Lecteur multimédia pour vidéos, musique et flux réseau.",
+    "Videollamadas, reuniones en línea y uso compartido de pantalla.": "Appels vidéo, réunions en ligne et partage d’écran.",
 })
 TRADUCCIONES["zh"].update({
     "Configuración y mantenimiento": "配置与维护",
@@ -1050,6 +1054,7 @@ TRADUCCIONES["zh"].update({
     "Algunas aplicaciones no se pudieron instalar.": "部分应用未能安装。",
     "Se instalaron las aplicaciones seleccionadas.": "已安装所选应用。",
     "Editor gráfico para crear, redimensionar y gestionar particiones de disco.": "用于创建、调整大小和管理磁盘分区的图形编辑器。",
+    "Controladores y herramientas gráficas para configurar impresoras y multifunción HP.": "用于配置惠普打印机和多功能一体机的驱动程序及图形工具。",
     "Interfaz unificada para emular consolas clásicas con núcleos Libretro.": "通过 Libretro 核心模拟经典游戏机的统一界面。",
     "Gestiona tu biblioteca de juegos de Steam y juega en Linux con Proton.": "管理 Steam 游戏库，并通过 Proton 在 Linux 上玩游戏。",
     "Graba y edita audio con varias pistas y efectos.": "录制和编辑音频，支持多轨和效果。",
@@ -1082,6 +1087,7 @@ TRADUCCIONES["zh"].update({
     "Editor de imágenes para crear, retocar y componer gráficos y fotografías.": "用于创建、修饰和合成图形与照片的图像编辑器。",
     "Reproduce vídeos con mpv desde una interfaz GTK sencilla.": "通过简洁的 GTK 界面使用 mpv 播放视频。",
     "Reproductor multimedia para vídeos, música y transmisiones de red.": "用于播放视频、音乐和网络流的多媒体播放器。",
+    "Videollamadas, reuniones en línea y uso compartido de pantalla.": "视频通话、在线会议和屏幕共享。",
 })
 
 TRADUCCIONES["en"].update({

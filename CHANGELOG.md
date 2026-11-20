@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.1.3
+
+- Añade HPLIP con HP Toolbox y Zoom Workplace a Apps recomendadas, con sus iconos.
+
 ## 1.1.2
 
 - Añade el perfil Estándar como selección predeterminada y la purga de dependencias huérfanas al perfil Completo.

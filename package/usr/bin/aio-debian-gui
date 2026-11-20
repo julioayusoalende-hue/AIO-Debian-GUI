@@ -392,6 +392,15 @@ APPS_RECOMENDADAS = [
         ],
     },
     {
+        "id": "hplip-gui", "name": "HPLIP (HP Toolbox)",
+        "icon": "hp_logo", "bundled_icon": "hplip.png",
+        "fallback_icon": "printer",
+        "description": "Controladores y herramientas gráficas para configurar impresoras y multifunción HP.",
+        "channels": [
+            {"type": "deb", "package": "hplip-gui", "command": "hp-toolbox"},
+        ],
+    },
+    {
         "id": "htop", "name": "htop",
         "icon": "htop", "bundled_icon": "htop.png",
         "fallback_icon": "utilities-system-monitor",
@@ -499,6 +508,16 @@ APPS_RECOMENDADAS = [
         "channels": [
             {"type": "deb", "package": "vlc", "command": "vlc"},
             {"type": "flatpak", "app_id": "org.videolan.VLC"},
+        ],
+    },
+    {
+        "id": "zoom", "name": "Zoom Workplace",
+        "icon": "us.zoom.Zoom", "bundled_icon": "zoom.png",
+        "fallback_icon": "camera-video",
+        "description": "Videollamadas, reuniones en línea y uso compartido de pantalla.",
+        "channels": [
+            {"type": "deb-download", "package": "zoom", "uri": "https://zoom.us/download/linux"},
+            {"type": "flatpak", "app_id": "us.zoom.Zoom"},
         ],
     },
 ]

@@ -1,0 +1,7 @@
+The recommended app icon hplip.png comes from data/images/64x64/hp_logo.png
+in Debian's hplip-data package.
+
+Copyright 2001-2020 HP Development Company, L.P.
+License: GPL-2-or-later
+On Debian systems, the complete GPL version 2 is available in
+/usr/share/common-licenses/GPL-2.

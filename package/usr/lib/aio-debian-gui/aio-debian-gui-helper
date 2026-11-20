@@ -357,6 +357,7 @@ instalar_aplicacion_recomendada() {
         gimp) paquete=gimp ;;
         gparted) paquete=gparted ;;
         handbrake) paquete=handbrake ;;
+        hplip-gui) paquete=hplip-gui ;;
         htop) paquete=htop ;;
         kdenlive) paquete=kdenlive ;;
         kitty) paquete=kitty ;;
@@ -1654,7 +1655,7 @@ main() {
             exit $?
             ;;
         --recommended-install)
-            [ "$#" -eq 2 ] || { err "Uso: $0 [--lang LOCALE] --recommended-install audacity|btop|celluloid|deluge|ghostty|gimp|gparted|handbrake|htop|kdenlive|kitty|qbittorrent|retroarch|vlc"; exit 2; }
+            [ "$#" -eq 2 ] || { err "Uso: $0 [--lang LOCALE] --recommended-install audacity|btop|celluloid|deluge|ghostty|gimp|gparted|handbrake|hplip-gui|htop|kdenlive|kitty|qbittorrent|retroarch|vlc"; exit 2; }
             instalar_aplicacion_recomendada "$2"
             exit $?
             ;;
