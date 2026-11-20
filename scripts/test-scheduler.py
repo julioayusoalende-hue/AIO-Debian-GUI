@@ -191,6 +191,7 @@ with tempfile.TemporaryDirectory() as directory:
     root = Path(directory)
     with patch.multiple(s, CONFIG_DIR=root/'config', STATE_DIR=root/'state', UNIT_DIR=root/'units', LOCK=str(root/'run/maintenance.lock')), \
          patch.object(s.os, 'geteuid', return_value=0), \
+         patch.object(s.os, 'chown') as chown, \
          patch.object(s.pwd, 'getpwuid', return_value=SimpleNamespace(pw_name='test')), \
          patch.object(s, 'available', return_value=True), \
          patch.object(s, 'host_supported', return_value=True), \
@@ -292,6 +293,8 @@ with tempfile.TemporaryDirectory() as directory:
                 }
                 assert 'errors' not in result
                 assert all(p.stat().st_mode & 0o777 == 0o400 for p in s._history_paths('1000'))
+                assert all(call.args[1:] == (1000, -1) for call in chown.call_args_list)
+                assert chown.call_count == 2
                 assert incomplete.call_args.args[2] == result
                 notify.assert_not_called()
                 launch.assert_called_once_with('1000', config['launcher'])
