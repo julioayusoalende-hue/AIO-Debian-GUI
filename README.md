@@ -67,12 +67,12 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.1.2
+### Lo nuevo en la 1.1.3
 
-- **Mantenimiento:** Estándar es el perfil predeterminado y Completo añade la purga de dependencias huérfanas con revisión previa.
-- **Información del sistema:** muestra la RAM física instalada y traduce los encabezados de la pestaña principal.
-- **Terminal:** organiza los comandos por categorías, incorpora Htop y el análisis del arranque y permite limpiar la consola con un acceso rápido.
-- **Backup:** al restaurar GNOME, explica cuándo volver a iniciar sesión y ofrece cerrar la sesión desde el aviso.
+- **Historial de mantenimiento:** consulta el resultado por tarea y reintenta solo las que fallaron.
+- **Apps recomendadas:** busca, filtra, revisa la selección e importa o exporta listas de aplicaciones.
+- **Nuevas recomendaciones:** Gradia, Flameshot, ONLYOFFICE, Bitwarden, HPLIP y Zoom Workplace.
+- **Terminal:** mejora el ajuste de la ventana separada al ejecutar btop o htop.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -80,7 +80,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.1.2**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.1.3**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -104,10 +104,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.1.2:
+Para la versión 1.1.3:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.1.2_all.deb
+sudo apt install ./aio-debian-gui_1.1.3_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.
@@ -181,9 +181,9 @@ Las comprobaciones gráficas requieren PyGObject, GTK 3, VTE y una pantalla disp
 <details>
 <summary><strong>Cómo se numeran las versiones testing</strong></summary>
 
-Cada cambio en `testing` que supera las comprobaciones publica una preversión sin modificar `main` ni el repositorio APT estable. Parte de la siguiente versión respecto a la última estable: por ejemplo, tras `1.1.1`, `1.1.2~testing.N.INTENTO`.
+Cada cambio en `testing` que supera las comprobaciones publica una preversión sin modificar `main` ni el repositorio APT estable. Parte de la siguiente versión respecto a la última estable: por ejemplo, tras `1.1.1`, `1.1.3~testing.N.INTENTO`.
 
-El contador se aplica al paquete construido. Debian considera esa preversión anterior a `1.1.2`. La publicación estable se realiza por separado, sin arrastrar el contador.
+El contador se aplica al paquete construido. Debian considera esa preversión anterior a `1.1.3`. La publicación estable se realiza por separado, sin arrastrar el contador.
 
 </details>
 
