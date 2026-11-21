@@ -2171,3 +2171,30 @@ TRADUCCIONES["zh"].update({
     "Quitar": "移除",
     "Reintentar fallidas": "重试失败的安装",
 })
+
+TRADUCCIONES["en"].update({
+    "¿Reiniciar los servicios pendientes?": "Restart the pending services?",
+    "No hace falta reiniciar el equipo. Al reiniciar estos servicios, pueden interrumpirse brevemente las aplicaciones que los usan.": "The computer does not need to reboot. Restarting these services may briefly interrupt apps that use them.",
+    "Reiniciar servicios": "Restart services",
+    "Reiniciando servicios…": "Restarting services…",
+    "No se pudieron reiniciar los servicios.": "Could not restart the services.",
+    "Reinicio de servicios completado.": "Service restart completed.",
+})
+
+TRADUCCIONES["fr"].update({
+    "¿Reiniciar los servicios pendientes?": "Redémarrer les services en attente ?",
+    "No hace falta reiniciar el equipo. Al reiniciar estos servicios, pueden interrumpirse brevemente las aplicaciones que los usan.": "Le redémarrage de l’ordinateur est inutile. Redémarrer ces services peut interrompre brièvement les applications qui les utilisent.",
+    "Reiniciar servicios": "Redémarrer les services",
+    "Reiniciando servicios…": "Redémarrage des services…",
+    "No se pudieron reiniciar los servicios.": "Impossible de redémarrer les services.",
+    "Reinicio de servicios completado.": "Redémarrage des services terminé.",
+})
+
+TRADUCCIONES["zh"].update({
+    "¿Reiniciar los servicios pendientes?": "重启待处理的服务吗？",
+    "No hace falta reiniciar el equipo. Al reiniciar estos servicios, pueden interrumpirse brevemente las aplicaciones que los usan.": "无需重启计算机。重启这些服务可能会短暂中断使用它们的应用。",
+    "Reiniciar servicios": "重启服务",
+    "Reiniciando servicios…": "正在重启服务…",
+    "No se pudieron reiniciar los servicios.": "无法重启服务。",
+    "Reinicio de servicios completado.": "服务重启完成。",
+})

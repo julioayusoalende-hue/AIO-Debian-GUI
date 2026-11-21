@@ -1150,6 +1150,7 @@ class VentanaPrincipal(Gtk.Window):
         self.proceso = None
         self.flujo = None
         self.necesita_reinicio = False
+        self.servicios_pendientes = set()
         self.hubo_errores = False
         self.fin_recibido = False
         self.terminado_gestionado = False
@@ -4929,6 +4930,7 @@ class VentanaPrincipal(Gtk.Window):
 
         self.buf.set_text("")
         self.necesita_reinicio = False
+        self.servicios_pendientes = set()
         self.hubo_errores = False
         self.fin_recibido = False
         self.terminado_gestionado = False
@@ -4975,6 +4977,7 @@ class VentanaPrincipal(Gtk.Window):
         self.flatpak_sistema_en_ejecucion = False
         self.buf.set_text("")
         self.necesita_reinicio = False
+        self.servicios_pendientes = set()
         self.hubo_errores = False
         self.fin_recibido = False
         self.terminado_gestionado = False
@@ -5222,6 +5225,11 @@ class VentanaPrincipal(Gtk.Window):
             self.salida_error_tarea.clear()
             self._resultado_tarea(tarea, {"0": "Completada", "2": "No ejecutada"}.get(codigo, "Error"))
             return
+        if linea.startswith("##RESTART-SERVICE:"):
+            servicio = linea.partition(":")[2]
+            if re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.@:-]*\.service", servicio):
+                self.servicios_pendientes.add(servicio)
+            return
         if linea.startswith("##REBOOT:"):
             self.necesita_reinicio = linea.endswith(":1")
             return
@@ -5380,7 +5388,55 @@ class VentanaPrincipal(Gtk.Window):
         self._resumir_diagnostico([])
         if self.necesita_reinicio:
             self._preguntar_reinicio()
+        elif self.fin_recibido and self.servicios_pendientes:
+            self._preguntar_reinicio_servicios(sorted(self.servicios_pendientes))
         self._consultar_estados_tareas()
+
+    def _preguntar_reinicio_servicios(self, servicios):
+        dialogo = Gtk.MessageDialog(
+            transient_for=self, modal=True, message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.NONE, text=traducir("¿Reiniciar los servicios pendientes?"),
+        )
+        dialogo.format_secondary_text(
+            traducir("No hace falta reiniciar el equipo. Al reiniciar estos servicios, pueden interrumpirse brevemente las aplicaciones que los usan.")
+            + "\n\n" + "\n".join(servicios))
+        dialogo.add_button(traducir("Más tarde"), Gtk.ResponseType.CANCEL)
+        dialogo.add_button(traducir("Reiniciar servicios"), Gtk.ResponseType.OK)
+        dialogo.set_default_response(Gtk.ResponseType.CANCEL)
+        respuesta = dialogo.run()
+        dialogo.destroy()
+        if respuesta != Gtk.ResponseType.OK:
+            return
+
+        self.backup_action_in_progress = True
+        self._actualizar_sensibilidad()
+        self.estado.set_text(traducir("Reiniciando servicios…"))
+
+        def reiniciar():
+            try:
+                resultado = subprocess.run(
+                    comando_host("systemctl", "try-restart", "--", *servicios),
+                    stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                )
+                error = (resultado.stderr.strip() or str(resultado.returncode)) if resultado.returncode else ""
+            except OSError as exc:
+                error = str(exc)
+            GLib.idle_add(terminar, error)
+
+        def terminar(error):
+            if self.destruida:
+                return GLib.SOURCE_REMOVE
+            self.backup_action_in_progress = False
+            self._actualizar_sensibilidad()
+            mensaje = ("No se pudieron reiniciar los servicios." if error
+                       else "Reinicio de servicios completado.")
+            self.estado.set_text(traducir(mensaje))
+            self._escribir(traducir(mensaje) + "\n", "error" if error else "ok")
+            if error:
+                self._mensaje(Gtk.MessageType.ERROR, mensaje, error)
+            return GLib.SOURCE_REMOVE
+
+        threading.Thread(target=reiniciar, daemon=True).start()
 
     def _preguntar_reinicio(self):
         d = Gtk.MessageDialog(
