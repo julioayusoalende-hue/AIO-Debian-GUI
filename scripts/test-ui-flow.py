@@ -939,8 +939,13 @@ def revisar_importacion(dialogo):
     assert not w.recommended_selection
     return Gtk.ResponseType.OK
 
-with patch.object(w, '_consultar_estado_recomendadas',
-                  side_effect=lambda mostrar: mostrar(estado_portable, [])), \
+def consultar_importacion(mostrar):
+    generacion_importada = w.recommended_scan_generation
+    # Recuperar el foco inicia otra consulta mientras se abre el diálogo.
+    w.recommended_scan_generation += 1
+    w._recomendadas_comprobadas(generacion_importada, estado_portable, [], mostrar)
+
+with patch.object(w, '_consultar_estado_recomendadas', side_effect=consultar_importacion), \
      patch.object(Gtk.Dialog, 'run', revisar_importacion), \
      patch.object(w, '_ejecutar_instalacion_recomendada') as instalar:
     w._revisar_lista_importada(seleccion_portable)

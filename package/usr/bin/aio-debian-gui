@@ -3351,18 +3351,21 @@ class VentanaPrincipal(Gtk.Window):
         threading.Thread(target=comprobar, daemon=True).start()
 
     def _recomendadas_comprobadas(self, generation, estados, errores, al_completar=None):
-        if self.destruida or generation != self.recommended_scan_generation:
+        if self.destruida:
             return GLib.SOURCE_REMOVE
-        self.recommended_installed = estados
-        for clave, indicador in self.recommended_indicators.items():
-            indicador.set_visible(estados.get(clave) is True)
-        if errores:
-            self.recommended_status.set_text(traducir("No se pudo comprobar el estado de algunas aplicaciones."))
-            self.recommended_status.set_tooltip_text("\n".join(errores))
-        else:
-            self.recommended_status.set_text("")
-            self.recommended_status.set_tooltip_text(None)
-        self._actualizar_sensibilidad()
+        # Un refresco al recuperar el foco solo sustituye el estado del catálogo.
+        # El diálogo de importación o la exportación siguen esperando su consulta.
+        if generation == self.recommended_scan_generation:
+            self.recommended_installed = estados
+            for clave, indicador in self.recommended_indicators.items():
+                indicador.set_visible(estados.get(clave) is True)
+            if errores:
+                self.recommended_status.set_text(traducir("No se pudo comprobar el estado de algunas aplicaciones."))
+                self.recommended_status.set_tooltip_text("\n".join(errores))
+            else:
+                self.recommended_status.set_text("")
+                self.recommended_status.set_tooltip_text(None)
+            self._actualizar_sensibilidad()
         if al_completar is not None:
             al_completar(estados, errores)
         return GLib.SOURCE_REMOVE

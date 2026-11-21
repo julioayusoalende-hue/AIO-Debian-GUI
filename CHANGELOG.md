@@ -2,6 +2,7 @@
 
 ## 1.1.4
 
+- Corrige el bloqueo al revisar una lista de aplicaciones importada.
 - Incluye las aplicaciones recomendadas ya instaladas al exportar una lista, incluso sin selección manual.
 - Los paquetes Testing usan un icono azul para distinguirlos de la edición estable.
 
