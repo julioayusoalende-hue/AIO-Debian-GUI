@@ -14,7 +14,7 @@ HOST_DEB=${3:-}
 [ "$#" -le 3 ] || { echo "Demasiados argumentos." >&2; exit 1; }
 KEEP=${KEEP_VERSIONS:-5}
 CHANNEL=${APT_CHANNEL:-stable}
-VERSION_PATTERN='^([0-9]+:)?[0-9]+\.[0-9]+\.[0-9]+$'
+VERSION_PATTERN='^([0-9]+:)?[0-9]+\.[0-9]+\.[0-9]+(-[1-9][0-9]*)?$'
 case "$CHANNEL" in
     stable) ;;
     testing)

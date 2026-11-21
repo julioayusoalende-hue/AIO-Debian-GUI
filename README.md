@@ -67,12 +67,10 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.1.3
+### Lo nuevo en la 1.1.4
 
-- **Historial de mantenimiento:** consulta el resultado por tarea y reintenta solo las que fallaron.
-- **Apps recomendadas:** busca, filtra, revisa la selección e importa o exporta listas de aplicaciones.
-- **Nuevas recomendaciones:** Gradia, Flameshot, ONLYOFFICE, Bitwarden, HPLIP y Zoom Workplace.
-- **Terminal:** mejora el ajuste de la ventana separada al ejecutar btop o htop.
+- **Mantenimiento:** ofrece reiniciar los servicios pendientes al finalizar, con confirmación.
+- **Apps recomendadas:** la exportación incluye las aplicaciones instaladas y la revisión de listas importadas se recupera al cambiar el foco.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -80,7 +78,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.1.3**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.1.4**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -104,10 +102,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.1.3:
+Para la versión 1.1.4:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.1.3_all.deb
+sudo apt install ./aio-debian-gui_1.1.4_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.

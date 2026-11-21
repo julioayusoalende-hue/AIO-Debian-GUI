@@ -1339,7 +1339,8 @@ class VentanaPrincipal(Gtk.Window):
         self.etiqueta_canal_actualizaciones.set_text(texto if formato_actualizacion() == "deb" else "")
 
     def _boton_novedades(self, version):
-        texto = version if version_numerica(version.split("~", 1)[0]) else traducir("Desarrollo")
+        base = re.split(r"[~-]", version, maxsplit=1)[0]
+        texto = version if version_numerica(base) else traducir("Desarrollo")
         boton = Gtk.Button()
         boton.set_relief(Gtk.ReliefStyle.NONE)
         encabezado = traducir("Novedades de esta versión")
