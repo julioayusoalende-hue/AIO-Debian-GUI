@@ -906,6 +906,22 @@ for invalido in (b'{}', b'[' * (codec.LIMITE + 1), b'\xff',
     else:
         raise AssertionError("Se aceptó una lista inválida")
 
+# La exportación comprueba de nuevo el inventario incluso con selección vacía.
+archivo_exportado = Mock()
+inventario = {('deluge', 'flatpak'): True, ('gimp', 'deb'): True,
+              ('google-chrome', 'deb-download'): True, ('vlc', 'deb'): False}
+assert w.recommended_export.get_sensitive()
+with patch.object(w, '_consultar_estado_recomendadas',
+                  side_effect=lambda guardar: guardar(inventario, [])):
+    w._exportar_lista_recomendada(archivo_exportado)
+    assert codec.importar(archivo_exportado.replace_contents.call_args.args[0]) == {
+        'deluge': 'flatpak', 'gimp': 'deb', 'google-chrome': 'deb-download'}
+    w.recommended_selection = {'deluge': 'deb', 'gparted': 'deb'}
+    w._exportar_lista_recomendada(archivo_exportado)
+    assert codec.importar(archivo_exportado.replace_contents.call_args.args[0]) == {
+        'deluge': 'deb', 'gparted': 'deb', 'gimp': 'deb', 'google-chrome': 'deb-download'}
+    w.recommended_selection.clear()
+
 estado_portable = {('deluge', 'flatpak'): True, ('gparted', 'deb'): False}
 w._recomendadas_comprobadas(w.recommended_scan_generation, estado_portable, [])
 
@@ -916,12 +932,13 @@ def revisar_importacion(dialogo):
     texto = buffer.get_text(*buffer.get_bounds(), False)
     assert 'Deluge · Flatpak · Ya instalada' in texto
     assert 'GParted · DEB (APT) · Pendiente de instalar' in texto
-    assert texto.count('Formato no disponible') == 2
+    assert 'Google Chrome · DEB (web oficial) · Descarga desde la web oficial' in texto
+    assert texto.count('Formato no disponible') == 1
     assert not w.recommended_selection
     return Gtk.ResponseType.OK
 
 with patch.object(w, '_consultar_estado_recomendadas',
-                  side_effect=lambda mostrar: mostrar(estado_portable)), \
+                  side_effect=lambda mostrar: mostrar(estado_portable, [])), \
      patch.object(Gtk.Dialog, 'run', revisar_importacion), \
      patch.object(w, '_ejecutar_instalacion_recomendada') as instalar:
     w._revisar_lista_importada(seleccion_portable)

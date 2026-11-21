@@ -2563,6 +2563,7 @@ class VentanaPrincipal(Gtk.Window):
         archivos = Gtk.Box(spacing=8)
         self.recommended_import = Gtk.Button(label=traducir("Importar lista"))
         self.recommended_export = Gtk.Button(label=traducir("Exportar lista"))
+        self.recommended_export.set_tooltip_text(traducir("Incluye las aplicaciones recomendadas instaladas y la selección actual."))
         self.recommended_import.connect("clicked", self._archivo_seleccion_recomendada, False)
         self.recommended_export.connect("clicked", self._archivo_seleccion_recomendada, True)
         archivos.pack_start(self.recommended_import, False, False, 0)
@@ -3325,11 +3326,13 @@ class VentanaPrincipal(Gtk.Window):
 
         def comprobar():
             estados, errores = {}, []
-            try:
-                flatpaks = self._flatpaks_recomendadas_instaladas()
-            except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
-                flatpaks = None
-                errores.append(str(exc))
+            flatpaks = set()
+            if self.flatpak_presente:
+                try:
+                    flatpaks = self._flatpaks_recomendadas_instaladas()
+                except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
+                    flatpaks = None
+                    errores.append(str(exc))
             for app in APPS_RECOMENDADAS:
                 for canal in self.canales_recomendados[app["id"]]:
                     if canal["type"] == "appimage":
@@ -3361,7 +3364,7 @@ class VentanaPrincipal(Gtk.Window):
             self.recommended_status.set_tooltip_text(None)
         self._actualizar_sensibilidad()
         if al_completar is not None:
-            al_completar(estados)
+            al_completar(estados, errores)
         return GLib.SOURCE_REMOVE
 
     def _marcar_recomendada_instalada(self, app_id, tipo_canal):
@@ -3413,9 +3416,7 @@ class VentanaPrincipal(Gtk.Window):
             return
         try:
             if exportar:
-                contenido = core_recommended_list.exportar(self.recommended_selection)
-                archivo.replace_contents(contenido, None, False, Gio.FileCreateFlags.NONE, None)
-                self.recommended_status.set_text(traducir("Lista exportada."))
+                self._exportar_lista_recomendada(archivo)
                 return
             ruta = archivo.get_path()
             if ruta is None or not Path(ruta).is_file():
@@ -3427,6 +3428,34 @@ class VentanaPrincipal(Gtk.Window):
             self._mensaje(Gtk.MessageType.ERROR, titulo_error, traducir(str(error)))
             return
         self._revisar_lista_importada(seleccion)
+
+    def _exportar_lista_recomendada(self, archivo):
+        seleccion = self.recommended_selection.copy()
+        self.backup_action_in_progress = True
+
+        def guardar(estados, errores):
+            self.backup_action_in_progress = False
+            self._actualizar_sensibilidad()
+            if errores:
+                self._mensaje(Gtk.MessageType.ERROR, "No se pudo exportar la lista",
+                              traducir("No se pudo comprobar el estado de algunas aplicaciones."))
+                return
+            for (app_id, canal), instalada in estados.items():
+                if instalada:
+                    seleccion.setdefault(app_id, canal)
+            if not seleccion:
+                self.recommended_status.set_text(traducir("No hay aplicaciones instaladas ni seleccionadas."))
+                return
+            try:
+                contenido = core_recommended_list.exportar(seleccion)
+                archivo.replace_contents(contenido, None, False, Gio.FileCreateFlags.NONE, None)
+            except (OSError, GLib.Error) as error:
+                self._mensaje(Gtk.MessageType.ERROR, "No se pudo exportar la lista", str(error))
+                return
+            self.recommended_status.set_text(traducir("Lista exportada."))
+
+        self._consultar_estado_recomendadas(guardar)
+        self.recommended_status.set_text(traducir("Comprobando las aplicaciones instaladas…"))
 
     def _revisar_lista_importada(self, seleccion):
         dialogo = Gtk.Dialog(title=traducir("Revisar lista importada"), transient_for=self,
@@ -3454,11 +3483,11 @@ class VentanaPrincipal(Gtk.Window):
         disponibles = {}
         abierto = True
 
-        def mostrar(estados):
+        def mostrar(estados, _errores):
             if not abierto:
                 return
             nombres = {app["id"]: app["name"] for app in APPS_RECOMENDADAS}
-            formatos = {"deb": "DEB (APT)", "flatpak": "Flatpak"}
+            formatos = {"deb": "DEB (APT)", "flatpak": "Flatpak", "deb-download": "DEB (web oficial)"}
             filas = []
             for app_id, tipo in seleccion.items():
                 soportados = {canal["type"] for canal in self.canales_recomendados.get(app_id, ())}
@@ -3466,6 +3495,9 @@ class VentanaPrincipal(Gtk.Window):
                         or (tipo == "flatpak" and not self.flatpak_presente
                             and (app_id, tipo) not in estados)):
                     estado = "Formato no disponible"
+                elif tipo == "deb-download":
+                    estado = ("Ya instalada" if estados.get((app_id, tipo)) is True
+                              else "Descarga desde la web oficial")
                 else:
                     disponibles[app_id] = tipo
                     instalado = estados.get((app_id, tipo))
@@ -3477,7 +3509,7 @@ class VentanaPrincipal(Gtk.Window):
                         estado = "Pendiente de instalar"
                     else:
                         estado = "Estado de instalación sin comprobar"
-                filas.append(f'{nombres.get(app_id, app_id)} · {formatos.get(tipo, tipo)} · {traducir(estado)}')
+                filas.append(f'{nombres.get(app_id, app_id)} · {traducir(formatos.get(tipo, tipo))} · {traducir(estado)}')
             vista.get_buffer().set_text("\n".join(filas))
             aplicar.set_sensitive(bool(disponibles))
 
@@ -4464,7 +4496,7 @@ class VentanaPrincipal(Gtk.Window):
                                        and not self.grub_action_in_progress)
         modo_multiple = self.recommended_multi.get_active()
         self.recommended_import.set_sensitive(recomendaciones_disponibles)
-        self.recommended_export.set_sensitive(recomendaciones_disponibles and bool(self.recommended_selection))
+        self.recommended_export.set_sensitive(recomendaciones_disponibles)
         self.recommended_multi.set_sensitive(recomendaciones_disponibles)
         seleccionables = 0
         for clave, boton in self.recommended_buttons.items():
