@@ -14,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 
-VERSION = '1.1.3'
+VERSION = '1.1.3-1'
 
 
 HOST_PROTOCOL = 1

@@ -48,7 +48,8 @@ PY
 fi
 
 NOTAS="$STAGE/usr/share/aio-debian-gui/release-notes.txt"
-awk -v version="${PUBLIC_VERSION}" -v seccion="${PUBLIC_VERSION%%~*}" '
+SECCION=${PUBLIC_VERSION%%[~-]*}
+awk -v version="${PUBLIC_VERSION}" -v seccion="$SECCION" '
     $0 == "## " seccion { activo = 1; encontrados++; next }
     /^## / { activo = 0 }
     activo && NF {
@@ -59,7 +60,7 @@ awk -v version="${PUBLIC_VERSION}" -v seccion="${PUBLIC_VERSION%%~*}" '
     }
     END { if (encontrados != 1 || !contenido) exit 1 }
 ' CHANGELOG.md > "$NOTAS" || {
-    echo "El CHANGELOG debe contener una única sección con novedades para ${PUBLIC_VERSION%%~*}." >&2
+    echo "El CHANGELOG debe contener una única sección con novedades para ${SECCION}." >&2
     exit 1
 }
 

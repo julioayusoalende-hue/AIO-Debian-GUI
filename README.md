@@ -80,7 +80,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.1.3**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.1.3**, disponible como paquete **DEB** en su revisión 1, junto con `SHA256SUMS-1.1.3-1`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -107,7 +107,7 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 Para la versión 1.1.3:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.1.3_all.deb
+sudo apt install ./aio-debian-gui_1.1.3-1_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.
