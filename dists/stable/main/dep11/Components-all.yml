@@ -96,19 +96,14 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
 Releases:
-- version: 1.1.3-1
+- version: 1.1.4
   type: stable
   unix-timestamp: 1795219200
   description:
     C: >-
-      <ul><li>Corrección del paquete (revisión 1): incluye las apps recomendadas instaladas al exportar y completa la revisión
-      de listas importadas al recuperar el foco.</li><li>Permite exportar e importar una selección de Apps recomendadas con
-      su formato de instalación.</li><li>Añade Gradia, Flameshot, ONLYOFFICE Desktop Editors y Bitwarden a Apps recomendadas,
-      con sus iconos.</li><li>Añade el reintento de tareas fallidas desde el historial con una referencia a la ejecución original.</li><li>El
-      historial permite abrir ejecuciones manuales y programadas, revisar el estado de cada tarea y consultar los mensajes
-      de error registrados.</li><li>Añade filtros por categoría, una revisión de la selección y el reintento de instalaciones
-      fallidas en Apps recomendadas.</li><li>Añade una búsqueda por nombre y descripción en Apps recomendadas, compatible
-      con la selección múltiple.</li><li>Corrige el ajuste de la ventana al separar la terminal con btop o htop en ejecución.</li><li>Añade
-      HPLIP con HP Toolbox y Zoom Workplace a Apps recomendadas, con sus iconos.</li></ul>
+      <ul><li>Ofrece reiniciar los servicios pendientes detectados al terminar el mantenimiento manual.</li><li>Corrige el
+      bloqueo al revisar una lista de aplicaciones importada.</li><li>Incluye las aplicaciones recomendadas ya instaladas
+      al exportar una lista, incluso sin selección manual.</li><li>Los paquetes Testing usan un icono azul para distinguirlos
+      de la edición estable.</li></ul>
 ContentRating:
   oars-1.1: {}
