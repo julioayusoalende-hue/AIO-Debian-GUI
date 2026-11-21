@@ -784,7 +784,8 @@ with patch.object(app.subprocess, 'run', side_effect=[
     assert not w.recommended_indicators[('video-downloader', 'flatpak')].get_visible()
 
 # La consulta por pestaña distingue formatos y detecta DEB descargados externamente.
-with patch.object(w, '_comprobar_deb_recomendada',
+with patch.object(w, 'flatpak_presente', True), \
+     patch.object(w, '_comprobar_deb_recomendada',
                   side_effect=lambda package: package in {'gimp', 'google-chrome-stable'}), \
      patch.object(w, '_flatpaks_recomendadas_instaladas', return_value={video_id}), \
      patch.object(app.threading, 'Thread', ImmediateThread):
@@ -800,7 +801,8 @@ with patch.object(w, '_comprobar_deb_recomendada',
         w._accion_app_recomendada(None, 'google-chrome', 'deb-download')
         open_url.assert_not_called()
 
-with patch.object(w, '_comprobar_deb_recomendada', return_value=False), \
+with patch.object(w, 'flatpak_presente', True), \
+     patch.object(w, '_comprobar_deb_recomendada', return_value=False), \
      patch.object(w, '_flatpaks_recomendadas_instaladas', side_effect=RuntimeError('test error')), \
      patch.object(app.threading, 'Thread', ImmediateThread):
     w._cambiar_pestana_recomendadas(None, w.pagina_recomendadas, 3)
