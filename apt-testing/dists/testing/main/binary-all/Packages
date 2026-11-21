@@ -1,16 +1,16 @@
 Package: aio-debian-gui
-Version: 1:1.1.4~testing.52.1
+Version: 1:1.1.4~testing.53.1
 Architecture: all
 Maintainer: Julio Ayuso <epdc@msn.com>
-Installed-Size: 1967
+Installed-Size: 1968
 Depends: bash, apt, dconf-cli, coreutils, diffutils, grep, sed, util-linux, pciutils, libnotify-bin, needrestart, python3, python3-gi, gir1.2-gtk-3.0, gir1.2-vte-2.91, librsvg2-common, pkexec | policykit-1
 Conflicts: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
 Replaces: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
-Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.1.4~testing.52.1_all.deb
-Size: 974104
-MD5sum: e76c8e362e2e5a70f78f06b24ba07445
-SHA1: 28b7691a62dbd905dcd42b3b5d7607b0d4f16139
-SHA256: e43d0ea2b89d473be9128d9abc962b2fa1d490819c3407b00d348d1b9bba3d08
+Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.1.4~testing.53.1_all.deb
+Size: 974284
+MD5sum: eea44afb04ffbfbd8185808f4defe809
+SHA1: 20bc55e9621927a266390ec38bb60267e0189579
+SHA256: 4fc872f38bf4e3c9a770c7423e1612aafb6ecf85c0e394a1a0e70fb5ebeb7b76
 Section: admin
 Priority: optional
 Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
