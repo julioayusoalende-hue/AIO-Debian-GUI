@@ -5,6 +5,7 @@
 - Añade la pestaña Gestor de software al paquete DEB, con autocompletado y gestión de paquetes DEB, Flatpak y repositorios.
 - Sitúa Gestor de software justo después de Apps recomendadas.
 - Identifica los paquetes DEB y Flatpak instalados con una marca verde junto a su nombre.
+- Retira Synaptic de las herramientas auxiliares que instala AiO.
 
 ## 1.1.5
 

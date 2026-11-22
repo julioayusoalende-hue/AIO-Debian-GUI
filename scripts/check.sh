@@ -157,14 +157,18 @@ if bash -c '
     source "$1"
     paquete_instalado() {
         case "$1" in
-            libnotify-bin|fastfetch|synaptic|libfuse2t64) return 0 ;;
+            libnotify-bin|fastfetch|libfuse2t64) return 0 ;;
             *) return 1 ;;
         esac
     }
     estado_tools || exit 1
+    asegurar_listas() { return 0; }
+    instalar_paquete_si_falta() { echo "$1"; }
+    ok() { :; }
+    [ "$(paso_tools)" = "$(printf "libnotify-bin\nfastfetch")" ] || exit 1
     paquete_instalado() {
         case "$1" in
-            synaptic) return 1 ;;
+            fastfetch) return 1 ;;
             *) return 0 ;;
         esac
     }

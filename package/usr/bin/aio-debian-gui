@@ -1000,7 +1000,7 @@ PASOS = [
     ("repos", "Configurar repositorios oficiales",
      "En Debian habilita contrib/non-free; en Ubuntu LTS habilita universe/restricted/multiverse.", True, "apt"),
     ("tools", "Instalar herramientas auxiliares",
-     "Fastfetch, Synaptic y soporte FUSE para AppImage, si faltan.", True, "apt"),
+     "Fastfetch y soporte FUSE para AppImage, si faltan.", True, "apt"),
     ("backports-kernel-mesa", "Instalar kernel y Mesa desde Backports",
      "Instala el kernel y los controladores gráficos Mesa de Debian Backports; puede requerir reinicio.",
      False, "apt"),

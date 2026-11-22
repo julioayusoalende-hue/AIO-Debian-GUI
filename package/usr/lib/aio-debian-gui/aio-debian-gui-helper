@@ -724,7 +724,6 @@ paso_tools() {
     local r=0
     instalar_paquete_si_falta libnotify-bin "No se pudo instalar 'libnotify-bin'; no se podrán mostrar avisos del mantenimiento programado." || r=1
     instalar_paquete_si_falta fastfetch   "No se pudo instalar 'fastfetch'. Puede que no esté disponible en tus repositorios." || r=1
-    instalar_paquete_si_falta synaptic    "No se pudo instalar 'synaptic'. Puede que no esté disponible en tus repositorios." || r=1
     if paquete_instalado libfuse2 || paquete_instalado libfuse2t64; then
         ok "El soporte FUSE 2 para AppImage ya está instalado."
     else
@@ -741,7 +740,7 @@ paso_tools() {
 
 estado_tools() {
     local paquete
-    for paquete in libnotify-bin fastfetch synaptic; do
+    for paquete in libnotify-bin fastfetch; do
         paquete_instalado "$paquete" || return 1
     done
     paquete_instalado libfuse2 || paquete_instalado libfuse2t64
