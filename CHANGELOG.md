@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.1.6
+
+- Añade la pestaña Gestor de software al paquete DEB, con autocompletado y gestión de paquetes DEB, Flatpak y repositorios.
+
 ## 1.1.5
 
 - Reconoce AyusOS Linux y muestra su identidad en la cabecera y en los detalles técnicos.

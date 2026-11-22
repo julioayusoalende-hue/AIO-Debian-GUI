@@ -272,7 +272,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         w = app.VentanaPrincipal({'idioma': language, 'tema': 'claro', 'modo_simple': False})
     w.show_all()
     settle()
-    assert w.notebook.get_n_pages() == 5
+    assert w.notebook.get_n_pages() == 6
     assert w.notebook.get_nth_page(1) == w.grub_pagina
     assert w.notebook.get_tab_label_text(w.grub_pagina) == app.traducir('Inicio')
     assert w.grub_pagina.get_style_context().has_class("aio-page")
@@ -311,7 +311,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         assert w.grub_pagina.get_sensitive()
     assert [w.notebook.get_tab_label_text(page) for page in w.notebook.get_children()] == [
         app.traducir(name) for name in
-        ('Configuración y mantenimiento', 'Inicio', 'Backup', 'Apps recomendadas', 'Terminal')
+        ('Configuración y mantenimiento', 'Inicio', 'Backup', 'Apps recomendadas', 'Terminal', 'Gestor de software')
     ]
     assert set(w.backup_buttons) == {
         'timeshift', 'deja-dup', 'backup', 'restore', 'folder',

@@ -2167,6 +2167,11 @@ class VentanaPrincipal(Gtk.Window):
         consola.pack_start(self.vistas_terminal, True, True, 0)
         self.pagina_terminal.pack_start(consola, True, True, 0)
         notebook.append_page(self.pagina_terminal, Gtk.Label(label=traducir("Terminal")))
+        self.pagina_software = None
+        if not (es_flatpak() or os.environ.get("APPIMAGE") or os.environ.get("SNAP")):
+            from software_manager.manager import SoftwareManagerPage
+            self.pagina_software = SoftwareManagerPage(self)
+            notebook.append_page(self.pagina_software, Gtk.Label(label=traducir("Gestor de software")))
         notebook.connect("switch-page", self._cambiar_pestana_terminal)
         paneles = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL, wide_handle=True)
         self.paneles_principales = paneles
@@ -5584,6 +5589,10 @@ class VentanaPrincipal(Gtk.Window):
             d.destroy()
 
     def _al_cerrar(self, *_a):
+        if self.pagina_software is not None and self.pagina_software.applying_changes:
+            self._mensaje(Gtk.MessageType.INFO, "Gestor de software",
+                          "Espera a que termine la operación de software antes de cerrar.")
+            return True
         if self.grub_action_in_progress:
             self._mensaje(Gtk.MessageType.INFO, "Operación en curso",
                           "Espera a que termine la operación de la aplicación antes de cerrar la ventana.")

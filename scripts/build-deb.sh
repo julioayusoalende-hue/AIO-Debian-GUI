@@ -130,6 +130,8 @@ find "$STAGE" -type f -exec chmod 644 {} +
 chmod 755 "$STAGE/DEBIAN/postinst" "$STAGE/DEBIAN/prerm" "$STAGE/usr/bin/aio-debian-gui" \
           "$STAGE/usr/lib/aio-debian-gui/"{aio-debian-gui-helper,aio-apt-sources-backup,aio-grub-settings}
 
+chmod 755 "$STAGE/usr/lib/aio-debian-gui/software_manager/admin.py"
+
 # Fecha fija = fecha del último commit (o la actual si no hay git)
 find "$STAGE" -exec touch -h -d "@${SOURCE_DATE_EPOCH}" {} +
 
