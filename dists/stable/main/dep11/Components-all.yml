@@ -96,14 +96,11 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
 Releases:
-- version: 1.1.4
+- version: 1.1.5
   type: stable
-  unix-timestamp: 1795219200
+  unix-timestamp: 1795305600
   description:
     C: >-
-      <ul><li>Ofrece reiniciar los servicios pendientes detectados al terminar el mantenimiento manual.</li><li>Corrige el
-      bloqueo al revisar una lista de aplicaciones importada.</li><li>Incluye las aplicaciones recomendadas ya instaladas
-      al exportar una lista, incluso sin selección manual.</li><li>Los paquetes Testing usan un icono azul para distinguirlos
-      de la edición estable.</li></ul>
+      <ul><li>Reconoce AyusOS Linux y muestra su identidad en la cabecera y en los detalles técnicos.</li></ul>
 ContentRating:
   oars-1.1: {}
