@@ -272,7 +272,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         w = app.VentanaPrincipal({'idioma': language, 'tema': 'claro', 'modo_simple': False})
     w.show_all()
     settle()
-    assert w.notebook.get_n_pages() == 5
+    assert w.notebook.get_n_pages() == 6
     assert w.notebook.get_nth_page(1) == w.grub_pagina
     assert w.notebook.get_tab_label_text(w.grub_pagina) == app.traducir('Inicio')
     assert w.grub_pagina.get_style_context().has_class("aio-page")
@@ -311,8 +311,19 @@ for language in ('es', 'en', 'fr', 'zh'):
         assert w.grub_pagina.get_sensitive()
     assert [w.notebook.get_tab_label_text(page) for page in w.notebook.get_children()] == [
         app.traducir(name) for name in
-        ('Configuración y mantenimiento', 'Inicio', 'Backup', 'Apps recomendadas', 'Terminal')
+        ('Configuración y mantenimiento', 'Inicio', 'Backup', 'Apps recomendadas', 'Gestor de software', 'Terminal')
     ]
+    if language == 'es':
+        column = w.pagina_software.view.get_column(0)
+        indicator, package_name = column.get_cells()
+        model = Gtk.ListStore(str, str, str, str, str)
+        for status, expected in (
+            ('Instalado', '✓'), ('Actualizable', '✓'), ('Disponible', ''), ('Activo', ''),
+        ):
+            row = model.append(('Paquete de prueba', 'prueba', '1.0', status, ''))
+            column.cell_set_cell_data(model, row, False, False)
+            assert indicator.get_property('text') == expected
+            assert package_name.get_property('text') == 'Paquete de prueba'
     assert set(w.backup_buttons) == {
         'timeshift', 'deja-dup', 'backup', 'restore', 'folder',
         'desktop-backup', 'desktop-restore',
@@ -1145,7 +1156,7 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
                 while not started.called and time.monotonic() < deadline:
                     settle()
                 assert started.called and started.call_args.args[2] is None
-            assert w.notebook.get_current_page() == 4
+            assert w.notebook.get_current_page() == w.notebook.page_num(w.pagina_terminal)
 
             def terminal_contains(text):
                 deadline = time.monotonic() + 8
@@ -1188,7 +1199,7 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
                 w.btn_ver_terminal.clicked()
                 present.assert_called_once_with()
                 assert w.notebook.get_current_page() == 0
-                w.notebook.set_current_page(4)
+                w.notebook.set_current_page(w.notebook.page_num(w.pagina_terminal))
                 w.boton_mostrar_terminal.clicked()
                 assert present.call_count == 2
             w.terminal.feed_child(b'printf "%s%s\\n" AIO_DETACHED_ "$AIO_DOCK_STATE"\n')
@@ -1370,7 +1381,7 @@ with patch.dict(os.environ, {'PATH': '/nonexistent'}):
     w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
     w.show_all()
     with patch.object(w, '_terminal_iniciada', wraps=w._terminal_iniciada) as started:
-        w.notebook.set_current_page(4)
+        w.notebook.set_current_page(w.notebook.page_num(w.pagina_terminal))
         deadline = time.monotonic() + 8
         while not started.called and time.monotonic() < deadline:
             settle()

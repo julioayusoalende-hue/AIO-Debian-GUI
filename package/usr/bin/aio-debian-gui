@@ -1000,7 +1000,7 @@ PASOS = [
     ("repos", "Configurar repositorios oficiales",
      "En Debian habilita contrib/non-free; en Ubuntu LTS habilita universe/restricted/multiverse.", True, "apt"),
     ("tools", "Instalar herramientas auxiliares",
-     "Fastfetch, Synaptic y soporte FUSE para AppImage, si faltan.", True, "apt"),
+     "Fastfetch y soporte FUSE para AppImage, si faltan.", True, "apt"),
     ("backports-kernel-mesa", "Instalar kernel y Mesa desde Backports",
      "Instala el kernel y los controladores gráficos Mesa de Debian Backports; puede requerir reinicio.",
      False, "apt"),
@@ -2087,6 +2087,11 @@ class VentanaPrincipal(Gtk.Window):
         notebook.append_page(self._pagina_backup(), Gtk.Label(label=traducir("Backup")))
         self.pagina_recomendadas = self._pagina_recomendadas()
         notebook.append_page(self.pagina_recomendadas, Gtk.Label(label=traducir("Apps recomendadas")))
+        self.pagina_software = None
+        if not (es_flatpak() or os.environ.get("APPIMAGE") or os.environ.get("SNAP")):
+            from software_manager.manager import SoftwareManagerPage
+            self.pagina_software = SoftwareManagerPage(self)
+            notebook.append_page(self.pagina_software, Gtk.Label(label=traducir("Gestor de software")))
         notebook.connect("switch-page", self._cambiar_pestana_recomendadas)
         self.pagina_terminal = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.boton_mostrar_terminal = Gtk.Button(label=traducir("Mostrar ventana de la terminal"))
@@ -5584,6 +5589,10 @@ class VentanaPrincipal(Gtk.Window):
             d.destroy()
 
     def _al_cerrar(self, *_a):
+        if self.pagina_software is not None and self.pagina_software.applying_changes:
+            self._mensaje(Gtk.MessageType.INFO, "Gestor de software",
+                          "Espera a que termine la operación de software antes de cerrar.")
+            return True
         if self.grub_action_in_progress:
             self._mensaje(Gtk.MessageType.INFO, "Operación en curso",
                           "Espera a que termine la operación de la aplicación antes de cerrar la ventana.")

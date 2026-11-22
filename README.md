@@ -67,9 +67,11 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.1.5
+### Lo nuevo en la 1.1.6
 
-- **AyusOS Linux:** AiO reconoce la distribución como compatible y muestra su logotipo oficial en la cabecera y en Detalles técnicos.
+- **Gestor de software:** busca paquetes DEB y Flatpak con autocompletado, gestiona repositorios y distingue las aplicaciones instaladas con una marca verde.
+- **Interfaz:** la pestaña Gestor de software aparece justo después de Apps recomendadas.
+- **Herramientas auxiliares:** AiO deja de instalar Synaptic como parte de ese grupo.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -77,7 +79,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.1.5**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.1.6**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -101,10 +103,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.1.5:
+Para la versión 1.1.6:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.1.5_all.deb
+sudo apt install ./aio-debian-gui_1.1.6_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.
