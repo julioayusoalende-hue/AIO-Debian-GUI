@@ -96,14 +96,17 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
 Releases:
-- version: 1.1.6
+- version: 1.1.7
   type: stable
   unix-timestamp: 1795305600
   description:
     C: >-
-      <ul><li>Añade la pestaña Gestor de software al paquete DEB, con autocompletado y gestión de paquetes DEB, Flatpak y
-      repositorios.</li><li>Sitúa Gestor de software justo después de Apps recomendadas.</li><li>Identifica los paquetes DEB
-      y Flatpak instalados con una marca verde junto a su nombre.</li><li>Retira Synaptic de las herramientas auxiliares que
-      instala AiO.</li></ul>
+      <ul><li>Los DEB locales sin coincidencia SHA-256 en un índice autenticado de APT requieren autenticación de administrador.</li><li>El
+      Gestor de software, Inicio (GRUB) y las copias de repositorios respetan la autorización sin contraseña de la primera
+      pestaña.</li><li>Permite abrir un .deb local en el Gestor de software, revisar sus dependencias y confirmar la instalación.</li><li>Comprueba
+      y sincroniza el reloj de forma desatendida antes del primer mantenimiento.</li><li>La primera pestaña abre con los desplegables
+      plegados y respeta su estado al redimensionar la ventana.</li><li>El filtro Actualizables del Gestor de software incluye
+      los paquetes DEB y las aplicaciones Flatpak del ámbito seleccionado.</li><li>El Gestor de software muestra la descripción,
+      las dependencias y otros datos del paquete seleccionado.</li></ul>
 ContentRating:
   oars-1.1: {}
