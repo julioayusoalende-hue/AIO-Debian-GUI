@@ -96,11 +96,14 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
 Releases:
-- version: 1.1.5
+- version: 1.1.6
   type: stable
   unix-timestamp: 1795305600
   description:
     C: >-
-      <ul><li>Reconoce AyusOS Linux y muestra su identidad en la cabecera y en los detalles técnicos.</li></ul>
+      <ul><li>Añade la pestaña Gestor de software al paquete DEB, con autocompletado y gestión de paquetes DEB, Flatpak y
+      repositorios.</li><li>Sitúa Gestor de software justo después de Apps recomendadas.</li><li>Identifica los paquetes DEB
+      y Flatpak instalados con una marca verde junto a su nombre.</li><li>Retira Synaptic de las herramientas auxiliares que
+      instala AiO.</li></ul>
 ContentRating:
   oars-1.1: {}
