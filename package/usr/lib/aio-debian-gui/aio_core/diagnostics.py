@@ -6,6 +6,7 @@ como un sistema sano.
 """
 from __future__ import annotations
 
+import base64
 import os
 import json
 from pathlib import Path
@@ -31,26 +32,38 @@ def _run(args, timeout=12):
 
 
 def refresh_apt_indices(command):
-    """Solicita al asistente autorizado la actualización de los índices APT."""
+    """Devuelve el error de refresco y la auditoría del asistente autorizado."""
     try:
         result = subprocess.run(command, capture_output=True, text=True,
                                 timeout=280, check=False)
+        lines = result.stdout.splitlines()
+        audit = None
+        for line in lines:
+            if line.startswith("##DIAGNOSTIC_DPKG:"):
+                try:
+                    _, code, payload = line.split(":", 2)
+                    report = base64.b64decode(payload, validate=True).decode("utf-8", errors="replace")
+                    audit = (int(code), report, "")
+                except ValueError:
+                    continue
         if result.returncode != 0:
-            return (result.stderr or result.stdout or "No se obtuvo autorización de administrador.").strip()[-1500:]
-        if "##DIAGNOSTIC_APT:updated" not in result.stdout.splitlines():
-            return "El asistente no confirmó la actualización de los índices APT."
-        return None
+            detail = result.stderr or "\n".join(line for line in lines
+                                                  if not line.startswith("##DIAGNOSTIC_DPKG:"))
+            return (detail or "No se obtuvo autorización de administrador.").strip()[-1500:], audit
+        if "##DIAGNOSTIC_APT:updated" not in lines:
+            return "El asistente no confirmó la actualización de los índices APT.", audit
+        return None, audit
     except (OSError, subprocess.SubprocessError) as exc:
-        return str(exc)
+        return str(exc), None
 
 
-def run_host_diagnostics():
+def run_host_diagnostics(dpkg_audit=None):
     """Consulta el anfitrión desde Flatpak sin otorgar privilegios al diagnóstico."""
     try:
         source = Path(__file__).read_text(encoding="utf-8")
-        source += "\nprint(json.dumps(run_diagnostics()))\n"
+        source += "\nimport sys\nprint(json.dumps(run_diagnostics(json.loads(sys.argv[1]))))\n"
         result = subprocess.run(
-            ["flatpak-spawn", "--host", "env", "LC_ALL=C", "python3", "-c", source],
+            ["flatpak-spawn", "--host", "env", "LC_ALL=C", "python3", "-c", source, json.dumps(dpkg_audit)],
             capture_output=True, text=True, timeout=180, check=False,
         )
         if result.returncode != 0:
@@ -68,7 +81,7 @@ def run_host_diagnostics():
         return [_check("Sistema anfitrión", "unknown", str(exc))]
 
 
-def run_diagnostics():
+def run_diagnostics(dpkg_audit=None):
     """Devuelve una lista de comprobaciones sin alterar el sistema."""
     findings = []
     # La sandbox Flatpak no representa fielmente el sistema anfitrión:
@@ -95,7 +108,7 @@ def run_diagnostics():
         findings.append(_check("Espacio en /", "unknown", str(exc)))
 
     # Recuento conservador de paquetes que dpkg considera incompletos.
-    rc, output, error = _run(["dpkg", "--audit"])
+    rc, output, error = dpkg_audit if dpkg_audit is not None else _run(["dpkg", "--audit"])
     if rc is None or rc != 0:
         findings.append(_check("Estado de dpkg", "unknown",
             (error or output or "No pudo comprobarse dpkg.").strip()[:350]))

@@ -50,7 +50,7 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.1.7
+HELPER_VERSION=1.1.8
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -417,6 +417,11 @@ asegurar_listas() {
 }
 
 refrescar_indices_diagnostico() {
+    local auditoria codigo=0
+    auditoria=$(LC_ALL=C timeout --kill-after=2s 12s /usr/bin/dpkg --audit 2>&1) || codigo=$?
+    printf '##DIAGNOSTIC_DPKG:%s:' "$codigo"
+    printf '%s' "${auditoria:0:500}" | base64 -w0
+    printf '\n'
     if ! timeout --kill-after=10s 180s apt-get -o APT::Update::Error-Mode=any update; then
         err "No se pudieron actualizar todos los índices APT."
         return 1

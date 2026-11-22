@@ -2,6 +2,23 @@
 
 TRADUCCIONES = {
     "en": {
+        "Firmware": "Firmware",
+        "Dispositivo": "Device",
+        "Consulta actualizaciones para los dispositivos compatibles con fwupd.": "Check for updates for devices supported by fwupd.",
+        "Buscar actualizaciones de firmware": "Check for firmware updates",
+        "Actualizar dispositivo…": "Update device…",
+        "Instala el paquete fwupd para consultar el firmware.": "Install the fwupd package to check for firmware updates.",
+        "Buscando actualizaciones de firmware…": "Checking for firmware updates…",
+        "No se pudo consultar el firmware.": "Could not check for firmware updates.",
+        "Selecciona un dispositivo para revisar su actualización.": "Select a device to review its update.",
+        "No hay actualizaciones de firmware disponibles.": "No firmware updates are available.",
+        "Actualiza el firmware desde el sistema instalado.": "Update firmware from the installed system.",
+        "¿Actualizar el firmware de %s?": "Update firmware for %s?",
+        "Mantén el equipo conectado a la corriente. Puede ser necesario reiniciar.": "Keep the computer connected to power. A restart may be required.",
+        "Actualizar firmware": "Update firmware",
+        "Consulta el resultado. El firmware puede requerir reiniciar.": "Review the result. The firmware update may require a restart.",
+        "La actualización no se completó. Consulta el resultado.": "The update did not complete. Review the output.",
+        "Ya puedes cerrar esta ventana.": "You can close this window now.",
         "Navegador web con bloqueo de anuncios y rastreadores integrado.": "Web browser with built-in ad and tracker blocking.",
         "Organiza e integra aplicaciones AppImage en el menú del escritorio y gestiona sus actualizaciones.": "Organize and integrate AppImage applications into the desktop menu and manage their updates.",
 

@@ -2144,6 +2144,8 @@ class VentanaPrincipal(Gtk.Window):
             from software_manager.manager import SoftwareManagerPage
             self.pagina_software = SoftwareManagerPage(self, traducir, autorizacion_sin_contrasena_activa)
             notebook.append_page(self.pagina_software, Gtk.Label(label=traducir("Gestor de software")))
+            from aio_core.firmware import FirmwarePage
+            notebook.append_page(FirmwarePage(self, traducir), Gtk.Label(label=traducir("Firmware")))
         notebook.connect("switch-page", self._cambiar_pestana_recomendadas)
         self.pagina_terminal = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.boton_mostrar_terminal = Gtk.Button(label=traducir("Mostrar ventana de la terminal"))
@@ -4178,10 +4180,10 @@ class VentanaPrincipal(Gtk.Window):
         def analizar():
             try:
                 helper = helper_mantenimiento()
-                error_apt = core_diagnostics.refresh_apt_indices(
+                error_apt, auditoria_dpkg = core_diagnostics.refresh_apt_indices(
                     comando_pkexec(helper, "C.UTF-8", "--refresh-diagnostic-apt"))
-                resultados = (core_diagnostics.run_host_diagnostics() if es_flatpak()
-                              else core_diagnostics.run_diagnostics())
+                resultados = (core_diagnostics.run_host_diagnostics(auditoria_dpkg) if es_flatpak()
+                              else core_diagnostics.run_diagnostics(auditoria_dpkg))
                 if error_apt:
                     resultados.insert(0, {
                         "name": "Índices de APT", "status": "unknown",

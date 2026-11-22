@@ -14,17 +14,20 @@ spec.loader.exec_module(diag)
 # La actualización requiere confirmación explícita del asistente.
 command = ["pkexec", "helper", "--refresh-diagnostic-apt"]
 with mock.patch.object(diag.subprocess, "run", return_value=SimpleNamespace(
-        returncode=0, stdout="##DIAGNOSTIC_APT:updated\n", stderr="")) as run:
-    assert diag.refresh_apt_indices(command) is None
+        returncode=0, stdout="##DIAGNOSTIC_DPKG:0:\n##DIAGNOSTIC_APT:updated\n", stderr="")) as run:
+    assert diag.refresh_apt_indices(command) == (None, (0, "", ""))
     assert run.call_args.args[0] == command
 with mock.patch.object(diag.subprocess, "run", return_value=SimpleNamespace(
         returncode=1, stdout="", stderr="Permiso denegado")):
-    assert "Permiso denegado" in diag.refresh_apt_indices(command)
+    assert "Permiso denegado" in diag.refresh_apt_indices(command)[0]
+with mock.patch.object(diag.subprocess, "run", return_value=SimpleNamespace(
+        returncode=1, stdout="##DIAGNOSTIC_DPKG:0:cGFxdWV0ZSBpbmNvbXBsZXRv\n", stderr="Falló APT")):
+    assert diag.refresh_apt_indices(command) == ("Falló APT", (0, "paquete incompleto", ""))
 with mock.patch.object(diag.subprocess, "run", return_value=SimpleNamespace(
         returncode=0, stdout="", stderr="")):
-    assert diag.refresh_apt_indices(command)
+    assert diag.refresh_apt_indices(command)[0]
 with mock.patch.object(diag.subprocess, "run", side_effect=subprocess.TimeoutExpired(command, 280)):
-    assert diag.refresh_apt_indices(command)
+    assert diag.refresh_apt_indices(command)[0]
 
 # Flatpak consulta en el anfitrión y falla de forma explícita ante respuestas inválidas.
 with mock.patch.object(diag.subprocess, "run", return_value=SimpleNamespace(

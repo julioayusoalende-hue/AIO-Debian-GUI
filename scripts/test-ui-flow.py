@@ -299,7 +299,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         w = app.VentanaPrincipal({'idioma': language, 'tema': 'claro', 'modo_simple': False})
     w.show_all()
     settle()
-    assert w.notebook.get_n_pages() == 6
+    assert w.notebook.get_n_pages() == 7
     assert w.notebook.get_nth_page(1) == w.grub_pagina
     assert w.notebook.get_tab_label_text(w.grub_pagina) == app.traducir('Inicio')
     assert w.grub_pagina.get_style_context().has_class("aio-page")
@@ -338,7 +338,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         assert w.grub_pagina.get_sensitive()
     assert [w.notebook.get_tab_label_text(page) for page in w.notebook.get_children()] == [
         app.traducir(name) for name in
-        ('Configuración y mantenimiento', 'Inicio', 'Backup', 'Apps recomendadas', 'Gestor de software', 'Terminal')
+        ('Configuración y mantenimiento', 'Inicio', 'Backup', 'Apps recomendadas', 'Gestor de software', 'Firmware', 'Terminal')
     ]
     if language == 'es':
         column = w.pagina_software.view.get_column(0)
@@ -1151,8 +1151,9 @@ for refresh_error in (None, 'Autorización cancelada'):
     def refresh(command):
         calls.append('refresh')
         assert command == ['test-refresh']
-        return refresh_error
-    def diagnose():
+        return refresh_error, (0, '', '')
+    def diagnose(audit):
+        assert audit == (0, '', '')
         calls.append('diagnose')
         return [{'name': 'Actualizaciones pendientes', 'status': 'ok',
                  'detail': '0 actualizaciones disponibles según los índices APT locales.', 'advice': ''}]

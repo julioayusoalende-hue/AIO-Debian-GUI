@@ -1,5 +1,11 @@
 # Cambios
 
+## 1.1.8
+
+- Ejecuta la auditoría de dpkg con la autorización del diagnóstico preventivo.
+
+- Añade una pestaña de firmware con búsqueda y actualización interactiva por dispositivo mediante fwupd.
+
 ## 1.1.7
 
 - Los DEB locales sin coincidencia SHA-256 en un índice autenticado de APT requieren autenticación de administrador.
