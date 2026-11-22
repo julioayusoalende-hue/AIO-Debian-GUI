@@ -51,6 +51,7 @@ def esperar_disposicion(ventana, ancho):
 
 for distro, version, expected in (
     ('debian', '13', ['appimage']),
+    ('ayusos', '0.1', ['appimage']),
     ('ubuntu', '24.04', ['appimage']),
     ('ubuntu', '26.04', ['deb', 'appimage']),
     ('ubuntu', '26.10', ['deb', 'appimage']),
@@ -58,6 +59,33 @@ for distro, version, expected in (
 ):
     assert [canal['type'] for canal in app.canales_ghostty(
         {'ID': distro, 'VERSION_ID': version})] == expected
+
+for os_release, esperado in (
+    ('ID=ayusos\nVERSION_ID="0.1"\nPRETTY_NAME="AyusOS Linux 0.1 (base Debian 13)"\n',
+     'AyusOS Linux 0.1'),
+    ('ID=debian\nVERSION_ID="13"\nNAME="AyusOS Linux"\nPRETTY_NAME="AyusOS Linux 0.3"\n',
+     'AyusOS Linux 0.3'),
+    ('ID=debian\nVERSION_ID="13"\nLOGO=ayusos-logo\n', 'AyusOS Linux'),
+):
+    with patch.object(app, 'leer_texto', return_value=os_release):
+        ayusos = app.datos_distribucion_anfitrion()
+        assert app.distribucion_anfitrion() == 'debian'
+        assert app.sistema_operativo().startswith(esperado)
+    with patch.object(app, 'datos_distribucion_anfitrion', return_value=ayusos):
+        ventana = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+        _, sistema = ventana.get_titlebar().get_custom_title().get_children()
+        logo, nombre = sistema.get_children()
+        assert logo.get_accessible().get_name() == 'Logotipo de AyusOS Linux'
+        assert logo.get_pixbuf().get_width() == 16
+        assert nombre.get_text() == esperado
+        detalles = ventana._crear_detalles_sistema()
+        scroll = next(w for w in detalles.get_content_area().get_children()
+                      if isinstance(w, Gtk.ScrolledWindow))
+        imagen = scroll.get_child().get_child().get_children()[0]
+        assert imagen.get_accessible().get_name() == 'Logotipo de AyusOS Linux'
+        assert imagen.get_pixbuf().get_width() == 100
+        detalles.destroy()
+        ventana.destroy()
 
 with patch.object(app.urllib.request, 'urlopen') as request:
     request.return_value.__enter__.return_value.geturl.return_value = (

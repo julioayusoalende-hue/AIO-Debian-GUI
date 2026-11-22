@@ -35,7 +35,7 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.1.3
+HELPER_VERSION=1.1.4
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -57,7 +57,7 @@ leer_distribucion() {
       ID= VERSION_ID=
       . "$archivo"
       case "${ID:-}" in
-        debian) printf '%s\n' debian ;;
+        debian|ayusos) printf '%s\n' debian ;;
         ubuntu)
           case "${VERSION_ID:-}" in
             24.04|26.04) printf '%s\n' ubuntu ;;
@@ -72,7 +72,7 @@ leer_distribucion() {
 distribucion_soportada() {
     local id
     id=$(leer_distribucion) || {
-        err "Este sistema no es Debian ni Ubuntu 24.04/26.04 LTS. Se han bloqueado las operaciones administrativas."
+        err "Este sistema no es Debian, AyusOS Linux ni Ubuntu 24.04/26.04 LTS. Se han bloqueado las operaciones administrativas."
         return 1
     }
     printf '%s\n' "$id"
@@ -437,21 +437,25 @@ paquete_appimage() {
     return 1
 }
 
-debian_backports_codename() {
-    local distro codename
-    . /etc/os-release
-    distro=${ID:-}
-    codename=${VERSION_CODENAME:-}
-    if [ "$distro" != "debian" ]; then
-        err "La instalación del kernel desde Backports solo está disponible en Debian."
-        return 1
+debian_backports_codename() (
+    local archivo=/etc/os-release codename
+    if [ "$EUID" -ne 0 ] && [ -n "${AIO_TEST_OS_RELEASE:-}" ]; then
+        archivo="$AIO_TEST_OS_RELEASE"
     fi
+    [ -r "$archivo" ] || return 1
+    local ID= VERSION_CODENAME= DEBIAN_CODENAME=
+    . "$archivo"
+    case "$ID" in
+        debian) codename=$VERSION_CODENAME ;;
+        ayusos) codename=${DEBIAN_CODENAME:-$VERSION_CODENAME} ;;
+        *) err "La instalación del kernel desde Backports solo está disponible en Debian y AyusOS Linux."; return 1 ;;
+    esac
     if [[ ! "$codename" =~ ^[a-z][a-z0-9-]*$ ]]; then
         err "No se pudo determinar de forma segura la versión de Debian."
         return 1
     fi
     printf '%s\n' "$codename"
-}
+)
 
 kernel_backports_package() {
     case "$(dpkg --print-architecture)" in

@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.1.5
+
+- Reconoce AyusOS Linux y muestra su identidad en la cabecera y en los detalles técnicos.
+
 ## 1.1.4
 
 - Ofrece reiniciar los servicios pendientes detectados al terminar el mantenimiento manual.
@@ -9,6 +13,7 @@
 
 ## 1.1.3
 
+- Corrección del paquete (revisión 1): incluye las apps recomendadas instaladas al exportar y completa la revisión de listas importadas al recuperar el foco.
 - Permite exportar e importar una selección de Apps recomendadas con su formato de instalación.
 - Añade Gradia, Flameshot, ONLYOFFICE Desktop Editors y Bitwarden a Apps recomendadas, con sus iconos.
 - Añade el reintento de tareas fallidas desde el historial con una referencia a la ejecución original.

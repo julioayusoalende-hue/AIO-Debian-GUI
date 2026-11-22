@@ -715,6 +715,9 @@ TRADUCCIONES["zh"].update({
 TRADUCCIONES["en"]["Logotipo de Ubuntu"] = "Ubuntu logo"
 TRADUCCIONES["fr"]["Logotipo de Ubuntu"] = "Logo Ubuntu"
 TRADUCCIONES["zh"]["Logotipo de Ubuntu"] = "Ubuntu 标志"
+TRADUCCIONES["en"]["Logotipo de AyusOS Linux"] = "AyusOS Linux logo"
+TRADUCCIONES["fr"]["Logotipo de AyusOS Linux"] = "Logo AyusOS Linux"
+TRADUCCIONES["zh"]["Logotipo de AyusOS Linux"] = "AyusOS Linux 标志"
 
 
 TRADUCCIONES["en"]["Seguir el sistema"] = "Follow system"

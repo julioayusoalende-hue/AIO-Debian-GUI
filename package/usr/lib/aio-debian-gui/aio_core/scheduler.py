@@ -14,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 
-VERSION = '1.1.3'
+VERSION = '1.1.4'
 
 
 HOST_PROTOCOL = 1
@@ -142,13 +142,22 @@ def _systemctl(*args):
     return result.stdout.strip()
 
 
+def maintenance_distro(values):
+    distro = values.get('ID')
+    if distro in ('debian', 'ayusos'):
+        return 'debian'
+    if distro == 'ubuntu' and values.get('VERSION_ID') in ('24.04', '26.04'):
+        return 'ubuntu'
+    return None
+
+
 def host_supported():
     try:
         values = {}
         for line in Path('/etc/os-release').read_text().splitlines():
             key, _, value = line.partition('=')
             values[key] = value.strip().strip('"').strip("'")
-        return values.get('ID') == 'debian' or (values.get('ID') == 'ubuntu' and values.get('VERSION_ID') in ('24.04', '26.04'))
+        return maintenance_distro(values) is not None
     except OSError:
         return False
 

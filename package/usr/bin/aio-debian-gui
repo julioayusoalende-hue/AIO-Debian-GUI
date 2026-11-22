@@ -67,6 +67,10 @@ DEBIAN_LOGO = os.path.normpath(
 UBUNTU_LOGO = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/ubuntu-logo.svg")
 )
+AYUSOS_LOGO = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/ayusos-logo.png")
+)
+NOMBRE_AYUSOS = re.compile(r"^AyusOS(?: Linux)?\b", re.IGNORECASE)
 FASTFETCH_LAYOUT = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/fastfetch-layout.jsonc")
 )
@@ -82,11 +86,38 @@ BACKUP_ICON_DIR = os.path.normpath(
 
 def logo_distribucion(distribucion):
     """Devuelve el recurso y el nombre accesible para cada sistema soportado."""
+    if distribucion == "ayusos":
+        return AYUSOS_LOGO, "Logotipo de AyusOS Linux"
     if distribucion == "ubuntu":
         return UBUNTU_LOGO, "Logotipo de Ubuntu"
     if distribucion == "debian":
         return DEBIAN_LOGO, "Logotipo de Debian"
     return None, None
+
+def identidad_distribucion(datos):
+    sistema = datos.get("ID")
+    # AyusOS conserva ID=debian en las imágenes que usan los repositorios de Debian.
+    if sistema == "debian" and (
+        any(NOMBRE_AYUSOS.match(datos.get(campo, "")) for campo in ("NAME", "PRETTY_NAME"))
+        or datos.get("LOGO") in ("ayusos", "ayusos-logo")
+    ):
+        return "ayusos"
+    return sistema
+
+
+def imagen_logo_distribucion(datos, tamano):
+    ruta, nombre_logo = logo_distribucion(identidad_distribucion(datos))
+    if ruta is None:
+        return None
+    try:
+        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(ruta, tamano, tamano, True)
+    except GLib.Error:
+        return None
+    logo = Gtk.Image.new_from_pixbuf(pixbuf)
+    logo.get_accessible().set_name(traducir(nombre_logo))
+    logo.set_tooltip_text(traducir(nombre_logo))
+    return logo
+
 
 FOTO_INSPIRACION = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/adri-y-lu.jpg")
@@ -650,19 +681,16 @@ def datos_distribucion_anfitrion():
     for linea in (contenido or "").splitlines():
         if "=" in linea and not linea.startswith("#"):
             clave, valor = linea.split("=", 1)
-            if clave in ("ID", "VERSION_ID"):
+            if clave in ("ID", "VERSION_ID", "NAME", "PRETTY_NAME", "LOGO"):
                 valores[clave] = valor.strip().strip('"').strip("'")
     return valores
 
 
-def distribucion_anfitrion():
-    """Identifica Debian y Ubuntu LTS mediante /etc/os-release del anfitrión."""
-    valores = datos_distribucion_anfitrion()
-    if valores.get("ID") == "debian":
-        return "debian"
-    if valores.get("ID") == "ubuntu" and valores.get("VERSION_ID") in ("24.04", "26.04"):
-        return "ubuntu"
-    return "no-soportada"
+def distribucion_anfitrion(valores=None):
+    """Devuelve la familia de mantenimiento, separada de la identidad visual."""
+    if valores is None:
+        valores = datos_distribucion_anfitrion()
+    return core_scheduler.maintenance_distro(valores) or "no-soportada"
 
 
 GHOSTTY_APPIMAGE_RELEASES = "https://github.com/pkgforge-dev/ghostty-appimage/releases"
@@ -672,7 +700,7 @@ def canales_ghostty(distribucion):
     sistema = distribucion.get("ID")
     version = distribucion.get("VERSION_ID", "")
     appimage = {"type": "appimage"}
-    if sistema == "debian":
+    if sistema in ("debian", "ayusos"):
         return [appimage]
     if sistema == "ubuntu":
         if re.fullmatch(r"[0-9]{2,}\.[0-9]{2}", version) and tuple(map(int, version.split("."))) >= (26, 4):
@@ -702,12 +730,11 @@ def url_appimage_ghostty(arquitectura):
 
 
 def sistema_operativo():
-    contenido = leer_texto("/etc/os-release")
-    if contenido:
-        for linea in contenido.splitlines():
-            if linea.startswith("PRETTY_NAME="):
-                return linea.split("=", 1)[1].strip().strip('"')
-    return "Debian GNU/Linux"
+    datos = datos_distribucion_anfitrion()
+    nombre = datos.get("PRETTY_NAME", "")
+    if identidad_distribucion(datos) == "ayusos" and not NOMBRE_AYUSOS.match(nombre):
+        return "AyusOS Linux"
+    return nombre or "Debian GNU/Linux"
 
 
 def _ejecutar(cmd):
@@ -1194,9 +1221,9 @@ class VentanaPrincipal(Gtk.Window):
         self.salida_error_tarea = []
         self.estado_diagnostico = "No comprobado"
 
-        self.distribucion = distribucion_anfitrion()
-        self.canales_recomendados = {app["id"]: app["channels"] for app in APPS_RECOMENDADAS}
         self.datos_anfitrion = datos_distribucion_anfitrion()
+        self.distribucion = distribucion_anfitrion(self.datos_anfitrion)
+        self.canales_recomendados = {app["id"]: app["channels"] for app in APPS_RECOMENDADAS}
         self.canales_recomendados["ghostty"] = canales_ghostty(self.datos_anfitrion)
         self.snapd_presente = paquete_instalado("snapd")
         self.flatpak_presente = es_flatpak() or shutil.which("flatpak") is not None
@@ -1314,18 +1341,19 @@ class VentanaPrincipal(Gtk.Window):
         titulo.pack_start(principal, False, False, 0)
 
         sistema = Gtk.Box(spacing=5, halign=Gtk.Align.CENTER)
-        distribucion = self.datos_anfitrion.get("ID")
-        nombre_sistema = {"debian": "Debian", "ubuntu": "Ubuntu"}.get(
+        distribucion = identidad_distribucion(self.datos_anfitrion)
+        nombre_sistema = {"debian": "Debian", "ubuntu": "Ubuntu", "ayusos": "AyusOS Linux"}.get(
             distribucion, traducir("Sistema no compatible"))
-        ruta_logo, _ = logo_distribucion(distribucion)
-        if ruta_logo:
-            try:
-                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(ruta_logo, 16, 16, True)
-                sistema.pack_start(Gtk.Image.new_from_pixbuf(pixbuf), False, False, 0)
-            except GLib.Error:
-                pass
+        logo = imagen_logo_distribucion(self.datos_anfitrion, 16)
+        if logo is not None:
+            sistema.pack_start(logo, False, False, 0)
         version_sistema = self.datos_anfitrion.get("VERSION_ID")
-        if distribucion in ("debian", "ubuntu") and version_sistema:
+        if distribucion == "ayusos" and self.datos_anfitrion.get("ID") == "debian":
+            descripcion = self.datos_anfitrion.get("PRETTY_NAME", "")
+            version_ayusos = re.match(r"AyusOS(?: Linux)?\s+(\d+(?:\.\d+)*)\b",
+                                      descripcion, re.IGNORECASE)
+            version_sistema = version_ayusos[1] if version_ayusos else None
+        if distribucion in ("debian", "ubuntu", "ayusos") and version_sistema:
             nombre_sistema = f"{nombre_sistema} {version_sistema}"
         etiqueta_sistema = Gtk.Label(label=nombre_sistema)
         etiqueta_sistema.get_style_context().add_class("aio-header-system")
@@ -1339,7 +1367,8 @@ class VentanaPrincipal(Gtk.Window):
         self.etiqueta_canal_actualizaciones.set_text(texto if formato_actualizacion() == "deb" else "")
 
     def _boton_novedades(self, version):
-        texto = version if version_numerica(version.split("~", 1)[0]) else traducir("Desarrollo")
+        base = re.split(r"[~-]", version, maxsplit=1)[0]
+        texto = version if version_numerica(base) else traducir("Desarrollo")
         boton = Gtk.Button()
         boton.set_relief(Gtk.ReliefStyle.NONE)
         encabezado = traducir("Novedades de esta versión")
@@ -3986,18 +4015,10 @@ class VentanaPrincipal(Gtk.Window):
         detalles.set_border_width(20)
         scroll.add(detalles)
 
-        ruta_logo, nombre_logo = logo_distribucion(self.distribucion)
-        if ruta_logo and os.path.isfile(ruta_logo):
-            try:
-                imagen_logo = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                    ruta_logo, 100, 100, True)
-                logo = Gtk.Image.new_from_pixbuf(imagen_logo)
-                logo.set_tooltip_text(traducir(nombre_logo))
-                logo.set_halign(Gtk.Align.CENTER)
-                logo.get_accessible().set_name(traducir(nombre_logo))
-                detalles.pack_start(logo, False, False, 6)
-            except GLib.Error:
-                pass
+        logo = imagen_logo_distribucion(self.datos_anfitrion, 100)
+        if logo is not None:
+            logo.set_halign(Gtk.Align.CENTER)
+            detalles.pack_start(logo, False, False, 6)
 
         self.grid_detalles_sistema = Gtk.Grid(column_spacing=16, row_spacing=10)
         detalles.pack_start(self.grid_detalles_sistema, False, False, 0)
@@ -4680,7 +4701,7 @@ class VentanaPrincipal(Gtk.Window):
         pasos = self._pasos_seleccionados()
         if self.distribucion == "no-soportada":
             self._mensaje(Gtk.MessageType.ERROR, "Sistema no compatible",
-                          "Las operaciones administrativas solo están disponibles en Debian y Ubuntu 24.04/26.04 LTS.")
+                          "Las operaciones administrativas están disponibles en Debian, AyusOS Linux y Ubuntu 24.04/26.04 LTS.")
             return
         if not pasos:
             self._mensaje(Gtk.MessageType.INFO, "Nada que hacer", "Activa al menos una tarea.")

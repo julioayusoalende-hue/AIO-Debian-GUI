@@ -9,6 +9,14 @@ cat > "$TMP/debian" <<'EOF'
 ID=debian
 VERSION_ID="13"
 EOF
+cat > "$TMP/ayusos" <<'EOF'
+NAME="AyusOS Linux"
+ID=ayusos
+ID_LIKE=debian
+VERSION_ID="0.1"
+VERSION_CODENAME=trixie
+DEBIAN_CODENAME=trixie
+EOF
 cat > "$TMP/ubuntu24" <<'EOF'
 ID=ubuntu
 VERSION_ID="24.04"
@@ -23,7 +31,7 @@ ID_LIKE="ubuntu debian"
 VERSION_ID="22"
 EOF
 
-for pair in "debian:debian" "ubuntu24:ubuntu" "ubuntu26:ubuntu"; do
+for pair in "debian:debian" "ayusos:debian" "ubuntu24:ubuntu" "ubuntu26:ubuntu"; do
   file=${pair%%:*}
   expected=${pair#*:}
   got=$(AIO_TEST_OS_RELEASE="$TMP/$file" bash -c 'source "$1"; leer_distribucion' _ "$HELPER")
@@ -33,6 +41,8 @@ if AIO_TEST_OS_RELEASE="$TMP/unsupported" bash -c 'source "$1"; leer_distribucio
   echo 'Una distribución derivada no verificada se aceptó como soportada.' >&2
   exit 1
 fi
+
+[ "$(AIO_TEST_OS_RELEASE="$TMP/ayusos" bash -c 'source "$1"; debian_backports_codename' _ "$HELPER")" = trixie ]
 
 # Metapaquetes específicos: nunca instalar los de Ubuntu en Debian.
 for version in 24 26; do

@@ -100,9 +100,9 @@ SCHEDULER_VERSION=$(python3 -c 'import sys; sys.path.insert(0,"package/usr/lib/a
 grep -Fq -- '--check-update-self)' "$HELPER" &&
     bien "actualizador APT con comprobación previa" ||
     fallo "falta comprobación previa APT"
-[ "$(grep -Fxc "## $V" CHANGELOG.md)" -eq 1 ] &&
+[ "$(grep -Fxc "## ${V%%-*}" CHANGELOG.md)" -eq 1 ] &&
     bien "entrada única de $V en CHANGELOG.md" ||
-    fallo "se requiere una única sección '## $V' en CHANGELOG.md"
+    fallo "se requiere una única sección '## ${V%%-*}' en CHANGELOG.md"
 
 if grep -Fq '("backports-kernel-mesa",' "$GUI" &&
    grep -Fq 'helper_admite_tarea(helper, "backports-kernel-mesa")' "$GUI" &&
