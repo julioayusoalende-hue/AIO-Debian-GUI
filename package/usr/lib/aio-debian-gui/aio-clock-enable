@@ -1,0 +1,4 @@
+#!/bin/sh
+# La acción Polkit de inicio solo permite activar el proveedor NTP del sistema.
+[ "$#" -eq 0 ] && [ "$(/usr/bin/id -u)" -eq 0 ] || exit 2
+exec /usr/bin/timedatectl --no-ask-password set-ntp true

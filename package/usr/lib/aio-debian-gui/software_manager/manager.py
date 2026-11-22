@@ -13,11 +13,16 @@ PAGES = ('DEB', 'Flatpak', 'Repositorios')
 
 
 class SoftwareManagerPage(Gtk.Box):
-    def __init__(self, window):
+    def __init__(self, window, translate=lambda text: text):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin=12)
         self.window = window
+        self.translate = translate
+        self.details_pool = ThreadPoolExecutor(max_workers=2)
+        self.details_request = None
+        self.details_timer = 0
         self.pool = ThreadPoolExecutor(max_workers=1)
         self.rows = []
+        self.catalogue_errors = []
         self.timer = 0
         self.busy = False
         self.applying_changes = False
@@ -50,7 +55,7 @@ class SoftwareManagerPage(Gtk.Box):
 
         self.filters = Gtk.ComboBoxText()
         for name in ('Todos', 'Instalados', 'Disponibles', 'Actualizables'):
-            self.filters.append_text(name)
+            self.filters.append_text(self.translate(name))
         self.filters.set_active(0)
         toolbar.pack_end(self.filters, False, False, 0)
 
@@ -76,6 +81,21 @@ class SoftwareManagerPage(Gtk.Box):
         scroller.add(self.view)
         self.pack_start(scroller, True, True, 0)
 
+        self.details = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        self.details_title = Gtk.Label(xalign=0, ellipsize=3)
+        self.details_title.get_style_context().add_class('aio-task-name')
+        self.details.pack_start(self.details_title, False, False, 0)
+        self.details_view = Gtk.TextView(editable=False, cursor_visible=False,
+                                         wrap_mode=Gtk.WrapMode.WORD_CHAR, left_margin=8,
+                                         right_margin=8, top_margin=6, bottom_margin=6)
+        details_scroll = Gtk.ScrolledWindow(shadow_type=Gtk.ShadowType.IN, min_content_height=118)
+        details_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        details_scroll.add(self.details_view)
+        self.details.pack_start(details_scroll, True, True, 0)
+        self.details.show_all()
+        self.details.set_no_show_all(True)
+        self.pack_start(self.details, False, False, 0)
+
         self.actions = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE,
                                    column_spacing=6, row_spacing=4, max_children_per_line=8)
         self.pack_start(self.actions, False, False, 0)
@@ -86,7 +106,7 @@ class SoftwareManagerPage(Gtk.Box):
         self.scope.connect('changed', self.change_page)
         self.search.connect('changed', self.queue_filter)
         self.filters.connect('changed', self.queue_filter)
-        self.view.get_selection().connect('changed', lambda *_: self.show_actions())
+        self.view.get_selection().connect('changed', self.selection_changed)
         self.scope.set_no_show_all(True)
         self.connect('map', self.on_map)
 
@@ -105,6 +125,8 @@ class SoftwareManagerPage(Gtk.Box):
         if self.timer:
             GLib.source_remove(self.timer)
             self.timer = 0
+        self.cancel_details()
+        self.details_pool.shutdown(wait=False, cancel_futures=True)
         self.pool.shutdown(wait=False, cancel_futures=True)
 
     def queue_filter(self, *_):
@@ -141,13 +163,20 @@ class SoftwareManagerPage(Gtk.Box):
         if not self.busy:
             total = len(found)
             visible = f'Mostrando {len(self.store):,} de ' if total > len(self.store) else ''
-            self.status.set_text(f'{visible}{total:,} resultados')
+            text = f'{visible}{total:,} resultados'
+            if self.catalogue_errors:
+                text += ' · ' + (self.translate('No se pudieron consultar todos los remotos (%d)')
+                                 % len(self.catalogue_errors))
+            elif packages and wanted == 3 and not query and not total:
+                text = self.translate('No hay actualizaciones disponibles.')
+            self.status.set_text(text)
+            self.status.set_tooltip_text('\n'.join(self.catalogue_errors) or None)
         return False
 
     def change_page(self, *_):
         page = self.page.get_active()
         self.scope.set_visible(page != 0)
-        self.filters.set_visible(page == 0)
+        self.filters.set_visible(page in (0, 1))
         self.search.set_text('')
         self.search.set_placeholder_text(
             'Buscar repositorios…' if page == 2 else 'Buscar por nombre o identificador…')
@@ -156,6 +185,7 @@ class SoftwareManagerPage(Gtk.Box):
         for column, title in zip(self.columns, names):
             column.set_title(title)
         self.load()
+        self.show_details()
 
     def job(self, message, task, completed):
         self.busy = True
@@ -189,21 +219,18 @@ class SoftwareManagerPage(Gtk.Box):
 
         def display(result):
             self.catalogues[key] = result
-            self.rows, errors = result
+            self.rows, self.catalogue_errors = result
             if self.timer:
                 GLib.source_remove(self.timer)
             self.filter_rows()
-            if errors:
-                self.status.set_text(f'{len(self.store):,} resultados · {len(errors)} remotos inaccesibles')
-                self.status.set_tooltip_text('\n'.join(errors))
-            else:
-                self.status.set_tooltip_text(None)
             self.show_actions()
 
         if not force and key in self.catalogues:
             display(self.catalogues[key])
         else:
             self.rows = []
+            self.catalogue_errors = []
+            self.status.set_tooltip_text(None)
             self.store.clear()
             self.show_actions()
             readers = (backend.debs, lambda: backend.flatpaks(scope), lambda: backend.repos(scope))
@@ -212,6 +239,84 @@ class SoftwareManagerPage(Gtk.Box):
     def selected(self):
         model, iterator = self.view.get_selection().get_selected()
         return tuple(model[iterator]) if iterator else None
+
+    def selection_changed(self, _selection):
+        self.show_actions()
+        self.show_details()
+
+    def cancel_details(self):
+        if self.details_timer:
+            GLib.source_remove(self.details_timer)
+            self.details_timer = 0
+        if self.details_request is not None:
+            request, self.details_request = self.details_request, None
+            request.cancel()
+
+    def show_details(self):
+        self.cancel_details()
+        page, scope = self.page.get_active(), self.scope.get_active_id()
+        row = self.selected()
+        self.details.set_visible(page in (0, 1))
+        self.details.set_tooltip_text(None)
+        self.details_title.set_text(row[0] if row and page in (0, 1)
+                                    else self.translate('Detalles del paquete'))
+        buffer = self.details_view.get_buffer()
+        if not row or page not in (0, 1):
+            buffer.set_text(self.translate('Selecciona un paquete para ver su descripción y dependencias.'))
+            return
+        _, identifier, version, state, origin = row
+        buffer.set_text(self.translate('Cargando detalles del paquete…'))
+
+        def finish(request):
+            if self.destroyed or request is not self.details_request:
+                return GLib.SOURCE_REMOVE
+            self.details_request = None
+            try:
+                metadata = request.result()
+            except (RuntimeError, OSError) as exc:
+                buffer.set_text(self.translate('No se pudieron consultar los detalles de este paquete.'))
+                self.details.set_tooltip_text(str(exc)[-1000:])
+            else:
+                self.render_details(metadata, row, page)
+            return GLib.SOURCE_REMOVE
+
+        def start():
+            self.details_timer = 0
+            if page == 0:
+                task = self.details_pool.submit(backend.deb_details, identifier, version, origin)
+            else:
+                task = self.details_pool.submit(
+                    backend.flatpak_details, scope, origin, identifier, state != 'Disponible')
+            self.details_request = task
+            task.add_done_callback(lambda request: GLib.idle_add(finish, request))
+            return GLib.SOURCE_REMOVE
+
+        self.details_timer = GLib.timeout_add(120, start)
+
+    def render_details(self, metadata, row, page):
+        _, identifier, version, _, origin = row
+        translate = self.translate
+        fields = [
+            ('Identificador', identifier),
+            ('Versión', metadata.get('Version') or version),
+            ('Arquitectura', metadata.get('Architecture') or (origin if page == 0 else '')),
+            ('Remoto', origin if page == 1 else ''),
+            ('Rama', metadata.get('Branch')),
+            ('Dependencias previas', metadata.get('Pre-Depends')),
+            ('Dependencias', metadata.get('Depends')),
+            ('Paquetes recomendados', metadata.get('Recommends')),
+            ('Entorno de ejecución requerido', metadata.get('Runtime')),
+            ('Tamaño de descarga', metadata.get('Download Size')),
+            ('Tamaño instalado', metadata.get('Installed Size')),
+            ('Sección', metadata.get('Section')),
+            ('Licencia', metadata.get('License')),
+            ('Sitio web', metadata.get('Homepage')),
+        ]
+        lines = [metadata.get('Description') or translate('Descripción no disponible.'), '']
+        lines.extend(f'{translate(label)}: {value}' for label, value in fields if value)
+        self.details_view.get_buffer().set_text('\n'.join(lines))
+        self.details_view.scroll_to_iter(self.details_view.get_buffer().get_start_iter(),
+                                         0, False, 0, 0)
 
     def show_actions(self):
         for child in self.actions.get_children():

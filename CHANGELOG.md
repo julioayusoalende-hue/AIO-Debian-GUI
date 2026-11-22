@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.1.7
+
+- Comprueba y sincroniza el reloj de forma desatendida antes del primer mantenimiento.
+- La primera pestaña abre con los desplegables plegados y respeta su estado al redimensionar la ventana.
+- El filtro Actualizables del Gestor de software incluye los paquetes DEB y las aplicaciones Flatpak del ámbito seleccionado.
+- El Gestor de software muestra la descripción, las dependencias y otros datos del paquete seleccionado.
+
 ## 1.1.6
 
 - Añade la pestaña Gestor de software al paquete DEB, con autocompletado y gestión de paquetes DEB, Flatpak y repositorios.

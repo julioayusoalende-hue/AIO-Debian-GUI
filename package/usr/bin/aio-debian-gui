@@ -42,6 +42,7 @@ CORE_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file_
                                       "../lib/aio-debian-gui"))
 if CORE_DIR not in sys.path:
     sys.path.insert(0, CORE_DIR)
+from aio_core import clock as core_clock  # noqa: E402
 from aio_core import history as core_history, preferences as core_preferences, updates as core_updates, diagnostics as core_diagnostics, preflight as core_preflight, scheduler as core_scheduler, host_integration as core_host_integration  # noqa: E402
 from aio_core import desktop_backup as core_desktop_backup, recommended_list as core_recommended_list  # noqa: E402
 from aio_core.fastfetch import instalar_layout, restaurar_layout  # noqa: E402
@@ -131,6 +132,7 @@ PREFERENCIAS_DEFECTO = {
     "modo_simple": False,
     "carpeta_repositorios": "",
     "canal_actualizaciones": "stable",
+    "reloj_inicial_sincronizado": False,
 }
 IDIOMAS = {"es", "en", "fr", "zh"}
 TEMAS = {"sistema", "claro", "oscuro"}
@@ -1205,6 +1207,8 @@ class VentanaPrincipal(Gtk.Window):
         self.ventana_terminal = None
         self.terminal_monitor = None
         self.programando = False
+        self.sincronizando_reloj = False
+        self.aviso_reloj_inicial = False
         self.programacion = ControladorProgramacion(self)
         self.diagnostico_en_curso = False
         self.ventana_diagnostico = None
@@ -1236,6 +1240,48 @@ class VentanaPrincipal(Gtk.Window):
         self.connect("delete-event", self._al_cerrar)
         self.connect("focus-in-event", self._refrescar_recomendadas_al_volver)
     def _preparar_anfitrion_al_iniciar(self):
+        if self.sincronizando_reloj:
+            return
+        if (self.distribucion == "no-soportada"
+                or self.preferencias.get("reloj_inicial_sincronizado") is True):
+            self._preparar_integracion_inicial()
+            return
+        self.sincronizando_reloj = True
+        self.estado.set_text(traducir("Sincronizando el reloj del sistema…"))
+        self._actualizar_sensibilidad()
+
+        def sincronizar():
+            try:
+                sincronizado = core_clock.sincronizar(comando_host)
+            except (OSError, subprocess.SubprocessError):
+                sincronizado = False
+            GLib.idle_add(self._reloj_inicial_comprobado, sincronizado)
+
+        threading.Thread(target=sincronizar, daemon=True).start()
+
+    def _reloj_inicial_comprobado(self, sincronizado):
+        if self.destruida:
+            return GLib.SOURCE_REMOVE
+        self.sincronizando_reloj = False
+        self.aviso_reloj_inicial = not sincronizado
+        if sincronizado:
+            nuevas = dict(self.preferencias, reloj_inicial_sincronizado=True)
+            try:
+                guardar_preferencias(nuevas)
+            except OSError as error:
+                self._escribir("[!] %s: %s\n" % (
+                    traducir("No se pudieron guardar las preferencias"), error,
+                ), "aviso")
+            self.preferencias = nuevas
+        else:
+            self._escribir("[!] %s\n" % traducir(
+                "El reloj aún no está sincronizado. Se volverá a intentar al abrir AiO.",
+            ), "aviso")
+        self._actualizar_sensibilidad()
+        self._preparar_integracion_inicial()
+        return GLib.SOURCE_REMOVE
+
+    def _preparar_integracion_inicial(self):
         formato = formato_actualizacion()
         if formato not in ("flatpak", "appimage") or self.distribucion == "no-soportada":
             self._consultar_estados_tareas(inicial=True)
@@ -2090,7 +2136,7 @@ class VentanaPrincipal(Gtk.Window):
         self.pagina_software = None
         if not (es_flatpak() or os.environ.get("APPIMAGE") or os.environ.get("SNAP")):
             from software_manager.manager import SoftwareManagerPage
-            self.pagina_software = SoftwareManagerPage(self)
+            self.pagina_software = SoftwareManagerPage(self, traducir)
             notebook.append_page(self.pagina_software, Gtk.Label(label=traducir("Gestor de software")))
         notebook.connect("switch-page", self._cambiar_pestana_recomendadas)
         self.pagina_terminal = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -3861,7 +3907,6 @@ class VentanaPrincipal(Gtk.Window):
             self.restaurar_proporcion_paneles = not estrecha
             paneles = self.paneles_principales
             paneles.set_position(-1)
-            self.seleccion_detalle.set_expanded(not estrecha)
         self._ajustar_consola()
         return GLib.SOURCE_REMOVE
 
@@ -4076,7 +4121,6 @@ class VentanaPrincipal(Gtk.Window):
         marco, caja = tarjeta_mantenimiento(8)
         self.seleccion_detalle = Gtk.Expander(label=traducir("<b>Tu selección</b>"))
         self.seleccion_detalle.set_use_markup(True)
-        self.seleccion_detalle.set_expanded(True)
         self.resumen_seleccion = etiqueta("")
         self.resumen_seleccion.set_max_width_chars(38)
         self.resumen_seleccion.set_margin_top(8)
@@ -4290,19 +4334,18 @@ class VentanaPrincipal(Gtk.Window):
         )
 
         grupos = (
-            ("Mantenimiento habitual", "view-refresh-symbolic", {"clock", "upgrade", "autoremove", "autopurge", "autoclean", "flatpak-update", "snap-update", "rebootcheck"}, True),
-            ("Aplicaciones y repositorios", "system-software-install-symbolic", {"repos", "tools", "flatpak-setup", "gnome-plugin", "ext-manager"}, True),
-            ("Kernel y controladores · Avanzado", "preferences-system-symbolic", {"backports-kernel-mesa", "revertir-backports", "nvidia-driver", "ubuntu-hwe"}, False),
+            ("Mantenimiento habitual", "view-refresh-symbolic", {"clock", "upgrade", "autoremove", "autopurge", "autoclean", "flatpak-update", "snap-update", "rebootcheck"}),
+            ("Aplicaciones y repositorios", "system-software-install-symbolic", {"repos", "tools", "flatpak-setup", "gnome-plugin", "ext-manager"}),
+            ("Kernel y controladores · Avanzado", "preferences-system-symbolic", {"backports-kernel-mesa", "revertir-backports", "nvidia-driver", "ubuntu-hwe"}),
         )
         self.grupos_tareas = []
-        for titulo, icono, ids, abierto in grupos:
+        for titulo, icono, ids in grupos:
             visibles = [p for p in PASOS if p[0] in ids and self._visible(p[0])]
             if not visibles:
                 continue
             grupo = Gtk.Expander()
             grupo.set_label_widget(cabecera_mantenimiento(titulo, icono, "aio-group"))
             grupo.get_accessible().set_name(traducir(titulo))
-            grupo.set_expanded(abierto)
             lista = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
             lista.get_style_context().add_class("aio-tasks")
             lista.set_margin_top(4)
@@ -4466,9 +4509,9 @@ class VentanaPrincipal(Gtk.Window):
         self._actualizar_sensibilidad()
         if correcta:
             if inicial:
-                self.estado.set_text(
-                    traducir("Selecciona las tareas que quieres ejecutar.")
-                )
+                mensaje = ("El reloj aún no está sincronizado. Se volverá a intentar al abrir AiO."
+                           if self.aviso_reloj_inicial else "Selecciona las tareas que quieres ejecutar.")
+                self.estado.set_text(traducir(mensaje))
             return
         if mensaje is None:
             mensaje = traducir(
@@ -4481,11 +4524,14 @@ class VentanaPrincipal(Gtk.Window):
         self._escribir("[!] %s\n" % mensaje, "aviso")
 
     def _actualizar_sensibilidad(self):
-        disponible = (not self.en_curso and not self.comprobando_actualizacion and not self.programando
+        disponible = (not self.sincronizando_reloj and not self.en_curso
+                     and not self.comprobando_actualizacion and not self.programando
                      and not self.diagnostico_en_curso and not self.backup_action_in_progress
                      and not self.grub_action_in_progress
                      and self.distribucion != "no-soportada")
         self.grub_pagina.set_sensitive(disponible)
+        if self.pagina_software is not None:
+            self.pagina_software.set_sensitive(not self.sincronizando_reloj)
         self._actualizar_seleccion()
         self.btn_iniciar.set_sensitive(disponible and not self.consultando_estados and bool(self._pasos_seleccionados()))
         if self.btn_actualizar is not None:
@@ -4496,7 +4542,8 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_preferencias_menu.set_sensitive(disponible)
         self.btn_programar.set_sensitive(disponible)
         self.btn_borrar.set_sensitive(not self.en_curso)
-        self.btn_diagnostico.set_sensitive(not self.en_curso and not self.diagnostico_en_curso
+        self.btn_diagnostico.set_sensitive(not self.sincronizando_reloj and not self.en_curso
+                                           and not self.diagnostico_en_curso
                                            and not self.comprobando_actualizacion and not self.programando
                                            and not self.backup_action_in_progress
                                            and not self.grub_action_in_progress)
@@ -4514,12 +4561,14 @@ class VentanaPrincipal(Gtk.Window):
             fila.set_sensitive(habilitada)
             self.switches[pid][0].set_sensitive(habilitada)
         for boton in self.backup_buttons.values():
-            boton.set_sensitive(not self.en_curso and not self.programando
+            boton.set_sensitive(not self.sincronizando_reloj and not self.en_curso
+                                and not self.programando
                                 and not self.comprobando_actualizacion
                                 and not self.diagnostico_en_curso
                                 and not self.backup_action_in_progress
                                 and not self.grub_action_in_progress)
-        recomendaciones_disponibles = (not self.en_curso and not self.programando
+        recomendaciones_disponibles = (not self.sincronizando_reloj and not self.en_curso
+                                       and not self.programando
                                        and not self.comprobando_actualizacion
                                        and not self.diagnostico_en_curso
                                        and not self.backup_action_in_progress
@@ -4701,7 +4750,7 @@ class VentanaPrincipal(Gtk.Window):
         return sel
 
     def _iniciar(self, _b):
-        if self.en_curso or self.programando:
+        if self.sincronizando_reloj or self.en_curso or self.programando:
             return
         pasos = self._pasos_seleccionados()
         if self.distribucion == "no-soportada":

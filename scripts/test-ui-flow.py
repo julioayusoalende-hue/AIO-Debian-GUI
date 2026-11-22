@@ -223,7 +223,8 @@ for formato in ('appimage', 'flatpak', 'deb'):
          patch.object(app, 'version_app', return_value='2.10.15'), \
          patch.object(app.threading, 'Thread') as worker, \
          patch.object(app.core_host_integration, 'prepare_host') as prepare:
-        window = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+        window = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False,
+                                      'reloj_inicial_sincronizado': True})
         window.distribucion = 'ubuntu'
         with patch.object(window, '_consultar_estados_tareas') as status:
             window._preparar_anfitrion_al_iniciar()
@@ -238,6 +239,32 @@ for formato in ('appimage', 'flatpak', 'deb'):
                 settle()
                 status.assert_called_once_with(inicial=True)
         window.destroy()
+
+for sincronizado in (True, False):
+    window = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+    window.distribucion = 'debian'
+    with patch.object(app, 'formato_actualizacion', return_value='deb'), \
+         patch.object(app.threading, 'Thread') as worker, \
+         patch.object(app.core_clock, 'sincronizar', return_value=sincronizado), \
+         patch.object(app, 'guardar_preferencias') as save, \
+         patch.object(window, '_consultar_estados_tareas') as status:
+        window._preparar_anfitrion_al_iniciar()
+        assert window.sincronizando_reloj and not window.btn_iniciar.get_sensitive()
+        assert not window.pagina_software.get_sensitive()
+        status.assert_not_called()
+        worker.call_args.kwargs['target']()
+        settle()
+        status.assert_called_once_with(inicial=True)
+        assert not window.sincronizando_reloj and window.pagina_software.get_sensitive()
+        assert window.aviso_reloj_inicial is (not sincronizado)
+        if sincronizado:
+            assert save.call_args.args[0]['reloj_inicial_sincronizado'] is True
+            worker.reset_mock()
+            window._preparar_anfitrion_al_iniciar()
+            worker.assert_not_called()
+        else:
+            save.assert_not_called()
+    window.destroy()
 
 preferencias = {'idioma': 'es', 'tema': 'claro', 'modo_simple': False}
 paquete_instalado = app.paquete_instalado
@@ -324,6 +351,80 @@ for language in ('es', 'en', 'fr', 'zh'):
             column.cell_set_cell_data(model, row, False, False)
             assert indicator.get_property('text') == expected
             assert package_name.get_property('text') == 'Paquete de prueba'
+        gestor = w.pagina_software
+        backend = sys.modules['software_manager.backend']
+        apt_record = ('Package: prueba\nVersion: 2.0\nArchitecture: amd64\n'
+                      'Description: Herramienta de prueba\n Descripción larga\n'
+                      'Depends: base (>= 1),\n alternativa | otra\nInstalled-Size: 128\n')
+        with patch.object(backend, 'run', return_value=apt_record) as run:
+            gestor.view.get_selection().select_iter(
+                gestor.store.append(('prueba', 'prueba:amd64', '2.0', 'Disponible', 'amd64')))
+            texto = gestor.details_view.get_buffer()
+            limite = time.monotonic() + 2
+            while gestor.details_request is not None or gestor.details_timer:
+                assert time.monotonic() < limite, 'No se cargó la ficha del paquete'
+                settle()
+            ficha = texto.get_text(*texto.get_bounds(), False)
+            assert 'Herramienta de prueba' in ficha
+            assert 'Dependencias: base (>= 1), alternativa | otra' in ficha
+            run.assert_called_once_with(
+                ['/usr/bin/apt-cache', 'show', '--', 'prueba:amd64=2.0'], timeout=8)
+        gestor.store.clear()
+        flatpak_info = ('Ejemplo - Editor de notas\n  sin conexión\n\n'
+                        '     ID: org.example.Editor\nRuntime: org.gnome.Platform/x86_64/48\n'
+                        '   Arch: x86_64\nLicense: GPL-3.0-or-later\n')
+        ref = 'app/org.example.Editor/x86_64/stable'
+        with patch.object(backend, 'run', return_value=flatpak_info) as run:
+            metadata = backend.flatpak_details('user', 'flathub', ref, installed=False)
+            run.assert_called_once_with(
+                ['/usr/bin/flatpak', '--user', 'remote-info', '--', 'flathub', ref], timeout=12)
+        gestor.render_details(metadata, ('Ejemplo', ref, '', 'Disponible', 'flathub'), 1)
+        texto = gestor.details_view.get_buffer()
+        assert 'Editor de notas sin conexión' in texto.get_text(*texto.get_bounds(), False)
+        assert 'Entorno de ejecución requerido: org.gnome.Platform/x86_64/48' in texto.get_text(
+            *texto.get_bounds(), False)
+        instalado = f'Ejemplo\t{ref}\t1.0\tflathub\n'
+        otra_ref = 'app/org.example.Other/x86_64/stable'
+        cat = f'Ejemplo\t{ref}\t2.0\nOtra\t{otra_ref}\t1.0\n'
+        with patch.object(backend, 'remotes', return_value=[
+            ('flathub', '', ''), ('otro', '', ''), ('pausado', '', 'disabled'),
+        ]), patch.object(backend, 'run', side_effect=[instalado, cat, ref + '\n', cat]) as run:
+            filas, errores = backend.flatpaks('user')
+            assert not errores
+            assert {(fila[1], fila[4]): fila[3] for fila in filas} == {
+                (ref, 'flathub'): 'Actualizable', (otra_ref, 'flathub'): 'Disponible',
+                (ref, 'otro'): 'Disponible', (otra_ref, 'otro'): 'Disponible',
+            }
+            assert run.call_args_list[2].args[0] == [
+                '/usr/bin/flatpak', '--user', 'remote-ls', '--app', '--updates', '--all',
+                '--arch=*', '--columns=ref', '--', 'flathub',
+            ]
+        with patch.object(backend, 'remotes', return_value=[('flathub', '', '')]), \
+             patch.object(backend, 'run', side_effect=[instalado, cat, RuntimeError('sin conexión')]):
+            parciales, errores = backend.flatpaks('system')
+            assert errores == ['flathub — sin conexión']
+            assert next(fila for fila in parciales if fila[1] == ref)[3] == 'Instalado'
+        with patch.object(gestor, 'load'):
+            gestor.page.set_active(1)
+            assert gestor.filters.get_visible()
+            gestor.rows, gestor.catalogue_errors = filas, []
+            gestor.filters.set_active(3)
+            settle()
+            assert len(gestor.store) == 1 and gestor.store[0][1] == ref
+            gestor.rows = parciales
+            gestor.filter_rows()
+            assert gestor.status.get_text() == 'No hay actualizaciones disponibles.'
+            gestor.catalogue_errors = errores
+            gestor.filter_rows()
+            assert 'No se pudieron consultar todos los remotos' in gestor.status.get_text()
+            gestor.catalogue_errors = []
+            gestor.filters.set_active(0)
+            gestor.page.set_active(2)
+            assert not gestor.filters.get_visible()
+            gestor.page.set_active(0)
+            assert gestor.filters.get_visible()
+            gestor.rows = []
+            settle()
     assert set(w.backup_buttons) == {
         'timeshift', 'deja-dup', 'backup', 'restore', 'folder',
         'desktop-backup', 'desktop-restore',
@@ -430,7 +531,9 @@ for language in ('es', 'en', 'fr', 'zh'):
     assert w.marco_consola.get_allocated_height() >= 200
     assert w.btn_iniciar.get_mapped()
     w.expansor_consola.set_expanded(False)
-    assert not w.grupos_tareas[-1].get_expanded()
+    assert all(not grupo.get_expanded() for grupo in w.grupos_tareas)
+    assert not w.seleccion_detalle.get_expanded()
+    assert not w.chk_sin_contrasena.get_ancestor(Gtk.Expander).get_expanded()
     assert all(isinstance(check, Gtk.CheckButton) for check, _ in w.switches.values())
     assert isinstance(w.chk_sin_contrasena, Gtk.Switch)
     assert not any(t in w._pasos_seleccionados() for t in ('backports-kernel-mesa', 'revertir-backports', 'nvidia-driver', 'ubuntu-hwe'))
@@ -663,10 +766,17 @@ for language in ('es', 'en', 'fr', 'zh'):
         assert left.get_allocated_width() > ancho_izq
         assert right.get_allocated_width() > ancho_der
         assert abs(panels.get_position() / (left.get_allocated_width() + right.get_allocated_width()) - ratio) < 0.005
+        w.seleccion_detalle.set_expanded(True)
+        w.grupos_tareas[0].set_expanded(True)
         w.resize(700, 900)
         esperar_disposicion(w, 700)
+        assert w.seleccion_detalle.get_expanded() and w.grupos_tareas[0].get_expanded()
+        w.seleccion_detalle.set_expanded(False)
         w.resize(1520, 900)
         esperar_disposicion(w, 1520)
+        assert not w.seleccion_detalle.get_expanded()
+        assert w.grupos_tareas[0].get_expanded()
+        w.grupos_tareas[0].set_expanded(False)
         assert abs(panels.get_position() / (left.get_allocated_width() + right.get_allocated_width()) - ratio) < 0.005
     w.destroy()
     settle()

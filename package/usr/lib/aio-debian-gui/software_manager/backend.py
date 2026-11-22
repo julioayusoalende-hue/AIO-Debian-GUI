@@ -39,6 +39,75 @@ def debs():
     return rows, []
 
 
+def _deb822_records(output):
+    for stanza in re.split(r'\n[ \t]*\n', output):
+        fields = {}
+        key = None
+        for line in stanza.splitlines():
+            if line.startswith((' ', '\t')):
+                if key in ('Pre-Depends', 'Depends', 'Recommends'):
+                    fields[key] += ' ' + line.strip()
+                continue
+            key, separator, value = line.partition(':')
+            if separator:
+                fields[key] = value.strip()
+            else:
+                key = None
+        if fields:
+            yield fields
+
+
+def deb_details(identifier, version, arch):
+    name = identifier.split(':', 1)[0]
+
+    def find_record(output):
+        return next((record for record in _deb822_records(output)
+                     if record.get('Package') == name and record.get('Version') == version
+                     and record.get('Architecture') == arch), None)
+
+    try:
+        output = run(['/usr/bin/apt-cache', 'show', '--', f'{identifier}={version}'], timeout=8)
+        record = find_record(output)
+    except RuntimeError:
+        record = None
+    if record is None:
+        record = find_record(run(['/usr/bin/dpkg-query', '-s', '--', identifier], timeout=8))
+    if record is None:
+        return {}
+    details = {key: record[key] for key in
+               ('Architecture', 'Version', 'Pre-Depends', 'Depends', 'Recommends', 'Section', 'Homepage')
+               if record.get(key)}
+    description = record.get('Description') or record.get('Description-en')
+    if description:
+        details['Description'] = description
+    for source, field, unit in (('Size', 'Download Size', 'B'),
+                                ('Installed-Size', 'Installed Size', 'KiB')):
+        size = record.get(source, '')
+        if size.isdecimal():
+            details[field] = f'{size} {unit}'
+    return details
+
+
+def flatpak_details(scope, remote, ref, installed):
+    args = ('info', '--', ref) if installed else ('remote-info', '--', remote, ref)
+    output = run(flatpak(scope, *args), timeout=12).strip()
+    # With LC_ALL=C.UTF-8, the human-readable report starts with an optional
+    # AppStream summary and then prints the English field labels.
+    report = re.search(r'^[ \t]*ID:', output, flags=re.MULTILINE)
+    summary = output[:report.start()] if report else ''
+    fields = output[report.end():] if report else output
+    details = {}
+    _, found, description = ' '.join(summary.split()).partition(' - ')
+    if found and description not in ('(null)', '-'):
+        details['Description'] = description
+    keys = {'Runtime', 'Arch', 'Branch', 'Version', 'License', 'Download Size', 'Installed Size'}
+    for line in fields.splitlines():
+        key, _, value = line.strip().partition(':')
+        if key in keys and value.strip() not in ('', '-'):
+            details['Architecture' if key == 'Arch' else key] = value.strip()
+    return details
+
+
 def flatpak(scope, *args):
     return ['/usr/bin/flatpak', f'--{scope}', *args]
 
@@ -61,6 +130,7 @@ def flatpaks(scope):
     for name, ref, version, origin in columns(run(flatpak(
             scope, 'list', '--app', '--columns=name,ref,version,origin')), 4):
         rows[(origin, ref)] = (name, ref, version, 'Instalado', origin)
+    installed_origins = {origin for origin, _ in rows}
     for remote, _, options in remotes(scope):
         if 'disabled' in options.split(','):
             continue
@@ -69,6 +139,14 @@ def flatpaks(scope):
                                  '--columns=name,ref,version', remote), timeout=12)
             for name, ref, version in columns(output, 3):
                 rows.setdefault((remote, ref), (name, ref, version, 'Disponible', remote))
+            if remote in installed_origins:
+                updates = run(flatpak(scope, 'remote-ls', '--app', '--updates', '--all',
+                                      '--arch=*', '--columns=ref', '--', remote), timeout=12)
+                for (ref,) in columns(updates, 1):
+                    key = (remote, ref)
+                    row = rows.get(key)
+                    if row and row[3] == 'Instalado':
+                        rows[key] = (*row[:3], 'Actualizable', remote)
         except RuntimeError as exc:
             errors.append(f'{remote} — {exc}')
     return sorted(rows.values(), key=lambda row: row[0].casefold()), errors

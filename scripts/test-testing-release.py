@@ -82,6 +82,13 @@ with tempfile.TemporaryDirectory() as directory:
     policy = Path("share/polkit-1/actions/es.aiodebian.gui.policy")
     assert "Icon=aio-debian-gui-testing" in (testing_usr / desktop).read_text().splitlines()
     assert ET.parse(testing_usr / policy).findtext(".//icon_name") == "aio-debian-gui-testing"
+    clock = testing_usr / "lib/aio-debian-gui/aio-clock-enable"
+    assert clock.stat().st_mode & 0o777 == 0o755
+    clock_action = ET.parse(testing_usr / policy).find("./action[@id='es.aiodebian.gui.reloj']")
+    assert clock_action.findtext("annotate") == "/usr/lib/aio-debian-gui/aio-clock-enable"
+    assert [clock_action.findtext(f"defaults/allow_{key}") for key in ("any", "inactive", "active")] == [
+        "no", "no", "yes",
+    ]
     assert (work / "package/DEBIAN/control").read_text() == before
     assert run("bash", "scripts/build-deb.sh", "--testing-version", "1.0.4", cwd=work, check=False).returncode != 0
     run("bash", "scripts/build-deb.sh", cwd=work)
