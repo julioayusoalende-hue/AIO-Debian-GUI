@@ -3,6 +3,7 @@
 ## 1.1.6
 
 - Añade la pestaña Gestor de software al paquete DEB, con autocompletado y gestión de paquetes DEB, Flatpak y repositorios.
+- Sitúa Gestor de software justo después de Apps recomendadas.
 
 ## 1.1.5
 

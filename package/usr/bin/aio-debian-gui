@@ -2087,6 +2087,11 @@ class VentanaPrincipal(Gtk.Window):
         notebook.append_page(self._pagina_backup(), Gtk.Label(label=traducir("Backup")))
         self.pagina_recomendadas = self._pagina_recomendadas()
         notebook.append_page(self.pagina_recomendadas, Gtk.Label(label=traducir("Apps recomendadas")))
+        self.pagina_software = None
+        if not (es_flatpak() or os.environ.get("APPIMAGE") or os.environ.get("SNAP")):
+            from software_manager.manager import SoftwareManagerPage
+            self.pagina_software = SoftwareManagerPage(self)
+            notebook.append_page(self.pagina_software, Gtk.Label(label=traducir("Gestor de software")))
         notebook.connect("switch-page", self._cambiar_pestana_recomendadas)
         self.pagina_terminal = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.boton_mostrar_terminal = Gtk.Button(label=traducir("Mostrar ventana de la terminal"))
@@ -2167,11 +2172,6 @@ class VentanaPrincipal(Gtk.Window):
         consola.pack_start(self.vistas_terminal, True, True, 0)
         self.pagina_terminal.pack_start(consola, True, True, 0)
         notebook.append_page(self.pagina_terminal, Gtk.Label(label=traducir("Terminal")))
-        self.pagina_software = None
-        if not (es_flatpak() or os.environ.get("APPIMAGE") or os.environ.get("SNAP")):
-            from software_manager.manager import SoftwareManagerPage
-            self.pagina_software = SoftwareManagerPage(self)
-            notebook.append_page(self.pagina_software, Gtk.Label(label=traducir("Gestor de software")))
         notebook.connect("switch-page", self._cambiar_pestana_terminal)
         paneles = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL, wide_handle=True)
         self.paneles_principales = paneles
