@@ -1,5 +1,16 @@
 # Cambios
 
+## 1.1.7
+
+- Los DEB locales sin coincidencia SHA-256 en un índice autenticado de APT requieren autenticación de administrador.
+
+- El Gestor de software, Inicio (GRUB) y las copias de repositorios respetan la autorización sin contraseña de la primera pestaña.
+- Permite abrir un .deb local en el Gestor de software, revisar sus dependencias y confirmar la instalación.
+- Comprueba y sincroniza el reloj de forma desatendida antes del primer mantenimiento.
+- La primera pestaña abre con los desplegables plegados y respeta su estado al redimensionar la ventana.
+- El filtro Actualizables del Gestor de software incluye los paquetes DEB y las aplicaciones Flatpak del ámbito seleccionado.
+- El Gestor de software muestra la descripción, las dependencias y otros datos del paquete seleccionado.
+
 ## 1.1.6
 
 - Añade la pestaña Gestor de software al paquete DEB, con autocompletado y gestión de paquetes DEB, Flatpak y repositorios.

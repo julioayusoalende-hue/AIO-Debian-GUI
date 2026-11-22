@@ -17,6 +17,21 @@
 set -u
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 umask 022
+# Estas operaciones comparten la autorización de AiO. Los asistentes instalados
+# validan sus propios argumentos y dos de ellos reciben datos por stdin.
+if [[ "${BASH_SOURCE[0]}" == "$0" && "$EUID" == 0 ]]; then
+    case "${1:-}" in
+        --software)
+            shift
+            case "${1:-}" in
+                install-trusted-local|install|remove|upgrade|refresh|flatpak-system|add-source|enable|disable|delete)
+                    exec /usr/lib/aio-debian-gui/software_manager/admin.py "$@" ;;
+                *) exit 2 ;;
+            esac ;;
+        --grub) shift; exec /usr/lib/aio-debian-gui/aio-grub-settings "$@" ;;
+        --apt-backup) shift; exec /usr/lib/aio-debian-gui/aio-apt-sources-backup "$@" ;;
+    esac
+fi
 exec </dev/null   # nunca esperar entrada: no hay terminal
 
 info() { echo "[*] $*"; }
@@ -35,7 +50,7 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.1.6
+HELPER_VERSION=1.1.7
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py

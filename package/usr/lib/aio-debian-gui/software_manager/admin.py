@@ -53,12 +53,86 @@ def write_source(uri, suite, components, key):
             temp_path.unlink()
 
 
+def system_flatpak_args(values):
+    # Reconstruir únicamente las operaciones que ofrece el gestor.
+    identifier = re.compile(r'[A-Za-z0-9][A-Za-z0-9._/-]*')
+    for prefix, count in (
+        (['update', '-y'], 0), (['update', '-y', '--'], 1),
+        (['install', '-y', '--'], 2), (['uninstall', '-y', '--'], 1),
+        (['remote-delete', '--'], 1), (['remote-modify', '--enable', '--'], 1),
+        (['remote-modify', '--disable', '--'], 1),
+        (['remote-add', '--if-not-exists', '--'], 2),
+    ):
+        if values[:len(prefix)] != prefix or len(values) != len(prefix) + count:
+            continue
+        operands = values[len(prefix):]
+        if prefix[0] == 'remote-add':
+            url = urlsplit(operands[-1])
+            if url.scheme != 'https' or not url.hostname or url.username or url.password:
+                break
+            operands = operands[:-1]
+        if all(identifier.fullmatch(item) and '..' not in item for item in operands):
+            return ['/usr/bin/flatpak', '--system', *values]
+    raise ValueError('Operación Flatpak del sistema no válida.')
+
+
+def trusted_archive(package, digest):
+    """Match one SHA256 in one authenticated Packages index (never dpkg status)."""
+    if not PACKAGE.fullmatch(package) or not re.fullmatch('[0-9a-f]{64}', digest):
+        return False
+    try:
+        import apt_pkg
+        apt_pkg.init()
+        # APT also calls an index trusted when its source explicitly overrides
+        # authentication. Require normal signature checking for the silent path.
+        sources = Path(apt_pkg.config.find_dir('Dir::Etc::sourceparts'))
+        paths = [*sources.glob('*.list'), *sources.glob('*.sources')]
+        primary = Path(apt_pkg.config.find_file('Dir::Etc::sourcelist'))
+        if primary.exists():
+            paths.append(primary)
+        for path in paths:
+            if re.search(r'(?im)(?:^|[\s\[])trusted\s*[:=]', path.read_text()):
+                return False
+        cache = apt_pkg.Cache(None)
+        indexes = apt_pkg.SourceList()
+        indexes.read_main_list()
+        records = apt_pkg.PackageRecords(cache)
+        for version in cache[package].version_list:
+            for entry in version.file_list:
+                index = indexes.find_index(entry[0])
+                if (index and index.is_trusted and records.lookup(entry)
+                        and records.sha256_hash == digest):
+                    return True
+    except (ImportError, KeyError, OSError, ValueError, SystemError, UnicodeError):
+        pass
+    return False
+
+
 def main(args):
     if os.geteuid() != 0:
         raise ValueError('Esta operación requiere permisos de administración.')
     command, *values = args
     env = {**os.environ, 'DEBIAN_FRONTEND': 'noninteractive'}
     apt = ['/usr/bin/apt-get', '-y', '-o', 'Dpkg::Options::=--force-confold']
+    if command == 'flatpak-system':
+        return subprocess.call(system_flatpak_args(values), env=env)
+    if ((command == 'install-local' and len(values) == 1)
+            or (command == 'install-trusted-local' and len(values) == 2)) and re.fullmatch('[a-f0-9]{64}', values[0]):
+        with tempfile.TemporaryDirectory(dir='/var/tmp') as directory:
+            archive = Path(directory) / 'package.deb'
+            checksum = hashlib.sha256()
+            with archive.open('wb') as target:
+                for block in iter(lambda: sys.stdin.buffer.read(1024 * 1024), b''):
+                    target.write(block)
+                    checksum.update(block)
+            if checksum.hexdigest() != values[0]:
+                raise ValueError('El archivo ha cambiado. Vuelve a abrirlo para revisar la instalación.')
+            if command == 'install-trusted-local' and not trusted_archive(values[1], checksum.hexdigest()):
+                raise ValueError('APT no acredita este archivo. Vuelve a abrirlo para autenticarte.')
+            archive.chmod(0o644)
+            Path(directory).chmod(0o711)
+            return subprocess.call(apt + ['--no-remove', 'install', '--', str(archive)],
+                                   stdin=subprocess.DEVNULL, env=env)
     if command == 'refresh' and not values:
         return subprocess.call(apt + ['update'], env=env)
     if command in ('install', 'remove', 'upgrade') and len(values) == 1 and PACKAGE.fullmatch(values[0]):

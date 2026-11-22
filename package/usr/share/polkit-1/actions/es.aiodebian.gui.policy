@@ -17,6 +17,16 @@
     <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/aio-debian-gui/aio-debian-gui-helper</annotate>
     <annotate key="org.freedesktop.policykit.exec.allow_gui">false</annotate>
   </action>
+  <action id="es.aiodebian.gui.reloj">
+    <description>Activar la sincronización horaria de red</description>
+    <message>Activar el servicio de sincronización horaria de red</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/aio-debian-gui/aio-clock-enable</annotate>
+  </action>
   <action id="es.aiodebian.gui.repositorios">
     <description>Copiar o restaurar los repositorios APT</description>
     <message>Se necesita autenticación para copiar o restaurar los repositorios APT</message>
