@@ -313,6 +313,17 @@ for language in ('es', 'en', 'fr', 'zh'):
         app.traducir(name) for name in
         ('Configuración y mantenimiento', 'Inicio', 'Backup', 'Apps recomendadas', 'Gestor de software', 'Terminal')
     ]
+    if language == 'es':
+        column = w.pagina_software.view.get_column(0)
+        indicator, package_name = column.get_cells()
+        model = Gtk.ListStore(str, str, str, str, str)
+        for status, expected in (
+            ('Instalado', '✓'), ('Actualizable', '✓'), ('Disponible', ''), ('Activo', ''),
+        ):
+            row = model.append(('Paquete de prueba', 'prueba', '1.0', status, ''))
+            column.cell_set_cell_data(model, row, False, False)
+            assert indicator.get_property('text') == expected
+            assert package_name.get_property('text') == 'Paquete de prueba'
     assert set(w.backup_buttons) == {
         'timeshift', 'deja-dup', 'backup', 'restore', 'folder',
         'desktop-backup', 'desktop-restore',

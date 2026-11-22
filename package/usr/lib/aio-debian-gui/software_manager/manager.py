@@ -58,7 +58,15 @@ class SoftwareManagerPage(Gtk.Box):
         self.view = Gtk.TreeView(model=self.store, enable_search=False)
         self.columns = []
         for index in range(5):
-            column = Gtk.TreeViewColumn('', Gtk.CellRendererText(ellipsize=3), text=index)
+            column = Gtk.TreeViewColumn('')
+            if index == 0:
+                installed = Gtk.CellRendererText(foreground='#269343', weight=700,
+                                                 width=24, xalign=0.5)
+                column.pack_start(installed, False)
+                column.set_cell_data_func(installed, self.show_installed_mark)
+            name = Gtk.CellRendererText(ellipsize=3)
+            column.pack_start(name, True)
+            column.add_attribute(name, 'text', index)
             column.set_resizable(True)
             column.set_sort_column_id(index)
             column.set_expand(index in (0, 1))
@@ -81,6 +89,11 @@ class SoftwareManagerPage(Gtk.Box):
         self.view.get_selection().connect('changed', lambda *_: self.show_actions())
         self.scope.set_no_show_all(True)
         self.connect('map', self.on_map)
+
+    @staticmethod
+    def show_installed_mark(_column, renderer, model, iterator, _data):
+        state = model.get_value(iterator, 3)
+        renderer.set_property('text', '✓' if state in ('Instalado', 'Actualizable') else '')
 
     def on_map(self, _widget):
         if not self.loaded:
