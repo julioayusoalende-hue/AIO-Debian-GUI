@@ -1,5 +1,32 @@
 # Cambios
 
+## 1.1.10 (testing)
+
+### Refactor de arquitectura modular
+- **UI completamente modularizada**: 15 archivos en `ui/` (main_window, 6 páginas, 4 diálogos, 4 widgets reutilizables)
+- **Constantes centralizadas** en `aio_core/constants.py` + re-exports en `aio_core/__init__.py`
+- **Entry point limpio** en `main.py` (~30 líneas)
+
+### GTK4 + libadwaita (prototipo)
+- Prototipo funcional en `gtk4_prototype/main.py` usando `Adw.NavigationView`, `Adw.PreferencesGroup/Section/ActionRow`
+- Temas automáticos (claro/oscuro/sistema), diálogos nativos, switches integrados
+
+### Software Manager mejorado
+- **Caché inteligente** (`CatalogueManager`): TTL 5 min, carga async con callbacks, invalidación selectiva
+- **Drag & Drop para .deb**: `analyze_deb_file()` → `DebFileInfo` + diálogo confirmación con plan de instalación
+- **Búsqueda instantánea** (`SearchIndex`): índice invertido por nombre, descripción, sección (30+ secciones DEB)
+- **Filtros avanzados**: por estado (Instalado/Disponible/Actualizable) + por sección DEB
+
+### Tests y CI/CD
+- **39 tests unitarios**: `test_backend.py` (12), `test_admin.py` (18), `test_gui.py` (9)
+- **CI/CD completo** (`.github/workflows/ci.yml`): lint (ruff+mypy) → unit-tests → gui-tests (xvfb) → build-deb → integration-test (Docker)
+- Configuración en `pyproject.toml`: ruff, mypy, pytest, coverage
+
+### Integraciones y fixes
+- **FirmwareSection** integrado en mantenimiento (usa `firmware.py` existente)
+- **desktop_backend real** integrado en Backup (copia/restaura GNOME/KDE)
+- **EnhancedSoftwareManagerPage** como reemplazo directo compatible
+
 ## 1.1.9
 
 - **Gestor de software**: detalles del paquete muestran la «Versión disponible» para actualizables; búsqueda por descripción del paquete (además de nombre e identificador) en la pestaña DEB.
