@@ -2370,3 +2370,24 @@ TRADUCCIONES["zh"].update({
 TRADUCCIONES["en"]["Ya están en la cola."] = "They are already in the queue."
 TRADUCCIONES["fr"]["Ya están en la cola."] = "Ils sont déjà dans la file."
 TRADUCCIONES["zh"]["Ya están en la cola."] = "它们已在队列中。"
+TRADUCCIONES["en"].update({
+    "Actualizar todo": "Update all",
+    "No hay actualizaciones disponibles.": "No updates available.",
+    "Demasiadas actualizaciones": "Too many updates",
+    "Hay %d actualizaciones; el límite de la cola es %d.": "There are %d updates; the queue limit is %d.",
+    "%d actualizaciones en cola": "%d updates queued",
+})
+TRADUCCIONES["fr"].update({
+    "Actualizar todo": "Tout mettre à jour",
+    "No hay actualizaciones disponibles.": "Aucune mise à jour disponible.",
+    "Demasiadas actualizaciones": "Trop de mises à jour",
+    "Hay %d actualizaciones; el límite de la cola es %d.": "Il y a %d mises à jour ; la limite de la file est %d.",
+    "%d actualizaciones en cola": "%d mises à jour en file d’attente",
+})
+TRADUCCIONES["zh"].update({
+    "Actualizar todo": "全部更新",
+    "No hay actualizaciones disponibles.": "没有可用的更新。",
+    "Demasiadas actualizaciones": "更新过多",
+    "Hay %d actualizaciones; el límite de la cola es %d.": "有 %d 项更新；队列上限为 %d。",
+    "%d actualizaciones en cola": "队列中有 %d 项更新",
+})

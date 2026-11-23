@@ -409,6 +409,12 @@ class SoftwareManagerPage(Gtk.Box):
             if states & {'Instalado', 'Actualizable'}:
                 self.button(self.translate('Desinstalar seleccionados'),
                             lambda: self.queue_action('remove'))
+        if page in (0, 1):
+            # Botón "Actualizar todo" si hay actualizaciones disponibles en el catálogo
+            all_rows = self.catalogues.get((page, scope if page else None), ([], []))[0]
+            if any(row[3] == 'Actualizable' for row in all_rows):
+                self.button(self.translate('Actualizar todo'),
+                            lambda: self.queue_all_upgrades(all_rows, page, scope))
         self.actions.show_all()
 
     def button(self, label, action):
@@ -450,6 +456,27 @@ class SoftwareManagerPage(Gtk.Box):
                 'No hay paquetes compatibles con esa acción en la selección.'))
         self.show_queue()
         self.show_actions()
+
+    def queue_all_upgrades(self, all_rows, page, scope):
+        if self.busy:
+            return
+        upgrades = [row for row in all_rows if row[3] == 'Actualizable']
+        if not upgrades:
+            self.status.set_text(self.translate('No hay actualizaciones disponibles.'))
+            return
+        if len(upgrades) > QUEUE_LIMIT:
+            self.message(self.translate('Demasiadas actualizaciones'),
+                         self.translate('Hay %d actualizaciones; el límite de la cola es %d.')
+                         % (len(upgrades), QUEUE_LIMIT))
+            return
+        for row in upgrades:
+            name, identifier, _, _, origin = row
+            self.queue.append({'action': 'upgrade', 'identifier': identifier, 'name': name,
+                               'origin': origin, 'page': page, 'scope': scope})
+        self.status.set_text(self.translate('%d actualizaciones en cola') % len(upgrades))
+        self.show_queue()
+        self.show_actions()
+        self.apply_queue()
 
     def show_queue(self):
         for child in self.queue_list.get_children():
