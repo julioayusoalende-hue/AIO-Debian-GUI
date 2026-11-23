@@ -390,8 +390,8 @@ class SoftwareManagerPage(Gtk.Box):
                     self.button('Quitar', lambda: self.modify(f'Quitar el repositorio {row[0]}',
                         self.admin('delete', row[4])))
         elif page == 1:
-            self.button('Actualizar todos', lambda: self.modify(
-                'Actualizar los Flatpaks de este ámbito', backend.flatpak(scope, 'update', '-y')))
+            # "Actualizar todo" (nuevo) ya cubre esta función con cola y confirmación
+            pass
         if row and page in (0, 1):
             if row[3] == 'Disponible':
                 self.button('Instalar', lambda: self.package_action(page, scope, row, 'install'))
