@@ -99,10 +99,10 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
         toolbar.pack_end(self.section_combo, False, False, 0)
 
         # TreeView
-        self.store = Gtk.ListStore(str, str, str, str, str, str)  # + sección
+        self.store = Gtk.ListStore(str, str, str, str, str)
         self.view = Gtk.TreeView(model=self.store, enable_search=False)
         self.columns = []
-        for index in range(6):
+        for index in range(5):
             column = Gtk.TreeViewColumn('')
             if index == 0:
                 installed = Gtk.CellRendererText(foreground='#269343', weight=700,
@@ -117,9 +117,6 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
             column.set_expand(index in (0, 1))
             self.view.append_column(column)
             self.columns.append(column)
-
-        # Ocultar columna de sección por defecto
-        self.columns[5].set_visible(False)
 
         scroller = Gtk.ScrolledWindow(shadow_type=Gtk.ShadowType.IN)
         scroller.add(self.view)
@@ -347,7 +344,8 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
 
         found = prefixes + matches
         for row in found[:1500]:
-            self.store.append(row)
+            # Las filas históricas tienen cinco columnas; la sección es opcional.
+            self.store.append(tuple(row[:5]))
             if len(query) >= 2 and len(suggestions) < 12:
                 suggestion = row[0] or row[1]
                 if suggestion not in suggestions:
