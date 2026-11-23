@@ -361,7 +361,8 @@ class SoftwareManagerPage(Gtk.Box):
     def show_actions(self):
         for child in self.actions.get_children():
             self.actions.remove(child)
-        page, scope = self.page.get_active(), self.scope.get_active_id()
+        page = self.page.get_active()
+        scope = self.scope.get_active_id() if page else None
         rows = self.selected_rows()
         row = rows[0] if len(rows) == 1 else None
         if page in (0, 2):
