@@ -937,3 +937,5 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
 
 # Para compatibilidad - SoftwareManagerPage original se mantiene en software_manager.manager original
 # OriginalSoftwareManagerPage = SoftwareManagerPage
+# Compatibilidad con el entrypoint GTK3 y los tests existentes.
+SoftwareManagerPage = EnhancedSoftwareManagerPage

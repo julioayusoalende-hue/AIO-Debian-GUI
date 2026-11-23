@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.1.10~testing.1
+
+- Release testing con publicación APT firmada.
+
 ## 1.1.10 (testing)
 
 ### Refactor de arquitectura modular
