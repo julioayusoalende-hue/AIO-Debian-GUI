@@ -2,7 +2,9 @@
 
 ## 1.1.9
 
-- Continúa el desarrollo de la serie 1.1.9 sobre la base estable 1.1.8.
+- **Gestor de software**: detalles del paquete muestran la «Versión disponible» para actualizables; búsqueda por descripción del paquete (además de nombre e identificador) en la pestaña DEB.
+- **Health Dashboard**: nueva pestaña «Salud del sistema» con tarjetas de estado (espacio en disco, actualizaciones, dpkg, APT, índices APT, DKMS, reinicio pendiente, servicios systemd); códigos de color por nivel; botón «Ejecutar diagnóstico completo».
+- **Interfaz**: pestaña «Salud del sistema» entre Apps recomendadas y Backup; botón «Diagnosticar» retirado de Información del sistema (redundante).
 
 ## 1.1.8
 
