@@ -1367,6 +1367,14 @@ class VentanaPrincipal(Gtk.Window):
         menu.show_all()
         self.menu_popover = popover
         hb.pack_start(self.btn_menu)
+        # Acceso a la Terminal desde el encabezado, junto al menú de preferencias.
+        self.btn_terminal_cabecera = Gtk.Button()
+        self.btn_terminal_cabecera.set_image(Gtk.Image.new_from_icon_name(
+            "utilities-terminal-symbolic", Gtk.IconSize.BUTTON))
+        self.btn_terminal_cabecera.set_always_show_image(True)
+        self.btn_terminal_cabecera.set_tooltip_text(traducir("Terminal"))
+        self.btn_terminal_cabecera.connect("clicked", self._abrir_terminal)
+        hb.pack_start(self.btn_terminal_cabecera)
         self.set_titlebar(hb)
 
     @staticmethod
@@ -2099,6 +2107,11 @@ class VentanaPrincipal(Gtk.Window):
             if not self.panel_derecho.get_visible():
                 self.restaurar_proporcion_paneles = True
             self.panel_derecho.show_all()
+        self.btn_terminal_cabecera.set_no_show_all(simple)
+        if simple:
+            self.btn_terminal_cabecera.hide()
+        else:
+            self.btn_terminal_cabecera.show()
         self.expansor_consola.set_expanded(False)
         self.expansor_consola.set_no_show_all(simple)
         self.expansor_consola.set_visible(not simple)
@@ -2134,16 +2147,23 @@ class VentanaPrincipal(Gtk.Window):
         notebook.set_scrollable(True)
         self.notebook = notebook
         self.add(notebook)
-        notebook.append_page(principal, Gtk.Label(label=traducir("Configuración y mantenimiento")))
-        notebook.append_page(self._pagina_inicio(), Gtk.Label(label=traducir("Inicio")))
-        notebook.append_page(self._pagina_backup(), Gtk.Label(label=traducir("Backup")))
+        # Las páginas se construyen en su orden habitual (comparten atributos de
+        # la ventana) y se añaden al notebook en el orden de uso previsto:
+        # Configuración y mantenimiento, Gestor de software, Apps recomendadas,
+        # Backup e Inicio.
+        pagina_inicio = self._pagina_inicio()
+        pagina_backup = self._pagina_backup()
         self.pagina_recomendadas = self._pagina_recomendadas()
-        notebook.append_page(self.pagina_recomendadas, Gtk.Label(label=traducir("Apps recomendadas")))
         self.pagina_software = None
         if not (es_flatpak() or os.environ.get("APPIMAGE") or os.environ.get("SNAP")):
             from software_manager.manager import SoftwareManagerPage
             self.pagina_software = SoftwareManagerPage(self, traducir, autorizacion_sin_contrasena_activa)
+        notebook.append_page(principal, Gtk.Label(label=traducir("Configuración y mantenimiento")))
+        if self.pagina_software is not None:
             notebook.append_page(self.pagina_software, Gtk.Label(label=traducir("Gestor de software")))
+        notebook.append_page(self.pagina_recomendadas, Gtk.Label(label=traducir("Apps recomendadas")))
+        notebook.append_page(pagina_backup, Gtk.Label(label=traducir("Backup")))
+        notebook.append_page(pagina_inicio, Gtk.Label(label=traducir("Inicio")))
         notebook.connect("switch-page", self._cambiar_pestana_recomendadas)
         self.pagina_terminal = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.boton_mostrar_terminal = Gtk.Button(label=traducir("Mostrar ventana de la terminal"))
@@ -2223,7 +2243,8 @@ class VentanaPrincipal(Gtk.Window):
         self.vistas_terminal.add_named(terminal_scroll, "bash")
         consola.pack_start(self.vistas_terminal, True, True, 0)
         self.pagina_terminal.pack_start(consola, True, True, 0)
-        notebook.append_page(self.pagina_terminal, Gtk.Label(label=traducir("Terminal")))
+        # La Terminal no es una pestaña fija: se añade al notebook la primera vez
+        # que se abre desde el botón del encabezado (ver _abrir_terminal).
         notebook.connect("switch-page", self._cambiar_pestana_terminal)
         paneles = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL, wide_handle=True)
         self.paneles_principales = paneles
@@ -3214,7 +3235,7 @@ class VentanaPrincipal(Gtk.Window):
         self.ventana_terminal = None
         ventana.destroy()
         if not self.preferencias["modo_simple"]:
-            self.notebook.set_current_page(self.notebook.page_num(self.pagina_terminal))
+            self.notebook.set_current_page(self._indice_pagina_terminal())
             self.present()
             (self.terminal_monitor or self.terminal).grab_focus()
         return True
@@ -3998,12 +4019,24 @@ class VentanaPrincipal(Gtk.Window):
             self.expansor_consola.show()
             self.expansor_consola.set_expanded(True)
 
+    def _indice_pagina_terminal(self):
+        """Devuelve el índice de la Terminal, añadiéndola al notebook si falta."""
+        pagina = self.notebook.page_num(self.pagina_terminal)
+        if pagina == -1:
+            # Se muestra antes de añadirla para que el arranque de la sesión
+            # (switch-page) pueda ocultar los avisos que no procedan.
+            self.pagina_terminal.set_no_show_all(False)
+            self.pagina_terminal.show_all()
+            pagina = self.notebook.append_page(
+                self.pagina_terminal, Gtk.Label(label=traducir("Terminal")))
+        return pagina
+
     def _abrir_terminal(self, _boton=None):
         if self.ventana_terminal is not None:
             self.ventana_terminal.present()
             (self.terminal_monitor or self.terminal).grab_focus()
         elif not self.preferencias["modo_simple"]:
-            self.notebook.set_current_page(self.notebook.page_num(self.pagina_terminal))
+            self.notebook.set_current_page(self._indice_pagina_terminal())
 
     def _desplazar_consola(self, vista):
         marca = self.buf.create_mark(None, self.buf.get_end_iter(), False)

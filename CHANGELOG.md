@@ -2,6 +2,10 @@
 
 ## 1.1.8
 
+- Reordena las pestañas: Configuración y mantenimiento, Gestor de software, Apps recomendadas, Backup e Inicio.
+
+- Sustituye la pestaña Terminal por un botón con icono de terminal en el encabezado, junto al menú de preferencias, que abre la misma consola y conserva su sesión.
+
 - Permite seleccionar varios paquetes DEB o aplicaciones Flatpak y añadirlos a una cola de instalación, actualización o desinstalación que se aplica de forma conjunta.
 
 - Añade el botón «Actualizar todo» para poner en cola y aplicar todas las actualizaciones disponibles de la pestaña activa.
