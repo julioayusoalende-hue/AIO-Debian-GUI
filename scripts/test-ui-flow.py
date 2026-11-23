@@ -299,7 +299,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         w = app.VentanaPrincipal({'idioma': language, 'tema': 'claro', 'modo_simple': False})
     w.show_all()
     settle()
-    assert w.notebook.get_n_pages() == 5
+    assert w.notebook.get_n_pages() == 6
     assert w.notebook.page_num(w.pagina_terminal) == -1
     assert w.btn_terminal_cabecera.get_tooltip_text() == app.traducir('Terminal')
     assert w.btn_terminal_cabecera.get_image().get_icon_name()[0] == 'utilities-terminal-symbolic'
@@ -307,7 +307,7 @@ for language in ('es', 'en', 'fr', 'zh'):
     assert firmware.get_accessible().get_name() == app.traducir('Firmware')
     assert firmware.get_child().get_ancestor(Gtk.Notebook) is w.notebook
     assert not firmware.get_expanded()
-    assert w.notebook.get_nth_page(4) == w.grub_pagina
+    assert w.notebook.get_nth_page(5) == w.grub_pagina
     assert w.notebook.get_tab_label_text(w.grub_pagina) == app.traducir('Inicio')
     assert w.grub_pagina.get_style_context().has_class("aio-page")
     grub_card = w.grub_formulario.get_ancestor(Gtk.Frame)
@@ -359,7 +359,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         w._grub_finalizado('apply', grub_status, None)
     assert [w.notebook.get_tab_label_text(page) for page in w.notebook.get_children()] == [
         app.traducir(name) for name in
-        ('Configuración y mantenimiento', 'Gestor de software', 'Apps recomendadas', 'Backup', 'Inicio')
+        ('Configuración y mantenimiento', 'Gestor de software', 'Apps recomendadas', 'Salud del sistema', 'Backup', 'Inicio')
     ]
     if language == 'es':
         column = w.pagina_software.view.get_column(0)
@@ -470,7 +470,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         name, description = text.get_children()
         assert name.get_text() == app.APLICACIONES_BACKUP[app_id]['name']
         assert description.get_text() == app.traducir(app.APLICACIONES_BACKUP[app_id]['description'])
-    w.notebook.set_current_page(3)
+    w.notebook.set_current_page(4)
     w.resize(600, 900)
     settle()
     assert w.get_size()[0] <= 601, (language, w.get_size())
