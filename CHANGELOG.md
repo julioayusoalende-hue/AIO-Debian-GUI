@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.1.10
+
+- Base de la release testing 1.1.10.
+
 ## 1.1.10~testing.1
 
 - Release testing con publicación APT firmada.
