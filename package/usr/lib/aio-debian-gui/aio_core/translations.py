@@ -2,6 +2,23 @@
 
 TRADUCCIONES = {
     "en": {
+        "Firmware": "Firmware",
+        "Dispositivo": "Device",
+        "Consulta actualizaciones para los dispositivos compatibles con fwupd.": "Check for updates for devices supported by fwupd.",
+        "Buscar actualizaciones de firmware": "Check for firmware updates",
+        "Actualizar dispositivo…": "Update device…",
+        "Instala el paquete fwupd para consultar el firmware.": "Install the fwupd package to check for firmware updates.",
+        "Buscando actualizaciones de firmware…": "Checking for firmware updates…",
+        "No se pudo consultar el firmware.": "Could not check for firmware updates.",
+        "Selecciona un dispositivo para revisar su actualización.": "Select a device to review its update.",
+        "No hay actualizaciones de firmware disponibles.": "No firmware updates are available.",
+        "Actualiza el firmware desde el sistema instalado.": "Update firmware from the installed system.",
+        "¿Actualizar el firmware de %s?": "Update firmware for %s?",
+        "Mantén el equipo conectado a la corriente. Puede ser necesario reiniciar.": "Keep the computer connected to power. A restart may be required.",
+        "Actualizar firmware": "Update firmware",
+        "Consulta el resultado. El firmware puede requerir reiniciar.": "Review the result. The firmware update may require a restart.",
+        "La actualización no se completó. Consulta el resultado.": "The update did not complete. Review the output.",
+        "Ya puedes cerrar esta ventana.": "You can close this window now.",
         "Navegador web con bloqueo de anuncios y rastreadores integrado.": "Web browser with built-in ad and tracker blocking.",
         "Organiza e integra aplicaciones AppImage en el menú del escritorio y gestiona sus actualizaciones.": "Organize and integrate AppImage applications into the desktop menu and manage their updates.",
 
@@ -2287,4 +2304,90 @@ TRADUCCIONES["zh"].update({
     "Sección": "分类",
     "Licencia": "许可证",
     "Sitio web": "网站",
+})
+
+# Textos de la cola de instalación del gestor de software.
+TRADUCCIONES["en"].update({
+    "Instalar seleccionados": "Install selected",
+    "Actualizar seleccionados": "Update selected",
+    "Desinstalar seleccionados": "Uninstall selected",
+    "La cola está llena": "The queue is full",
+    "Puedes añadir hasta %d operaciones a la cola.": "You can add up to %d operations to the queue.",
+    "%d operaciones en cola": "%d operations queued",
+    "No hay paquetes compatibles con esa acción en la selección.": "No packages in the selection support that action.",
+    "Quitar de la cola": "Remove from queue",
+    "Cola de instalación · %d operaciones": "Installation queue · %d operations",
+    "Aplicar cola (%d)": "Apply queue (%d)",
+    "Vaciar cola": "Clear queue",
+    "¿Aplicar %d operaciones?": "Apply %d operations?",
+    "Aplicar": "Apply",
+    "Comprobando dependencias…": "Checking dependencies…",
+    "Aplicando la cola…": "Applying queue…",
+    "La cola no se pudo aplicar por completo": "The queue could not be fully applied",
+    "Actualizar": "Update",
+    "Desinstalar": "Uninstall",
+})
+TRADUCCIONES["fr"].update({
+    "Instalar seleccionados": "Installer la sélection",
+    "Actualizar seleccionados": "Mettre à jour la sélection",
+    "Desinstalar seleccionados": "Désinstaller la sélection",
+    "La cola está llena": "La file d’attente est pleine",
+    "Puedes añadir hasta %d operaciones a la cola.": "Vous pouvez ajouter jusqu’à %d opérations à la file.",
+    "%d operaciones en cola": "%d opérations en file d’attente",
+    "No hay paquetes compatibles con esa acción en la selección.": "Aucun paquet de la sélection ne prend en charge cette action.",
+    "Quitar de la cola": "Retirer de la file",
+    "Cola de instalación · %d operaciones": "File d’installation · %d opérations",
+    "Aplicar cola (%d)": "Appliquer la file (%d)",
+    "Vaciar cola": "Vider la file",
+    "¿Aplicar %d operaciones?": "Appliquer %d opérations ?",
+    "Aplicar": "Appliquer",
+    "Comprobando dependencias…": "Vérification des dépendances…",
+    "Aplicando la cola…": "Application de la file…",
+    "La cola no se pudo aplicar por completo": "La file n’a pas pu être appliquée entièrement",
+    "Actualizar": "Mettre à jour",
+    "Desinstalar": "Désinstaller",
+})
+TRADUCCIONES["zh"].update({
+    "Instalar seleccionados": "安装所选项目",
+    "Actualizar seleccionados": "更新所选项目",
+    "Desinstalar seleccionados": "卸载所选项目",
+    "La cola está llena": "队列已满",
+    "Puedes añadir hasta %d operaciones a la cola.": "最多可向队列添加 %d 项操作。",
+    "%d operaciones en cola": "队列中有 %d 项操作",
+    "No hay paquetes compatibles con esa acción en la selección.": "所选项目中没有支持该操作的软件包。",
+    "Quitar de la cola": "从队列中移除",
+    "Cola de instalación · %d operaciones": "安装队列 · %d 项操作",
+    "Aplicar cola (%d)": "应用队列（%d）",
+    "Vaciar cola": "清空队列",
+    "¿Aplicar %d operaciones?": "要应用 %d 项操作吗？",
+    "Aplicar": "应用",
+    "Comprobando dependencias…": "正在检查依赖项…",
+    "Aplicando la cola…": "正在应用队列…",
+    "La cola no se pudo aplicar por completo": "队列未能完全应用",
+    "Actualizar": "更新",
+    "Desinstalar": "卸载",
+})
+TRADUCCIONES["en"]["Ya están en la cola."] = "They are already in the queue."
+TRADUCCIONES["fr"]["Ya están en la cola."] = "Ils sont déjà dans la file."
+TRADUCCIONES["zh"]["Ya están en la cola."] = "它们已在队列中。"
+TRADUCCIONES["en"].update({
+    "Actualizar todo": "Update all",
+    "No hay actualizaciones disponibles.": "No updates available.",
+    "Demasiadas actualizaciones": "Too many updates",
+    "Hay %d actualizaciones; el límite de la cola es %d.": "There are %d updates; the queue limit is %d.",
+    "%d actualizaciones en cola": "%d updates queued",
+})
+TRADUCCIONES["fr"].update({
+    "Actualizar todo": "Tout mettre à jour",
+    "No hay actualizaciones disponibles.": "Aucune mise à jour disponible.",
+    "Demasiadas actualizaciones": "Trop de mises à jour",
+    "Hay %d actualizaciones; el límite de la cola es %d.": "Il y a %d mises à jour ; la limite de la file est %d.",
+    "%d actualizaciones en cola": "%d mises à jour en file d’attente",
+})
+TRADUCCIONES["zh"].update({
+    "Actualizar todo": "全部更新",
+    "No hay actualizaciones disponibles.": "没有可用的更新。",
+    "Demasiadas actualizaciones": "更新过多",
+    "Hay %d actualizaciones; el límite de la cola es %d.": "有 %d 项更新；队列上限为 %d。",
+    "%d actualizaciones en cola": "队列中有 %d 项更新",
 })

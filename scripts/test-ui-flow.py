@@ -299,8 +299,15 @@ for language in ('es', 'en', 'fr', 'zh'):
         w = app.VentanaPrincipal({'idioma': language, 'tema': 'claro', 'modo_simple': False})
     w.show_all()
     settle()
-    assert w.notebook.get_n_pages() == 6
-    assert w.notebook.get_nth_page(1) == w.grub_pagina
+    assert w.notebook.get_n_pages() == 5
+    assert w.notebook.page_num(w.pagina_terminal) == -1
+    assert w.btn_terminal_cabecera.get_tooltip_text() == app.traducir('Terminal')
+    assert w.btn_terminal_cabecera.get_image().get_icon_name()[0] == 'utilities-terminal-symbolic'
+    firmware = w.grupos_tareas[-1]
+    assert firmware.get_accessible().get_name() == app.traducir('Firmware')
+    assert firmware.get_child().get_ancestor(Gtk.Notebook) is w.notebook
+    assert not firmware.get_expanded()
+    assert w.notebook.get_nth_page(4) == w.grub_pagina
     assert w.notebook.get_tab_label_text(w.grub_pagina) == app.traducir('Inicio')
     assert w.grub_pagina.get_style_context().has_class("aio-page")
     grub_card = w.grub_formulario.get_ancestor(Gtk.Frame)
@@ -336,9 +343,23 @@ for language in ('es', 'en', 'fr', 'zh'):
             thread.return_value.start.assert_called_once()
         w._grub_finalizado('apply', grub_status, None)
         assert w.grub_pagina.get_sensitive()
+        inherited = {**grub_status, 'effective': grub_status['settings'], 'settings': {}}
+        w._grub_finalizado('status', inherited, None)
+        assert w.grub_entrada.get_active_id() == 'test-debian'
+        assert w.grub_tiempo.get_text() == '8'
+        assert w.grub_estilo.get_active_id() == 'menu'
+        assert not w.grub_restaurar.get_sensitive()
+        with patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK), \
+             patch.object(app.threading, 'Thread') as thread:
+            w._accion_grub(None, 'apply')
+            thread.assert_not_called()
+            w.grub_tiempo.set_text('12')
+            w._accion_grub(None, 'apply')
+            assert app.json.loads(thread.call_args.kwargs['args'][0][1])['settings'] == {'GRUB_TIMEOUT': '12'}
+        w._grub_finalizado('apply', grub_status, None)
     assert [w.notebook.get_tab_label_text(page) for page in w.notebook.get_children()] == [
         app.traducir(name) for name in
-        ('Configuración y mantenimiento', 'Inicio', 'Backup', 'Apps recomendadas', 'Gestor de software', 'Terminal')
+        ('Configuración y mantenimiento', 'Gestor de software', 'Apps recomendadas', 'Backup', 'Inicio')
     ]
     if language == 'es':
         column = w.pagina_software.view.get_column(0)
@@ -441,12 +462,12 @@ for language in ('es', 'en', 'fr', 'zh'):
         name, description = text.get_children()
         assert name.get_text() == app.APLICACIONES_BACKUP[app_id]['name']
         assert description.get_text() == app.traducir(app.APLICACIONES_BACKUP[app_id]['description'])
-    w.notebook.set_current_page(2)
+    w.notebook.set_current_page(3)
     w.resize(600, 900)
     settle()
     assert w.get_size()[0] <= 601, (language, w.get_size())
     assert all(button.get_mapped() for button in w.backup_buttons.values())
-    w.notebook.set_current_page(3)
+    w.notebook.set_current_page(2)
     settle()
     assert w.get_size()[0] <= 601, (language, w.get_size())
     assert all(button.get_mapped() for button in w.recommended_buttons.values())
@@ -968,10 +989,10 @@ w._recomendadas_comprobadas(w.recommended_scan_generation - 1, {}, [])
 assert w.recommended_indicators[('video-downloader', 'flatpak')].get_visible()
 
 with patch.object(w, '_cambiar_pestana_recomendadas') as refresh:
-    w.notebook.set_current_page(3)
+    w.notebook.set_current_page(2)
     refresh.reset_mock()
     w._refrescar_recomendadas_al_volver(None, None)
-    refresh.assert_called_once_with(w.notebook, w.pagina_recomendadas, 3)
+    refresh.assert_called_once_with(w.notebook, w.pagina_recomendadas, 2)
 w.notebook.set_current_page(0)
 
 # Selección múltiple: puede mezclar formatos, cambiar de formato y reintentar los fallos.
@@ -1151,8 +1172,9 @@ for refresh_error in (None, 'Autorización cancelada'):
     def refresh(command):
         calls.append('refresh')
         assert command == ['test-refresh']
-        return refresh_error
-    def diagnose():
+        return refresh_error, (0, '', '')
+    def diagnose(audit):
+        assert audit == (0, '', '')
         calls.append('diagnose')
         return [{'name': 'Actualizaciones pendientes', 'status': 'ok',
                  'detail': '0 actualizaciones disponibles según los índices APT locales.', 'advice': ''}]
@@ -1491,7 +1513,11 @@ with patch.dict(os.environ, {'PATH': '/nonexistent'}):
     w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
     w.show_all()
     with patch.object(w, '_terminal_iniciada', wraps=w._terminal_iniciada) as started:
-        w.notebook.set_current_page(w.notebook.page_num(w.pagina_terminal))
+        # La Terminal no tiene pestaña propia: el botón del encabezado la crea.
+        assert w.notebook.page_num(w.pagina_terminal) == -1
+        w.btn_terminal_cabecera.clicked()
+        assert w.notebook.get_current_page() == w.notebook.page_num(w.pagina_terminal)
+        assert w.notebook.get_tab_label_text(w.pagina_terminal) == app.traducir('Terminal')
         deadline = time.monotonic() + 8
         while not started.called and time.monotonic() < deadline:
             settle()

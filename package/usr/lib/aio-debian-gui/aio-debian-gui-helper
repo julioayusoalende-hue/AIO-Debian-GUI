@@ -50,7 +50,7 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.1.7
+HELPER_VERSION=1.1.8
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -417,6 +417,11 @@ asegurar_listas() {
 }
 
 refrescar_indices_diagnostico() {
+    local auditoria codigo=0
+    auditoria=$(LC_ALL=C timeout --kill-after=2s 12s /usr/bin/dpkg --audit 2>&1) || codigo=$?
+    printf '##DIAGNOSTIC_DPKG:%s:' "$codigo"
+    printf '%s' "${auditoria:0:500}" | base64 -w0
+    printf '\n'
     if ! timeout --kill-after=10s 180s apt-get -o APT::Update::Error-Mode=any update; then
         err "No se pudieron actualizar todos los índices APT."
         return 1
@@ -1469,14 +1474,21 @@ mostrar_estados() {
 # Consulta un origen firmado solo para esta operación. El APT del equipo
 # conserva sus fuentes y la instalación resuelve allí las dependencias.
 actualizar_aiodebian_testing() (
-    local accion=$1 aprobada=${2:-} temporal instalada disponible archivo
+    local accion=$1 aprobada=${2:-} temporal instalada disponible archivo auditoria hash
     local patron='^[0-9]+:[0-9]+\.[0-9]+\.[0-9]+~testing\.[1-9][0-9]*\.[1-9][0-9]*$'
     paquete_instalado aio-debian-gui || { err "AiO Debian GUI no está instalado como DEB."; return 1; }
     instalada=$(dpkg-query -W -f='${Version}' aio-debian-gui) || return 1
+    if [ "$accion" = instalar ]; then
+        if ! auditoria=$(LC_ALL=C timeout --kill-after=2s 12s dpkg --audit 2>&1) || [ -n "$auditoria" ]; then
+            err "Hay una incidencia de dpkg pendiente. Revisa el diagnóstico antes de actualizar AiO."
+            [ -z "$auditoria" ] || printf '%s\n' "$auditoria" >&2
+            return 1
+        fi
+    fi
     temporal=$(mktemp -d /var/tmp/aio-testing.XXXXXXXX) || return 1
     trap 'rm -rf -- "$temporal"' EXIT
     chmod 0755 "$temporal" || return 1
-    mkdir "$temporal/lists" "$temporal/download" || return 1
+    mkdir "$temporal/lists" || return 1
     printf '%s\n' 'deb [signed-by=/usr/share/keyrings/aio-debian-gui.gpg] https://julioayusoalende-hue.github.io/AIO-Debian-GUI/apt-testing/ testing main' > "$temporal/testing.list" || return 1
     local opciones=(-o "Dir::Etc::sourcelist=$temporal/testing.list"
                     -o 'Dir::Etc::sourceparts=-' -o "Dir::State::lists=$temporal/lists"
@@ -1501,11 +1513,25 @@ actualizar_aiodebian_testing() (
         err "La versión Testing ha cambiado. Vuelve a buscar actualizaciones."
         return 1
     fi
+    hash=$(LC_ALL=C apt-cache "${opciones[@]}" show "aio-debian-gui=$disponible" |
+        awk '$1 == "SHA256:" { print $2 }')
+    [[ "$hash" =~ ^[0-9a-f]{64}$ ]] || { err "El índice Testing no contiene un SHA-256 válido."; return 1; }
+    mkdir -m 0755 "$temporal/download" || return 1
+    mkdir -m 0700 "$temporal/verified" || return 1
+    if [ "$EUID" -eq 0 ]; then
+        chown _apt "$temporal/download" || return 1
+    fi
     cd "$temporal/download" || return 1
     apt-get "${opciones[@]}" download "aio-debian-gui=$disponible" || return 1
     local paquetes=(./*.deb)
     [ "${#paquetes[@]}" -eq 1 ] || return 1
-    archivo=${paquetes[0]}
+    [ -f "${paquetes[0]}" ] && [ ! -L "${paquetes[0]}" ] || return 1
+    archivo="$temporal/verified/aio-debian-gui_all.deb"
+    install -m 0644 -- "${paquetes[0]}" "$archivo" || return 1
+    printf '%s  %s\n' "$hash" "$archivo" | sha256sum --check --status ||
+        { err "El paquete descargado no coincide con el SHA-256 del canal Testing."; return 1; }
+    # APT necesita atravesar el directorio al abrir el paquete ya verificado.
+    chmod 0755 "$temporal/verified" || return 1
     [ "$(dpkg-deb -f "$archivo" Package)" = aio-debian-gui ] &&
         [ "$(dpkg-deb -f "$archivo" Version)" = "$disponible" ] || return 1
     apt-get "${APT_OPTS[@]}" --only-upgrade --no-remove install "$archivo"

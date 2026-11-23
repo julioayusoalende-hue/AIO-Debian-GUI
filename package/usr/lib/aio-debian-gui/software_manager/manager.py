@@ -10,6 +10,8 @@ from gi.repository import GLib, Gtk
 from . import backend
 
 PAGES = ('DEB', 'Flatpak', 'Repositorios')
+VERBS = {'install': 'Instalar', 'upgrade': 'Actualizar', 'remove': 'Desinstalar'}
+QUEUE_LIMIT = 100
 
 
 class SoftwareManagerPage(Gtk.Box):
@@ -23,6 +25,7 @@ class SoftwareManagerPage(Gtk.Box):
         self.details_timer = 0
         self.pool = ThreadPoolExecutor(max_workers=1)
         self.rows = []
+        self.queue = []
         self.catalogue_errors = []
         self.timer = 0
         self.busy = False
@@ -100,6 +103,32 @@ class SoftwareManagerPage(Gtk.Box):
         self.actions = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE,
                                    column_spacing=6, row_spacing=4, max_children_per_line=8)
         self.pack_start(self.actions, False, False, 0)
+
+        self.queue_frame = Gtk.Frame()
+        queue_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin=8)
+        self.queue_title = Gtk.Label(xalign=0)
+        self.queue_title.get_style_context().add_class('aio-task-name')
+        queue_box.pack_start(self.queue_title, False, False, 0)
+        self.queue_list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+        self.queue_list.set_activate_on_single_click(False)
+        queue_scroll = Gtk.ScrolledWindow(shadow_type=Gtk.ShadowType.NONE,
+                                          max_content_height=180,
+                                          propagate_natural_height=True)
+        queue_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        queue_scroll.add(self.queue_list)
+        queue_box.pack_start(queue_scroll, False, False, 0)
+        self.queue_actions = Gtk.Box(spacing=6)
+        self.queue_apply = Gtk.Button()
+        self.queue_apply.connect('clicked', lambda *_: self.apply_queue())
+        self.queue_clear = Gtk.Button()
+        self.queue_clear.connect('clicked', lambda *_: self.clear_queue())
+        self.queue_actions.pack_end(self.queue_apply, False, False, 0)
+        self.queue_actions.pack_end(self.queue_clear, False, False, 0)
+        queue_box.pack_start(self.queue_actions, False, False, 0)
+        self.queue_frame.add(queue_box)
+        self.queue_frame.set_no_show_all(True)
+        self.pack_start(self.queue_frame, False, False, 0)
+
         self.status = Gtk.Label(xalign=0, ellipsize=3)
         self.pack_end(self.status, False, False, 0)
 
@@ -107,7 +136,9 @@ class SoftwareManagerPage(Gtk.Box):
         self.scope.connect('changed', self.change_page)
         self.search.connect('changed', self.queue_filter)
         self.filters.connect('changed', self.queue_filter)
-        self.view.get_selection().connect('changed', self.selection_changed)
+        selection = self.view.get_selection()
+        selection.set_mode(Gtk.SelectionMode.MULTIPLE)
+        selection.connect('changed', self.selection_changed)
         self.scope.set_no_show_all(True)
         self.connect('map', self.on_map)
 
@@ -176,6 +207,10 @@ class SoftwareManagerPage(Gtk.Box):
 
     def change_page(self, *_):
         page = self.page.get_active()
+        scope = self.scope.get_active_id() if page else None
+        if self.queue and any((item['page'], item['scope']) != (page, scope)
+                              for item in self.queue):
+            self.clear_queue()
         self.scope.set_visible(page != 0)
         self.filters.set_visible(page in (0, 1))
         self.search.set_text('')
@@ -190,7 +225,7 @@ class SoftwareManagerPage(Gtk.Box):
 
     def job(self, message, task, completed):
         self.busy = True
-        for widget in (self.page, self.scope, self.actions):
+        for widget in (self.page, self.scope, self.actions, self.queue_actions):
             widget.set_sensitive(False)
         self.status.set_text(message)
         future = self.pool.submit(task)
@@ -200,7 +235,7 @@ class SoftwareManagerPage(Gtk.Box):
                 return False
             self.applying_changes = False
             self.busy = False
-            for widget in (self.page, self.scope, self.actions):
+            for widget in (self.page, self.scope, self.actions, self.queue_actions):
                 widget.set_sensitive(True)
             try:
                 result = future.result()
@@ -237,9 +272,13 @@ class SoftwareManagerPage(Gtk.Box):
             readers = (backend.debs, lambda: backend.flatpaks(scope), lambda: backend.repos(scope))
             self.job('Cargando catálogo…', readers[page], display)
 
+    def selected_rows(self):
+        model, paths = self.view.get_selection().get_selected_rows()
+        return [tuple(model[model.get_iter(path)]) for path in paths]
+
     def selected(self):
-        model, iterator = self.view.get_selection().get_selected()
-        return tuple(model[iterator]) if iterator else None
+        rows = self.selected_rows()
+        return rows[0] if rows else None
 
     def selection_changed(self, _selection):
         self.show_actions()
@@ -322,8 +361,10 @@ class SoftwareManagerPage(Gtk.Box):
     def show_actions(self):
         for child in self.actions.get_children():
             self.actions.remove(child)
-        page, scope = self.page.get_active(), self.scope.get_active_id()
-        row = self.selected()
+        page = self.page.get_active()
+        scope = self.scope.get_active_id() if page else None
+        rows = self.selected_rows()
+        row = rows[0] if len(rows) == 1 else None
         if page in (0, 2):
             self.button('Actualizar índices APT', lambda: self.modify(
                 'Actualizar los índices de APT', self.admin('refresh')))
@@ -349,8 +390,8 @@ class SoftwareManagerPage(Gtk.Box):
                     self.button('Quitar', lambda: self.modify(f'Quitar el repositorio {row[0]}',
                         self.admin('delete', row[4])))
         elif page == 1:
-            self.button('Actualizar todos', lambda: self.modify(
-                'Actualizar los Flatpaks de este ámbito', backend.flatpak(scope, 'update', '-y')))
+            # "Actualizar todo" (nuevo) ya cubre esta función con cola y confirmación
+            pass
         if row and page in (0, 1):
             if row[3] == 'Disponible':
                 self.button('Instalar', lambda: self.package_action(page, scope, row, 'install'))
@@ -358,12 +399,220 @@ class SoftwareManagerPage(Gtk.Box):
                 if row[3] == 'Actualizable' or page == 1:
                     self.button('Actualizar', lambda: self.package_action(page, scope, row, 'upgrade'))
                 self.button('Desinstalar', lambda: self.package_action(page, scope, row, 'remove'))
+        if page in (0, 1) and rows:
+            states = {item[3] for item in rows}
+            if 'Disponible' in states:
+                self.button(self.translate('Instalar seleccionados'),
+                            lambda: self.queue_action('install'))
+            if 'Actualizable' in states:
+                self.button(self.translate('Actualizar seleccionados'),
+                            lambda: self.queue_action('upgrade'))
+            if states & {'Instalado', 'Actualizable'}:
+                self.button(self.translate('Desinstalar seleccionados'),
+                            lambda: self.queue_action('remove'))
+        if page in (0, 1):
+            # Botón "Actualizar todo" si hay actualizaciones disponibles en el catálogo
+            all_rows = self.catalogues.get((page, scope if page else None), ([], []))[0]
+            if any(row[3] == 'Actualizable' for row in all_rows):
+                self.suggested_button(self.translate('Actualizar todo'),
+                                      lambda: self.queue_all_upgrades(all_rows, page, scope))
         self.actions.show_all()
 
     def button(self, label, action):
         button = Gtk.Button(label=label)
         button.connect('clicked', lambda *_: action())
         self.actions.add(button)
+
+    def suggested_button(self, label, action):
+        button = Gtk.Button(label=label)
+        button.get_style_context().add_class('suggested-action')
+        button.connect('clicked', lambda *_: action())
+        self.actions.add(button)
+
+    def queue_action(self, action):
+        if self.busy:
+            return
+        page, scope = self.page.get_active(), self.scope.get_active_id()
+        if page not in (0, 1):
+            return
+        accepted = {'install': {'Disponible'},
+                    'upgrade': {'Actualizable'},
+                    'remove': {'Instalado', 'Actualizable'}}[action]
+        added = 0
+        queued = 0
+        for row in self.selected_rows():
+            name, identifier, _, state, origin = row
+            if state not in accepted:
+                continue
+            if any(item['identifier'] == identifier for item in self.queue):
+                queued += 1
+                continue
+            if len(self.queue) >= QUEUE_LIMIT:
+                self.message(self.translate('La cola está llena'),
+                             self.translate('Puedes añadir hasta %d operaciones a la cola.')
+                             % QUEUE_LIMIT)
+                break
+            self.queue.append({'action': action, 'identifier': identifier, 'name': name,
+                               'origin': origin, 'page': page, 'scope': scope})
+            added += 1
+        if added:
+            self.status.set_text(self.translate('%d operaciones en cola') % len(self.queue))
+        else:
+            self.status.set_text(self.translate(
+                'Ya están en la cola.' if queued else
+                'No hay paquetes compatibles con esa acción en la selección.'))
+        self.show_queue()
+        self.show_actions()
+
+    def queue_all_upgrades(self, all_rows, page, scope):
+        if self.busy:
+            return
+        upgrades = [row for row in all_rows if row[3] == 'Actualizable']
+        if not upgrades:
+            self.status.set_text(self.translate('No hay actualizaciones disponibles.'))
+            return
+        if len(upgrades) > QUEUE_LIMIT:
+            self.message(self.translate('Demasiadas actualizaciones'),
+                         self.translate('Hay %d actualizaciones; el límite de la cola es %d.')
+                         % (len(upgrades), QUEUE_LIMIT))
+            return
+        for row in upgrades:
+            name, identifier, _, _, origin = row
+            self.queue.append({'action': 'upgrade', 'identifier': identifier, 'name': name,
+                               'origin': origin, 'page': page, 'scope': scope})
+        self.status.set_text(self.translate('%d actualizaciones en cola') % len(upgrades))
+        self.show_queue()
+        self.show_actions()
+        self.apply_queue()
+
+    def show_queue(self):
+        for child in self.queue_list.get_children():
+            self.queue_list.remove(child)
+        if not self.queue:
+            self.queue_frame.hide()
+            return
+        for index, item in enumerate(self.queue):
+            row = Gtk.Box(spacing=8)
+            label = Gtk.Label(xalign=0, ellipsize=3, label=(
+                f"{self.translate(VERBS[item['action']])} {item['name']}"))
+            label.set_tooltip_text(item['identifier'])
+            row.pack_start(label, True, True, 0)
+            remove = Gtk.Button(label='×')
+            remove.set_relief(Gtk.ReliefStyle.NONE)
+            remove.set_tooltip_text(self.translate('Quitar de la cola'))
+            remove.connect('clicked', lambda *_args, position=index: self.dequeue(position))
+            row.pack_end(remove, False, False, 0)
+            self.queue_list.add(row)
+        self.queue_title.set_text(self.translate('Cola de instalación · %d operaciones')
+                                  % len(self.queue))
+        self.queue_apply.set_label(self.translate('Aplicar cola (%d)') % len(self.queue))
+        self.queue_clear.set_label(self.translate('Vaciar cola'))
+        self.queue_frame.set_no_show_all(False)
+        self.queue_frame.show_all()
+        self.queue_frame.set_no_show_all(True)
+
+    def dequeue(self, position):
+        if self.busy or not 0 <= position < len(self.queue):
+            return
+        del self.queue[position]
+        self.show_queue()
+
+    def clear_queue(self):
+        if self.busy or not self.queue:
+            return
+        self.queue.clear()
+        self.show_queue()
+
+    def queue_commands(self, items, page, scope):
+        commands = []
+        if page == 0:
+            for action in ('install', 'upgrade', 'remove'):
+                identifiers = [item['identifier'] for item in items
+                               if item['action'] == action]
+                if identifiers:
+                    commands.append(self.admin(action, *identifiers))
+            return commands
+        for action in ('install', 'upgrade', 'remove'):
+            group = [item for item in items if item['action'] == action]
+            if not group:
+                continue
+            if action == 'install':
+                origins = {}
+                for item in group:
+                    origins.setdefault(item['origin'], []).append(item['identifier'])
+                for origin, references in origins.items():
+                    commands.append(backend.flatpak(
+                        scope, 'install', '-y', '--', origin, *references))
+                continue
+            verb = 'update' if action == 'upgrade' else 'uninstall'
+            commands.append(backend.flatpak(
+                scope, verb, '-y', '--', *[item['identifier'] for item in group]))
+        if self.passwordless():
+            commands = [self.admin('flatpak-system', *command[2:])
+                        if command[:2] == ['/usr/bin/flatpak', '--system'] else command
+                        for command in commands]
+        return commands
+
+    def apply_queue(self):
+        if self.busy or not self.queue:
+            return
+        page, scope = self.page.get_active(), self.scope.get_active_id()
+        items = list(self.queue)
+
+        def simulate():
+            if page != 0:
+                return ''
+            lines = []
+            for action in ('install', 'upgrade', 'remove'):
+                identifiers = [item['identifier'] for item in items
+                               if item['action'] == action]
+                if not identifiers:
+                    continue
+                apt_action = ['install', '--only-upgrade'] if action == 'upgrade' else [action]
+                output = backend.run(
+                    ['/usr/bin/apt-get', '-s', *apt_action, '--', *identifiers])
+                lines.append(f"== {self.translate(VERBS[action])}: "
+                             f"{', '.join(identifiers)} ==\n{output.strip()}")
+            return '\n\n'.join(lines)
+
+        def confirmed(plan):
+            if self.destroyed:
+                return
+            details = '\n'.join(
+                f"{self.translate(VERBS[item['action']])} {item['name']} "
+                f"({item['identifier']})" for item in items)
+            if plan:
+                details += '\n\n' + plan
+            if self.message(self.translate('¿Aplicar %d operaciones?') % len(items),
+                            details, confirm=True, accept_label=self.translate('Aplicar')):
+                self.execute_queue(items, page, scope)
+
+        self.job(self.translate('Comprobando dependencias…'), simulate, confirmed)
+
+    def execute_queue(self, items, page, scope):
+        commands = self.queue_commands(items, page, scope)
+
+        def run_all():
+            errors = []
+            for command in commands:
+                try:
+                    backend.run(command)
+                except (RuntimeError, OSError, ValueError) as exc:
+                    errors.append(str(exc))
+            return errors
+
+        def finished(errors):
+            self.catalogues.clear()
+            if errors:
+                self.message(self.translate('La cola no se pudo aplicar por completo'),
+                             '\n\n'.join(errors))
+            else:
+                self.queue.clear()
+                self.show_queue()
+            self.load(force=True)
+
+        self.applying_changes = True
+        self.job(self.translate('Aplicando la cola…'), run_all, finished)
 
     def admin(self, *args):
         if self.passwordless():
