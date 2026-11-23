@@ -2,7 +2,7 @@ Origin: aio-debian-gui
 Label: aio-debian-gui
 Suite: stable
 Codename: stable
-Date: Mon, 23 Nov 2026 12:04:02 UTC
+Date: Mon, 23 Nov 2026 15:45:48 UTC
 Architectures: all
 Components: main
 Description: Repositorio APT de aio-debian-gui
