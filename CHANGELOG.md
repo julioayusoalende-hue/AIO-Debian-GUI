@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.1.10
+
+- Base de la release 1.1.10 (contenido completo en la sección `1.1.10~testing.1`).
+
 ## 1.1.10~testing.1
 
 ### Refactor de arquitectura modular
