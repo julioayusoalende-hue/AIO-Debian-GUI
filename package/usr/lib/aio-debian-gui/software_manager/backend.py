@@ -329,6 +329,10 @@ def debs():
 def flatpaks(scope: str):
     rows = {}
     errors = []
+
+    def flatpak(*args):
+        return ['/usr/bin/flatpak', f'--{scope}', *args]
+
     for name, ref, version, origin in _columns(run(flatpak('list', '--app', '--columns=name,ref,version,origin')), 4):
         rows[(origin, ref)] = (name, ref, version, 'Instalado', origin)
     installed_origins = {origin for origin, _ in rows}
