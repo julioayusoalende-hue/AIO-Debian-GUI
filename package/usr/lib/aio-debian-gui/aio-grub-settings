@@ -23,6 +23,7 @@ TIMEOUT = re.compile(r"-1|0|[1-9][0-9]{0,2}")
 def menu_entries(config):
     entries = []
     submenus = []
+    positions = {}
     for line in config.splitlines():
         start = line.lstrip()
         indent = len(line) - len(start)
@@ -32,6 +33,10 @@ def menu_entries(config):
             continue
         while submenus and submenus[-1][0] >= indent:
             submenus.pop()
+        parent = tuple(item[3] for item in submenus)
+        position = positions.get(parent, 0)
+        positions[parent] = position + 1
+        index = (*parent, position)
         try:
             declaration = shlex.split(start)
             marker = next(i for i, part in enumerate(declaration[2:], start=2)
@@ -45,13 +50,65 @@ def menu_entries(config):
         if not ENTRY_ID.fullmatch(identifier):
             identifier = ""
         if start.startswith("submenu "):
-            submenus.append((indent, identifier, title))
+            submenus.append((indent, identifier, title, position))
         elif identifier and all(item[1] for item in submenus):
             entries.append({
                 "id": ">".join([item[1] for item in submenus] + [identifier]),
                 "title": " › ".join([item[2] for item in submenus] + [title]),
+                "index": ">".join(map(str, index)),
             })
     return entries
+
+
+def effective_settings(config, entries, environment):
+    """Lee los valores de arranque normal del grub.cfg ya generado."""
+    header = config.split("### END /etc/grub.d/00_header ###", 1)[0]
+    defaults = re.findall(r'^\s*set default=["\']?([^"\'\n]+)', header, re.MULTILINE)
+    default = next((item.strip() for item in reversed(defaults)
+                    if item.strip() != "${next_entry}"), "0")
+    if default == "${saved_entry}":
+        default = environment.get("saved_entry", "0")
+    settings = {}
+    for entry in entries:
+        if default in (entry["id"], entry["index"], entry["title"],
+                       entry["title"].replace(" › ", ">")):
+            settings["GRUB_DEFAULT"] = entry["id"]
+            break
+    else:
+        if entries and default == "0" and not defaults:
+            settings["GRUB_DEFAULT"] = entries[0]["id"]
+
+    normal = re.search(
+        r'^\s*set timeout_style=(menu|countdown|hidden)\s*\n\s*set timeout=(-?\d+)\s*$',
+        header, re.MULTILINE)
+    if normal and TIMEOUT.fullmatch(normal[2]):
+        settings.update(GRUB_TIMEOUT_STYLE=normal[1], GRUB_TIMEOUT=normal[2])
+    else:
+        timeouts = re.findall(r'^\s*set timeout=(-?\d+)\s*$', header, re.MULTILINE)
+        if len(set(timeouts)) == 1 and TIMEOUT.fullmatch(timeouts[0]):
+            settings.update(GRUB_TIMEOUT=timeouts[0], GRUB_TIMEOUT_STYLE="menu")
+    # Debian muestra el menú cuando os-prober detecta otro sistema.
+    dual_boot = re.search(
+        r'### BEGIN /etc/grub.d/30_os-prober ###(.*?)### END /etc/grub.d/30_os-prober ###',
+        config, re.DOTALL)
+    if dual_boot and re.search(r"^set timeout_style=menu$", dual_boot[1], re.MULTILINE):
+        settings["GRUB_TIMEOUT_STYLE"] = "menu"
+        fallback = re.search(r'if \[ "\$\{timeout\}" = 0 \]; then\s+set timeout=(\d+)', dual_boot[1])
+        if fallback and settings.get("GRUB_TIMEOUT") == "0" and TIMEOUT.fullmatch(fallback[1]):
+            settings["GRUB_TIMEOUT"] = fallback[1]
+    return settings
+
+
+def grub_environment(config):
+    try:
+        result = subprocess.run(
+            ["/usr/bin/grub-editenv", str(config.with_name("grubenv")), "list"],
+            stdin=subprocess.DEVNULL, capture_output=True, text=True,
+            errors="replace", timeout=5, check=True,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return {}
+    return dict(line.split("=", 1) for line in result.stdout.splitlines() if "=" in line)
 
 
 def render(values, entry_ids=None):
@@ -118,7 +175,8 @@ def manage(defaults, config, regenerate, action, request=None):
     path = directory / DROP_IN
     previous, values = current_settings(path)
     revision = hashlib.sha256(previous.encode()).hexdigest()
-    entries = menu_entries(config.read_text(errors="replace"))
+    generated = config.read_text(errors="replace")
+    entries = menu_entries(generated)
     if action == "apply":
         if not isinstance(request, dict) or request.keys() != {"revision", "settings"}:
             raise ValueError("Invalid GRUB request.")
@@ -138,7 +196,9 @@ def manage(defaults, config, regenerate, action, request=None):
                 detail = getattr(exc, "stderr", None) or str(exc)
                 raise ValueError(f"GRUB regeneration failed. Previous settings restored.\n{detail}") from exc
             return manage(defaults, config, regenerate, "status")
-    return {"entries": entries, "settings": values, "revision": revision}
+    environment = grub_environment(config) if "${saved_entry}" in generated else {}
+    effective = effective_settings(generated, entries, environment)
+    return {"entries": entries, "settings": values, "effective": effective, "revision": revision}
 
 
 def regenerate(config, required_entry):

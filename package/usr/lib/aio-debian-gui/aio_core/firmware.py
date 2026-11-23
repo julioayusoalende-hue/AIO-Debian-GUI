@@ -13,12 +13,12 @@ from gi.repository import GLib, Gtk, Vte
 FWUPDMGR = "/usr/bin/fwupdmgr"
 
 
-class FirmwarePage(Gtk.Box):
+class FirmwareSection(Gtk.Box):
     def __init__(self, parent, translate):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.parent = parent
         self.tr = translate
-        self.set_border_width(14)
+        self.set_border_width(6)
         self.closed = False
         self.connect("destroy", self._on_destroy)
 

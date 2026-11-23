@@ -299,7 +299,11 @@ for language in ('es', 'en', 'fr', 'zh'):
         w = app.VentanaPrincipal({'idioma': language, 'tema': 'claro', 'modo_simple': False})
     w.show_all()
     settle()
-    assert w.notebook.get_n_pages() == 7
+    assert w.notebook.get_n_pages() == 6
+    firmware = w.grupos_tareas[-1]
+    assert firmware.get_accessible().get_name() == app.traducir('Firmware')
+    assert firmware.get_child().get_ancestor(Gtk.Notebook) is w.notebook
+    assert not firmware.get_expanded()
     assert w.notebook.get_nth_page(1) == w.grub_pagina
     assert w.notebook.get_tab_label_text(w.grub_pagina) == app.traducir('Inicio')
     assert w.grub_pagina.get_style_context().has_class("aio-page")
@@ -336,9 +340,23 @@ for language in ('es', 'en', 'fr', 'zh'):
             thread.return_value.start.assert_called_once()
         w._grub_finalizado('apply', grub_status, None)
         assert w.grub_pagina.get_sensitive()
+        inherited = {**grub_status, 'effective': grub_status['settings'], 'settings': {}}
+        w._grub_finalizado('status', inherited, None)
+        assert w.grub_entrada.get_active_id() == 'test-debian'
+        assert w.grub_tiempo.get_text() == '8'
+        assert w.grub_estilo.get_active_id() == 'menu'
+        assert not w.grub_restaurar.get_sensitive()
+        with patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK), \
+             patch.object(app.threading, 'Thread') as thread:
+            w._accion_grub(None, 'apply')
+            thread.assert_not_called()
+            w.grub_tiempo.set_text('12')
+            w._accion_grub(None, 'apply')
+            assert app.json.loads(thread.call_args.kwargs['args'][0][1])['settings'] == {'GRUB_TIMEOUT': '12'}
+        w._grub_finalizado('apply', grub_status, None)
     assert [w.notebook.get_tab_label_text(page) for page in w.notebook.get_children()] == [
         app.traducir(name) for name in
-        ('Configuración y mantenimiento', 'Inicio', 'Backup', 'Apps recomendadas', 'Gestor de software', 'Firmware', 'Terminal')
+        ('Configuración y mantenimiento', 'Inicio', 'Backup', 'Apps recomendadas', 'Gestor de software', 'Terminal')
     ]
     if language == 'es':
         column = w.pagina_software.view.get_column(0)

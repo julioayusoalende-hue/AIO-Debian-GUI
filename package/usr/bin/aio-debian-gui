@@ -2144,8 +2144,6 @@ class VentanaPrincipal(Gtk.Window):
             from software_manager.manager import SoftwareManagerPage
             self.pagina_software = SoftwareManagerPage(self, traducir, autorizacion_sin_contrasena_activa)
             notebook.append_page(self.pagina_software, Gtk.Label(label=traducir("Gestor de software")))
-            from aio_core.firmware import FirmwarePage
-            notebook.append_page(FirmwarePage(self, traducir), Gtk.Label(label=traducir("Firmware")))
         notebook.connect("switch-page", self._cambiar_pestana_recomendadas)
         self.pagina_terminal = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.boton_mostrar_terminal = Gtk.Button(label=traducir("Mostrar ventana de la terminal"))
@@ -2463,10 +2461,15 @@ class VentanaPrincipal(Gtk.Window):
                     self._mensaje(Gtk.MessageType.ERROR, "Tiempo de espera no válido",
                                   "Escribe un número entre -1 y 999.")
                     return
-                ajustes = {clave: valor for clave, valor in (
-                    ("GRUB_DEFAULT", entrada), ("GRUB_TIMEOUT", tiempo),
-                    ("GRUB_TIMEOUT_STYLE", estilo),
-                ) if valor and valor != "@system"}
+                ajustes = dict(self.grub_estado["settings"])
+                for clave, valor in (("GRUB_DEFAULT", entrada), ("GRUB_TIMEOUT", tiempo),
+                                     ("GRUB_TIMEOUT_STYLE", estilo)):
+                    if valor == self.grub_valores_cargados[clave]:
+                        continue
+                    if valor and valor != "@system":
+                        ajustes[clave] = valor
+                    else:
+                        ajustes.pop(clave, None)
             if ajustes == self.grub_estado["settings"]:
                 return
             dialogo = Gtk.MessageDialog(
@@ -2517,16 +2520,22 @@ class VentanaPrincipal(Gtk.Window):
 
         self.grub_estado = estado
         ajustes = estado["settings"]
+        mostrados = {**ajustes, **estado.get("effective", {})}
+        self.grub_valores_cargados = {
+            "GRUB_DEFAULT": mostrados.get("GRUB_DEFAULT", "@system"),
+            "GRUB_TIMEOUT": mostrados.get("GRUB_TIMEOUT", ""),
+            "GRUB_TIMEOUT_STYLE": mostrados.get("GRUB_TIMEOUT_STYLE", "@system"),
+        }
         self.grub_entrada.remove_all()
         self.grub_entrada.append("@system", traducir("Usar los ajustes del sistema"))
         for entrada in estado["entries"]:
             self.grub_entrada.append(entrada["id"], entrada["title"])
-        predeterminada = ajustes.get("GRUB_DEFAULT", "@system")
+        predeterminada = self.grub_valores_cargados["GRUB_DEFAULT"]
         if not self.grub_entrada.set_active_id(predeterminada):
             self.grub_entrada.append(predeterminada, traducir("Entrada no disponible") + " · " + predeterminada)
             self.grub_entrada.set_active_id(predeterminada)
-        self.grub_tiempo.set_text(ajustes.get("GRUB_TIMEOUT", ""))
-        self.grub_estilo.set_active_id(ajustes.get("GRUB_TIMEOUT_STYLE", "@system"))
+        self.grub_tiempo.set_text(self.grub_valores_cargados["GRUB_TIMEOUT"])
+        self.grub_estilo.set_active_id(self.grub_valores_cargados["GRUB_TIMEOUT_STYLE"])
         self.grub_formulario.set_sensitive(True)
         self.grub_acciones.set_sensitive(True)
         self.grub_restaurar.set_sensitive(bool(ajustes))
@@ -4360,6 +4369,16 @@ class VentanaPrincipal(Gtk.Window):
             grupo.add(lista)
             for pid, titulo_tarea, desc, defecto, _ in visibles:
                 lista.add(self._fila(pid, titulo_tarea, desc, defecto))
+            tarjeta.pack_start(grupo, False, False, 2)
+            self.grupos_tareas.append(grupo)
+        if not (es_flatpak() or os.environ.get("APPIMAGE") or os.environ.get("SNAP")):
+            from aio_core.firmware import FirmwareSection
+
+            grupo = Gtk.Expander()
+            grupo.set_label_widget(cabecera_mantenimiento(
+                "Firmware", "computer-symbolic", "aio-group"))
+            grupo.get_accessible().set_name(traducir("Firmware"))
+            grupo.add(FirmwareSection(self, traducir))
             tarjeta.pack_start(grupo, False, False, 2)
             self.grupos_tareas.append(grupo)
         tarjeta.pack_start(Gtk.Separator(), False, False, 0)

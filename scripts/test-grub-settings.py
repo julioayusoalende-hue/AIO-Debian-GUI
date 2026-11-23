@@ -40,6 +40,35 @@ class BootSettingsTests(unittest.TestCase):
     def manage(self, action, request=None):
         return grub.manage(self.defaults, self.config, self.regenerate, action, request)
 
+    def test_effective_boot_settings_without_aio_overrides(self):
+        header = (
+            'set default="${next_entry}"\n'
+            'set default="1>0"\n'
+            'set timeout=30\n'
+            'set timeout_style=hidden\n'
+            'set timeout=0\n'
+            '### END /etc/grub.d/00_header ###\n'
+        )
+        config = header + self.config.read_text()
+        self.config.write_text(config)
+        status = self.manage("status")
+        self.assertEqual(status["settings"], {})
+        self.assertEqual(status["effective"], {
+            "GRUB_DEFAULT": "gnulinux-advanced-disk>linux-6.12",
+            "GRUB_TIMEOUT": "0",
+            "GRUB_TIMEOUT_STYLE": "hidden",
+        })
+        self.config.write_text(config.replace('default="1>0"', 'default="${saved_entry}"'))
+        with patch.object(grub, "grub_environment", return_value={"saved_entry": "osprober-efi-disk"}):
+            self.assertEqual(self.manage("status")["effective"]["GRUB_DEFAULT"], "osprober-efi-disk")
+        self.config.write_text(config + (
+            '### BEGIN /etc/grub.d/30_os-prober ###\n'
+            'set timeout_style=menu\nif [ "${timeout}" = 0 ]; then\n'
+            '  set timeout=10\nfi\n### END /etc/grub.d/30_os-prober ###\n'
+        ))
+        effective = self.manage("status")["effective"]
+        self.assertEqual((effective["GRUB_TIMEOUT"], effective["GRUB_TIMEOUT_STYLE"]), ("10", "menu"))
+
     def test_apply_and_restore(self):
         old_defaults = self.defaults.read_text()
         status = self.manage("status")

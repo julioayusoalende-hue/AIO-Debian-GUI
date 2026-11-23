@@ -2,9 +2,13 @@
 
 ## 1.1.8
 
+- Muestra la entrada predeterminada, la espera y la visibilidad vigentes de GRUB al cargar Inicio.
+
+- Detecta incidencias pendientes de dpkg antes de instalar una actualización Testing y conserva el aislamiento de la descarga de APT.
+
 - Ejecuta la auditoría de dpkg con la autorización del diagnóstico preventivo.
 
-- Añade una pestaña de firmware con búsqueda y actualización interactiva por dispositivo mediante fwupd.
+- Añade un apartado de firmware en Tareas a realizar, con búsqueda y actualización interactiva por dispositivo mediante fwupd.
 
 ## 1.1.7
 
