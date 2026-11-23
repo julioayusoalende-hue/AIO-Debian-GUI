@@ -96,17 +96,19 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
 Releases:
-- version: 1.1.7
+- version: 1.1.8
   type: stable
-  unix-timestamp: 1795305600
+  unix-timestamp: 1795392000
   description:
     C: >-
-      <ul><li>Los DEB locales sin coincidencia SHA-256 en un índice autenticado de APT requieren autenticación de administrador.</li><li>El
-      Gestor de software, Inicio (GRUB) y las copias de repositorios respetan la autorización sin contraseña de la primera
-      pestaña.</li><li>Permite abrir un .deb local en el Gestor de software, revisar sus dependencias y confirmar la instalación.</li><li>Comprueba
-      y sincroniza el reloj de forma desatendida antes del primer mantenimiento.</li><li>La primera pestaña abre con los desplegables
-      plegados y respeta su estado al redimensionar la ventana.</li><li>El filtro Actualizables del Gestor de software incluye
-      los paquetes DEB y las aplicaciones Flatpak del ámbito seleccionado.</li><li>El Gestor de software muestra la descripción,
-      las dependencias y otros datos del paquete seleccionado.</li></ul>
+      <ul><li>Reordena las pestañas: Configuración y mantenimiento, Gestor de software, Apps recomendadas, Backup e Inicio.</li><li>Sustituye
+      la pestaña Terminal por un botón con icono de terminal en el encabezado, junto al menú de preferencias, que abre la
+      misma consola y conserva su sesión.</li><li>Permite seleccionar varios paquetes DEB o aplicaciones Flatpak y añadirlos
+      a una cola de instalación, actualización o desinstalación que se aplica de forma conjunta.</li><li>Añade el botón «Actualizar
+      todo» para poner en cola y aplicar todas las actualizaciones disponibles de la pestaña activa.</li><li>Muestra la entrada
+      predeterminada, la espera y la visibilidad vigentes de GRUB al cargar Inicio.</li><li>Detecta incidencias pendientes
+      de dpkg antes de instalar una actualización Testing y conserva el aislamiento de la descarga de APT.</li><li>Ejecuta
+      la auditoría de dpkg con la autorización del diagnóstico preventivo.</li><li>Añade un apartado de firmware en Tareas
+      a realizar, con búsqueda y actualización interactiva por dispositivo mediante fwupd.</li></ul>
 ContentRating:
   oars-1.1: {}
