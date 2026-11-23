@@ -2,15 +2,15 @@ Origin: aio-debian-gui
 Label: aio-debian-gui
 Suite: testing
 Codename: testing
-Date: Mon, 23 Nov 2026 19:45:18 UTC
+Date: Mon, 23 Nov 2026 20:07:18 UTC
 Architectures: all
 Components: main
 Description: Repositorio APT de aio-debian-gui
 MD5Sum:
- e595da576f82529f292d3cf3edd95849             1428 main/binary-all/Packages
- 86c8f5cdb57ab032f9056c2876e82d39              852 main/binary-all/Packages.gz
- b3f7905f52ebcdf2b03f477fdcb9c090              948 main/binary-all/Packages.xz
+ a3369415e27c21db9aa2f1628f8fe84b             1428 main/binary-all/Packages
+ 7d3298406007e193fab9b7cc3b0fb10e              850 main/binary-all/Packages.gz
+ 79778548d700f9896933b9a48b4a2fe9              948 main/binary-all/Packages.xz
 SHA256:
- 6abcc5218242c32419fc0b71ac638ba7c1e3702d5dd8686d915d8fe4d5a80345             1428 main/binary-all/Packages
- 3e13df4e8742b3dbbb38bd1598944408d88a60c03a523d02fd9c999dcf427f8d              852 main/binary-all/Packages.gz
- 1012e5de291e6019154ddc2df0c75d8aab3923a7d44970e934ea99086625bdad              948 main/binary-all/Packages.xz
+ 7c26074cd7b4fd663a51c9f2dfcaffa96ef19b372cc66f762788bdada18321ec             1428 main/binary-all/Packages
+ 87e879396470900a7a26ca5ea9e65950a60c70af952d353a47a44a3b4bac5f3a              850 main/binary-all/Packages.gz
+ 2962c06a8d3a41caed9766220da3761371186063e06962ac9c23717ace12f485              948 main/binary-all/Packages.xz
