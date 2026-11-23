@@ -132,6 +132,7 @@ class BootSettingsTests(unittest.TestCase):
 
     def test_decline_modified_fragment_and_missing_grub(self):
         self.fragment.parent.mkdir()
+        self.fragment.parent.chmod(0o750)  # Ensure directory has proper permissions
         self.fragment.write_text("GRUB_TIMEOUT=20\n")
         with self.assertRaisesRegex(ValueError, "modified outside"):
             self.manage("status")

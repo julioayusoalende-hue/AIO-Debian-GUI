@@ -11,7 +11,11 @@ RELEASE_API = "https://api.github.com/repos/julioayusoalende-hue/AIO-Debian-GUI/
 MAX_APPIMAGE_SIZE = 256 * 1024 * 1024
 
 def version_numerica(version):
-    match = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)", version)
+    """Convierte versión a tupla comparable. Acepta formatos: 1.2.3, v1.2.3, 1.2.3~testing.4"""
+    # Quitar prefijo v y sufijo ~testing.N
+    version = version.lstrip("v")
+    version = re.sub(r"~testing\.\d+$", "", version)
+    match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", version)
     return tuple(map(int, match.groups())) if match else None
 
 
