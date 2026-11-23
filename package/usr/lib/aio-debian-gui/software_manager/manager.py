@@ -1,32 +1,25 @@
-#!/usr/bin/env python3
-"""Enhanced Software Manager with caching, filters, and drag & drop."""
+#!/usr/bin/python3
+"""AyusOS Software Manager GTK interface."""
 
-import os
-import threading
 from concurrent.futures import ThreadPoolExecutor
 
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import GLib, Gtk, Gdk
+from gi.repository import GLib, Gtk
 
 from . import backend
-from . import admin
 
 PAGES = ('DEB', 'Flatpak', 'Repositorios')
 VERBS = {'install': 'Instalar', 'upgrade': 'Actualizar', 'remove': 'Desinstalar'}
 QUEUE_LIMIT = 100
 
 
-class EnhancedSoftwareManagerPage(Gtk.Box):
-    """Software Manager mejorado con caché, filtros avanzados y drag & drop."""
-
+class SoftwareManagerPage(Gtk.Box):
     def __init__(self, window, translate=lambda text: text, passwordless=lambda: False):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin=12)
         self.window = window
         self.translate = translate
         self.passwordless = passwordless
-
-        # Estado
         self.details_pool = ThreadPoolExecutor(max_workers=2)
         self.details_request = None
         self.details_timer = 0
@@ -43,62 +36,34 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
         self.destroyed = False
         self.connect('destroy', self.on_destroy)
 
-        # Filtros
-        self.current_section_filter = "Todas"
-        self.search_index = backend.search_index
-
-        # UI
-        self._build_ui()
-
-        # Configurar drag & drop
-        self._setup_drag_drop()
-
-    def _build_ui(self):
-        # Toolbar principal
         toolbar = Gtk.Box(spacing=8)
         self.pack_start(toolbar, False, False, 0)
-
-        # Selector de página
-        self.page_combo = Gtk.ComboBoxText()
+        self.page = Gtk.ComboBoxText()
         for name in PAGES:
-            self.page_combo.append_text(name)
-        self.page_combo.set_active(0)
-        toolbar.pack_start(self.page_combo, False, False, 0)
+            self.page.append_text(name)
+        self.page.set_active(0)
+        toolbar.pack_start(self.page, False, False, 0)
+        self.scope = Gtk.ComboBoxText()
+        self.scope.append('user', 'Usuario')
+        self.scope.append('system', 'Sistema')
+        self.scope.set_active_id('user')
+        toolbar.pack_end(self.scope, False, False, 0)
 
-        # Scope (usuario/sistema) para Flatpak
-        self.scope_combo = Gtk.ComboBoxText()
-        self.scope_combo.append('user', 'Usuario')
-        self.scope_combo.append('system', 'Sistema')
-        self.scope_combo.set_active_id('user')
-        toolbar.pack_end(self.scope_combo, False, False, 0)
-
-        # Búsqueda
-        self.search_entry = Gtk.SearchEntry(placeholder_text='Buscar por nombre, descripción, sección…')
-        self.search_entry.set_max_length(200)
-        toolbar.pack_start(self.search_entry, True, True, 0)
+        self.search = Gtk.SearchEntry(placeholder_text='Buscar por nombre o identificador…')
+        self.search.set_max_length(200)
+        toolbar.pack_start(self.search, True, True, 0)
         self.completions = Gtk.ListStore(str)
         completion = Gtk.EntryCompletion(model=self.completions, text_column=0,
                                          minimum_key_length=2)
         completion.set_match_func(lambda *_: True)
-        self.search_entry.set_completion(completion)
+        self.search.set_completion(completion)
 
-        # Filtros básicos
-        self.filters_combo = Gtk.ComboBoxText()
+        self.filters = Gtk.ComboBoxText()
         for name in ('Todos', 'Instalados', 'Disponibles', 'Actualizables'):
-            self.filters_combo.append_text(self.translate(name))
-        self.filters_combo.set_active(0)
-        toolbar.pack_end(self.filters_combo, False, False, 0)
+            self.filters.append_text(self.translate(name))
+        self.filters.set_active(0)
+        toolbar.pack_end(self.filters, False, False, 0)
 
-        # Filtro de sección (solo DEB)
-        self.section_combo = Gtk.ComboBoxText()
-        self.section_combo.append_text(self.translate("Todas las secciones"))
-        for section in sorted(backend.DEB_SECTIONS):
-            self.section_combo.append_text(section.capitalize())
-        self.section_combo.set_active(0)
-        self.section_combo.set_visible(False)  # Solo visible en página DEB
-        toolbar.pack_end(self.section_combo, False, False, 0)
-
-        # TreeView
         self.store = Gtk.ListStore(str, str, str, str, str)
         self.view = Gtk.TreeView(model=self.store, enable_search=False)
         self.columns = []
@@ -117,12 +82,10 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
             column.set_expand(index in (0, 1))
             self.view.append_column(column)
             self.columns.append(column)
-
         scroller = Gtk.ScrolledWindow(shadow_type=Gtk.ShadowType.IN)
         scroller.add(self.view)
         self.pack_start(scroller, True, True, 0)
 
-        # Detalles
         self.details = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         self.details_title = Gtk.Label(xalign=0, ellipsize=3)
         self.details_title.get_style_context().add_class('aio-task-name')
@@ -138,12 +101,10 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
         self.details.set_no_show_all(True)
         self.pack_start(self.details, False, False, 0)
 
-        # Acciones
         self.actions = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE,
                                    column_spacing=6, row_spacing=4, max_children_per_line=8)
         self.pack_start(self.actions, False, False, 0)
 
-        # Cola
         self.queue_frame = Gtk.Frame()
         queue_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin=8)
         self.queue_title = Gtk.Label(xalign=0)
@@ -169,121 +130,18 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
         self.queue_frame.set_no_show_all(True)
         self.pack_start(self.queue_frame, False, False, 0)
 
-        # Status
         self.status = Gtk.Label(xalign=0, ellipsize=3)
         self.pack_end(self.status, False, False, 0)
 
-        # Conexiones
-        self.page_combo.connect('changed', self.change_page)
-        self.scope_combo.connect('changed', self.change_page)
-        self.search_entry.connect('changed', self.queue_filter)
-        self.filters_combo.connect('changed', self.queue_filter)
-        self.section_combo.connect('changed', self.queue_filter)
+        self.page.connect('changed', self.change_page)
+        self.scope.connect('changed', self.change_page)
+        self.search.connect('changed', self.queue_filter)
+        self.filters.connect('changed', self.queue_filter)
         selection = self.view.get_selection()
         selection.set_mode(Gtk.SelectionMode.MULTIPLE)
         selection.connect('changed', self.selection_changed)
-        self.scope_combo.set_no_show_all(True)
+        self.scope.set_no_show_all(True)
         self.connect('map', self.on_map)
-
-    def _setup_drag_drop(self):
-        """Configura drag & drop para archivos .deb."""
-        targets = [
-            Gtk.TargetEntry.new('text/uri-list', 0, 0),
-            Gtk.TargetEntry.new('application/x-deb', 0, 1),
-        ]
-        self.drag_dest_set(Gtk.DestDefaults.ALL, targets, Gdk.DragAction.COPY)
-        self.connect('drag-data-received', self._on_drag_data_received)
-
-    def _on_drag_data_received(self, widget, drag_context, x, y, data, info, time):
-        """Maneja archivos .deb soltados."""
-        uris = data.get_uris()
-        if not uris:
-            return
-
-        for uri in uris:
-            if uri.startswith('file://'):
-                filepath = uri[7:]  # Quitar 'file://'
-                if filepath.lower().endswith('.deb'):
-                    GLib.idle_add(self._handle_dropped_deb, filepath)
-
-        drag_context.finish(True, False, time)
-
-    def _handle_dropped_deb(self, filepath):
-        """Procesa un archivo .deb soltado."""
-        if self.busy:
-            return
-
-        self.status.set_text(self.translate("Analizando paquete .deb..."))
-
-        def worker():
-            try:
-                info = backend.analyze_deb_file(filepath)
-                GLib.idle_add(self._show_deb_install_dialog, info)
-            except Exception as exc:
-                GLib.idle_add(self._show_error, self.translate("Error analizando .deb"), str(exc))
-
-        threading.Thread(target=worker, daemon=True).start()
-
-    def _show_deb_install_dialog(self, info: backend.DebFileInfo):
-        """Muestra diálogo de confirmación para instalar .deb."""
-        details = f"{info.package} {info.version} ({info.architecture})\n\n"
-        details += f"{self.translate('Descripción')}: {info.description}\n\n"
-        details += f"{self.translate('Dependencias')}: {info.depends or 'Ninguna'}\n"
-        if info.pre_depends:
-            details += f"{self.translate('Pre-dependencias')}: {info.pre_depends}\n"
-        details += f"\n{self.translate('Plan de instalación')}:\n{info.install_plan}"
-
-        if info.trusted:
-            details = self.translate("✓ Paquete verificado en repositorios APT\n\n") + details
-        else:
-            details = self.translate("⚠ Paquete NO verificado - requiere autenticación\n\n") + details
-
-        dialog = Gtk.MessageDialog(transient_for=self.window, modal=True,
-                                   message_type=Gtk.MessageType.QUESTION,
-                                   buttons=Gtk.ButtonsType.OK_CANCEL,
-                                   text=self.translate("Instalar paquete .deb"))
-        dialog.format_secondary_text(details)
-        dialog.set_default_response(Gtk.ResponseType.CANCEL)
-
-        if dialog.run() == Gtk.ResponseType.OK:
-            self._install_local_deb(info)
-        dialog.destroy()
-
-    def _install_local_deb(self, info: backend.DebFileInfo):
-        """Instala un paquete .deb local."""
-        if info.trusted and self.passwordless():
-            command = self.admin('install-trusted-local', info.sha256, info.package)
-        else:
-            command = ['/usr/bin/pkexec', admin.ADMIN, 'install-local', info.sha256]
-
-        self.applying_changes = True
-        self.status.set_text(self.translate("Instalando..."))
-
-        def worker():
-            try:
-                backend.install_local_deb(info.path, command)
-                GLib.idle_add(self._on_install_done, True, info.package)
-            except Exception as exc:
-                GLib.idle_add(self._on_install_done, False, str(exc))
-
-        threading.Thread(target=worker, daemon=True).start()
-
-    def _on_install_done(self, success, msg):
-        self.applying_changes = False
-        if success:
-            self.status.set_text(self.translate("✓ %s instalado") % msg)
-            self.load(force=True)
-        else:
-            self._show_error(self.translate("Error instalando"), msg)
-
-    def _show_error(self, title, details):
-        dialog = Gtk.MessageDialog(transient_for=self.window, modal=True,
-                                   message_type=Gtk.MessageType.ERROR,
-                                   buttons=Gtk.ButtonsType.CLOSE,
-                                   text=title)
-        dialog.format_secondary_text(details)
-        dialog.run()
-        dialog.destroy()
 
     @staticmethod
     def show_installed_mark(_column, renderer, model, iterator, _data):
@@ -311,51 +169,35 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
 
     def filter_rows(self):
         self.timer = 0
-        query = self.search_entry.get_text().strip().casefold()
-        wanted = self.filters_combo.get_active()
-        packages = self.page_combo.get_active() != 2
-        section_filter = self.section_combo.get_active_text() if self.section_combo.get_visible() else "Todas"
-
+        query = self.search.get_text().strip().casefold()
+        wanted = self.filters.get_active()
+        packages = self.page.get_active() != 2
         self.store.clear()
         self.completions.clear()
         suggestions = set()
         prefixes, matches = [], []
-
         for row in self.rows:
-            # Filtro por estado
+            fields = (row[0].casefold(), row[1].casefold(),
+                      self.catalogue_extra.get(row[0] or row[1], '').casefold())
             if packages and wanted and row[3] not in (
                 (), ('Instalado', 'Actualizable'), ('Disponible',), ('Actualizable',)
             )[wanted]:
                 continue
-
-            # Filtro por sección (DEB)
-            if packages and self.page_combo.get_active() == 0 and section_filter != "Todas":
-                row_section = row[5] if len(row) > 5 else ''
-                if row_section.lower() != section_filter.lower():
-                    continue
-
-            # Filtro por búsqueda
-            fields = (row[0].casefold(), row[1].casefold(),
-                      self.catalogue_extra.get(row[0] or row[1], '').casefold())
             if not all(any(term in field for field in fields) for term in query.split()):
                 continue
-
             (prefixes if any(field.startswith(query) for field in fields) else matches).append(row)
-
         found = prefixes + matches
         for row in found[:1500]:
-            # Las filas históricas tienen cinco columnas; la sección es opcional.
-            self.store.append(tuple(row[:5]))
+            self.store.append(row)
             if len(query) >= 2 and len(suggestions) < 12:
                 suggestion = row[0] or row[1]
                 if suggestion not in suggestions:
                     suggestions.add(suggestion)
                     self.completions.append((suggestion,))
-
         if not self.busy:
             total = len(found)
-            visible = f'{self.translate("Mostrando")} {len(self.store):,} {self.translate("de")} ' if total > len(self.store) else ''
-            text = f'{visible}{total:,} {self.translate("resultados")}'
+            visible = f'Mostrando {len(self.store):,} de ' if total > len(self.store) else ''
+            text = f'{visible}{total:,} resultados'
             if self.catalogue_errors:
                 text += ' · ' + (self.translate('No se pudieron consultar todos los remotos (%d)')
                                  % len(self.catalogue_errors))
@@ -363,46 +205,60 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
                 text = self.translate('No hay actualizaciones disponibles.')
             self.status.set_text(text)
             self.status.set_tooltip_text('\n'.join(self.catalogue_errors) or None)
-
         return False
 
     def change_page(self, *_):
-        page = self.page_combo.get_active()
-        scope = self.scope_combo.get_active_id() if page else None
-
+        page = self.page.get_active()
+        scope = self.scope.get_active_id() if page else None
         if self.queue and any((item['page'], item['scope']) != (page, scope)
                               for item in self.queue):
             self.clear_queue()
-
-        self.scope_combo.set_visible(page != 0)
-        self.filters_combo.set_visible(page in (0, 1))
-        self.section_combo.set_visible(page == 0)  # Solo DEB
-        self.search_entry.set_text('')
-        self.search_entry.set_placeholder_text(
-            self.translate('Buscar repositorios…') if page == 2 else self.translate('Buscar por nombre, descripción, sección…'))
-
-        names = ('Nombre', 'Identificador', 'Versión', 'Estado', 'Arquitectura' if page == 0 else 'Remoto', 'Sección') if page != 2 else (
-            'Nombre', 'URL', 'Tipo', 'Estado', 'Origen o archivo', '')
+        self.scope.set_visible(page != 0)
+        self.filters.set_visible(page in (0, 1))
+        self.search.set_text('')
+        self.search.set_placeholder_text(
+            'Buscar repositorios…' if page == 2 else 'Buscar por nombre o identificador…')
+        names = ('Nombre', 'URL', 'Tipo', 'Estado', 'Origen o archivo') if page == 2 else (
+            'Nombre', 'Identificador', 'Versión', 'Estado', 'Arquitectura' if page == 0 else 'Remoto')
         for column, title in zip(self.columns, names):
             column.set_title(title)
-            column.set_visible(bool(title))
-
         self.load()
         self.show_details()
 
+    def job(self, message, task, completed):
+        self.busy = True
+        for widget in (self.page, self.scope, self.actions, self.queue_actions):
+            widget.set_sensitive(False)
+        self.status.set_text(message)
+        future = self.pool.submit(task)
+
+        def finish():
+            if self.destroyed:
+                return False
+            self.applying_changes = False
+            self.busy = False
+            for widget in (self.page, self.scope, self.actions, self.queue_actions):
+                widget.set_sensitive(True)
+            try:
+                result = future.result()
+            except (RuntimeError, OSError, ValueError) as exc:
+                self.status.set_text('La operación no se pudo completar')
+                self.message('Error', str(exc))
+            else:
+                completed(result)
+            self.show_actions()
+            return False
+
+        future.add_done_callback(lambda _: GLib.idle_add(finish))
+
     def load(self, force=False):
-        page, scope = self.page_combo.get_active(), self.scope_combo.get_active_id()
+        page, scope = self.page.get_active(), self.scope.get_active_id()
         key = (page, scope if page else None)
 
         def display(result):
             self.catalogues[key] = result
             self.rows, self.catalogue_errors = result[:2]
             self.catalogue_extra = result[2] if len(result) > 2 else {}
-
-            # Construir índice de búsqueda
-            if page == 0:
-                self.search_index.build(self.rows, self.catalogue_extra)
-
             if self.timer:
                 GLib.source_remove(self.timer)
             self.filter_rows()
@@ -416,13 +272,8 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
             self.status.set_tooltip_text(None)
             self.store.clear()
             self.show_actions()
-
-            # Usar caché
-            cached = backend.catalogue_manager.get_cached(page, scope)
-            if cached and not force:
-                display(cached)
-            else:
-                backend.catalogue_manager.load_async(page, scope, display)
+            readers = (backend.debs, lambda: backend.flatpaks(scope), lambda: backend.repos(scope))
+            self.job('Cargando catálogo…', readers[page], display)
 
     def selected_rows(self):
         model, paths = self.view.get_selection().get_selected_rows()
@@ -446,7 +297,7 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
 
     def show_details(self):
         self.cancel_details()
-        page, scope = self.page_combo.get_active(), self.scope_combo.get_active_id()
+        page, scope = self.page.get_active(), self.scope.get_active_id()
         row = self.selected()
         self.details.set_visible(page in (0, 1))
         self.details.set_tooltip_text(None)
@@ -516,49 +367,44 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
     def show_actions(self):
         for child in self.actions.get_children():
             self.actions.remove(child)
-        page = self.page_combo.get_active()
-        scope = self.scope_combo.get_active_id() if page else None
+        page = self.page.get_active()
+        scope = self.scope.get_active_id() if page else None
         rows = self.selected_rows()
         row = rows[0] if len(rows) == 1 else None
-
         if page in (0, 2):
-            self.button(self.translate('Actualizar índices APT'), lambda: self.modify(
-                self.translate('Actualizar los índices de APT'), self.admin('refresh')))
-
-        self.button(self.translate('Recargar'), lambda: self.load(force=True))
-
+            self.button('Actualizar índices APT', lambda: self.modify(
+                'Actualizar los índices de APT', self.admin('refresh')))
+        self.button('Recargar', lambda: self.load(force=True))
         if page == 0:
-            self.button(self.translate('Instalar archivo .deb…'), self.choose_local_deb)
-
+            self.button('Instalar archivo .deb…', self.choose_local_deb)
         if page == 2:
-            self.button(self.translate('Añadir repositorio APT…'), self.add_apt)
-            self.button(self.translate('Añadir remoto Flatpak…'), self.add_remote)
+            self.button('Añadir repositorio APT…', self.add_apt)
+            self.button('Añadir remoto Flatpak…', self.add_remote)
             if row and row[2] == 'Flatpak':
-                toggle = self.translate('Desactivar') if row[3] == 'Activo' else self.translate('Activar')
+                toggle = 'Desactivar' if row[3] == 'Activo' else 'Activar'
                 command = 'disable' if row[3] == 'Activo' else 'enable'
                 self.button(toggle, lambda: self.modify(f'{toggle} {row[0]}',
                     backend.flatpak(scope, 'remote-modify', f'--{command}', '--', row[4])))
-                self.button(self.translate('Quitar'), lambda: self.modify(f'{self.translate("Quitar el remoto")} {row[0]}',
+                self.button('Quitar', lambda: self.modify(f'Quitar el remoto {row[0]}',
                     backend.flatpak(scope, 'remote-delete', '--', row[4])))
             elif row:
-                toggle = self.translate('Restaurar archivo') if row[4].endswith('.disabled') else self.translate('Pausar archivo')
+                toggle = 'Restaurar archivo' if row[4].endswith('.disabled') else 'Pausar archivo'
                 command = 'enable' if row[4].endswith('.disabled') else 'disable'
                 self.button(toggle, lambda: self.modify(toggle, self.admin(command, row[4]),
-                    f'{self.translate("Se aplica a todas las entradas de")} {row[4]}.'))
+                    f'Se aplica a todas las entradas de {row[4]}.'))
                 if row[2] == 'APT • gestionado':
-                    self.button(self.translate('Quitar'), lambda: self.modify(f'{self.translate("Quitar el repositorio")} {row[0]}',
+                    self.button('Quitar', lambda: self.modify(f'Quitar el repositorio {row[0]}',
                         self.admin('delete', row[4])))
         elif page == 1:
-            pass  # "Actualizar todo" manejado abajo
-
+            # "Actualizar todo" (nuevo) ya cubre esta función con cola y confirmación
+            pass
         if row and page in (0, 1):
             if row[3] == 'Disponible':
-                self.button(self.translate('Instalar'), lambda: self.package_action(page, scope, row, 'install'))
+                self.button('Instalar', lambda: self.package_action(page, scope, row, 'install'))
             else:
                 if row[3] == 'Actualizable' or page == 1:
-                    self.button(self.translate('Actualizar'), lambda: self.package_action(page, scope, row, 'upgrade'))
-                self.button(self.translate('Desinstalar'), lambda: self.package_action(page, scope, row, 'remove'))
-
+                    self.button('Actualizar', lambda: self.package_action(page, scope, row, 'upgrade'))
+                self.button('Desinstalar', lambda: self.package_action(page, scope, row, 'remove'))
         if page in (0, 1) and rows:
             states = {item[3] for item in rows}
             if 'Disponible' in states:
@@ -570,13 +416,12 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
             if states & {'Instalado', 'Actualizable'}:
                 self.button(self.translate('Desinstalar seleccionados'),
                             lambda: self.queue_action('remove'))
-
         if page in (0, 1):
+            # Botón "Actualizar todo" si hay actualizaciones disponibles en el catálogo
             all_rows = self.catalogues.get((page, scope if page else None), ([], []))[0]
             if any(row[3] == 'Actualizable' for row in all_rows):
                 self.suggested_button(self.translate('Actualizar todo'),
                                       lambda: self.queue_all_upgrades(all_rows, page, scope))
-
         self.actions.show_all()
 
     def button(self, label, action):
@@ -593,7 +438,7 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
     def queue_action(self, action):
         if self.busy:
             return
-        page, scope = self.page_combo.get_active(), self.scope_combo.get_active_id()
+        page, scope = self.page.get_active(), self.scope.get_active_id()
         if page not in (0, 1):
             return
         accepted = {'install': {'Disponible'},
@@ -717,7 +562,7 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
     def apply_queue(self):
         if self.busy or not self.queue:
             return
-        page, scope = self.page_combo.get_active(), self.scope_combo.get_active_id()
+        page, scope = self.page.get_active(), self.scope.get_active_id()
         items = list(self.queue)
 
         def simulate():
@@ -842,7 +687,7 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
     def open_local_deb(self, filename):
         if self.destroyed:
             return GLib.SOURCE_REMOVE
-        if self.busy or getattr(self.window, 'sincronizando_reloj', False):
+        if self.busy or self.window.sincronizando_reloj:
             return GLib.SOURCE_CONTINUE
 
         def confirm(result):
@@ -853,7 +698,7 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
                             confirm=True, accept_label='Instalar'):
                 self.applying_changes = True
                 command = (self.admin('install-trusted-local', digest, package) if trusted else
-                           ['/usr/bin/pkexec', admin.ADMIN, 'install-local', digest])
+                           ['/usr/bin/pkexec', backend.ADMIN, 'install-local', digest])
                 self.job('Instalando el paquete…', lambda: backend.install_local_deb(filename, command),
                          installed)
 
@@ -902,38 +747,6 @@ class EnhancedSoftwareManagerPage(Gtk.Box):
             if not name or not url.startswith('https://') or not url.endswith('.flatpakrepo'):
                 self.message('Indica un nombre y una URL HTTPS de un archivo .flatpakrepo')
                 return
-            scope = self.scope_combo.get_active_id()
+            scope = self.scope.get_active_id()
             self.modify(f'Añadir {name}', backend.flatpak(
                 scope, 'remote-add', '--if-not-exists', '--', name, url), url)
-
-    def job(self, message, task, completed):
-        self.busy = True
-        for widget in (self.page_combo, self.scope_combo, self.actions, self.queue_actions):
-            widget.set_sensitive(False)
-        self.status.set_text(message)
-        future = self.pool.submit(task)
-
-        def finish():
-            if self.destroyed:
-                return False
-            self.applying_changes = False
-            self.busy = False
-            for widget in (self.page_combo, self.scope_combo, self.actions, self.queue_actions):
-                widget.set_sensitive(True)
-            try:
-                result = future.result()
-            except (RuntimeError, OSError, ValueError) as exc:
-                self.status.set_text('La operación no se pudo completar')
-                self.message('Error', str(exc))
-            else:
-                completed(result)
-            self.show_actions()
-            return False
-
-        future.add_done_callback(lambda _: GLib.idle_add(finish))
-
-
-# Para compatibilidad - SoftwareManagerPage original se mantiene en software_manager.manager original
-# OriginalSoftwareManagerPage = SoftwareManagerPage
-# Compatibilidad con el entrypoint GTK3 y los tests existentes.
-SoftwareManagerPage = EnhancedSoftwareManagerPage
