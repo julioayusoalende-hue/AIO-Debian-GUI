@@ -390,6 +390,14 @@ for language in ('es', 'en', 'fr', 'zh'):
             assert 'Dependencias: base (>= 1), alternativa | otra' in ficha
             run.assert_called_once_with(
                 ['/usr/bin/apt-cache', 'show', '--', 'prueba:amd64=2.0'], timeout=8)
+        with patch.object(backend, 'run', side_effect=[
+                'Package: prueba\nVersion: 1.0\nArchitecture: amd64\n'
+                'Description: Herramienta de prueba\n',
+                'Candidate: 2.0\n']) as run:
+            metadata = backend.deb_details('prueba:amd64', '1.0', 'amd64', updatable=True)
+        assert metadata.get('Versión disponible') == '2.0'
+        assert run.call_args_list[1].args[0] == [
+            '/usr/bin/apt-cache', 'policy', '--', 'prueba']
         gestor.store.clear()
         flatpak_info = ('Ejemplo - Editor de notas\n  sin conexión\n\n'
                         '     ID: org.example.Editor\nRuntime: org.gnome.Platform/x86_64/48\n'
@@ -410,7 +418,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         with patch.object(backend, 'remotes', return_value=[
             ('flathub', '', ''), ('otro', '', ''), ('pausado', '', 'disabled'),
         ]), patch.object(backend, 'run', side_effect=[instalado, cat, ref + '\n', cat]) as run:
-            filas, errores = backend.flatpaks('user')
+            filas, errores, _actualizables = backend.flatpaks('user')
             assert not errores
             assert {(fila[1], fila[4]): fila[3] for fila in filas} == {
                 (ref, 'flathub'): 'Actualizable', (otra_ref, 'flathub'): 'Disponible',
@@ -418,11 +426,11 @@ for language in ('es', 'en', 'fr', 'zh'):
             }
             assert run.call_args_list[2].args[0] == [
                 '/usr/bin/flatpak', '--user', 'remote-ls', '--app', '--updates', '--all',
-                '--arch=*', '--columns=ref', '--', 'flathub',
+                '--arch=*', '--columns=ref,version', '--', 'flathub',
             ]
         with patch.object(backend, 'remotes', return_value=[('flathub', '', '')]), \
              patch.object(backend, 'run', side_effect=[instalado, cat, RuntimeError('sin conexión')]):
-            parciales, errores = backend.flatpaks('system')
+            parciales, errores, _actualizables = backend.flatpaks('system')
             assert errores == ['flathub — sin conexión']
             assert next(fila for fila in parciales if fila[1] == ref)[3] == 'Instalado'
         with patch.object(gestor, 'load'):

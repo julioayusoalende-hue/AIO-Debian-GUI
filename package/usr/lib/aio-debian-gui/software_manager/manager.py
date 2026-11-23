@@ -31,6 +31,7 @@ class SoftwareManagerPage(Gtk.Box):
         self.busy = False
         self.applying_changes = False
         self.catalogues = {}
+        self.catalogue_extra = {}
         self.loaded = False
         self.destroyed = False
         self.connect('destroy', self.on_destroy)
@@ -176,7 +177,8 @@ class SoftwareManagerPage(Gtk.Box):
         suggestions = set()
         prefixes, matches = [], []
         for row in self.rows:
-            fields = (row[0].casefold(), row[1].casefold())
+            fields = (row[0].casefold(), row[1].casefold(),
+                      self.catalogue_extra.get(row[0] or row[1], '').casefold())
             if packages and wanted and row[3] not in (
                 (), ('Instalado', 'Actualizable'), ('Disponible',), ('Actualizable',)
             )[wanted]:
@@ -255,7 +257,8 @@ class SoftwareManagerPage(Gtk.Box):
 
         def display(result):
             self.catalogues[key] = result
-            self.rows, self.catalogue_errors = result
+            self.rows, self.catalogue_errors = result[:2]
+            self.catalogue_extra = result[2] if len(result) > 2 else {}
             if self.timer:
                 GLib.source_remove(self.timer)
             self.filter_rows()
@@ -323,10 +326,12 @@ class SoftwareManagerPage(Gtk.Box):
         def start():
             self.details_timer = 0
             if page == 0:
-                task = self.details_pool.submit(backend.deb_details, identifier, version, origin)
+                task = self.details_pool.submit(
+                    backend.deb_details, identifier, version, origin, state == 'Actualizable')
             else:
                 task = self.details_pool.submit(
-                    backend.flatpak_details, scope, origin, identifier, state != 'Disponible')
+                    backend.flatpak_details, scope, origin, identifier, state != 'Disponible',
+                    self.catalogue_extra.get((origin, identifier)))
             self.details_request = task
             task.add_done_callback(lambda request: GLib.idle_add(finish, request))
             return GLib.SOURCE_REMOVE
@@ -339,6 +344,7 @@ class SoftwareManagerPage(Gtk.Box):
         fields = [
             ('Identificador', identifier),
             ('Versión', metadata.get('Version') or version),
+            ('Versión disponible', metadata.get('Versión disponible')),
             ('Arquitectura', metadata.get('Architecture') or (origin if page == 0 else '')),
             ('Remoto', origin if page == 1 else ''),
             ('Rama', metadata.get('Branch')),
