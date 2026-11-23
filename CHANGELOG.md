@@ -2,6 +2,8 @@
 
 ## 1.1.8
 
+- Permite seleccionar varios paquetes DEB o aplicaciones Flatpak y añadirlos a una cola de instalación, actualización o desinstalación que se aplica de forma conjunta.
+
 - Muestra la entrada predeterminada, la espera y la visibilidad vigentes de GRUB al cargar Inicio.
 
 - Detecta incidencias pendientes de dpkg antes de instalar una actualización Testing y conserva el aislamiento de la descarga de APT.

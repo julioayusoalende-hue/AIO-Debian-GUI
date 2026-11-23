@@ -42,6 +42,7 @@ python3 scripts/test-host-updater.py && bien "actualizador del anfitrión" || fa
 python3 scripts/test-interface-translations.py && bien "traducciones de interfaz y diagnóstico" || fallo "traducciones incompletas"
 python3 scripts/test-app-update-diagnostic.py && bien "versiones y actualización desde diagnóstico" || fallo "pruebas de actualización desde diagnóstico"
 python3 scripts/test-install-format.py && bien "detección de formato DEB/AppImage/Flatpak" || fallo "detección de formato"
+python3 scripts/test-software-queue.py && bien "cola del gestor de software y lotes APT/Flatpak" || fallo "pruebas de la cola del gestor de software"
 python3 scripts/test-system-logo.py && bien "logotipos dinámicos Debian/Ubuntu" || fallo "pruebas de logotipos"
 bash scripts/test-nvidia.sh && bien "detección NVIDIA e híbrida" || fallo "pruebas NVIDIA"
 bash scripts/test-backports-rollback.sh && bien "reversión Backports segura" || fallo "pruebas de reversión Backports"
@@ -58,6 +59,9 @@ if python3 -c 'import gi; gi.require_version("Gtk", "3.0")' >/dev/null 2>&1; the
         bien "preferencias, traducciones, Acerca de y modo simple" ||
         fallo "pruebas de preferencias"
     python3 scripts/test-ui-flow.py && bien "flujos de interfaz y adaptación" || fallo "pruebas de interfaz"
+    python3 scripts/test-software-queue-ui.py &&
+        bien "selección múltiple y cola de instalación" ||
+        fallo "pruebas GTK de la cola del gestor de software"
     python3 scripts/test-scheduler-ui.py && bien "interfaz de programación" || fallo "pruebas GTK de programación"
 else
     echo "- PyGObject no instalado: se omiten las pruebas de preferencias"

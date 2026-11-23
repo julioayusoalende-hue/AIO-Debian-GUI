@@ -16,6 +16,7 @@ PACKAGE = re.compile(r'[a-z0-9][a-z0-9+.-]*(?::[a-z0-9][a-z0-9-]*)?')
 TOKEN = re.compile(r'[A-Za-z0-9][A-Za-z0-9+._/-]*')
 APT_SOURCE = re.compile(r'[A-Za-z0-9_.-]+\.(?:list|sources)(?:\.disabled)?')
 MANAGED = re.compile(r'ayusos-manager-[a-f0-9]{16}\.sources(?:\.disabled)?')
+MAX_QUEUE = 100
 
 
 def source_contents(uri, suite, components, key):
@@ -56,9 +57,26 @@ def write_source(uri, suite, components, key):
 def system_flatpak_args(values):
     # Reconstruir únicamente las operaciones que ofrece el gestor.
     identifier = re.compile(r'[A-Za-z0-9][A-Za-z0-9._/-]*')
+
+    def valid(operands):
+        return (len(operands) <= MAX_QUEUE
+                and all(identifier.fullmatch(item) and '..' not in item
+                        for item in operands))
+
+    if values == ['update', '-y']:
+        return ['/usr/bin/flatpak', '--system', *values]
+    # La cola permite aplicar varios paquetes en una sola operación.
+    for prefix in (['update', '-y', '--'], ['uninstall', '-y', '--']):
+        if values[:len(prefix)] == prefix:
+            operands = values[len(prefix):]
+            if operands and valid(operands):
+                return ['/usr/bin/flatpak', '--system', *values]
+    if values[:3] == ['install', '-y', '--']:
+        operands = values[3:]
+        # El primer operando es el remoto y el resto, referencias de aplicaciones.
+        if len(operands) >= 2 and valid(operands):
+            return ['/usr/bin/flatpak', '--system', *values]
     for prefix, count in (
-        (['update', '-y'], 0), (['update', '-y', '--'], 1),
-        (['install', '-y', '--'], 2), (['uninstall', '-y', '--'], 1),
         (['remote-delete', '--'], 1), (['remote-modify', '--enable', '--'], 1),
         (['remote-modify', '--disable', '--'], 1),
         (['remote-add', '--if-not-exists', '--'], 2),
@@ -71,7 +89,7 @@ def system_flatpak_args(values):
             if url.scheme != 'https' or not url.hostname or url.username or url.password:
                 break
             operands = operands[:-1]
-        if all(identifier.fullmatch(item) and '..' not in item for item in operands):
+        if valid(operands):
             return ['/usr/bin/flatpak', '--system', *values]
     raise ValueError('Operación Flatpak del sistema no válida.')
 
@@ -135,9 +153,10 @@ def main(args):
                                    stdin=subprocess.DEVNULL, env=env)
     if command == 'refresh' and not values:
         return subprocess.call(apt + ['update'], env=env)
-    if command in ('install', 'remove', 'upgrade') and len(values) == 1 and PACKAGE.fullmatch(values[0]):
+    if (command in ('install', 'remove', 'upgrade') and 1 <= len(values) <= MAX_QUEUE
+            and all(PACKAGE.fullmatch(value) for value in values)):
         action = ['install', '--only-upgrade'] if command == 'upgrade' else [command]
-        return subprocess.call(apt + action + ['--', values[0]], env=env)
+        return subprocess.call(apt + action + ['--', *values], env=env)
     if command == 'add-source' and len(values) == 4:
         write_source(*values)
         return 0
