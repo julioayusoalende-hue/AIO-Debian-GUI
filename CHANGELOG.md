@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.1.9
+
+- Continúa el desarrollo de la serie 1.1.9 sobre la base estable 1.1.8.
+
 ## 1.1.8
 
 - Reordena las pestañas: Configuración y mantenimiento, Gestor de software, Apps recomendadas, Backup e Inicio.
