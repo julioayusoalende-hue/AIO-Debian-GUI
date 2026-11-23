@@ -56,6 +56,7 @@ def install_local_deb(filename, command):
 
 def debs():
     rows = []
+    descriptions = {}
     for line in run(['/usr/bin/apt', 'list']).splitlines()[1:]:
         fields = line.split(maxsplit=3)
         if len(fields) < 3 or '/' not in fields[0]:
@@ -66,7 +67,16 @@ def debs():
                  'Instalado' if '[installed' in apt_state else 'Disponible')
         identifier = package if arch == 'all' else f'{package}:{arch}'
         rows.append((package, identifier, version, state, arch))
-    return rows, []
+    try:
+        for record in _deb822_records(run(['/usr/bin/apt-cache', 'show'])):
+            name = record.get('Package', '')
+            if name and name not in descriptions:
+                description = (record.get('Description') or record.get('Description-en') or '').strip()
+                if description:
+                    descriptions[name] = description
+    except (RuntimeError, OSError, ValueError):
+        pass
+    return rows, [], descriptions
 
 
 def _deb822_records(output):
@@ -87,7 +97,7 @@ def _deb822_records(output):
             yield fields
 
 
-def deb_details(identifier, version, arch):
+def deb_details(identifier, version, arch, updatable=False):
     name = identifier.split(':', 1)[0]
 
     def find_record(output):
@@ -115,10 +125,19 @@ def deb_details(identifier, version, arch):
         size = record.get(source, '')
         if size.isdecimal():
             details[field] = f'{size} {unit}'
+    if updatable and details:
+        try:
+            output = run(['/usr/bin/apt-cache', 'policy', '--', name], timeout=8)
+        except RuntimeError:
+            output = ''
+        match = re.search(r'^\s*Candidate:\s*(\S+)', output, re.MULTILINE)
+        candidate = match.group(1) if match else ''
+        if candidate and candidate not in ('(none)', '(ninguno)') and candidate != version:
+            details['Versión disponible'] = candidate
     return details
 
 
-def flatpak_details(scope, remote, ref, installed):
+def flatpak_details(scope, remote, ref, installed, new_version=None):
     args = ('info', '--', ref) if installed else ('remote-info', '--', remote, ref)
     output = run(flatpak(scope, *args), timeout=12).strip()
     # With LC_ALL=C.UTF-8, the human-readable report starts with an optional
@@ -135,6 +154,8 @@ def flatpak_details(scope, remote, ref, installed):
         key, _, value = line.strip().partition(':')
         if key in keys and value.strip() not in ('', '-'):
             details['Architecture' if key == 'Arch' else key] = value.strip()
+    if installed and new_version and new_version.strip() not in ('', '-'):
+        details['Versión disponible'] = new_version.strip()
     return details
 
 
@@ -156,6 +177,7 @@ def remotes(scope):
 
 def flatpaks(scope):
     rows = {}
+    updates = {}
     errors = []
     for name, ref, version, origin in columns(run(flatpak(
             scope, 'list', '--app', '--columns=name,ref,version,origin')), 4):
@@ -170,16 +192,18 @@ def flatpaks(scope):
             for name, ref, version in columns(output, 3):
                 rows.setdefault((remote, ref), (name, ref, version, 'Disponible', remote))
             if remote in installed_origins:
-                updates = run(flatpak(scope, 'remote-ls', '--app', '--updates', '--all',
-                                      '--arch=*', '--columns=ref', '--', remote), timeout=12)
-                for (ref,) in columns(updates, 1):
+                updates_out = run(flatpak(scope, 'remote-ls', '--app', '--updates', '--all',
+                                          '--arch=*', '--columns=ref,version', '--', remote), timeout=12)
+                for ref, version in columns(updates_out, 2):
+                    if ref:
+                        updates[(remote, ref)] = version
                     key = (remote, ref)
                     row = rows.get(key)
                     if row and row[3] == 'Instalado':
                         rows[key] = (*row[:3], 'Actualizable', remote)
         except RuntimeError as exc:
             errors.append(f'{remote} — {exc}')
-    return sorted(rows.values(), key=lambda row: row[0].casefold()), errors
+    return sorted(rows.values(), key=lambda row: row[0].casefold()), errors, updates
 
 
 def repos(scope):

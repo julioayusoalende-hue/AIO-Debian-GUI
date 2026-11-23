@@ -2150,7 +2150,7 @@ class VentanaPrincipal(Gtk.Window):
         # Las páginas se construyen en su orden habitual (comparten atributos de
         # la ventana) y se añaden al notebook en el orden de uso previsto:
         # Configuración y mantenimiento, Gestor de software, Apps recomendadas,
-        # Backup e Inicio.
+        # Salud del sistema, Backup e Inicio.
         pagina_inicio = self._pagina_inicio()
         pagina_backup = self._pagina_backup()
         self.pagina_recomendadas = self._pagina_recomendadas()
@@ -2158,13 +2158,16 @@ class VentanaPrincipal(Gtk.Window):
         if not (es_flatpak() or os.environ.get("APPIMAGE") or os.environ.get("SNAP")):
             from software_manager.manager import SoftwareManagerPage
             self.pagina_software = SoftwareManagerPage(self, traducir, autorizacion_sin_contrasena_activa)
+        from aio_core.health_dashboard import create_health_dashboard
+        self.pagina_salud = create_health_dashboard(self, traducir, autorizacion_sin_contrasena_activa)
         notebook.append_page(principal, Gtk.Label(label=traducir("Configuración y mantenimiento")))
         if self.pagina_software is not None:
             notebook.append_page(self.pagina_software, Gtk.Label(label=traducir("Gestor de software")))
         notebook.append_page(self.pagina_recomendadas, Gtk.Label(label=traducir("Apps recomendadas")))
+        notebook.append_page(self.pagina_salud, Gtk.Label(label=traducir("Salud del sistema")))
         notebook.append_page(pagina_backup, Gtk.Label(label=traducir("Backup")))
         notebook.append_page(pagina_inicio, Gtk.Label(label=traducir("Inicio")))
-        notebook.connect("switch-page", self._cambiar_pestana_recomendadas)
+        notebook.connect("switch-page", self._cambiar_pestana_salud)
         self.pagina_terminal = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.boton_mostrar_terminal = Gtk.Button(label=traducir("Mostrar ventana de la terminal"))
         self.boton_mostrar_terminal.set_halign(Gtk.Align.CENTER)
@@ -3435,6 +3438,13 @@ class VentanaPrincipal(Gtk.Window):
         if pagina == self.pagina_recomendadas and not self.backup_action_in_progress:
             self._consultar_estado_recomendadas()
 
+    def _cambiar_pestana_salud(self, _notebook, pagina, _numero):
+        if pagina == self.pagina_salud and not self.backup_action_in_progress:
+            if hasattr(self.pagina_salud, 'on_page_show'):
+                self.pagina_salud.on_page_show()
+        elif hasattr(self.pagina_salud, 'on_page_hide'):
+            self.pagina_salud.on_page_hide()
+
     def _consultar_estado_recomendadas(self, al_completar=None):
         self.recommended_scan_generation += 1
         generation = self.recommended_scan_generation
@@ -4051,14 +4061,6 @@ class VentanaPrincipal(Gtk.Window):
         marco, caja = tarjeta_mantenimiento(9)
         titulo = cabecera_mantenimiento("Información del sistema", "computer-symbolic")
         caja.pack_start(titulo, False, False, 0)
-        self.btn_diagnostico = Gtk.Button(label=traducir("Diagnosticar"))
-        self.btn_diagnostico.set_tooltip_text(traducir(
-            "Comprobar el sistema sin realizar modificaciones"))
-        self.btn_diagnostico.connect("clicked", self._abrir_diagnostico)
-        self.btn_diagnostico.set_image(Gtk.Image.new_from_icon_name(
-            "edit-find-symbolic", Gtk.IconSize.BUTTON))
-        self.btn_diagnostico.set_always_show_image(True)
-        self.btn_diagnostico.set_halign(Gtk.Align.START)
 
         self.ventana_detalles_sistema = None
         self.btn_detalles_sistema = Gtk.Button(label=traducir("Detalles técnicos"))
@@ -4079,9 +4081,8 @@ class VentanaPrincipal(Gtk.Window):
             hardware.attach(valor, 1, fila, 1, 1)
         caja.pack_start(hardware, False, False, 0)
         caja.pack_start(self.salud_sistema, False, False, 0)
-        self.consejo_sistema = etiqueta("Ejecuta el diagnóstico para revisar el estado del sistema.", dim=True)
+        self.consejo_sistema = etiqueta("Usa la pestaña «Salud del sistema» para revisar el estado.", dim=True)
         caja.pack_start(self.consejo_sistema, False, False, 0)
-        caja.pack_start(self.btn_diagnostico, False, False, 0)
         caja.pack_start(self.btn_detalles_sistema, False, False, 0)
         if self.distribucion == "debian":
             self.nvidia_info_label = etiqueta("Buscando GPU NVIDIA…", dim=True)
@@ -4602,11 +4603,6 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_preferencias_menu.set_sensitive(disponible)
         self.btn_programar.set_sensitive(disponible)
         self.btn_borrar.set_sensitive(not self.en_curso)
-        self.btn_diagnostico.set_sensitive(not self.sincronizando_reloj and not self.en_curso
-                                           and not self.diagnostico_en_curso
-                                           and not self.comprobando_actualizacion and not self.programando
-                                           and not self.backup_action_in_progress
-                                           and not self.grub_action_in_progress)
         if self.btn_actualizar_diagnostico is not None:
             self.btn_actualizar_diagnostico.set_sensitive(
                 not self.en_curso and not self.comprobando_actualizacion)

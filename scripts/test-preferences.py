@@ -118,7 +118,7 @@ if Gtk.init_check([])[0]:
     )
     ventana.show_all()
     assert not ventana.expansor_consola.get_expanded()
-    assert [p.get_visible() for p in ventana.notebook.get_children()] == [True, False, False, False, False]
+    assert [p.get_visible() for p in ventana.notebook.get_children()] == [True, False, False, False, False, False]
     assert not ventana.panel_derecho.get_visible()
     assert not ventana.btn_terminal_cabecera.get_visible()
     assert ventana.panel_izquierdo.get_visible()
@@ -126,7 +126,6 @@ if Gtk.init_check([])[0]:
     ventana._aplicar_modo_simple()
     assert ventana.panel_derecho.get_visible()
     assert ventana.btn_terminal_cabecera.get_visible()
-    assert ventana.btn_diagnostico.get_visible()
     ventana.preferencias["modo_simple"] = True
     ventana._aplicar_modo_simple()
     ventana.show_all()
@@ -266,7 +265,7 @@ if Gtk.init_check([])[0]:
         nueva = nuevas_ventanas[0]
         assert nueva.get_titlebar().get_custom_title() is not None
         assert not nueva.expansor_consola.get_expanded()
-        assert [p.get_visible() for p in nueva.notebook.get_children()] == [True, False, False, False, False]
+        assert [p.get_visible() for p in nueva.notebook.get_children()] == [True, False, False, False, False, False]
         assert Gtk.Settings.get_default().get_property(
             "gtk-application-prefer-dark-theme"
         )
@@ -282,7 +281,7 @@ if Gtk.init_check([])[0]:
         GLib.idle_add(guardar_desde_dialogo, "en", "oscuro", True)
         nueva._abrir_preferencias(None)
         assert nueva.notebook.get_current_page() == 0
-        assert [p.get_visible() for p in nueva.notebook.get_children()] == [True, False, False, False, False]
+        assert [p.get_visible() for p in nueva.notebook.get_children()] == [True, False, False, False, False, False]
         nueva._escribir("console restored")
         inicio, fin = nueva.buf.get_bounds()
         assert nueva.buf.get_text(inicio, fin, True) == "console restored"
