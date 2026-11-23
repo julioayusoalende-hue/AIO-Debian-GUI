@@ -414,12 +414,18 @@ class SoftwareManagerPage(Gtk.Box):
             # Botón "Actualizar todo" si hay actualizaciones disponibles en el catálogo
             all_rows = self.catalogues.get((page, scope if page else None), ([], []))[0]
             if any(row[3] == 'Actualizable' for row in all_rows):
-                self.button(self.translate('Actualizar todo'),
-                            lambda: self.queue_all_upgrades(all_rows, page, scope))
+                self.suggested_button(self.translate('Actualizar todo'),
+                                      lambda: self.queue_all_upgrades(all_rows, page, scope))
         self.actions.show_all()
 
     def button(self, label, action):
         button = Gtk.Button(label=label)
+        button.connect('clicked', lambda *_: action())
+        self.actions.add(button)
+
+    def suggested_button(self, label, action):
+        button = Gtk.Button(label=label)
+        button.get_style_context().add_class('suggested-action')
         button.connect('clicked', lambda *_: action())
         self.actions.add(button)
 
