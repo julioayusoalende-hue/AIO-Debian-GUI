@@ -64,6 +64,12 @@ for idioma in ("en", "fr", "zh"):
         for texto in paso[1:3]:
             assert texto in app.TRADUCCIONES[idioma], (idioma, texto)
 
+def solo_primera_pagina_visible(ventana):
+    """Solo la primera página visible; el número depende del canal (DEB, Flatpak, AppImage)."""
+    visibles = [pagina.get_visible() for pagina in ventana.notebook.get_children()]
+    return visibles == [True] + [False] * (len(visibles) - 1)
+
+
 if Gtk.init_check([])[0]:
     for idioma, subtitulo in (
         ("en", "System maintenance and configuration"),
@@ -78,18 +84,27 @@ if Gtk.init_check([])[0]:
         menu = ventana.menu_popover.get_child()
         assert menu.get_visible()
         botones_menu = menu.get_children()
-        assert len(botones_menu) == 5
+        # En Flatpak, AppImage o Snap el menú añade la guía de integración del
+        # anfitrión; en el paquete DEB no aparece.
+        if app.formato_actualizacion() in ("flatpak", "appimage", "snap"):
+            assert len(botones_menu) == 6
+        else:
+            assert len(botones_menu) == 5
         assert all(boton.get_visible() for boton in botones_menu)
         assert [boton.get_label() for boton in botones_menu] == [
             app.traducir("Preferencias"),
             app.traducir("Historial de mantenimiento"),
             app.traducir("Programar mantenimiento"),
+            *([app.traducir("Guía de integración del anfitrión")]
+              if len(botones_menu) == 6 else []),
             app.traducir("Buscar actualizaciones"),
             app.traducir("Acerca de AiO Debian"),
         ]
-        assert ventana.btn_preferencias_menu is botones_menu[0]
-        assert ventana.btn_programar is botones_menu[2]
-        assert ventana.btn_actualizar is botones_menu[3]
+        indice = {boton.get_label(): posicion
+                  for posicion, boton in enumerate(botones_menu)}
+        assert ventana.btn_preferencias_menu is botones_menu[indice[app.traducir("Preferencias")]]
+        assert ventana.btn_programar is botones_menu[indice[app.traducir("Programar mantenimiento")]]
+        assert ventana.btn_actualizar is botones_menu[indice[app.traducir("Buscar actualizaciones")]]
         assert ventana.paneles_principales.get_orientation() == Gtk.Orientation.HORIZONTAL
         ventana.btn_menu.set_active(True)
         deadline = time.monotonic() + 2
@@ -118,7 +133,7 @@ if Gtk.init_check([])[0]:
     )
     ventana.show_all()
     assert not ventana.expansor_consola.get_expanded()
-    assert [p.get_visible() for p in ventana.notebook.get_children()] == [True, False, False, False, False, False]
+    assert solo_primera_pagina_visible(ventana)
     assert not ventana.panel_derecho.get_visible()
     assert not ventana.btn_terminal_cabecera.get_visible()
     assert ventana.panel_izquierdo.get_visible()
@@ -265,7 +280,7 @@ if Gtk.init_check([])[0]:
         nueva = nuevas_ventanas[0]
         assert nueva.get_titlebar().get_custom_title() is not None
         assert not nueva.expansor_consola.get_expanded()
-        assert [p.get_visible() for p in nueva.notebook.get_children()] == [True, False, False, False, False, False]
+        assert solo_primera_pagina_visible(nueva)
         assert Gtk.Settings.get_default().get_property(
             "gtk-application-prefer-dark-theme"
         )
@@ -281,7 +296,7 @@ if Gtk.init_check([])[0]:
         GLib.idle_add(guardar_desde_dialogo, "en", "oscuro", True)
         nueva._abrir_preferencias(None)
         assert nueva.notebook.get_current_page() == 0
-        assert [p.get_visible() for p in nueva.notebook.get_children()] == [True, False, False, False, False, False]
+        assert solo_primera_pagina_visible(nueva)
         nueva._escribir("console restored")
         inicio, fin = nueva.buf.get_bounds()
         assert nueva.buf.get_text(inicio, fin, True) == "console restored"

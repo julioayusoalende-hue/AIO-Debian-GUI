@@ -132,6 +132,10 @@ class BootSettingsTests(unittest.TestCase):
 
     def test_decline_modified_fragment_and_missing_grub(self):
         self.fragment.parent.mkdir()
+        # Sin esto, con umask 002 la carpeta queda en 0775 y el ayudante se
+        # niega antes por permisos, así que la prueba no llegaba a comprobar
+        # el fragmento modificado fuera de la aplicación.
+        self.fragment.parent.chmod(0o755)
         self.fragment.write_text("GRUB_TIMEOUT=20\n")
         with self.assertRaisesRegex(ValueError, "modified outside"):
             self.manage("status")
