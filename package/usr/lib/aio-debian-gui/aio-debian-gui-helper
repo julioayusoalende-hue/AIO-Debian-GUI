@@ -1331,8 +1331,17 @@ nvidia_modulo_listo() {
     modulo=$(modinfo -k "$(uname -r)" -F version nvidia 2>/dev/null) || return 1
     [ "$modulo" = "$version" ] || return 1
     LC_ALL=C dkms status 2>/dev/null | awk -F", " -v v="$version" -v k="$(uname -r)" '
-        $1 ~ /^nvidia[^/]*\// && substr($1, index($1, "/") + 1) == v && $2 == k && $3 ~ /: installed$/ { found=1 }
+        $1 ~ /^nvidia[^/]*\// && substr($1, index($1, "/") + 1) == v && $2 == k && $3 ~ /: installed($|[[:space:]])/ { found=1 }
         END { exit !found }'
+}
+
+nvidia_diagnostico_dkms() {
+    local esperado modulo
+    esperado=$(dpkg-query -W -f='${Version}' nvidia-driver 2>/dev/null)
+    esperado=${esperado#*:}; esperado=${esperado%%-*}
+    modulo=$(modinfo -k "$(uname -r)" -F version nvidia 2>/dev/null) || modulo="no encontrado"
+    info "Diagnóstico: kernel $(uname -r), nvidia-driver ${esperado:-no instalado}, módulo cargable: $modulo."
+    LC_ALL=C dkms status 2>&1 | grep -i nvidia | while IFS= read -r linea; do info "dkms status: $linea"; done
 }
 
 # Se consulta la lista de GPU del paquete candidato autenticado por APT.
@@ -1425,6 +1434,7 @@ paso_nvidia_driver() {
     fi
     if ! nvidia_modulo_listo; then
         err "APT terminó, pero no se verificó el módulo DKMS para el kernel activo. Revisa DKMS antes de reiniciar."
+        nvidia_diagnostico_dkms
         return 1
     fi
     REINICIO_REQUERIDO=1

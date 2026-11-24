@@ -13,6 +13,10 @@ trap 'rm -rf -- "$tmp"' EXIT
     modinfo() { echo 550.163.01; }
     dkms() { echo 'nvidia-current/550.163.01, 6.12.1-amd64, x86_64: installed'; }
     nvidia_modulo_listo
+    dkms() { echo 'nvidia-current/550.163.01, 6.12.1-amd64, x86_64: installed (original_module exists)'; }
+    nvidia_modulo_listo || { echo 'ERROR: installed con nota rechazado'; exit 1; }
+    dkms() { echo 'nvidia-current/550.163.01, 6.12.1-amd64, x86_64: installed-weak'; }
+    if nvidia_modulo_listo; then echo 'ERROR: estado desconocido aceptado'; exit 1; fi
     dkms() { echo 'nvidia-current/550.163.01, 6.12.1-amd64, x86_64: added'; }
     if nvidia_modulo_listo; then echo 'ERROR: DKMS no compilado aceptado'; exit 1; fi
     dkms() { echo 'nvidia-current/550.163.01, 6.11.0-amd64, x86_64: installed'; }
