@@ -1377,7 +1377,7 @@ nvidia_report() {
     if nvidia_presente; then
         p=1
         nvidia_hibrida && h=1
-        nvidia_modulo_listo && installed=1
+        nvidia_modulo_listo && nvidia_modeset_configurado && installed=1
         candidate=$(LC_ALL=C apt-cache policy nvidia-driver 2>/dev/null | awk '/Candidate:/ {print $2; exit}')
         [ -n "$candidate" ] || candidate=no-disponible
     fi
@@ -1388,12 +1388,45 @@ nvidia_report() {
     printf '##NVIDIA:secureboot:%s\n' "$(nvidia_secure_boot)"
     printf '##NVIDIA:kernel:%s\n' "$(uname -r)"
 }
+# Debian no activa el modesetting de nvidia-drm: en portátiles híbridos y con
+# Wayland/GDM la sesión gráfica puede quedarse en negro. Recomendado por
+# wiki.debian.org/NvidiaGraphicsDrivers. Devuelve 0 si lo ha cambiado,
+# 1 si ya estaba y 2 si ha fallado.
+NVIDIA_MODESET_CONF=${NVIDIA_MODESET_CONF:-/etc/modprobe.d/nvidia-modeset.conf}
+NVIDIA_MODESET_CONTENIDO=$'# Creado por AiO Debian GUI: modesetting para el controlador NVIDIA.\noptions nvidia-drm modeset=1\noptions nvidia-drm fbdev=1'
+nvidia_modeset_configurado() {
+    [ -f "$NVIDIA_MODESET_CONF" ] && [ "$(cat "$NVIDIA_MODESET_CONF" 2>/dev/null)" = "$NVIDIA_MODESET_CONTENIDO" ]
+}
+nvidia_configurar_modeset() {
+    local contenido="$NVIDIA_MODESET_CONTENIDO" kernel
+    if nvidia_modeset_configurado; then
+        return 1
+    fi
+    info "Activando modesetting de NVIDIA (nvidia-drm modeset=1) para evitar la pantalla negra al iniciar."
+    printf '%s\n' "$contenido" > "$NVIDIA_MODESET_CONF" || { err "No se pudo escribir $NVIDIA_MODESET_CONF."; return 2; }
+    kernel=$(uname -r)
+    if command -v update-initramfs >/dev/null 2>&1; then
+        update-initramfs -u -k "$kernel" || { err "No se pudo regenerar el initramfs."; return 2; }
+    elif command -v dracut >/dev/null 2>&1; then
+        dracut --force --kver "$kernel" || { err "No se pudo regenerar el initramfs."; return 2; }
+    fi
+    return 0
+}
+
 paso_nvidia_driver() {
     local candidate kernel headers modulo simulation metadata limite
     [ "$(leer_distribucion)" = debian ] || { err "NVIDIA automático solo en Debian."; return 1; }
     nvidia_presente || { err "No se detectó una GPU NVIDIA PCI."; return 1; }
     if nvidia_modulo_listo; then
         ok "El controlador NVIDIA tiene un módulo DKMS instalado para el kernel activo."
+        local estado=0
+        nvidia_configurar_modeset || estado=$?
+        [ "$estado" -eq 2 ] && return 1
+        if [ "$estado" -eq 0 ]; then
+            REINICIO_REQUERIDO=1
+            echo "##REBOOT:1"
+            ok "Modesetting activado. Reinicia para aplicarlo."
+        fi
         return 0
     fi
     nvidia_asegurar_mokutil || return 1
@@ -1450,6 +1483,9 @@ paso_nvidia_driver() {
         nvidia_diagnostico_dkms
         return 1
     fi
+    local estado_modeset=0
+    nvidia_configurar_modeset || estado_modeset=$?
+    [ "$estado_modeset" -eq 2 ] && return 1
     REINICIO_REQUERIDO=1
     echo "##REBOOT:1"
     ok "Módulo DKMS verificado. Reinicia y comprueba nvidia-smi; la GPU activa solo puede confirmarse después del reinicio."

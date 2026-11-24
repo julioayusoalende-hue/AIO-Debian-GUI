@@ -63,9 +63,25 @@ apt-get() {
     READY=1
     return "$INSTALL_STATUS"
 }
-# Paquete sano: no modifica el sistema.
-paso_nvidia_driver
+NVIDIA_MODESET_CONF="$tmp/nvidia-modeset.conf"
+update-initramfs() { echo "initramfs $*" >> "$tmp/initramfs"; }
+# Paquete sano sin modesetting: solo escribe la opción y regenera el initramfs.
+paso_nvidia_driver > "$tmp/out"
 [ ! -s "$tmp/calls" ]
+grep -qx 'options nvidia-drm modeset=1' "$NVIDIA_MODESET_CONF"
+grep -qx 'initramfs -u -k 6.12.1-amd64' "$tmp/initramfs"
+grep -q '##REBOOT:1' "$tmp/out"
+# Segunda ejecución: ya configurado, no toca nada ni pide reiniciar.
+: > "$tmp/initramfs"
+paso_nvidia_driver > "$tmp/out"
+[ ! -s "$tmp/initramfs" ]
+if grep -q '##REBOOT' "$tmp/out"; then echo 'ERROR: reinicio innecesario'; exit 1; fi
+# Fallo del initramfs: la tarea falla.
+rm -f "$NVIDIA_MODESET_CONF"
+update-initramfs() { return 1; }
+if paso_nvidia_driver >/dev/null 2>&1; then echo 'ERROR: fallo de initramfs ignorado'; exit 1; fi
+update-initramfs() { echo "initramfs $*" >> "$tmp/initramfs"; }
+rm -f "$NVIDIA_MODESET_CONF"
 # Paquete ausente o incompleto: selección, simulación e instalación protegida.
 READY=0
 paso_nvidia_driver
