@@ -2176,6 +2176,8 @@ class VentanaPrincipal(Gtk.Window):
         notebook.append_page(principal, Gtk.Label(label=traducir("Configuración y mantenimiento")))
         if self.pagina_software is not None:
             notebook.append_page(self.pagina_software, Gtk.Label(label=traducir("Gestor de software")))
+            # Arrastrar un .deb o .flatpakref a cualquier parte de la ventana lo abre en el gestor.
+            self.pagina_software.enable_drop(self, self._mostrar_gestor_software)
         notebook.append_page(self.pagina_recomendadas, Gtk.Label(label=traducir("Apps recomendadas")))
         notebook.append_page(pagina_backup, Gtk.Label(label=traducir("Backup")))
         notebook.append_page(pagina_inicio, Gtk.Label(label=traducir("Inicio")))
@@ -2458,6 +2460,17 @@ class VentanaPrincipal(Gtk.Window):
             self.grub_formulario.attach(label, 0, fila, 1, 1)
             self.grub_formulario.attach(widget, 1, fila, 1, 1)
 
+        self.grub_os_prober = Gtk.Switch(halign=Gtk.Align.START, valign=Gtk.Align.CENTER)
+        self.grub_os_prober_manejador = self.grub_os_prober.connect(
+            "notify::active", self._cambiar_os_prober)
+        label = etiqueta("Detectar otros sistemas operativos (os-prober)")
+        label.set_mnemonic_widget(self.grub_os_prober)
+        self.grub_formulario.attach(label, 0, 3, 1, 1)
+        self.grub_formulario.attach(self.grub_os_prober, 1, 3, 1, 1)
+        caja.pack_start(etiqueta(
+            "Al activar o desactivar la detección se regenera GRUB (update-grub) "
+            "para añadir o quitar del menú otros sistemas como Windows.", dim=True),
+            False, False, 0)
         caja.pack_start(etiqueta(
             "Usa 0 para arrancar al instante, -1 para esperar indefinidamente "
             "o deja el campo vacío para usar los ajustes del sistema.", dim=True),
@@ -2527,6 +2540,56 @@ class VentanaPrincipal(Gtk.Window):
         self._actualizar_sensibilidad()
         threading.Thread(target=self._procesar_grub, args=(argumentos,), daemon=True).start()
 
+    def _mostrar_gestor_software(self):
+        pagina = self.pagina_software
+        if pagina is not None:
+            pagina.set_no_show_all(False)
+            pagina.show_all()
+            self.notebook.set_current_page(self.notebook.page_num(pagina))
+
+    def _poner_os_prober(self, activo):
+        self.grub_os_prober.handler_block(self.grub_os_prober_manejador)
+        self.grub_os_prober.set_active(activo)
+        self.grub_os_prober.handler_unblock(self.grub_os_prober_manejador)
+
+    def _cambiar_os_prober(self, interruptor, _param):
+        if self.grub_estado is None or self.grub_action_in_progress:
+            return
+        activar = interruptor.get_active()
+        efectivo = self.grub_estado.get("effective", {}).get("GRUB_DISABLE_OS_PROBER")
+        if efectivo == ("false" if activar else "true"):
+            return
+        if activar and not self.grub_estado.get("os_prober_installed", True):
+            self._poner_os_prober(False)
+            self._mensaje(Gtk.MessageType.ERROR, "os-prober no está instalado",
+                          "Instala el paquete os-prober para detectar otros sistemas operativos.")
+            return
+        dialogo = Gtk.MessageDialog(
+            transient_for=self, modal=True, message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.NONE,
+            text=traducir("¿Activar la detección de otros sistemas?" if activar
+                          else "¿Desactivar la detección de otros sistemas?"))
+        dialogo.format_secondary_text(traducir(
+            "Se ejecutará update-grub para regenerar el menú de arranque. "
+            "Puede tardar un poco." if activar else
+            "Se ejecutará update-grub y los otros sistemas desaparecerán del menú de arranque."))
+        dialogo.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
+        dialogo.add_button(traducir("Continuar"), Gtk.ResponseType.OK)
+        dialogo.set_default_response(Gtk.ResponseType.CANCEL)
+        continuar = dialogo.run() == Gtk.ResponseType.OK
+        dialogo.destroy()
+        if not continuar:
+            self._poner_os_prober(not activar)
+            return
+        ajustes = dict(self.grub_estado["settings"])
+        ajustes["GRUB_DISABLE_OS_PROBER"] = "false" if activar else "true"
+        argumentos = ["apply", json.dumps(
+            {"revision": self.grub_estado["revision"], "settings": ajustes})]
+        self.grub_action_in_progress = True
+        self.grub_mensaje.set_text(traducir("Regenerando GRUB…"))
+        self._actualizar_sensibilidad()
+        threading.Thread(target=self._procesar_grub, args=(argumentos,), daemon=True).start()
+
     def _procesar_grub(self, argumentos):
         estado, error = None, None
         try:
@@ -2550,6 +2613,9 @@ class VentanaPrincipal(Gtk.Window):
         self._actualizar_sensibilidad()
         if error:
             titulo = "No se pudo gestionar el arranque de GRUB"
+            if self.grub_estado is not None:
+                self._poner_os_prober(self.grub_estado.get("effective", {})
+                                      .get("GRUB_DISABLE_OS_PROBER") == "false")
             self.grub_mensaje.set_text(traducir(titulo))
             self._mensaje(Gtk.MessageType.ERROR, titulo, error)
             return GLib.SOURCE_REMOVE
@@ -2572,6 +2638,7 @@ class VentanaPrincipal(Gtk.Window):
             self.grub_entrada.set_active_id(predeterminada)
         self.grub_tiempo.set_text(self.grub_valores_cargados["GRUB_TIMEOUT"])
         self.grub_estilo.set_active_id(self.grub_valores_cargados["GRUB_TIMEOUT_STYLE"])
+        self._poner_os_prober(estado.get("effective", {}).get("GRUB_DISABLE_OS_PROBER") == "false")
         self.grub_formulario.set_sensitive(True)
         self.grub_acciones.set_sensitive(True)
         self.grub_restaurar.set_sensitive(bool(ajustes))
@@ -5794,7 +5861,7 @@ def main():
             pagina.set_no_show_all(False)
             pagina.show_all()
             win.notebook.set_current_page(win.notebook.page_num(pagina))
-            GLib.timeout_add(100, pagina.open_local_deb, os.path.abspath(sys.argv[1]))
+            GLib.timeout_add(100, pagina.open_local_file, os.path.abspath(sys.argv[1]))
     if aviso_reinicio_programado:
         GLib.idle_add(win._preguntar_reinicio)
     if error_preferencias:

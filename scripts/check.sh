@@ -42,6 +42,7 @@ python3 scripts/test-host-updater.py && bien "actualizador del anfitrión" || fa
 python3 scripts/test-interface-translations.py && bien "traducciones de interfaz y diagnóstico" || fallo "traducciones incompletas"
 python3 scripts/test-app-update-diagnostic.py && bien "versiones y actualización desde diagnóstico" || fallo "pruebas de actualización desde diagnóstico"
 python3 scripts/test-install-format.py && bien "detección de formato DEB/AppImage/Flatpak" || fallo "detección de formato"
+python3 scripts/test-local-files.py && bien "instalación de .flatpakref y arrastrar archivos" || fallo "pruebas de archivos locales"
 python3 scripts/test-software-queue.py && bien "cola del gestor de software y lotes APT/Flatpak" || fallo "pruebas de la cola del gestor de software"
 python3 scripts/test-system-logo.py && bien "logotipos dinámicos Debian/Ubuntu" || fallo "pruebas de logotipos"
 bash scripts/test-nvidia.sh && bien "detección NVIDIA e híbrida" || fallo "pruebas NVIDIA"

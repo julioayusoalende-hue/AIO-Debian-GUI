@@ -18,7 +18,8 @@ import tempfile
 DROP_IN = "zz-aio-debian-gui.cfg"
 LEGACY_DROP_IN = "99-zz-aio-debian-gui.cfg"
 HEADER = "# Managed by AiO Debian GUI\n"
-FIELDS = ("GRUB_DEFAULT", "GRUB_TIMEOUT", "GRUB_TIMEOUT_STYLE")
+FIELDS = ("GRUB_DEFAULT", "GRUB_TIMEOUT", "GRUB_TIMEOUT_STYLE", "GRUB_DISABLE_OS_PROBER")
+OS_PROBER = Path("/usr/bin/os-prober")
 ENTRY_ID = re.compile(r"[A-Za-z0-9_.:+-]+")
 TIMEOUT = re.compile(r"-1|0|[1-9][0-9]{0,2}")
 
@@ -102,6 +103,21 @@ def effective_settings(config, entries, environment):
     return settings
 
 
+def os_prober_disabled(defaults):
+    """Lee GRUB_DISABLE_OS_PROBER igual que grub-mkconfig (Debian lo desactiva por defecto)."""
+    script = ('. "$1"; for f in "$2"/*.cfg; do [ -f "$f" ] && . "$f"; done; '
+              'printf %s "${GRUB_DISABLE_OS_PROBER:-true}"')
+    try:
+        result = subprocess.run(
+            ["/bin/sh", "-c", script, "sh", str(defaults), str(defaults.with_name("grub.d"))],
+            stdin=subprocess.DEVNULL, capture_output=True, text=True,
+            errors="replace", timeout=5, check=True,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return result.stdout.strip() == "true"
+
+
 def grub_environment(config):
     try:
         result = subprocess.run(
@@ -130,6 +146,9 @@ def render(values, entry_ids=None):
     style = values.get("GRUB_TIMEOUT_STYLE")
     if style is not None and style not in ("menu", "countdown", "hidden"):
         raise ValueError("Invalid GRUB timeout style.")
+    os_prober = values.get("GRUB_DISABLE_OS_PROBER")
+    if os_prober is not None and os_prober not in ("true", "false"):
+        raise ValueError("Invalid os-prober setting.")
     if any(value is None for value in values.values()):
         raise ValueError("Invalid empty GRUB setting.")
     return HEADER + "".join(f"{key}='{values[key]}'\n" for key in FIELDS if key in values)
@@ -207,8 +226,12 @@ def manage(defaults, config, regenerate, action, request=None):
     # Valores guardados que otro archivo de GRUB está pisando.
     overridden = [key for key in ("GRUB_TIMEOUT", "GRUB_TIMEOUT_STYLE")
                   if key in values and key in effective and values[key] != effective[key]]
+    disabled = os_prober_disabled(defaults)
+    if disabled is not None:
+        effective["GRUB_DISABLE_OS_PROBER"] = "true" if disabled else "false"
     return {"entries": entries, "settings": values, "effective": effective,
-            "revision": revision, "overridden": overridden, "legacy": migrating}
+            "revision": revision, "overridden": overridden, "legacy": migrating,
+            "os_prober_installed": OS_PROBER.exists()}
 
 
 def regenerate(config, required_entry):

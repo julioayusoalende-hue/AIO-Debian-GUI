@@ -8,7 +8,8 @@ import os
 import re
 import subprocess
 
-from .admin import APT_SOURCE, MANAGED, SOURCES, source_contents, trusted_archive
+from .admin import (APT_SOURCE, FLATPAKREF_MAX, MANAGED, SOURCES, parse_flatpakref,
+                    source_contents, trusted_archive)
 
 FLATPAK_REPO = 'https://dl.flathub.org/repo/flathub.flatpakrepo'
 MAINTENANCE = '/usr/lib/aio-debian-gui/aio-debian-gui-helper'
@@ -47,6 +48,28 @@ def preview_local_deb(filename):
         trusted = trusted_archive(package, digest)
         plan = run(['/usr/bin/apt-get', '-s', '--no-remove', 'install', '--', str(archive)])
     return digest, package, trusted, metadata + '\n' + plan
+
+
+def preview_flatpakref(filename):
+    """Lee un .flatpakref local: devuelve (contenido, sha256, campos validados)."""
+    path = Path(filename)
+    if path.suffix.lower() != '.flatpakref' or not path.is_file():
+        raise ValueError('Selecciona un archivo .flatpakref local válido.')
+    if path.stat().st_size > FLATPAKREF_MAX:
+        raise ValueError('El archivo .flatpakref es demasiado grande.')
+    data = path.read_bytes()
+    return data, hashlib.sha256(data).hexdigest(), parse_flatpakref(data)
+
+
+def install_flatpakref(data, command):
+    """Si el comando acaba en --from, añade un temporal; si no, pasa el archivo por stdin."""
+    with tempfile.TemporaryDirectory() as directory:
+        ref = Path(directory) / 'app.flatpakref'
+        ref.write_bytes(data)
+        if command[-1] == '--from':
+            return run([*command, str(ref)])
+        with ref.open('rb') as source:
+            return run(command, stdin=source)
 
 
 def install_local_deb(filename, command):

@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.2.4
+
+- Gestor de software: instala aplicaciones desde archivos .flatpakref. Se pueden abrir con doble clic, desde el botón de la pestaña Flatpak o arrastrándolos a la ventana. La instalación es para el usuario o para todo el sistema, según el ámbito elegido.
+- Arrastrar un .deb o un .flatpakref a cualquier parte de la ventana lo abre en el gestor de software.
+- El archivo .flatpakref se valida antes de instalar: debe ser una aplicación, con identificador válido y direcciones HTTPS.
+- Inicio: nuevo interruptor para activar o desactivar os-prober (detección de otros sistemas operativos). Al cambiarlo se regenera GRUB, como con update-grub, para que el cambio surta efecto.
+
 ## 1.2.3
 
 - NVIDIA: si el equipo arranca en EFI y falta mokutil, la app lo instala antes de instalar el controlador. Sin él no se puede comprobar Secure Boot y la instalación se rechazaba.

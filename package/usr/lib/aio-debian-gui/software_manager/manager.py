@@ -3,9 +3,13 @@
 
 from concurrent.futures import ThreadPoolExecutor
 
+import os
+from urllib.parse import unquote, urlsplit
+
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import GLib, Gtk
+gi.require_version('Gdk', '3.0')
+from gi.repository import Gdk, GLib, Gtk
 
 from . import backend
 
@@ -377,6 +381,8 @@ class SoftwareManagerPage(Gtk.Box):
         self.button('Recargar', lambda: self.load(force=True))
         if page == 0:
             self.button('Instalar archivo .deb…', self.choose_local_deb)
+        if page == 1:
+            self.button('Instalar archivo .flatpakref…', self.choose_local_flatpakref)
         if page == 2:
             self.button('Añadir repositorio APT…', self.add_apt)
             self.button('Añadir remoto Flatpak…', self.add_remote)
@@ -671,18 +677,108 @@ class SoftwareManagerPage(Gtk.Box):
         self.job('Comprobando dependencias…', lambda: backend.run(simulate),
                  lambda plan: self.modify(f'{verb} {identifier}', self.admin(action, identifier), plan))
 
-    def choose_local_deb(self):
-        dialog = Gtk.FileChooserDialog(title='Seleccionar paquete Debian', transient_for=self.window,
+    def choose_local_file(self, title, name, pattern):
+        dialog = Gtk.FileChooserDialog(title=title, transient_for=self.window,
                                        action=Gtk.FileChooserAction.OPEN)
         dialog.add_buttons('Cancelar', Gtk.ResponseType.CANCEL, 'Abrir', Gtk.ResponseType.OK)
         packages = Gtk.FileFilter()
-        packages.set_name('Paquetes Debian (*.deb)')
-        packages.add_pattern('*.[dD][eE][bB]')
+        packages.set_name(name)
+        packages.add_pattern(pattern)
         dialog.add_filter(packages)
         filename = dialog.get_filename() if dialog.run() == Gtk.ResponseType.OK else None
         dialog.destroy()
         if filename:
-            self.open_local_deb(filename)
+            self.open_local_file(filename)
+
+    def choose_local_deb(self):
+        self.choose_local_file('Seleccionar paquete Debian', 'Paquetes Debian (*.deb)',
+                               '*.[dD][eE][bB]')
+
+    def choose_local_flatpakref(self):
+        self.choose_local_file('Seleccionar aplicación Flatpak',
+                               'Aplicaciones Flatpak (*.flatpakref)', '*.[fF][lL][aA][tT][pP][aA][kK][rR][eE][fF]')
+
+    @staticmethod
+    def local_kind(filename):
+        suffix = os.path.splitext(filename)[1].lower()
+        return {'.deb': 'deb', '.flatpakref': 'flatpakref'}.get(suffix)
+
+    def open_local_file(self, filename):
+        """Abre un .deb o un .flatpakref (argumento, diálogo o arrastrar y soltar)."""
+        kind = self.local_kind(filename)
+        if kind == 'flatpakref':
+            return self.open_local_flatpakref(filename)
+        if kind == 'deb':
+            return self.open_local_deb(filename)
+        if not self.destroyed:
+            self.message('Archivo no compatible',
+                         f'{filename}\n\nSolo se pueden instalar archivos .deb y .flatpakref.')
+        return GLib.SOURCE_REMOVE
+
+    def enable_drop(self, widget, before_open=None):
+        """Permite soltar archivos .deb y .flatpakref sobre widget (la ventana)."""
+        widget.drag_dest_set(Gtk.DestDefaults.ALL, [], Gdk.DragAction.COPY)
+        widget.drag_dest_add_uri_targets()
+        widget.connect('drag-data-received', self.on_drop, before_open)
+
+    def dropped_files(self, uris):
+        files = []
+        for uri in uris or []:
+            parts = urlsplit(uri)
+            if parts.scheme == 'file' and parts.netloc in ('', 'localhost'):
+                path = unquote(parts.path)
+                if self.local_kind(path):
+                    files.append(path)
+        return files
+
+    def on_drop(self, _widget, context, _x, _y, data, _info, time, before_open):
+        files = self.dropped_files(data.get_uris())
+        Gtk.drag_finish(context, bool(files), False, time)
+        if not files:
+            if data.get_uris():
+                self.message('Archivo no compatible',
+                             'Solo se pueden instalar archivos .deb y .flatpakref.')
+            return
+        if len(files) > 1:
+            self.message('Suelta un único archivo',
+                         'Se instalará solo el primero: ' + os.path.basename(files[0]))
+        if before_open:
+            before_open()
+        GLib.timeout_add(100, self.open_local_file, files[0])
+
+    def open_local_flatpakref(self, filename):
+        if self.destroyed:
+            return GLib.SOURCE_REMOVE
+        if self.busy or getattr(self.window, 'sincronizando_reloj', False):
+            return GLib.SOURCE_CONTINUE
+        scope = self.scope.get_active_id() or 'user'
+
+        def confirm(result):
+            data, digest, fields = result
+            where = 'el sistema (todos los usuarios)' if scope == 'system' else 'tu usuario'
+            details = '\n'.join(f'{key}: {value}' for key, value in fields.items())
+            if not self.message(f"¿Instalar {fields.get('Title') or fields['Name']}?",
+                                f'{filename}\n\nSe instalará para {where}.\n\n{details}',
+                                confirm=True, accept_label='Instalar'):
+                return
+            if scope == 'system':
+                command = (self.admin('install-flatpakref', digest) if self.passwordless() else
+                           ['/usr/bin/pkexec', backend.ADMIN, 'install-flatpakref', digest])
+            else:
+                command = backend.flatpak('user', 'install', '-y', '--noninteractive', '--from')
+            self.applying_changes = True
+            self.job('Instalando la aplicación Flatpak…',
+                     lambda: backend.install_flatpakref(data, command), installed)
+
+        def installed(_output):
+            self.catalogues.clear()
+            self.message('Instalación completada', filename)
+            if self.page.get_active() != 1:
+                self.page.set_active(1)
+            self.load(force=True)
+
+        self.job('Leyendo el archivo .flatpakref…', lambda: backend.preview_flatpakref(filename), confirm)
+        return GLib.SOURCE_REMOVE
 
     def open_local_deb(self, filename):
         if self.destroyed:

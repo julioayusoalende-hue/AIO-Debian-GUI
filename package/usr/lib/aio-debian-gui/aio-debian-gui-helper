@@ -24,7 +24,7 @@ if [[ "${BASH_SOURCE[0]}" == "$0" && "$EUID" == 0 ]]; then
         --software)
             shift
             case "${1:-}" in
-                install-trusted-local|install|remove|upgrade|refresh|flatpak-system|add-source|enable|disable|delete)
+                install-trusted-local|install-flatpakref|install|remove|upgrade|refresh|flatpak-system|add-source|enable|disable|delete)
                     exec /usr/lib/aio-debian-gui/software_manager/admin.py "$@" ;;
                 *) exit 2 ;;
             esac ;;
@@ -50,7 +50,7 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.2.3
+HELPER_VERSION=1.2.4
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py

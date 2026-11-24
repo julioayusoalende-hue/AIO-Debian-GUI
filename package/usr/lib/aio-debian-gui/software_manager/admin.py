@@ -54,6 +54,48 @@ def write_source(uri, suite, components, key):
             temp_path.unlink()
 
 
+FLATPAKREF_MAX = 65536
+APP_ID = re.compile(r'[A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*){2,}')
+
+
+def parse_flatpakref(data):
+    """Valida un .flatpakref: aplicación (no runtime), Name válido y URL HTTPS."""
+    if len(data) > FLATPAKREF_MAX:
+        raise ValueError('El archivo .flatpakref es demasiado grande.')
+    try:
+        text = data.decode('utf-8')
+    except UnicodeDecodeError as exc:
+        raise ValueError('El archivo .flatpakref no es texto UTF-8.') from exc
+    fields, group = {}, None
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        if line.startswith('[') and line.endswith(']'):
+            group = line[1:-1]
+            continue
+        key, separator, value = line.partition('=')
+        if group == 'Flatpak Ref' and separator:
+            fields[key.strip()] = value.strip()
+    if group is None or not fields:
+        raise ValueError('No es un archivo .flatpakref válido.')
+    if fields.get('IsRuntime', 'false').lower() == 'true':
+        raise ValueError('El archivo describe un runtime, no una aplicación.')
+    if not APP_ID.fullmatch(fields.get('Name', '')) or len(fields['Name']) > 255:
+        raise ValueError('El identificador de la aplicación no es válido.')
+    for key in ('Url', 'RuntimeRepo'):
+        if key == 'RuntimeRepo' and key not in fields:
+            continue
+        url = urlsplit(fields.get(key, ''))
+        if url.scheme != 'https' or not url.hostname or url.username or url.password:
+            raise ValueError(f'{key} debe ser una dirección HTTPS.')
+    branch = fields.get('Branch', '')
+    if branch and not re.fullmatch(r'[A-Za-z0-9_.-]+', branch):
+        raise ValueError('La rama del archivo .flatpakref no es válida.')
+    return {key: fields[key] for key in ('Title', 'Name', 'Branch', 'Url', 'RuntimeRepo')
+            if fields.get(key)}
+
+
 def system_flatpak_args(values):
     # Reconstruir únicamente las operaciones que ofrece el gestor.
     identifier = re.compile(r'[A-Za-z0-9][A-Za-z0-9._/-]*')
@@ -132,6 +174,17 @@ def main(args):
     command, *values = args
     env = {**os.environ, 'DEBIAN_FRONTEND': 'noninteractive'}
     apt = ['/usr/bin/apt-get', '-y', '-o', 'Dpkg::Options::=--force-confold']
+    if command == 'install-flatpakref' and len(values) == 1 and re.fullmatch('[a-f0-9]{64}', values[0]):
+        data = sys.stdin.buffer.read(FLATPAKREF_MAX + 1)
+        if hashlib.sha256(data).hexdigest() != values[0]:
+            raise ValueError('El archivo ha cambiado. Vuelve a abrirlo para revisar la instalación.')
+        parse_flatpakref(data)
+        with tempfile.TemporaryDirectory(dir='/var/tmp') as directory:
+            ref = Path(directory) / 'app.flatpakref'
+            ref.write_bytes(data)
+            return subprocess.call(['/usr/bin/flatpak', '--system', 'install', '-y',
+                                    '--noninteractive', '--from', str(ref)],
+                                   stdin=subprocess.DEVNULL, env=env)
     if command == 'flatpak-system':
         return subprocess.call(system_flatpak_args(values), env=env)
     if ((command == 'install-local' and len(values) == 1)

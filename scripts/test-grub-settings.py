@@ -57,6 +57,7 @@ class BootSettingsTests(unittest.TestCase):
             "GRUB_DEFAULT": "gnulinux-advanced-disk>linux-6.12",
             "GRUB_TIMEOUT": "0",
             "GRUB_TIMEOUT_STYLE": "hidden",
+            "GRUB_DISABLE_OS_PROBER": "true",
         })
         self.config.write_text(config.replace('default="1>0"', 'default="${saved_entry}"'))
         with patch.object(grub, "grub_environment", return_value={"saved_entry": "osprober-efi-disk"}):
@@ -157,6 +158,29 @@ class BootSettingsTests(unittest.TestCase):
         self.assertFalse(legacy.exists())
         self.assertEqual(self.fragment.read_text(), grub.render({"GRUB_TIMEOUT": "2"}))
         self.regenerate.assert_called_once()
+
+    def test_os_prober_toggle(self):
+        # Debian lo desactiva por defecto; /etc/default/grub puede activarlo.
+        status = self.manage("status")
+        self.assertEqual(status["effective"]["GRUB_DISABLE_OS_PROBER"], "true")
+        self.assertIn("os_prober_installed", status)
+        self.defaults.write_text(self.defaults.read_text() + "GRUB_DISABLE_OS_PROBER=false\n")
+        status = self.manage("status")
+        self.assertEqual(status["effective"]["GRUB_DISABLE_OS_PROBER"], "false")
+        # El fragmento de la app se lee el último y manda; aplicar regenera GRUB.
+        updated = self.manage("apply", {"revision": status["revision"],
+                                        "settings": {"GRUB_DISABLE_OS_PROBER": "true"}})
+        self.assertEqual(self.fragment.read_text(),
+                         grub.HEADER + "GRUB_DISABLE_OS_PROBER='true'\n")
+        self.assertEqual(updated["effective"]["GRUB_DISABLE_OS_PROBER"], "true")
+        self.assertEqual(self.regenerate.call_count, 1)
+        updated = self.manage("apply", {"revision": updated["revision"],
+                                        "settings": {"GRUB_DISABLE_OS_PROBER": "false"}})
+        self.assertEqual(updated["effective"]["GRUB_DISABLE_OS_PROBER"], "false")
+        self.assertEqual(self.regenerate.call_count, 2)
+        with self.assertRaises(ValueError):
+            self.manage("apply", {"revision": updated["revision"],
+                                  "settings": {"GRUB_DISABLE_OS_PROBER": "yes"}})
 
     def test_reports_overridden_values(self):
         directory = self.fragment.parent
