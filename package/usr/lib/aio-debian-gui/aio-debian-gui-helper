@@ -1377,7 +1377,7 @@ nvidia_report() {
     if nvidia_presente; then
         p=1
         nvidia_hibrida && h=1
-        nvidia_modulo_listo && nvidia_modeset_configurado && installed=1
+        nvidia_modulo_listo && nvidia_configuracion_ok && installed=1
         candidate=$(LC_ALL=C apt-cache policy nvidia-driver 2>/dev/null | awk '/Candidate:/ {print $2; exit}')
         [ -n "$candidate" ] || candidate=no-disponible
     fi
@@ -1388,29 +1388,87 @@ nvidia_report() {
     printf '##NVIDIA:secureboot:%s\n' "$(nvidia_secure_boot)"
     printf '##NVIDIA:kernel:%s\n' "$(uname -r)"
 }
-# Debian no activa el modesetting de nvidia-drm: en portátiles híbridos y con
-# Wayland/GDM la sesión gráfica puede quedarse en negro. Recomendado por
-# wiki.debian.org/NvidiaGraphicsDrivers. Devuelve 0 si lo ha cambiado,
-# 1 si ya estaba y 2 si ha fallado.
+# Configuración posterior según wiki.debian.org/NvidiaGraphicsDrivers (Trixie):
+# - Wayland: nvidia-drm modeset=1 y fbdev=1.
+# - Suspensión (salvo portátiles híbridos/Optimus): PreserveVideoMemoryAllocations
+#   y NVreg_TemporaryFilePath=/var/tmp. Es obligatoria para que GDM use Wayland.
+# - dracut: incluir /etc/modprobe.d/nvidia* en el initramfs.
+# - Cabeceras: el metapaquete del kernel para que DKMS compile en kernels futuros.
+# - X11: si GDM desactiva Wayland (híbridos sin PreserveVideoMemoryAllocations),
+#   necesita el servidor X completo. Debian lo instala con GNOME; AyusOS no.
 NVIDIA_MODESET_CONF=${NVIDIA_MODESET_CONF:-/etc/modprobe.d/nvidia-modeset.conf}
 NVIDIA_MODESET_CONTENIDO=$'# Creado por AiO Debian GUI: modesetting para el controlador NVIDIA.\noptions nvidia-drm modeset=1\noptions nvidia-drm fbdev=1'
-nvidia_modeset_configurado() {
-    [ -f "$NVIDIA_MODESET_CONF" ] && [ "$(cat "$NVIDIA_MODESET_CONF" 2>/dev/null)" = "$NVIDIA_MODESET_CONTENIDO" ]
+NVIDIA_POWER_CONF=${NVIDIA_POWER_CONF:-/etc/modprobe.d/nvidia-aio-power.conf}
+NVIDIA_POWER_CONTENIDO=$'# Creado por AiO Debian GUI: suspensión del controlador NVIDIA (wiki de Debian).\noptions nvidia-current NVreg_PreserveVideoMemoryAllocations=1\noptions nvidia-current NVreg_TemporaryFilePath=/var/tmp'
+NVIDIA_DRACUT_CONF=${NVIDIA_DRACUT_CONF:-/etc/dracut.conf.d/10-nvidia.conf}
+NVIDIA_DRACUT_CONTENIDO='install_items+=" /etc/modprobe.d/nvidia* "'
+
+nvidia_fichero_igual() { [ -f "$1" ] && [ "$(cat "$1" 2>/dev/null)" = "$2" ]; }
+nvidia_usa_dracut() { paquete_instalado dracut; }
+
+# Paquetes que faltan para seguir la wiki (uno por línea).
+nvidia_paquetes_extra() {
+    local flavor meta
+    paquete_instalado xserver-xorg || echo xserver-xorg
+    flavor=$(uname -r); flavor=${flavor#*-}
+    meta="linux-headers-$flavor"
+    if ! paquete_instalado "$meta" &&
+       LC_ALL=C apt-cache policy "$meta" 2>/dev/null | grep -Eq 'Candidate:[[:space:]]+[^ (]'; then
+        echo "$meta"
+    fi
 }
-nvidia_configurar_modeset() {
-    local contenido="$NVIDIA_MODESET_CONTENIDO" kernel
-    if nvidia_modeset_configurado; then
+
+nvidia_configuracion_ok() {
+    nvidia_fichero_igual "$NVIDIA_MODESET_CONF" "$NVIDIA_MODESET_CONTENIDO" || return 1
+    if ! nvidia_hibrida; then
+        nvidia_fichero_igual "$NVIDIA_POWER_CONF" "$NVIDIA_POWER_CONTENIDO" || return 1
+    fi
+    if nvidia_usa_dracut; then
+        nvidia_fichero_igual "$NVIDIA_DRACUT_CONF" "$NVIDIA_DRACUT_CONTENIDO" || return 1
+    fi
+    [ -z "$(nvidia_paquetes_extra)" ]
+}
+
+nvidia_escribir() {
+    nvidia_fichero_igual "$1" "$2" && return 1
+    mkdir -p "$(dirname "$1")" && printf '%s\n' "$2" > "$1" || { err "No se pudo escribir $1."; return 2; }
+    info "Configurado $1."
+    return 0
+}
+
+# Devuelve 0 si ha cambiado algo, 1 si ya estaba todo y 2 si ha fallado.
+nvidia_configurar_wiki() {
+    local cambio=1 estado
+    nvidia_escribir "$NVIDIA_MODESET_CONF" "$NVIDIA_MODESET_CONTENIDO"; estado=$?
+    [ "$estado" -eq 2 ] && return 2; [ "$estado" -eq 0 ] && cambio=0
+    if nvidia_hibrida; then
+        info "Portátil híbrido: no se activa PreserveVideoMemoryAllocations (la wiki lo desaconseja en Optimus). GDM usará X11."
+    else
+        nvidia_escribir "$NVIDIA_POWER_CONF" "$NVIDIA_POWER_CONTENIDO"; estado=$?
+        [ "$estado" -eq 2 ] && return 2; [ "$estado" -eq 0 ] && cambio=0
+    fi
+    if nvidia_usa_dracut; then
+        nvidia_escribir "$NVIDIA_DRACUT_CONF" "$NVIDIA_DRACUT_CONTENIDO"; estado=$?
+        [ "$estado" -eq 2 ] && return 2
+        if [ "$estado" -eq 0 ]; then
+            cambio=0
+            dracut --force --kver "$(uname -r)" || { err "No se pudo regenerar el initramfs con dracut."; return 2; }
+        fi
+    fi
+    return "$cambio"
+}
+
+# Instala con APT sin permitir eliminaciones.
+nvidia_apt_seguro() {
+    local simulation
+    simulation=$(LC_ALL=C apt-get -s --no-remove install "$@" 2>&1) || {
+        err "No se pueden resolver las dependencias sin eliminaciones: $simulation"; return 1;
+    }
+    if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
+        err "APT propone eliminar paquetes. Se cancela por seguridad."
         return 1
     fi
-    info "Activando modesetting de NVIDIA (nvidia-drm modeset=1) para evitar la pantalla negra al iniciar."
-    printf '%s\n' "$contenido" > "$NVIDIA_MODESET_CONF" || { err "No se pudo escribir $NVIDIA_MODESET_CONF."; return 2; }
-    kernel=$(uname -r)
-    if command -v update-initramfs >/dev/null 2>&1; then
-        update-initramfs -u -k "$kernel" || { err "No se pudo regenerar el initramfs."; return 2; }
-    elif command -v dracut >/dev/null 2>&1; then
-        dracut --force --kver "$kernel" || { err "No se pudo regenerar el initramfs."; return 2; }
-    fi
-    return 0
+    apt-get "${APT_OPTS[@]}" --no-remove install "$@"
 }
 
 paso_nvidia_driver() {
@@ -1419,13 +1477,22 @@ paso_nvidia_driver() {
     nvidia_presente || { err "No se detectó una GPU NVIDIA PCI."; return 1; }
     if nvidia_modulo_listo; then
         ok "El controlador NVIDIA tiene un módulo DKMS instalado para el kernel activo."
-        local estado=0
-        nvidia_configurar_modeset || estado=$?
-        [ "$estado" -eq 2 ] && return 1
+        local extra=() estado=1
+        mapfile -t extra < <(nvidia_paquetes_extra)
+        if [ "${#extra[@]}" -gt 0 ]; then
+            info "Instalando lo que pide la wiki de Debian: ${extra[*]}"
+            asegurar_listas || return 1
+            nvidia_apt_seguro "${extra[@]}" || { err "No se pudieron instalar: ${extra[*]}"; return 1; }
+            estado=0
+        fi
+        local estado_conf=0
+        nvidia_configurar_wiki || estado_conf=$?
+        [ "$estado_conf" -eq 2 ] && return 1
+        [ "$estado_conf" -eq 0 ] && estado=0
         if [ "$estado" -eq 0 ]; then
             REINICIO_REQUERIDO=1
             echo "##REBOOT:1"
-            ok "Modesetting activado. Reinicia para aplicarlo."
+            ok "Configuración NVIDIA completada según la wiki de Debian. Reinicia para aplicarla."
         fi
         return 0
     fi
@@ -1462,7 +1529,9 @@ paso_nvidia_driver() {
         err "No hay cabeceras disponibles para el kernel $kernel."
         return 1
     fi
-    simulation=$(LC_ALL=C apt-get -s --no-remove install "$headers" "nvidia-driver=$candidate" "$modulo=$candidate" 2>&1) || {
+    local extra=()
+    mapfile -t extra < <(nvidia_paquetes_extra)
+    simulation=$(LC_ALL=C apt-get -s --no-remove install "$headers" "nvidia-driver=$candidate" "$modulo=$candidate" "${extra[@]}" 2>&1) || {
         err "No se pueden resolver las dependencias sin eliminaciones: $simulation"; return 1;
     }
     if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
@@ -1474,7 +1543,7 @@ paso_nvidia_driver() {
         info "GPU Intel/AMD y NVIDIA presentes: no se modifica la configuración de pantallas. PRIME puede estar disponible."
         info "PRIME: __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia programa"
     fi
-    if ! apt-get "${APT_OPTS[@]}" --no-remove install "$headers" "nvidia-driver=$candidate" "$modulo=$candidate"; then
+    if ! apt-get "${APT_OPTS[@]}" --no-remove install "$headers" "nvidia-driver=$candidate" "$modulo=$candidate" "${extra[@]}"; then
         err "Fallo instalando NVIDIA. Consulta logs de DKMS y APT."
         return 1
     fi
@@ -1484,7 +1553,7 @@ paso_nvidia_driver() {
         return 1
     fi
     local estado_modeset=0
-    nvidia_configurar_modeset || estado_modeset=$?
+    nvidia_configurar_wiki || estado_modeset=$?
     [ "$estado_modeset" -eq 2 ] && return 1
     REINICIO_REQUERIDO=1
     echo "##REBOOT:1"

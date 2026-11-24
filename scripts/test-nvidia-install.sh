@@ -64,24 +64,48 @@ apt-get() {
     return "$INSTALL_STATUS"
 }
 NVIDIA_MODESET_CONF="$tmp/nvidia-modeset.conf"
-update-initramfs() { echo "initramfs $*" >> "$tmp/initramfs"; }
-# Paquete sano sin modesetting: solo escribe la opción y regenera el initramfs.
+NVIDIA_POWER_CONF="$tmp/nvidia-aio-power.conf"
+NVIDIA_DRACUT_CONF="$tmp/dracut/10-nvidia.conf"
+EXTRA=""
+nvidia_paquetes_extra() { [ -z "$EXTRA" ] || printf '%s\n' $EXTRA; }
+# Driver ya instalado, equipo con una sola GPU: configura modeset y suspensión.
 paso_nvidia_driver > "$tmp/out"
 [ ! -s "$tmp/calls" ]
 grep -qx 'options nvidia-drm modeset=1' "$NVIDIA_MODESET_CONF"
-grep -qx 'initramfs -u -k 6.12.1-amd64' "$tmp/initramfs"
+grep -qx 'options nvidia-drm fbdev=1' "$NVIDIA_MODESET_CONF"
+grep -qx 'options nvidia-current NVreg_PreserveVideoMemoryAllocations=1' "$NVIDIA_POWER_CONF"
+grep -qx 'options nvidia-current NVreg_TemporaryFilePath=/var/tmp' "$NVIDIA_POWER_CONF"
+[ ! -e "$NVIDIA_DRACUT_CONF" ]
 grep -q '##REBOOT:1' "$tmp/out"
-# Segunda ejecución: ya configurado, no toca nada ni pide reiniciar.
-: > "$tmp/initramfs"
+nvidia_configuracion_ok
+# Segunda ejecución: nada que hacer, sin reinicio.
 paso_nvidia_driver > "$tmp/out"
-[ ! -s "$tmp/initramfs" ]
 if grep -q '##REBOOT' "$tmp/out"; then echo 'ERROR: reinicio innecesario'; exit 1; fi
-# Fallo del initramfs: la tarea falla.
-rm -f "$NVIDIA_MODESET_CONF"
-update-initramfs() { return 1; }
-if paso_nvidia_driver >/dev/null 2>&1; then echo 'ERROR: fallo de initramfs ignorado'; exit 1; fi
-update-initramfs() { echo "initramfs $*" >> "$tmp/initramfs"; }
-rm -f "$NVIDIA_MODESET_CONF"
+# Híbrido (Optimus): sin PreserveVideoMemoryAllocations, como indica la wiki.
+rm -f "$NVIDIA_MODESET_CONF" "$NVIDIA_POWER_CONF"
+nvidia_hibrida() { return 0; }
+paso_nvidia_driver > "$tmp/out"
+[ -f "$NVIDIA_MODESET_CONF" ] && [ ! -e "$NVIDIA_POWER_CONF" ]
+nvidia_configuracion_ok
+# Falta X11 (caso AyusOS): se instala sin eliminaciones y la tarea vuelve a aparecer hasta entonces.
+EXTRA="xserver-xorg"
+if nvidia_configuracion_ok; then echo 'ERROR: falta xserver-xorg y se da por configurado'; exit 1; fi
+: > "$tmp/calls"
+paso_nvidia_driver > "$tmp/out"
+grep -q -- '-s --no-remove install xserver-xorg' "$tmp/calls"
+grep -q -- '--no-remove install xserver-xorg' "$tmp/calls"
+grep -q '##REBOOT:1' "$tmp/out"
+EXTRA=""
+# dracut: incluye los ficheros de modprobe y regenera el initramfs.
+dracut() { echo "dracut $*" >> "$tmp/dracut.log"; }
+paquete_instalado() { [ "$1" = dracut ]; }
+paso_nvidia_driver > "$tmp/out"
+grep -qx 'install_items+=" /etc/modprobe.d/nvidia\* "' "$NVIDIA_DRACUT_CONF"
+grep -qx 'dracut --force --kver 6.12.1-amd64' "$tmp/dracut.log"
+paquete_instalado() { return 1; }
+nvidia_hibrida() { return 1; }
+rm -rf "$NVIDIA_MODESET_CONF" "$NVIDIA_POWER_CONF" "$tmp/dracut"
+: > "$tmp/calls"
 # Paquete ausente o incompleto: selección, simulación e instalación protegida.
 READY=0
 paso_nvidia_driver
