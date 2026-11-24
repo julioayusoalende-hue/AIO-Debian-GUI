@@ -73,12 +73,6 @@ class HealthDashboard(Gtk.Box):
         title.set_xalign(0)
         title_box.pack_start(title, True, True, 0)
 
-        self.btn_full_diagnostic = Gtk.Button(label=self.translate("Ejecutar diagnóstico completo"))
-        self.btn_full_diagnostic.set_image(Gtk.Image.new_from_icon_name(
-            "system-search-symbolic", Gtk.IconSize.BUTTON))
-        self.btn_full_diagnostic.set_always_show_image(True)
-        self.btn_full_diagnostic.connect("clicked", self._on_run_diagnostics)
-        title_box.pack_end(self.btn_full_diagnostic, False, False, 0)
         self.pack_start(title_box, False, False, 0)
 
         # Rejilla de tarjetas con desplazamiento.
@@ -110,7 +104,7 @@ class HealthDashboard(Gtk.Box):
         self.status_label.set_line_wrap(True)
         self.status_label.get_style_context().add_class("dim-label")
         self.status_label.set_text(self.translate(
-            "Pulsa «Ejecutar diagnóstico completo» para revisar el sistema."))
+            "El diagnóstico se ejecuta automáticamente al abrir esta ventana."))
         self.pack_start(self.status_label, False, False, 0)
 
         self._build_initial_cards()
@@ -306,7 +300,6 @@ class HealthDashboard(Gtk.Box):
         if self.loading:
             return
         self.loading = True
-        self.btn_full_diagnostic.set_sensitive(False)
         self.status_label.set_text(self.translate("Diagnóstico en curso…"))
         self._progreso(0.02, self.translate("Iniciando diagnóstico…"))
         for card in self.cards.values():
@@ -434,7 +427,6 @@ class HealthDashboard(Gtk.Box):
 
     def _on_diagnostics_done(self, results, error):
         self.loading = False
-        self.btn_full_diagnostic.set_sensitive(True)
 
         if error:
             self.progress.set_fraction(0.0)
