@@ -82,18 +82,21 @@ class HealthDashboard(Gtk.Box):
         self.pack_start(title_box, False, False, 0)
 
         # Rejilla de tarjetas con desplazamiento.
-        scroller = Gtk.ScrolledWindow()
-        scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scroller.set_vexpand(True)
 
         self.grid = Gtk.FlowBox(
             orientation=Gtk.Orientation.HORIZONTAL,
             column_spacing=12,
             row_spacing=12,
             selection_mode=Gtk.SelectionMode.NONE,
+            min_children_per_line=3,
             max_children_per_line=3,
         )
         self.grid.set_valign(Gtk.Align.START)
+        # Las tarjetas caben a tamaño normal; la barra de desplazamiento solo
+        # aparece si el contenido (p. ej. con botones de solución) no cabe.
+        scroller = Gtk.ScrolledWindow()
+        scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroller.set_vexpand(True)
         scroller.add(self.grid)
         self.pack_start(scroller, True, True, 0)
 

@@ -3446,7 +3446,10 @@ class VentanaPrincipal(Gtk.Window):
         if ventana is None:
             ventana = Gtk.Window(title=traducir("Salud del sistema"))
             ventana.set_transient_for(self)
-            ventana.set_default_size(760, 640)
+            # Mismo tamaño que la app al iniciarse (1160x780) como máximo.
+            ancho, alto = self.get_size()
+            ventana.set_default_size(min(ancho, 1160), min(alto, 780))
+            ventana.set_resizable(True)
             ventana.add(self.pagina_salud)
             ventana.connect("delete-event", self._ocultar_ventana_salud)
             self.ventana_salud = ventana

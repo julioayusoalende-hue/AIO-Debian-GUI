@@ -8,6 +8,7 @@
 - **Índices al abrir**: al ejecutar el diagnóstico se actualizan antes los índices APT con el asistente autorizado (antes fallaba y dejaba «Sin comprobar»).
 - **Ventana de solución**: si algo bloquea el diagnóstico (p. ej. actualizaciones sin aplicar) se abre sola una ventana que ofrece la solución, como el mantenimiento estándar.
 - **Semáforo**: el punto de cada apartado ahora es verde, naranja o rojo; antes salía siempre gris.
+- **Tamaño**: la ventana de Salud del sistema se abre con el tamaño de la app (como máximo 1160×780), de modo que se ven las nueve tarjetas sin desplazarse; la barra de desplazamiento solo aparece si no caben.
 - **Pruebas**: nuevas comprobaciones de la ventana, de los estados y de los botones de solución.
 
 ## 1.1.10
