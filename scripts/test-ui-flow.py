@@ -834,6 +834,21 @@ with patch.object(w, '_mensaje') as message:
     message.assert_called_once()
     w.backup_action_in_progress = False
 
+# Una regla Polkit que existe pero este usuario no puede leer cuenta como activa.
+import tempfile as _tf
+_dir = _tf.mkdtemp()
+_regla = os.path.join(_dir, 'regla')
+open(_regla, 'w').write('x')
+os.chmod(_regla, 0)
+_abrir = open
+def _abrir_regla(ruta, *args, **kwargs):
+    return _abrir(_regla if str(ruta).startswith('/etc/polkit-1/rules.d/50-aiodebian') else ruta, *args, **kwargs)
+_existe = os.path.exists
+with patch('builtins.open', _abrir_regla), \
+     patch.object(app.os.path, 'exists', lambda r: _existe(_regla) if str(r).startswith('/etc/polkit-1/rules.d/50-aiodebian') else _existe(r)):
+    assert app.autorizacion_sin_contrasena_activa() is True
+os.chmod(_regla, 0o600)
+
 # Al abrir la pestaña de apps recomendadas se marcan solas las ya instaladas.
 wrec = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
 wrec.show_all()

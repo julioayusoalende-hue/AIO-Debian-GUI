@@ -795,6 +795,16 @@ def helper_admite_tarea(ruta, tarea):
     return contenido is not None and "[%s]=" % tarea in contenido
 
 
+def regla_existe_sin_lectura(ruta):
+    if es_flatpak():
+        try:
+            return subprocess.run(comando_host("test", "-e", ruta), capture_output=True,
+                                  timeout=10).returncode == 0
+        except (OSError, subprocess.SubprocessError):
+            return False
+    return os.path.exists(ruta)
+
+
 def autorizacion_sin_contrasena_activa():
     uid = os.getuid()
     rule_path = "/etc/polkit-1/rules.d/50-aiodebian-gui-%s.rules" % uid
@@ -804,7 +814,9 @@ def autorizacion_sin_contrasena_activa():
     except (OSError, KeyError):
         return False
     if contenido is None:
-        return False
+        # La regla solo la crea el asistente al activar la opción. Si existe pero este
+        # usuario no puede leerla (permisos del sistema), cuenta como activa.
+        return regla_existe_sin_lectura(rule_path)
     return (
         ('action.id === "%s"' % POLKIT_ACTION) in contenido
         and ('action.lookup("program") === "%s"' % HELPER_SISTEMA) in contenido

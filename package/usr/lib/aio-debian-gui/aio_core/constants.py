@@ -491,7 +491,7 @@ def autorizacion_sin_contrasena_activa():
     except (OSError, KeyError):
         return False
     if contenido is None:
-        return False
+        return os.path.exists(rule_path)
     return (('action.id === "%s"' % POLKIT_ACTION) in contenido
             and ('action.lookup("program") === "%s"' % HELPER_SISTEMA) in contenido
             and ("subject.user === %s" % json.dumps(username)) in contenido

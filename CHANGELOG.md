@@ -2,6 +2,7 @@
 
 ## 1.2.1
 
+- Autorización de administrador: el interruptor «No solicitar contraseña» ya no aparece apagado cuando la regla está activa pero el sistema no deja leerla a tu usuario; permanece activado hasta que lo desactives tú.
 - Apps recomendadas: vuelven a marcarse con «✓ Instalado» las aplicaciones que ya están en el sistema (DEB o Flatpak). El indicador existía, pero dejó de actualizarse al abrir la pestaña.
 
 ## 1.2.0
