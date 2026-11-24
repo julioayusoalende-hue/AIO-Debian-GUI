@@ -143,6 +143,30 @@ class BootSettingsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "generated GRUB"):
             self.manage("status")
 
+    def test_fragment_is_read_last_and_legacy_is_migrated(self):
+        self.assertGreater(grub.DROP_IN, "ayusos.cfg")
+        directory = self.fragment.parent
+        directory.mkdir()
+        directory.chmod(0o755)
+        legacy = directory / grub.LEGACY_DROP_IN
+        legacy.write_text(grub.render({"GRUB_TIMEOUT": "2"}))
+        status = self.manage("status")
+        self.assertEqual(status["settings"], {"GRUB_TIMEOUT": "2"})
+        self.assertTrue(status["legacy"])
+        self.manage("apply", {"revision": status["revision"], "settings": {"GRUB_TIMEOUT": "2"}})
+        self.assertFalse(legacy.exists())
+        self.assertEqual(self.fragment.read_text(), grub.render({"GRUB_TIMEOUT": "2"}))
+        self.regenerate.assert_called_once()
+
+    def test_reports_overridden_values(self):
+        directory = self.fragment.parent
+        directory.mkdir()
+        directory.chmod(0o755)
+        self.fragment.write_text(grub.render({"GRUB_TIMEOUT": "2"}))
+        self.config.write_text("set timeout_style=menu\nset timeout=5\n"
+                               "### END /etc/grub.d/00_header ###\n" + self.config.read_text())
+        self.assertEqual(self.manage("status")["overridden"], ["GRUB_TIMEOUT"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2506,7 +2506,7 @@ class VentanaPrincipal(Gtk.Window):
                         ajustes[clave] = valor
                     else:
                         ajustes.pop(clave, None)
-            if ajustes == self.grub_estado["settings"]:
+            if ajustes == self.grub_estado["settings"] and not self.grub_estado.get("legacy"):
                 return
             dialogo = Gtk.MessageDialog(
                 transient_for=self, modal=True, message_type=Gtk.MessageType.QUESTION,
@@ -2577,6 +2577,9 @@ class VentanaPrincipal(Gtk.Window):
         self.grub_restaurar.set_sensitive(bool(ajustes))
         mensaje = ("Los cambios se aplicarán en el próximo arranque." if accion == "apply"
                    else "Ajustes de GRUB cargados.")
+        if estado.get("overridden"):
+            mensaje = ("Otro archivo de GRUB está cambiando algunos valores guardados. "
+                       "Se muestran los que se usan al arrancar.")
         self.grub_mensaje.set_text(traducir(mensaje))
         return GLib.SOURCE_REMOVE
 

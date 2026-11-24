@@ -13,7 +13,10 @@ import sys
 import tempfile
 
 
-DROP_IN = "99-zz-aio-debian-gui.cfg"
+# GRUB lee grub.d en orden alfabético: las letras van después de los números y de
+# archivos como ayusos.cfg, así que "zz-" se lee el último y sus valores mandan.
+DROP_IN = "zz-aio-debian-gui.cfg"
+LEGACY_DROP_IN = "99-zz-aio-debian-gui.cfg"
 HEADER = "# Managed by AiO Debian GUI\n"
 FIELDS = ("GRUB_DEFAULT", "GRUB_TIMEOUT", "GRUB_TIMEOUT_STYLE")
 ENTRY_ID = re.compile(r"[A-Za-z0-9_.:+-]+")
@@ -173,7 +176,9 @@ def manage(defaults, config, regenerate, action, request=None):
                 or status.st_mode & 0o022):
             raise ValueError("The GRUB settings directory has unexpected ownership or permissions.")
     path = directory / DROP_IN
-    previous, values = current_settings(path)
+    legacy = directory / LEGACY_DROP_IN
+    migrating = not path.exists() and (legacy.exists() or legacy.is_symlink())
+    previous, values = current_settings(legacy if migrating else path)
     revision = hashlib.sha256(previous.encode()).hexdigest()
     generated = config.read_text(errors="replace")
     entries = menu_entries(generated)
@@ -185,20 +190,25 @@ def manage(defaults, config, regenerate, action, request=None):
         requested = request["settings"]
         checked = render(requested, {entry["id"] for entry in entries})
         new_contents = checked if requested else ""
-        if new_contents != previous:
+        if new_contents != previous or migrating:
             if new_contents:
                 directory.mkdir(mode=0o755, exist_ok=True)
             write_fragment(path, new_contents)
             try:
                 regenerate(config, requested.get("GRUB_DEFAULT"))
             except (OSError, ValueError, subprocess.SubprocessError) as exc:
-                write_fragment(path, previous)
+                write_fragment(path, "" if migrating else previous)
                 detail = getattr(exc, "stderr", None) or str(exc)
                 raise ValueError(f"GRUB regeneration failed. Previous settings restored.\n{detail}") from exc
+            legacy.unlink(missing_ok=True)
             return manage(defaults, config, regenerate, "status")
     environment = grub_environment(config) if "${saved_entry}" in generated else {}
     effective = effective_settings(generated, entries, environment)
-    return {"entries": entries, "settings": values, "effective": effective, "revision": revision}
+    # Valores guardados que otro archivo de GRUB está pisando.
+    overridden = [key for key in ("GRUB_TIMEOUT", "GRUB_TIMEOUT_STYLE")
+                  if key in values and key in effective and values[key] != effective[key]]
+    return {"entries": entries, "settings": values, "effective": effective,
+            "revision": revision, "overridden": overridden, "legacy": migrating}
 
 
 def regenerate(config, required_entry):

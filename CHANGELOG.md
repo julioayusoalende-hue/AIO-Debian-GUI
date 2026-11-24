@@ -1,5 +1,10 @@
 # Cambios
 
+## 1.2.2
+
+- Inicio: los ajustes de GRUB que guardas (tiempo de espera, visibilidad del menú, entrada predeterminada) ahora se leen los últimos, así que ya no los pisa otro archivo del sistema como el de AyusOS. Al aplicar, los ajustes guardados con la versión anterior se migran solos.
+- Inicio: si otro archivo sigue cambiando un valor guardado, la pestaña lo avisa y muestra el que se usa al arrancar.
+
 ## 1.2.1
 
 - Autorización de administrador: el interruptor «No solicitar contraseña» ya no aparece apagado cuando la regla está activa pero el sistema no deja leerla a tu usuario; permanece activado hasta que lo desactives tú.
