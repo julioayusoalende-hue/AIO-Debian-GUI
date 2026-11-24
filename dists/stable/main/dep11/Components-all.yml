@@ -96,24 +96,14 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
 Releases:
-- version: 1.2.0
+- version: 1.2.1
   type: stable
   unix-timestamp: 1795478400
   description:
     C: >-
-      <ul><li>Un antes y un después en AiO Debian GUI: esta versión cambia por completo la forma de usar la app desde su creación.
-      El estado del sistema deja de ser algo que se consulta a mano y pasa a revisarse solo, con el problema y su solución
-      a la vista.</li><li>Salud del sistema, en ventana propia: se abre con el botón «Salud del sistema» de la tarjeta «Información
-      del sistema» y analiza el equipo automáticamente al abrirse, sin botón de diagnóstico ni diálogos aparte.</li><li>Diagnóstico
-      integrado: barra de progreso abajo y, en cada apartado, su resultado (Correcto, Revisar o No superado) con un punto
-      verde, naranja o rojo.</li><li>Índices actualizados antes de analizar: el diagnóstico refresca los índices APT con el
-      asistente autorizado, de modo que no arranca bloqueado con resultados «Sin comprobar».</li><li>Solución automática:
-      si algo bloquea o falla (por ejemplo, actualizaciones sin aplicar) se abre sola una ventana que ofrece la solución,
-      como ejecutar el mantenimiento estándar.</li><li>Soluciones a un clic: cada apartado que falla tiene su botón (completar
-      paquetes, reparar dependencias, actualizar índices, reiniciar, abrir mantenimiento…) sin salir de la ventana, y el análisis
-      se repite al terminar.</li><li>Tamaño cómodo: la ventana se abre con el tamaño de la app, como máximo 1160×780, para
-      ver las nueve tarjetas sin desplazarse; la barra de desplazamiento solo aparece si no caben.</li><li>Terminal: el botón
-      «Comandos» de la pestaña Terminal tiene un icono de lista propio, distinto del botón de terminal del encabezado.</li><li>Pruebas:
-      nuevas comprobaciones de la ventana, de los estados y de los botones de solución.</li></ul>
+      <ul><li>Autorización de administrador: el interruptor «No solicitar contraseña» ya no aparece apagado cuando la regla
+      está activa pero el sistema no deja leerla a tu usuario; permanece activado hasta que lo desactives tú.</li><li>Apps
+      recomendadas: vuelven a marcarse con «✓ Instalado» las aplicaciones que ya están en el sistema (DEB o Flatpak). El indicador
+      existía, pero dejó de actualizarse al abrir la pestaña.</li></ul>
 ContentRating:
   oars-1.1: {}
