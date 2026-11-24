@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.2.3
+
+- NVIDIA: si el equipo arranca en EFI y falta mokutil, la app lo instala antes de instalar el controlador. Sin él no se puede comprobar Secure Boot y la instalación se rechazaba.
+
 ## 1.2.2
 
 - Inicio: los ajustes de GRUB que guardas (tiempo de espera, visibilidad del menú, entrada predeterminada) ahora se leen los últimos, así que ya no los pisa otro archivo del sistema como el de AyusOS. Al aplicar, los ajustes guardados con la versión anterior se migran solos.

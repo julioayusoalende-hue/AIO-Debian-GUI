@@ -50,7 +50,7 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.2.2
+HELPER_VERSION=1.2.3
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -1298,9 +1298,22 @@ nvidia_hibrida() {
     # La combinación de fabricantes no demuestra una topología Optimus.
     nvidia_presente && [ "$(nvidia_gpu_count integrada)" -gt 0 ]
 }
+# Sin mokutil no se puede saber si Secure Boot está activo y la instalación se
+# rechazaría: en sistemas EFI se instala antes de comprobarlo.
+nvidia_asegurar_mokutil() {
+    [ -d "${EFI_DIR:-/sys/firmware/efi}" ] || return 0
+    command -v mokutil >/dev/null && return 0
+    info "Falta mokutil, necesario para comprobar Secure Boot: se instalará."
+    asegurar_listas || return 1
+    if ! apt-get "${APT_OPTS[@]}" --no-remove install mokutil; then
+        err "No se pudo instalar mokutil, necesario para comprobar Secure Boot."
+        return 1
+    fi
+    command -v mokutil >/dev/null || { err "mokutil no quedó disponible tras instalarlo."; return 1; }
+}
 nvidia_secure_boot() {
     local r
-    [ -d /sys/firmware/efi ] || { echo desactivado; return; }
+    [ -d "${EFI_DIR:-/sys/firmware/efi}" ] || { echo desactivado; return; }
     command -v mokutil >/dev/null || { echo desconocido; return; }
     r=$(mokutil --sb-state 2>/dev/null) || { echo desconocido; return; }
     case "$r" in
@@ -1361,6 +1374,7 @@ paso_nvidia_driver() {
         ok "El controlador NVIDIA tiene un módulo DKMS instalado para el kernel activo."
         return 0
     fi
+    nvidia_asegurar_mokutil || return 1
     if [ "$(nvidia_secure_boot)" != desactivado ]; then
         err "Secure Boot activo o desconocido: configura primero la firma DKMS/MOK."
         return 1

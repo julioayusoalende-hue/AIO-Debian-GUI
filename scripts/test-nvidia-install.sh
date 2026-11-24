@@ -76,5 +76,30 @@ if paso_nvidia_driver; then echo 'ERROR: instala sin soporte PCI'; exit 1; fi
 SELECT_OK=1; SECURE=desconocido
 if paso_nvidia_driver; then echo 'ERROR: permite Secure Boot desconocido'; exit 1; fi
 [ ! -s "$tmp/calls" ]
+# mokutil: en EFI se instala si falta; sin EFI o ya presente, no se toca nada.
+SECURE=desactivado; READY=0; INSTALL_STATUS=0
+mkdir "$tmp/efi"
+HAY_MOKUTIL=0
+command() { if [ "$1" = -v ] && [ "$2" = mokutil ]; then [ "$HAY_MOKUTIL" = 1 ]; else builtin command "$@"; fi; }
+apt-get() {
+    echo "$*" >> "$tmp/calls"
+    [[ " $* " == *' --no-remove '* ]] || return 99
+    [[ " $* " == *' install mokutil'* ]] && { HAY_MOKUTIL=1; return "$INSTALL_STATUS"; }
+    if [[ " $* " == *' -s '* ]]; then echo "$SIMULATION"; return "$SIM_STATUS"; fi
+    READY=1; return "$INSTALL_STATUS"
+}
+EFI_DIR="$tmp/efi"; : > "$tmp/calls"
+paso_nvidia_driver
+grep -q -- 'install mokutil' "$tmp/calls"
+HAY_MOKUTIL=0; READY=0; INSTALL_STATUS=100; : > "$tmp/calls"
+if paso_nvidia_driver; then echo 'ERROR: sigue sin mokutil'; exit 1; fi
+[ "$(wc -l < "$tmp/calls")" -eq 1 ]
+INSTALL_STATUS=0; HAY_MOKUTIL=1; READY=0; : > "$tmp/calls"
+paso_nvidia_driver
+! grep -q -- 'install mokutil' "$tmp/calls"
+HAY_MOKUTIL=0; READY=0; EFI_DIR="$tmp/sin-efi"; : > "$tmp/calls"
+paso_nvidia_driver
+! grep -q -- 'install mokutil' "$tmp/calls"
+unset EFI_DIR
 echo '✔ NVIDIA: selección, módulo, simulación y APT sin eliminaciones'
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/test-nvidia-selection.py
