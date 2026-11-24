@@ -21,6 +21,11 @@ trap 'rm -rf -- "$tmp"' EXIT
     if nvidia_modulo_listo; then echo 'ERROR: DKMS no compilado aceptado'; exit 1; fi
     dkms() { echo 'nvidia-current/550.163.01, 6.11.0-amd64, x86_64: installed'; }
     if nvidia_modulo_listo; then echo 'ERROR: kernel ajeno aceptado'; exit 1; fi
+    modinfo() { [ "${!#}" = nvidia-current ] && echo 550.163.01 || return 1; }
+    dkms() { echo 'nvidia-current/550.163.01, 6.12.1-amd64, x86_64: installed'; }
+    nvidia_modulo_listo || { echo 'ERROR: módulo nvidia-current de Debian rechazado'; exit 1; }
+    modinfo() { return 1; }
+    if nvidia_modulo_listo; then echo 'ERROR: módulo inexistente aceptado'; exit 1; fi
     modinfo() { echo 535.1; }
     if nvidia_modulo_listo; then echo 'ERROR: módulo de otra versión aceptado'; exit 1; fi
 )

@@ -1323,12 +1323,25 @@ nvidia_secure_boot() {
     esac
 }
 # Un paquete instalado no garantiza que exista un módulo para el kernel activo.
+# Debian instala el módulo como nvidia-current.ko (DEST_MODULE_NAME de su
+# dkms.conf); el alias "nvidia" solo existe cuando está activa la alternativa.
+nvidia_version_modulo() {
+    local nombre version
+    for nombre in nvidia nvidia-current nvidia-current-open nvidia-open; do
+        version=$(modinfo -k "$(uname -r)" -F version "$nombre" 2>/dev/null) || continue
+        [ -n "$version" ] || continue
+        printf '%s\n' "$version"
+        return 0
+    done
+    return 1
+}
+
 nvidia_modulo_listo() {
     paquete_instalado nvidia-driver || return 1
     local version modulo
     version=$(dpkg-query -W -f='${Version}' nvidia-driver 2>/dev/null) || return 1
     version=${version#*:}; version=${version%%-*}
-    modulo=$(modinfo -k "$(uname -r)" -F version nvidia 2>/dev/null) || return 1
+    modulo=$(nvidia_version_modulo) || return 1
     [ "$modulo" = "$version" ] || return 1
     LC_ALL=C dkms status 2>/dev/null | awk -F", " -v v="$version" -v k="$(uname -r)" '
         $1 ~ /^nvidia[^/]*\// && substr($1, index($1, "/") + 1) == v && $2 == k && $3 ~ /: installed($|[[:space:]])/ { found=1 }
@@ -1339,7 +1352,7 @@ nvidia_diagnostico_dkms() {
     local esperado modulo
     esperado=$(dpkg-query -W -f='${Version}' nvidia-driver 2>/dev/null)
     esperado=${esperado#*:}; esperado=${esperado%%-*}
-    modulo=$(modinfo -k "$(uname -r)" -F version nvidia 2>/dev/null) || modulo="no encontrado"
+    modulo=$(nvidia_version_modulo) || modulo="no encontrado"
     info "Diagnóstico: kernel $(uname -r), nvidia-driver ${esperado:-no instalado}, módulo cargable: $modulo."
     LC_ALL=C dkms status 2>&1 | grep -i nvidia | while IFS= read -r linea; do info "dkms status: $linea"; done
 }

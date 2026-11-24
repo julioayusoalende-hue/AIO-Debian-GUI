@@ -4,6 +4,7 @@
 
 - NVIDIA: si el equipo arranca en EFI y falta mokutil, la app lo instala antes de instalar el controlador. Sin él no se puede comprobar Secure Boot y la instalación se rechazaba.
 - NVIDIA: la comprobación del módulo DKMS acepta el estado installed aunque dkms añada una nota detrás. Si la comprobación falla, el registro muestra el kernel, la versión del módulo y la línea de dkms status para saber qué pasa.
+- NVIDIA: corregido el falso error «no se verificó el módulo DKMS». Debian instala el módulo con el nombre nvidia-current y la app solo buscaba nvidia, así que no lo encontraba aunque estuviera compilado.
 
 ## 1.2.2
 
