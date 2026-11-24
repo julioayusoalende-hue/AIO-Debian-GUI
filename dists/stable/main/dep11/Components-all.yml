@@ -96,19 +96,15 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
 Releases:
-- version: 1.1.8
+- version: 1.1.10
   type: stable
-  unix-timestamp: 1795392000
+  unix-timestamp: 1795478400
   description:
     C: >-
-      <ul><li>Reordena las pestañas: Configuración y mantenimiento, Gestor de software, Apps recomendadas, Backup e Inicio.</li><li>Sustituye
-      la pestaña Terminal por un botón con icono de terminal en el encabezado, junto al menú de preferencias, que abre la
-      misma consola y conserva su sesión.</li><li>Permite seleccionar varios paquetes DEB o aplicaciones Flatpak y añadirlos
-      a una cola de instalación, actualización o desinstalación que se aplica de forma conjunta.</li><li>Añade el botón «Actualizar
-      todo» para poner en cola y aplicar todas las actualizaciones disponibles de la pestaña activa.</li><li>Muestra la entrada
-      predeterminada, la espera y la visibilidad vigentes de GRUB al cargar Inicio.</li><li>Detecta incidencias pendientes
-      de dpkg antes de instalar una actualización Testing y conserva el aislamiento de la descarga de APT.</li><li>Ejecuta
-      la auditoría de dpkg con la autorización del diagnóstico preventivo.</li><li>Añade un apartado de firmware en Tareas
-      a realizar, con búsqueda y actualización interactiva por dispositivo mediante fwupd.</li></ul>
+      <ul><li>**Programación**: el aviso de reinicio abre AiO como mucho una vez por arranque, aunque el mantenimiento acabe
+      con errores o se repita mientras el equipo sigue pendiente de reiniciar.</li><li>**Backup**: la copia de repositorios
+      APT usa un único tope de tamaño de 32 MiB al leer y al escribir; antes se cortaba a 16 MiB al leer y rechazaba copias
+      que cabían en el tope anunciado.</li><li>**Pruebas**: las comprobaciones GTK ya no fallan al lanzar check.sh desde un
+      AppImage, Flatpak o Snap, y la prueba de preferencias admite la entrada de menú de la guía de integración.</li></ul>
 ContentRating:
   oars-1.1: {}
