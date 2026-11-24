@@ -1395,7 +1395,7 @@ nvidia_report() {
 # - dracut: incluir /etc/modprobe.d/nvidia* en el initramfs.
 # - Cabeceras: el metapaquete del kernel para que DKMS compile en kernels futuros.
 # - X11: si GDM desactiva Wayland (híbridos sin PreserveVideoMemoryAllocations),
-#   necesita el servidor X completo. Debian lo instala con GNOME; AyusOS no.
+#   necesita el servidor X y las sesiones X11 de GNOME. Debian los instala; AyusOS no.
 NVIDIA_MODESET_CONF=${NVIDIA_MODESET_CONF:-/etc/modprobe.d/nvidia-modeset.conf}
 NVIDIA_MODESET_CONTENIDO=$'# Creado por AiO Debian GUI: modesetting para el controlador NVIDIA.\noptions nvidia-drm modeset=1\noptions nvidia-drm fbdev=1'
 NVIDIA_POWER_CONF=${NVIDIA_POWER_CONF:-/etc/modprobe.d/nvidia-aio-power.conf}
@@ -1410,6 +1410,10 @@ nvidia_usa_dracut() { paquete_instalado dracut; }
 nvidia_paquetes_extra() {
     local flavor meta
     paquete_instalado xserver-xorg || echo xserver-xorg
+    # Sin las sesiones X11 de GNOME, GDM aborta con «no session desktop files installed».
+    if paquete_instalado gnome-session && ! paquete_instalado gnome-session-xsession; then
+        echo gnome-session-xsession
+    fi
     flavor=$(uname -r); flavor=${flavor#*-}
     meta="linux-headers-$flavor"
     if ! paquete_instalado "$meta" &&

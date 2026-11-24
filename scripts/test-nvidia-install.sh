@@ -96,6 +96,16 @@ grep -q -- '-s --no-remove install xserver-xorg' "$tmp/calls"
 grep -q -- '--no-remove install xserver-xorg' "$tmp/calls"
 grep -q '##REBOOT:1' "$tmp/out"
 EXTRA=""
+# nvidia_paquetes_extra real: con GNOME sin sesiones X11 pide xserver-xorg y gnome-session-xsession.
+(
+    unset -f nvidia_paquetes_extra
+    source package/usr/lib/aio-debian-gui/aio-debian-gui-helper
+    paquete_instalado() { case "$1" in gnome-session|linux-headers-amd64) return 0 ;; *) return 1 ;; esac; }
+    uname() { echo 6.12.1-amd64; }
+    [ "$(nvidia_paquetes_extra | tr '\n' ' ')" = "xserver-xorg gnome-session-xsession " ]
+    paquete_instalado() { return 0; }
+    [ -z "$(nvidia_paquetes_extra)" ]
+)
 # dracut: incluye los ficheros de modprobe y regenera el initramfs.
 dracut() { echo "dracut $*" >> "$tmp/dracut.log"; }
 paquete_instalado() { [ "$1" = dracut ]; }
