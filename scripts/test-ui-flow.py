@@ -1443,7 +1443,8 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
             assert terminal_contains('AIO_DETACHED_preserved')
             assert list(w.terminal_buttons) == ['clear', 'fastfetch', 'nautilus', 'arranque', 'htop', 'btop']
             assert not w.btn_comandos_terminal.get_label()
-            assert w.btn_comandos_terminal.get_image().get_icon_name()[0] == 'utilities-terminal-symbolic'
+            assert w.btn_comandos_terminal.get_image().get_icon_name()[0] == 'view-list-symbolic'
+            assert w.btn_comandos_terminal.get_image().get_icon_name()[0] != w.btn_terminal_cabecera.get_image().get_icon_name()[0]
             assert w.btn_comandos_terminal.get_accessible().get_name() == 'Comandos'
             assert w.btn_comandos_terminal.get_tooltip_text() == 'Comandos'
             assert w.btn_comandos_terminal.get_toplevel() == detached

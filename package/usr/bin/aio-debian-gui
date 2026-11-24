@@ -2180,7 +2180,7 @@ class VentanaPrincipal(Gtk.Window):
         opciones_terminal = Gtk.Box(spacing=8)
         self.btn_comandos_terminal = Gtk.MenuButton()
         self.btn_comandos_terminal.set_image(Gtk.Image.new_from_icon_name(
-            "utilities-terminal-symbolic", Gtk.IconSize.BUTTON))
+            "view-list-symbolic", Gtk.IconSize.BUTTON))
         nombre_comandos = traducir("Comandos")
         self.btn_comandos_terminal.set_tooltip_text(nombre_comandos)
         self.btn_comandos_terminal.get_accessible().set_name(nombre_comandos)

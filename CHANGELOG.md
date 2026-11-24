@@ -10,6 +10,7 @@
 - **Semáforo**: el punto de cada apartado ahora es verde, naranja o rojo; antes salía siempre gris.
 - **Tamaño**: la ventana de Salud del sistema se abre con el tamaño de la app (como máximo 1160×780), de modo que se ven las nueve tarjetas sin desplazarse; la barra de desplazamiento solo aparece si no caben.
 - **Automático**: la ventana ejecuta el análisis completo al abrirse, por lo que se ha quitado el botón «Ejecutar diagnóstico completo».
+- **Terminal**: el botón «Comandos» de la pestaña Terminal usa un icono de lista, distinto del botón de terminal del encabezado.
 - **Pruebas**: nuevas comprobaciones de la ventana, de los estados y de los botones de solución.
 
 ## 1.1.10
