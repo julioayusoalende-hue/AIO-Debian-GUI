@@ -1218,6 +1218,7 @@ class VentanaPrincipal(Gtk.Window):
         self.programacion = ControladorProgramacion(self)
         self.diagnostico_en_curso = False
         self.ventana_diagnostico = None
+        self.ventana_salud = None
         self.btn_actualizar_diagnostico = None
         self.tareas_en_ejecucion = []
         self.actualizando_preset = False
@@ -2164,10 +2165,8 @@ class VentanaPrincipal(Gtk.Window):
         if self.pagina_software is not None:
             notebook.append_page(self.pagina_software, Gtk.Label(label=traducir("Gestor de software")))
         notebook.append_page(self.pagina_recomendadas, Gtk.Label(label=traducir("Apps recomendadas")))
-        notebook.append_page(self.pagina_salud, Gtk.Label(label=traducir("Salud del sistema")))
         notebook.append_page(pagina_backup, Gtk.Label(label=traducir("Backup")))
         notebook.append_page(pagina_inicio, Gtk.Label(label=traducir("Inicio")))
-        notebook.connect("switch-page", self._cambiar_pestana_salud)
         self.pagina_terminal = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.boton_mostrar_terminal = Gtk.Button(label=traducir("Mostrar ventana de la terminal"))
         self.boton_mostrar_terminal.set_halign(Gtk.Align.CENTER)
@@ -3438,12 +3437,25 @@ class VentanaPrincipal(Gtk.Window):
         if pagina == self.pagina_recomendadas and not self.backup_action_in_progress:
             self._consultar_estado_recomendadas()
 
-    def _cambiar_pestana_salud(self, _notebook, pagina, _numero):
-        if pagina == self.pagina_salud and not self.backup_action_in_progress:
-            if hasattr(self.pagina_salud, 'on_page_show'):
-                self.pagina_salud.on_page_show()
-        elif hasattr(self.pagina_salud, 'on_page_hide'):
-            self.pagina_salud.on_page_hide()
+    def _abrir_ventana_salud(self, _boton=None, diagnosticar=True):
+        """Abre (o trae al frente) la ventana «Salud del sistema»."""
+        ventana = self.ventana_salud
+        if ventana is None:
+            ventana = Gtk.Window(title=traducir("Salud del sistema"))
+            ventana.set_transient_for(self)
+            ventana.set_default_size(760, 640)
+            ventana.add(self.pagina_salud)
+            ventana.connect("delete-event", self._ocultar_ventana_salud)
+            self.ventana_salud = ventana
+        ventana.show_all()
+        ventana.present()
+        if diagnosticar:
+            self.pagina_salud.refresh()
+
+    def _ocultar_ventana_salud(self, ventana, _evento):
+        # La ventana se conserva para no perder el último resultado.
+        ventana.hide()
+        return True
 
     def _consultar_estado_recomendadas(self, al_completar=None):
         self.recommended_scan_generation += 1
@@ -4081,8 +4093,12 @@ class VentanaPrincipal(Gtk.Window):
             hardware.attach(valor, 1, fila, 1, 1)
         caja.pack_start(hardware, False, False, 0)
         caja.pack_start(self.salud_sistema, False, False, 0)
-        self.consejo_sistema = etiqueta("Usa la pestaña «Salud del sistema» para revisar el estado.", dim=True)
+        self.consejo_sistema = etiqueta("Abre «Salud del sistema» para revisar el estado.", dim=True)
         caja.pack_start(self.consejo_sistema, False, False, 0)
+        self.btn_salud_sistema = Gtk.Button(label=traducir("Salud del sistema"))
+        self.btn_salud_sistema.set_halign(Gtk.Align.START)
+        self.btn_salud_sistema.connect("clicked", self._abrir_ventana_salud)
+        caja.pack_start(self.btn_salud_sistema, False, False, 0)
         caja.pack_start(self.btn_detalles_sistema, False, False, 0)
         if self.distribucion == "debian":
             self.nvidia_info_label = etiqueta("Buscando GPU NVIDIA…", dim=True)
@@ -4180,6 +4196,11 @@ class VentanaPrincipal(Gtk.Window):
         return marco
 
     def _abrir_diagnostico(self, _boton=None):
+        # El diagnóstico se ejecuta dentro de la pestaña «Salud del sistema»:
+        # barra de progreso, semáforos por apartado y botones de solución.
+        if getattr(self, "pagina_salud", None) is not None:
+            self._abrir_ventana_salud()
+            return
         if self.en_curso or self.programando or self.comprobando_actualizacion:
             return
         if self.diagnostico_en_curso:

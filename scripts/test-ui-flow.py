@@ -32,7 +32,7 @@ def settle():
 def esperar_disposicion(ventana, ancho):
     paneles = ventana.paneles_principales
     orientacion = Gtk.Orientation.VERTICAL if ancho < 900 else Gtk.Orientation.HORIZONTAL
-    limite = time.monotonic() + 2
+    limite = time.monotonic() + 3
     while time.monotonic() < limite:
         settle()
         actual = ventana.get_size()[0]
@@ -299,7 +299,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         w = app.VentanaPrincipal({'idioma': language, 'tema': 'claro', 'modo_simple': False})
     w.show_all()
     settle()
-    assert w.notebook.get_n_pages() == 6
+    assert w.notebook.get_n_pages() == 5
     assert w.notebook.page_num(w.pagina_terminal) == -1
     assert w.btn_terminal_cabecera.get_tooltip_text() == app.traducir('Terminal')
     assert w.btn_terminal_cabecera.get_image().get_icon_name()[0] == 'utilities-terminal-symbolic'
@@ -307,7 +307,7 @@ for language in ('es', 'en', 'fr', 'zh'):
     assert firmware.get_accessible().get_name() == app.traducir('Firmware')
     assert firmware.get_child().get_ancestor(Gtk.Notebook) is w.notebook
     assert not firmware.get_expanded()
-    assert w.notebook.get_nth_page(5) == w.grub_pagina
+    assert w.notebook.get_nth_page(4) == w.grub_pagina
     assert w.notebook.get_tab_label_text(w.grub_pagina) == app.traducir('Inicio')
     assert w.grub_pagina.get_style_context().has_class("aio-page")
     grub_card = w.grub_formulario.get_ancestor(Gtk.Frame)
@@ -359,7 +359,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         w._grub_finalizado('apply', grub_status, None)
     assert [w.notebook.get_tab_label_text(page) for page in w.notebook.get_children()] == [
         app.traducir(name) for name in
-        ('Configuración y mantenimiento', 'Gestor de software', 'Apps recomendadas', 'Salud del sistema', 'Backup', 'Inicio')
+        ('Configuración y mantenimiento', 'Gestor de software', 'Apps recomendadas', 'Backup', 'Inicio')
     ]
     if language == 'es':
         column = w.pagina_software.view.get_column(0)
@@ -470,7 +470,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         name, description = text.get_children()
         assert name.get_text() == app.APLICACIONES_BACKUP[app_id]['name']
         assert description.get_text() == app.traducir(app.APLICACIONES_BACKUP[app_id]['description'])
-    w.notebook.set_current_page(4)
+    w.notebook.set_current_page(3)
     w.resize(600, 900)
     settle()
     assert w.get_size()[0] <= 601, (language, w.get_size())
@@ -1171,10 +1171,8 @@ inicio, fin = w.buf.get_bounds()
 assert 'error registrado en modo simple' in w.buf.get_text(inicio, fin, True)
 w.destroy()
 
-# El refresco precede al diagnóstico y un fallo no se presenta como lectura actual.
-w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
-w.show_all()
-settle()
+# El refresco precede al diagnóstico y un fallo no se presenta como lectura actual,
+# y todo ocurre dentro de la ventana «Salud del sistema», sin otra ventana.
 for refresh_error in (None, 'Autorización cancelada'):
     calls = []
     def refresh(command):
@@ -1189,28 +1187,92 @@ for refresh_error in (None, 'Autorización cancelada'):
     def app_update(*args):
         calls.append('app')
         return {'status': 'current', 'detail': 'Al día'}
-    with patch.object(app, 'formato_actualizacion', return_value='deb'), \
-         patch.object(app, 'version_app', return_value='2.7.7'), \
-         patch.object(app, 'es_flatpak', return_value=False), \
-         patch.object(app, 'helper_mantenimiento', return_value='helper'), \
-         patch.object(app, 'comando_pkexec', return_value=['test-refresh']), \
-         patch.object(app.core_diagnostics, 'refresh_apt_indices', side_effect=refresh), \
+    from aio_core import constants as core_constants, updates as core_updates
+    with patch.object(app.core_diagnostics, 'refresh_apt_indices', side_effect=refresh), \
          patch.object(app.core_diagnostics, 'run_diagnostics', side_effect=diagnose), \
-         patch.object(app.core_updates, 'estado_actualizacion_app', side_effect=app_update), \
-         patch.object(w, '_diagnostico_terminado', wraps=w._diagnostico_terminado) as finished:
+         patch.object(core_updates, 'estado_actualizacion_app', side_effect=app_update), \
+         patch.object(core_constants, 'formato_actualizacion', return_value='deb'), \
+         patch.object(core_constants, 'version_app', return_value='2.7.7'), \
+         patch.object(core_constants, 'helper_mantenimiento', return_value='helper'), \
+         patch.object(core_constants, 'comando_pkexec', return_value=['test-refresh']):
+        w.pagina_salud.formato = 'deb'
         w._abrir_diagnostico()
-        deadline = time.monotonic() + 5
-        while w.diagnostico_en_curso and time.monotonic() < deadline:
+        deadline = time.monotonic() + 8
+        while (len(calls) < 3 or w.pagina_salud.loading) and time.monotonic() < deadline:
             settle()
-        assert not w.diagnostico_en_curso
-        assert calls == ['refresh', 'diagnose', 'app']
-        results = finished.call_args.args[1]
+            time.sleep(0.01)
+        assert w.ventana_salud is not None and w.ventana_salud.get_visible()
+        assert w.notebook.page_num(w.pagina_salud) == -1
+        assert not w.pagina_salud.loading
+        assert calls == ['refresh', 'diagnose', 'app'], calls
+        results = w.pagina_salud.resultados
         pending = next(item for item in results if item['name'] == 'Actualizaciones pendientes')
         version = next(item for item in results if item['name'] == 'Versión de AiO Debian GUI')
         assert pending['status'] == ('unknown' if refresh_error else 'ok')
         assert version['status'] == ('unknown' if refresh_error else 'ok')
-        w.ventana_diagnostico.destroy()
-        settle()
+        assert w.pagina_salud.cards['Versión de AiO Debian GUI']['status_label'].get_text() == (
+            'Sin comprobar' if refresh_error else 'Correcto')
+        assert not [d for d in Gtk.Window.list_toplevels()
+                    if isinstance(d, Gtk.Dialog) and d.get_visible()]
+# El diagnóstico se ejecuta dentro de la ventana «Salud del sistema»: barra de
+# progreso, semáforo por apartado y botón de solución, sin abrir otra ventana.
+salud = w.pagina_salud
+salud._on_diagnostics_done([
+    {'name': 'Espacio en /', 'status': 'ok', 'detail': '100 GiB libres', 'advice': ''},
+    {'name': 'Estado de dpkg', 'status': 'critical', 'detail': 'paquete incompleto',
+     'advice': 'Revisa los paquetes incompletos.'},
+    {'name': 'Índices de APT', 'status': 'warning', 'detail': 'hace 9 días', 'advice': ''},
+], None)
+settle()
+salud._marcar_acciones([
+    {'name': 'Estado de dpkg', 'status': 'critical', 'detail': '', 'advice': ''},
+    {'name': 'Índices de APT', 'status': 'warning', 'detail': '', 'advice': ''},
+])
+salud._pintar_resultado({'name': 'Estado de dpkg', 'status': 'critical',
+                         'detail': 'paquete incompleto', 'advice': 'Revisa.',
+                         'action': 'command', 'command': ('pkexec', 'dpkg', '--configure', '-a'),
+                         'command_label': 'Completar paquetes'})
+salud._pintar_resultado({'name': 'Índices de APT', 'status': 'warning',
+                         'detail': 'hace 9 días', 'advice': '', 'action': 'maintenance'})
+settle()
+assert salud.cards['Estado de dpkg']['status_label'].get_text() == 'No superado'
+assert salud.cards['Espacio en /']['status_label'].get_text() == 'Correcto'
+botones = [b.get_label() for b in salud.cards['Estado de dpkg']['actions'].get_children()]
+assert botones == ['Completar paquetes'], botones
+assert [b.get_label() for b in salud.cards['Índices de APT']['actions'].get_children()] == ['Abrir mantenimiento']
+assert not salud.cards['Espacio en /']['actions'].get_visible()
+assert salud.progress.get_fraction() == 1 / 3
+assert 'Correctos: 1' in salud.status_label.get_text()
+assert not [d for d in Gtk.Window.list_toplevels()
+            if isinstance(d, Gtk.Dialog) and d.get_visible()]
+
+# El botón de la tarjeta lanza la solución concreta y repite el diagnóstico.
+lanzados = []
+with patch.object(salud, '_ejecutar_comando', side_effect=lanzados.append):
+    for boton in salud.cards['Estado de dpkg']['actions'].get_children():
+        boton.clicked()
+assert lanzados == [('pkexec', 'dpkg', '--configure', '-a')], lanzados
+
+
+w.destroy()
+
+# El botón de «Información del sistema» abre la ventana de salud, sin pestaña propia.
+w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+w.show_all()
+settle()
+assert w.notebook.page_num(w.pagina_salud) == -1
+assert w.ventana_salud is None
+assert w.btn_salud_sistema.get_label() == app.traducir('Salud del sistema')
+with patch.object(w.pagina_salud, 'refresh') as refrescar:
+    w.btn_salud_sistema.clicked()
+    settle()
+    refrescar.assert_called_once()
+assert w.ventana_salud.get_visible() and w.ventana_salud.get_transient_for() == w
+assert w.pagina_salud.get_parent() == w.ventana_salud
+w.ventana_salud.hide()
+w.btn_salud_sistema.clicked()
+settle()
+assert w.ventana_salud.get_visible()
 w.destroy()
 
 # La guía ofrece una instalación gráfica con confirmación.

@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.1.11
+
+- **Salud del sistema**: deja de ser una pestaña y pasa a ser una ventana propia, que se abre con el botón «Salud del sistema» de la tarjeta «Información del sistema» de la primera pestaña.
+- **Diagnóstico integrado**: ya no abre otra ventana de diálogo. Muestra una barra de progreso abajo y, en cada apartado, el resultado (Correcto, Revisar o No superado) con un punto verde, naranja o rojo.
+- **Soluciones a mano**: cada apartado que falla ofrece su botón para solucionarlo (completar paquetes, reparar dependencias, actualizar índices, reiniciar, abrir mantenimiento…) sin salir de la ventana, y el diagnóstico se repite solo al terminar.
+- **Pruebas**: nuevas comprobaciones de la ventana, de los estados y de los botones de solución.
+
 ## 1.1.10
 
 - **Programación**: el aviso de reinicio abre AiO como mucho una vez por arranque, aunque el mantenimiento acabe con errores o se repita mientras el equipo sigue pendiente de reiniciar.
