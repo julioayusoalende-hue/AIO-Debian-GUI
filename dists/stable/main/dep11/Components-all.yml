@@ -96,14 +96,14 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
 Releases:
-- version: 1.2.1
+- version: 1.2.2
   type: stable
   unix-timestamp: 1795478400
   description:
     C: >-
-      <ul><li>Autorización de administrador: el interruptor «No solicitar contraseña» ya no aparece apagado cuando la regla
-      está activa pero el sistema no deja leerla a tu usuario; permanece activado hasta que lo desactives tú.</li><li>Apps
-      recomendadas: vuelven a marcarse con «✓ Instalado» las aplicaciones que ya están en el sistema (DEB o Flatpak). El indicador
-      existía, pero dejó de actualizarse al abrir la pestaña.</li></ul>
+      <ul><li>Inicio: los ajustes de GRUB que guardas (tiempo de espera, visibilidad del menú, entrada predeterminada) ahora
+      se leen los últimos, así que ya no los pisa otro archivo del sistema como el de AyusOS. Al aplicar, los ajustes guardados
+      con la versión anterior se migran solos.</li><li>Inicio: si otro archivo sigue cambiando un valor guardado, la pestaña
+      lo avisa y muestra el que se usa al arrancar.</li></ul>
 ContentRating:
   oars-1.1: {}
