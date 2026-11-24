@@ -102,7 +102,8 @@ EXTRA=""
     source package/usr/lib/aio-debian-gui/aio-debian-gui-helper
     paquete_instalado() { case "$1" in gnome-session|linux-headers-amd64) return 0 ;; *) return 1 ;; esac; }
     uname() { echo 6.12.1-amd64; }
-    [ "$(nvidia_paquetes_extra | tr '\n' ' ')" = "xserver-xorg gnome-session-xsession " ]
+    apt-cache() { printf '  Candidate: 550.163.01-1\n'; }
+    [ "$(nvidia_paquetes_extra | tr '\n' ' ')" = "xserver-xorg gnome-session-xsession nvidia-settings " ]
     paquete_instalado() { return 0; }
     [ -z "$(nvidia_paquetes_extra)" ]
 )

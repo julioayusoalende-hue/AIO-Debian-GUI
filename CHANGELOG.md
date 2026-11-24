@@ -7,6 +7,7 @@
 - NVIDIA: corregido el falso error «no se verificó el módulo DKMS». Debian instala el módulo con el nombre nvidia-current y la app solo buscaba nvidia, así que no lo encontraba aunque estuviera compilado.
 - NVIDIA: la instalación sigue los pasos de la wiki de Debian para Trixie. Activa nvidia-drm modeset=1 y fbdev=1. En equipos con una sola gráfica activa además PreserveVideoMemoryAllocations y NVreg_TemporaryFilePath=/var/tmp, necesarios para la suspensión y para que GDM use Wayland. En portátiles con gráfica Intel y NVIDIA no se activan, como indica la wiki.
 - NVIDIA: si faltan el servidor gráfico X11 (xserver-xorg) o las sesiones X11 de GNOME (gnome-session-xsession), se instalan. GDM pasa a X11 cuando no puede usar Wayland con NVIDIA y, sin ellos, abortaba con «no session desktop files installed» y la pantalla se quedaba en negro. AyusOS no los trae y Debian sí.
+- NVIDIA: se instala el panel de control de NVIDIA (nvidia-settings). nvidia-driver solo lo recomienda y podía quedar fuera.
 - NVIDIA: se instala el metapaquete de cabeceras del kernel (por ejemplo linux-headers-amd64) para que el módulo se compile también con los kernels futuros. Con dracut, el initramfs incluye la configuración de NVIDIA.
 - NVIDIA: si el controlador ya estaba instalado sin esta configuración, la tarea vuelve a aparecer para completarla.
 

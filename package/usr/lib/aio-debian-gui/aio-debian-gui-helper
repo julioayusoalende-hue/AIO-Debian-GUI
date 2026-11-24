@@ -1414,6 +1414,11 @@ nvidia_paquetes_extra() {
     if paquete_instalado gnome-session && ! paquete_instalado gnome-session-xsession; then
         echo gnome-session-xsession
     fi
+    # Panel de control de NVIDIA: nvidia-driver solo lo recomienda y puede quedar fuera.
+    if ! paquete_instalado nvidia-settings &&
+       LC_ALL=C apt-cache policy nvidia-settings 2>/dev/null | grep -Eq 'Candidate:[[:space:]]+[^ (]'; then
+        echo nvidia-settings
+    fi
     flavor=$(uname -r); flavor=${flavor#*-}
     meta="linux-headers-$flavor"
     if ! paquete_instalado "$meta" &&
