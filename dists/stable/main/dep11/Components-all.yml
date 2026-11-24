@@ -96,15 +96,24 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
 Releases:
-- version: 1.1.10
+- version: 1.2.0
   type: stable
   unix-timestamp: 1795478400
   description:
     C: >-
-      <ul><li>**Programación**: el aviso de reinicio abre AiO como mucho una vez por arranque, aunque el mantenimiento acabe
-      con errores o se repita mientras el equipo sigue pendiente de reiniciar.</li><li>**Backup**: la copia de repositorios
-      APT usa un único tope de tamaño de 32 MiB al leer y al escribir; antes se cortaba a 16 MiB al leer y rechazaba copias
-      que cabían en el tope anunciado.</li><li>**Pruebas**: las comprobaciones GTK ya no fallan al lanzar check.sh desde un
-      AppImage, Flatpak o Snap, y la prueba de preferencias admite la entrada de menú de la guía de integración.</li></ul>
+      <ul><li>Un antes y un después en AiO Debian GUI: esta versión cambia por completo la forma de usar la app desde su creación.
+      El estado del sistema deja de ser algo que se consulta a mano y pasa a revisarse solo, con el problema y su solución
+      a la vista.</li><li>Salud del sistema, en ventana propia: se abre con el botón «Salud del sistema» de la tarjeta «Información
+      del sistema» y analiza el equipo automáticamente al abrirse, sin botón de diagnóstico ni diálogos aparte.</li><li>Diagnóstico
+      integrado: barra de progreso abajo y, en cada apartado, su resultado (Correcto, Revisar o No superado) con un punto
+      verde, naranja o rojo.</li><li>Índices actualizados antes de analizar: el diagnóstico refresca los índices APT con el
+      asistente autorizado, de modo que no arranca bloqueado con resultados «Sin comprobar».</li><li>Solución automática:
+      si algo bloquea o falla (por ejemplo, actualizaciones sin aplicar) se abre sola una ventana que ofrece la solución,
+      como ejecutar el mantenimiento estándar.</li><li>Soluciones a un clic: cada apartado que falla tiene su botón (completar
+      paquetes, reparar dependencias, actualizar índices, reiniciar, abrir mantenimiento…) sin salir de la ventana, y el análisis
+      se repite al terminar.</li><li>Tamaño cómodo: la ventana se abre con el tamaño de la app, como máximo 1160×780, para
+      ver las nueve tarjetas sin desplazarse; la barra de desplazamiento solo aparece si no caben.</li><li>Terminal: el botón
+      «Comandos» de la pestaña Terminal tiene un icono de lista propio, distinto del botón de terminal del encabezado.</li><li>Pruebas:
+      nuevas comprobaciones de la ventana, de los estados y de los botones de solución.</li></ul>
 ContentRating:
   oars-1.1: {}
