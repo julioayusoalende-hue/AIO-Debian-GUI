@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.2.1
+
+- Apps recomendadas: vuelven a marcarse con «✓ Instalado» las aplicaciones que ya están en el sistema (DEB o Flatpak). El indicador existía, pero dejó de actualizarse al abrir la pestaña.
+
 ## 1.2.0
 
 Un antes y un después en AiO Debian GUI: esta versión cambia por completo la forma de usar la app desde su creación. El estado del sistema deja de ser algo que se consulta a mano y pasa a revisarse solo, con el problema y su solución a la vista.

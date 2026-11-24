@@ -2248,6 +2248,7 @@ class VentanaPrincipal(Gtk.Window):
         # La Terminal no es una pestaña fija: se añade al notebook la primera vez
         # que se abre desde el botón del encabezado (ver _abrir_terminal).
         notebook.connect("switch-page", self._cambiar_pestana_terminal)
+        notebook.connect("switch-page", self._cambiar_pestana_recomendadas)
         paneles = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL, wide_handle=True)
         self.paneles_principales = paneles
         principal.pack_start(paneles, True, True, 0)

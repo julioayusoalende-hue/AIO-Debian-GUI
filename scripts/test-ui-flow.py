@@ -834,6 +834,21 @@ with patch.object(w, '_mensaje') as message:
     message.assert_called_once()
     w.backup_action_in_progress = False
 
+# Al abrir la pestaña de apps recomendadas se marcan solas las ya instaladas.
+wrec = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+wrec.show_all()
+settle()
+with patch.object(app.VentanaPrincipal, '_comprobar_deb_recomendada', staticmethod(lambda paquete: paquete == 'btop')), \
+     patch.object(app.VentanaPrincipal, '_flatpaks_recomendadas_instaladas', staticmethod(lambda: set())):
+    assert not wrec.recommended_indicators[('btop', 'deb')].get_visible()
+    wrec.notebook.set_current_page(wrec.notebook.page_num(wrec.pagina_recomendadas))
+    limite = time.monotonic() + 5
+    while not wrec.recommended_indicators[('btop', 'deb')].get_visible() and time.monotonic() < limite:
+        settle()
+    assert wrec.recommended_indicators[('btop', 'deb')].get_visible()
+    assert not wrec.recommended_indicators[('htop', 'deb')].get_visible()
+wrec.destroy()
+
 # Apps recomendadas: fuentes separadas, ejecuciones seguras y confirmación de instalación.
 gimp = next(item for item in app.APPS_RECOMENDADAS if item['id'] == 'gimp')
 apt_installed = app.subprocess.CompletedProcess([], 0, stdout='installed', stderr='')
