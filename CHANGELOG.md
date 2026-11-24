@@ -1,17 +1,16 @@
 # Cambios
 
-## 1.1.11
+## 1.2.0
 
-- **Salud del sistema**: deja de ser una pestaña y pasa a ser una ventana propia, que se abre con el botón «Salud del sistema» de la tarjeta «Información del sistema» de la primera pestaña.
-- **Diagnóstico integrado**: ya no abre otra ventana de diálogo. Muestra una barra de progreso abajo y, en cada apartado, el resultado (Correcto, Revisar o No superado) con un punto verde, naranja o rojo.
-- **Soluciones a mano**: cada apartado que falla ofrece su botón para solucionarlo (completar paquetes, reparar dependencias, actualizar índices, reiniciar, abrir mantenimiento…) sin salir de la ventana, y el diagnóstico se repite solo al terminar.
-- **Índices al abrir**: al ejecutar el diagnóstico se actualizan antes los índices APT con el asistente autorizado (antes fallaba y dejaba «Sin comprobar»).
-- **Ventana de solución**: si algo bloquea el diagnóstico (p. ej. actualizaciones sin aplicar) se abre sola una ventana que ofrece la solución, como el mantenimiento estándar.
-- **Semáforo**: el punto de cada apartado ahora es verde, naranja o rojo; antes salía siempre gris.
-- **Tamaño**: la ventana de Salud del sistema se abre con el tamaño de la app (como máximo 1160×780), de modo que se ven las nueve tarjetas sin desplazarse; la barra de desplazamiento solo aparece si no caben.
-- **Automático**: la ventana ejecuta el análisis completo al abrirse, por lo que se ha quitado el botón «Ejecutar diagnóstico completo».
-- **Terminal**: el botón «Comandos» de la pestaña Terminal usa un icono de lista, distinto del botón de terminal del encabezado.
-- **Pruebas**: nuevas comprobaciones de la ventana, de los estados y de los botones de solución.
+Un antes y un después en AiO Debian GUI: esta versión cambia por completo la forma de usar la app desde su creación. El estado del sistema deja de ser algo que se consulta a mano y pasa a revisarse solo, con el problema y su solución a la vista.
+- Salud del sistema, en ventana propia: se abre con el botón «Salud del sistema» de la tarjeta «Información del sistema» y analiza el equipo automáticamente al abrirse, sin botón de diagnóstico ni diálogos aparte.
+- Diagnóstico integrado: barra de progreso abajo y, en cada apartado, su resultado (Correcto, Revisar o No superado) con un punto verde, naranja o rojo.
+- Índices actualizados antes de analizar: el diagnóstico refresca los índices APT con el asistente autorizado, de modo que no arranca bloqueado con resultados «Sin comprobar».
+- Solución automática: si algo bloquea o falla (por ejemplo, actualizaciones sin aplicar) se abre sola una ventana que ofrece la solución, como ejecutar el mantenimiento estándar.
+- Soluciones a un clic: cada apartado que falla tiene su botón (completar paquetes, reparar dependencias, actualizar índices, reiniciar, abrir mantenimiento…) sin salir de la ventana, y el análisis se repite al terminar.
+- Tamaño cómodo: la ventana se abre con el tamaño de la app, como máximo 1160×780, para ver las nueve tarjetas sin desplazarse; la barra de desplazamiento solo aparece si no caben.
+- Terminal: el botón «Comandos» de la pestaña Terminal tiene un icono de lista propio, distinto del botón de terminal del encabezado.
+- Pruebas: nuevas comprobaciones de la ventana, de los estados y de los botones de solución.
 
 ## 1.1.10
 
