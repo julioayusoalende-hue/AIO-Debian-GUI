@@ -30,6 +30,11 @@ def managed_path(name):
             and Path(filename).suffix in FILE_TYPES[folder])
 
 
+def size_limit():
+    """Tope único, en bytes, al leer y al escribir una copia de repositorios."""
+    return LIMIT
+
+
 def snapshot(root):
     if not stat.S_ISDIR(root.lstat().st_mode):
         raise ValueError(f"Unexpected APT directory: {root}")
@@ -45,7 +50,7 @@ def snapshot(root):
         paths.extend(path for path in directory.iterdir()
                      if managed_path(str(path.relative_to(root))))
     files = {}
-    remaining = LIMIT // 2
+    total = 0
     for path in sorted(paths):
         try:
             mode = path.lstat().st_mode
@@ -53,10 +58,11 @@ def snapshot(root):
             continue
         if not stat.S_ISREG(mode):
             raise ValueError(f"Expected a regular file: {path}")
+        # Un byte de más para distinguir «cabe justo» de «se pasa».
         with path.open("rb") as stream:
-            data = stream.read(remaining + 1)
-        remaining -= len(data)
-        if remaining < 0:
+            data = stream.read(LIMIT - total + 1)
+        total += len(data)
+        if total > LIMIT:
             raise ValueError("APT backup exceeds the size limit")
         files[str(path.relative_to(root))] = (data, mode & 0o777)
     return files
@@ -69,13 +75,13 @@ def encode(files):
                   for name, (data, mode) in files.items()},
     }
     encoded = json.dumps(document, indent=2).encode() + b"\n"
-    if len(encoded) > LIMIT:
+    if len(encoded) > size_limit():
         raise ValueError("APT backup exceeds the size limit")
     return encoded
 
 
 def decode(data):
-    if len(data) > LIMIT:
+    if len(data) > size_limit():
         raise ValueError("APT backup exceeds the size limit")
     document = json.loads(data)
     if (not isinstance(document, dict) or document.get("version") != 1

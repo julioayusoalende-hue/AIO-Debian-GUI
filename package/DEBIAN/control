@@ -1,5 +1,5 @@
 Package: aio-debian-gui
-Version: 1:1.1.10~testing.1
+Version: 1:1.1.10
 Section: admin
 Priority: optional
 Architecture: all

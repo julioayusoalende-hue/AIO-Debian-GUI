@@ -52,6 +52,10 @@ python3 scripts/test-desktop-backup.py && bien "copia y restauración de ajustes
 bash scripts/test-recommended-apps.sh && bien "instalación segura de apps recomendadas" || fallo "pruebas de apps recomendadas"
 
 if python3 -c 'import gi; gi.require_version("Gtk", "3.0")' >/dev/null 2>&1; then
+    # Las pruebas GTK simulan el paquete DEB: sin estas variables, lanzar
+    # check.sh desde un AppImage, Flatpak o Snap de AiO cambia las páginas y
+    # el menú que construye la ventana y las pruebas fallan sin motivo.
+    unset APPIMAGE FLATPAK_ID SNAP
     python3 scripts/test-gtk-appearance.py &&
         bien "seguimiento GTK del tema del sistema" ||
         fallo "seguimiento GTK del tema del sistema"

@@ -2,9 +2,11 @@
 
 ## 1.1.10
 
-- Base de la release 1.1.10 (contenido completo en la sección `1.1.10~testing.1`).
+- **Programación**: el aviso de reinicio abre AiO como mucho una vez por arranque, aunque el mantenimiento acabe con errores o se repita mientras el equipo sigue pendiente de reiniciar.
+- **Backup**: la copia de repositorios APT usa un único tope de tamaño de 32 MiB al leer y al escribir; antes se cortaba a 16 MiB al leer y rechazaba copias que cabían en el tope anunciado.
+- **Pruebas**: las comprobaciones GTK ya no fallan al lanzar `check.sh` desde un AppImage, Flatpak o Snap, y la prueba de preferencias admite la entrada de menú de la guía de integración.
 
-## 1.1.10~testing.1
+## 1.1.10 (testing)
 
 ### Refactor de arquitectura modular
 - **UI completamente modularizada**: 15 archivos en `ui/` (main_window, 6 páginas, 4 diálogos, 4 widgets reutilizables)

@@ -261,7 +261,8 @@ with tempfile.TemporaryDirectory() as directory:
              patch.object(s.subprocess, 'Popen', side_effect=Process) as popen, \
              patch.object(s, '_notify_success') as notify, \
              patch.object(s, '_notify_incomplete') as incomplete, \
-             patch.object(s, '_launch_for_reboot') as launch:
+             patch.object(s, '_launch_for_reboot') as launch, \
+             patch.object(s, 'boot_id', return_value='arranque-a'):
             assert s.run_schedule('1000') == 0
             notify.assert_called_once_with('1000')
             incomplete.assert_not_called()
@@ -294,10 +295,14 @@ with tempfile.TemporaryDirectory() as directory:
                 assert 'errors' not in result
                 assert all(p.stat().st_mode & 0o777 == 0o400 for p in s._history_paths('1000'))
                 assert all(call.args[1:] == (1000, -1) for call in chown.call_args_list)
-                assert chown.call_count == 2
+                # Dos copias del historial; la marca del aviso de reinicio se
+                # escribe con el nombre temporal, así que se comprueba abajo.
+                assert chown.call_count == 3
                 assert incomplete.call_args.args[2] == result
                 notify.assert_not_called()
-                launch.assert_called_once_with('1000', config['launcher'])
+                # El aviso de reinicio ya se mostró en la ejecución anterior
+                # del mismo arranque: no vuelve a abrir AiO.
+                launch.assert_not_called()
             with patch.object(preflight, '_check_local', return_value=preflight.Report(True, ['blocked'])):
                 popen.reset_mock()
                 notify.reset_mock()
@@ -339,4 +344,58 @@ with tempfile.TemporaryDirectory() as directory:
         s._atomic(s.STATE_DIR/'1000.json', json.dumps({'status':'running', 'tasks':{}}))
         with patch.object(s, '_systemctl', return_value='inactive'):
             assert s.status('1000')['last_result']['status'] == 'interrupted'
+# Aviso de reinicio: como mucho una apertura por arranque y usuario.
+with tempfile.TemporaryDirectory() as directory:
+    root = Path(directory)
+    with patch.multiple(s, STATE_DIR=root/'state'):
+        assert s.avisar_reinicio_una_vez('1000', None, {'reboot_required': False}) is False
+        assert s.avisar_reinicio_una_vez('1000', None, {}) is False
+        with patch.object(s, 'boot_id', return_value='arranque-a'), \
+             patch.object(s, '_launch_for_reboot') as launch:
+            assert s.avisar_reinicio_una_vez('1000', None, {'reboot_required': True}) is True
+            assert s.avisar_reinicio_una_vez('1000', None, {'reboot_required': True}) is False
+            launch.assert_called_once_with('1000', None)
+            marca = s.STATE_DIR/('1000.reinicio-avisado')
+            assert json.loads(marca.read_text()) == 'arranque-a'
+            # Tras reiniciar cambia el arranque y vuelve a avisar una vez.
+            with patch.object(s, 'boot_id', return_value='arranque-b'):
+                assert s.avisar_reinicio_una_vez('1000', None, {'reboot_required': True}) is True
+                assert s.avisar_reinicio_una_vez('1000', None, {'reboot_required': True}) is False
+            assert launch.call_count == 2
+        # Otra marca para otro usuario no se reutiliza.
+        (s.STATE_DIR/('2000.reinicio-avisado')).write_text(json.dumps('arranque-a') + '\n')
+        with patch.object(s, 'boot_id', return_value='arranque-a'), \
+             patch.object(s, '_launch_for_reboot') as launch:
+            assert s.avisar_reinicio_una_vez('2000', None, {'reboot_required': True}) is False
+            launch.assert_not_called()
+        # Sin boot_id legible se avisa siempre, sin crear marca ilegible.
+        (s.STATE_DIR/('3000.reinicio-avisado')).unlink(missing_ok=True)
+        with patch.object(s, 'boot_id', return_value=''), \
+             patch.object(s, '_launch_for_reboot') as launch:
+            assert s.avisar_reinicio_una_vez('3000', None, {'reboot_required': True}) is True
+            assert s.avisar_reinicio_una_vez('3000', None, {'reboot_required': True}) is True
+            assert launch.call_count == 2
+            assert not (s.STATE_DIR/('3000.reinicio-avisado')).exists()
+        # Marca corrupta o demasiado grande no impide avisar.
+        marca = s.STATE_DIR/('1000.reinicio-avisado')
+        marca.unlink(missing_ok=True)
+        marca.write_text('x' * 200)
+        with patch.object(s, 'boot_id', return_value='arranque-a'), \
+             patch.object(s, '_launch_for_reboot') as launch:
+            assert s.avisar_reinicio_una_vez('1000', None, {'reboot_required': True}) is True
+            launch.assert_called_once_with('1000', None)
+            assert json.loads(marca.read_text()) == 'arranque-a'
+        # El fallo al guardar la marca no impide abrir la aplicación.
+        with patch.object(s, 'boot_id', return_value='arranque-c'), \
+             patch.object(s, '_atomic', side_effect=OSError('disco lleno')), \
+             patch.object(s, '_launch_for_reboot') as launch:
+            assert s.avisar_reinicio_una_vez('1000', None, {'reboot_required': True}) is True
+            launch.assert_called_once_with('1000', None)
+        try:
+            s.avisar_reinicio_una_vez('../1000', None, {'reboot_required': True})
+        except ValueError:
+            pass
+        else:
+            raise AssertionError('UID no válido aceptado en el aviso de reinicio')
+
 print('Programación: validación, calendarios, permisos, persistencia, pausa, borrado, rollback, bloqueos, preflight y resultados OK')

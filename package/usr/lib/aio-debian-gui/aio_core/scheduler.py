@@ -14,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 
-VERSION = '1.1.10~testing.1'
+VERSION = '1.1.10'
 
 
 HOST_PROTOCOL = 1
@@ -40,6 +40,8 @@ HELPER = '/usr/lib/aio-debian-gui/aio-debian-gui-helper'
 LOCK = '/run/aio-debian-gui/maintenance.lock'
 USER_RUNTIME_DIR = Path('/run/user')
 HISTORY_LIMIT = 100
+# Identificador del arranque actual: caduca el aviso de reinicio al reiniciar.
+BOOT_ID_FILE = Path('/proc/sys/kernel/random/boot_id')
 TASKS = ('upgrade', 'autoclean', 'flatpak-update', 'snap-update', 'rebootcheck')
 DAYS = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 DEFAULT = {'enabled': False, 'frequency': 'weekly', 'weekday': 6,
@@ -410,6 +412,41 @@ def _launch_for_reboot(uid, launcher):
     _launch_in_session(uid, launcher)
 
 
+def boot_id():
+    """Identificador del arranque actual; vacío si no se puede leer."""
+    try:
+        return BOOT_ID_FILE.read_text(encoding='utf-8').strip()[:64]
+    except OSError:
+        return ''
+
+
+def avisar_reinicio_una_vez(uid, launcher, result):
+    """Abre AiO para el aviso de reinicio como mucho una vez por arranque.
+
+    Sin la marca, cada ejecución programada vuelve a abrir la aplicación
+    mientras el equipo siga pendiente de reiniciar. Devuelve True solo cuando
+    se lanza la apertura en esta llamada.
+    """
+    uid = validate_uid(uid)
+    if not isinstance(result, dict) or not result.get('reboot_required'):
+        return False
+    marca = STATE_DIR / (uid + '.reinicio-avisado')
+    actual = boot_id()
+    try:
+        anterior = _read(marca, limit=128)
+    except (OSError, ValueError):
+        anterior = None
+    if actual and anterior == actual:
+        return False
+    _launch_for_reboot(uid, launcher)
+    if actual:
+        try:
+            _atomic(marca, json.dumps(actual) + '\n', owner=int(uid))
+        except OSError as error:
+            print(f'No se pudo recordar el aviso de reinicio: {error}', file=sys.stderr)
+    return True
+
+
 def _launch_in_session(uid, launcher, notification=None):
     uid = validate_uid(uid)
     runtime = USER_RUNTIME_DIR / uid
@@ -516,8 +553,7 @@ def run_schedule(uid):
             _notify_success(uid)
         else:
             _notify_incomplete(uid, config.get('launcher'), result)
-        if result['reboot_required']:
-            _launch_for_reboot(uid, config.get('launcher'))
+        avisar_reinicio_una_vez(uid, config.get('launcher'), result)
         return 0 if state in ('success', 'skipped') else 1
 
     if not host_supported():
