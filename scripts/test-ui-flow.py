@@ -22,6 +22,10 @@ spec = importlib.util.spec_from_loader(loader.name, loader)
 app = importlib.util.module_from_spec(spec)
 loader.exec_module(app)
 
+from aio_core import health_dashboard as _hd
+_ofrecer_real = _hd.HealthDashboard._ofrecer_solucion
+_hd.HealthDashboard._ofrecer_solucion = lambda self, results: False
+
 def settle():
     end = time.monotonic() + .18
     while time.monotonic() < end:
@@ -1194,7 +1198,10 @@ for refresh_error in (None, 'Autorización cancelada'):
          patch.object(core_constants, 'formato_actualizacion', return_value='deb'), \
          patch.object(core_constants, 'version_app', return_value='2.7.7'), \
          patch.object(core_constants, 'helper_mantenimiento', return_value='helper'), \
-         patch.object(core_constants, 'comando_pkexec', return_value=['test-refresh']):
+         patch.object(core_constants, 'comando_pkexec', return_value=['test-refresh']), \
+         patch.object(app, 'helper_mantenimiento', return_value='helper'), \
+         patch.object(app, 'comando_pkexec', return_value=['test-refresh']), \
+         patch.object(w.pagina_salud, '_ofrecer_solucion', return_value=False):
         w.pagina_salud.formato = 'deb'
         w._abrir_diagnostico()
         deadline = time.monotonic() + 8
@@ -1255,6 +1262,34 @@ assert lanzados == [('pkexec', 'dpkg', '--configure', '-a')], lanzados
 
 
 w.destroy()
+
+# Un problema que bloquea el diagnóstico abre solo la ventana con su solución.
+wsol = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+wsol.show_all()
+settle()
+salud = wsol.pagina_salud
+_hd.HealthDashboard._ofrecer_solucion = _ofrecer_real
+problema = salud._elegir_problema([
+    {'name': 'Espacio en /', 'status': 'ok'},
+    {'name': 'Actualizaciones pendientes', 'status': 'warning', 'action': 'maintenance'},
+    {'name': 'Reinicio pendiente', 'status': 'warning', 'action': 'command', 'command': ('x',)},
+])
+assert problema['name'] == 'Actualizaciones pendientes'
+assert salud._elegir_problema([{'name': 'Espacio en /', 'status': 'ok'}]) is None
+salud._ofrecer_solucion([{'name': 'Actualizaciones pendientes', 'status': 'warning',
+                          'detail': '12 actualizaciones', 'advice': '', 'action': 'maintenance'}])
+settle()
+dlg = salud.dialogo_solucion
+assert dlg is not None and dlg.get_visible()
+botones = [dlg.get_widget_for_response(r).get_label() for r in (Gtk.ResponseType.CANCEL, Gtk.ResponseType.OK)]
+assert botones == ['Ahora no', 'Ejecutar mantenimiento estándar'], botones
+with patch.object(wsol, '_iniciar') as iniciar:
+    dlg.response(Gtk.ResponseType.OK)
+    settle()
+    iniciar.assert_called_once()
+assert salud.dialogo_solucion is None
+wsol.destroy()
+_hd.HealthDashboard._ofrecer_solucion = lambda self, results: False
 
 # El botón de «Información del sistema» abre la ventana de salud, sin pestaña propia.
 w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})

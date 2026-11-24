@@ -3437,6 +3437,9 @@ class VentanaPrincipal(Gtk.Window):
         if pagina == self.pagina_recomendadas and not self.backup_action_in_progress:
             self._consultar_estado_recomendadas()
 
+    def comando_refresco_diagnostico(self):
+        return comando_pkexec(helper_mantenimiento(), "C.UTF-8", "--refresh-diagnostic-apt")
+
     def _abrir_ventana_salud(self, _boton=None, diagnosticar=True):
         """Abre (o trae al frente) la ventana «Salud del sistema»."""
         ventana = self.ventana_salud

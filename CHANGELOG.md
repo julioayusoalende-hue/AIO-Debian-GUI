@@ -5,6 +5,9 @@
 - **Salud del sistema**: deja de ser una pestaña y pasa a ser una ventana propia, que se abre con el botón «Salud del sistema» de la tarjeta «Información del sistema» de la primera pestaña.
 - **Diagnóstico integrado**: ya no abre otra ventana de diálogo. Muestra una barra de progreso abajo y, en cada apartado, el resultado (Correcto, Revisar o No superado) con un punto verde, naranja o rojo.
 - **Soluciones a mano**: cada apartado que falla ofrece su botón para solucionarlo (completar paquetes, reparar dependencias, actualizar índices, reiniciar, abrir mantenimiento…) sin salir de la ventana, y el diagnóstico se repite solo al terminar.
+- **Índices al abrir**: al ejecutar el diagnóstico se actualizan antes los índices APT con el asistente autorizado (antes fallaba y dejaba «Sin comprobar»).
+- **Ventana de solución**: si algo bloquea el diagnóstico (p. ej. actualizaciones sin aplicar) se abre sola una ventana que ofrece la solución, como el mantenimiento estándar.
+- **Semáforo**: el punto de cada apartado ahora es verde, naranja o rojo; antes salía siempre gris.
 - **Pruebas**: nuevas comprobaciones de la ventana, de los estados y de los botones de solución.
 
 ## 1.1.10

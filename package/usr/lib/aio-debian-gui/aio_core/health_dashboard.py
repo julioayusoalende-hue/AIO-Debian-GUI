@@ -124,6 +124,7 @@ class HealthDashboard(Gtk.Box):
 
     def _create_card(self, name, icon_name):
         """Crea una tarjeta individual para una comprobación."""
+        card_estado = {"status": "unknown"}
         frame = Gtk.Frame()
         frame.set_shadow_type(Gtk.ShadowType.NONE)
         frame.set_hexpand(True)
@@ -156,7 +157,7 @@ class HealthDashboard(Gtk.Box):
         status_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         status_circle = Gtk.DrawingArea()
         status_circle.set_size_request(16, 16)
-        status_circle.connect("draw", self._draw_status_circle, "unknown")
+        status_circle.connect("draw", self._draw_status_circle, card_estado)
         status_box.pack_start(status_circle, False, False, 0)
 
         status_label = Gtk.Label(label=self.translate(NOMBRE_ESTADO["unknown"]))
@@ -195,14 +196,16 @@ class HealthDashboard(Gtk.Box):
             "name_label": name_label,
             "status_icon": status_icon,
             "status_circle": status_circle,
+            "estado": card_estado,
             "status_label": status_label,
             "detail_label": detail_label,
             "advice_label": advice_label,
             "actions": actions,
         }
 
-    def _draw_status_circle(self, area, cr, status):
-        """Dibuja un círculo coloreado según el estado."""
+    def _draw_status_circle(self, area, cr, estado):
+        """Dibuja un círculo coloreado según el estado de su tarjeta."""
+        status = estado["status"]
         color_hex = ESTADO_COLOR.get(status, ESTADO_COLOR["unknown"])
         r = int(color_hex[1:3], 16) / 255.0
         g = int(color_hex[3:5], 16) / 255.0
@@ -227,6 +230,7 @@ class HealthDashboard(Gtk.Box):
         if card is None:
             return
         card["status_label"].set_text(self.translate(NOMBRE_ESTADO.get(status, "Sin comprobar")))
+        card["estado"]["status"] = status
         card["status_circle"].queue_draw()
         ctx = card["status_label"].get_style_context()
         for clase in ("status-ok", "status-warning", "status-critical", "status-unknown"):
@@ -321,13 +325,8 @@ class HealthDashboard(Gtk.Box):
                 auditoria = None
                 if formato == "deb":
                     try:
-                        from .constants import (
-                            comando_pkexec, helper_mantenimiento, es_flatpak)
-                        if es_flatpak():
-                            raise RuntimeError("Sin acceso al anfitrión desde Flatpak")
                         error_apt, auditoria = core_diagnostics.refresh_apt_indices(
-                            comando_pkexec(helper_mantenimiento(), "C.UTF-8",
-                                           "--refresh-diagnostic-apt"))
+                            self.window.comando_refresco_diagnostico())
                     except Exception as exc:  # sin ayudante o sin autorización
                         error_apt = str(exc)
 
@@ -442,6 +441,7 @@ class HealthDashboard(Gtk.Box):
 
         self.resultados = results
         self.status_label.set_text("")
+        GLib.idle_add(self._ofrecer_solucion, results)
         for resultado in results:
             self._pintar_resultado(resultado)
 
@@ -466,6 +466,92 @@ class HealthDashboard(Gtk.Box):
                 self.translate("Sin comprobar"), recuento["unknown"],
                 self.translate("Correctos"), recuento["ok"]))
         return GLib.SOURCE_REMOVE
+
+    # ------------------------------------------------------------------
+    # Ventana de solución automática
+    # ------------------------------------------------------------------
+    PRIORIDAD = ("Estado de dpkg", "Dependencias APT", "Índices de APT",
+                 "Actualizaciones pendientes", "Espacio en /", "Módulos DKMS",
+                 "Reinicio pendiente", "Servicios systemd",
+                 "Versión de AiO Debian GUI")
+
+    def _elegir_problema(self, results):
+        """Devuelve el problema más urgente que tiene una solución ofrecible."""
+        problemas = [r for r in results
+                     if r.get("status") in ("critical", "warning", "unknown")
+                     and r.get("action") in ("command", "maintenance", "refresh-apt", "update")]
+        if not problemas:
+            return None
+        orden = {n: i for i, n in enumerate(self.PRIORIDAD)}
+        gravedad = {"critical": 0, "warning": 1, "unknown": 2}
+        problemas.sort(key=lambda r: (gravedad[r["status"]], orden.get(r.get("name"), 99)))
+        return problemas[0]
+
+    def _ofrecer_solucion(self, results):
+        """Abre una ventana con la solución del problema que bloquea el diagnóstico."""
+        problema = self._elegir_problema(results)
+        if problema is None or getattr(self, "dialogo_solucion", None) is not None:
+            return GLib.SOURCE_REMOVE
+        accion = problema["action"]
+        if accion == "maintenance":
+            boton_texto = "Ejecutar mantenimiento estándar"
+            explicacion = ("Se ejecutará el mantenimiento estándar: actualiza el sistema, "
+                           "limpia paquetes sobrantes y comprueba si hace falta reiniciar.")
+        elif accion == "refresh-apt":
+            boton_texto = "Reintentar actualización de índices"
+            explicacion = "Se volverá a pedir autorización para actualizar los índices APT."
+        elif accion == "update":
+            boton_texto = "Actualizar AiO"
+            explicacion = "Se abrirá el actualizador de AiO."
+        else:
+            boton_texto = problema.get("command_label") or "Ejecutar solución"
+            explicacion = "Se ejecutará: " + " ".join(problema.get("command") or ())
+        padre = self.get_toplevel()
+        dialogo = Gtk.MessageDialog(
+            transient_for=padre if isinstance(padre, Gtk.Window) else None,
+            modal=True, message_type=Gtk.MessageType.WARNING,
+            text=self.translate(problema.get("name", "")) + ": "
+                 + self.translate(NOMBRE_ESTADO.get(problema["status"], "")))
+        detalle = self.translate(problema.get("detail") or "")
+        consejo = self.translate(problema.get("advice") or "")
+        dialogo.format_secondary_text("\n\n".join(
+            t for t in (detalle, consejo, self.translate(explicacion)) if t))
+        dialogo.add_button(self.translate("Ahora no"), Gtk.ResponseType.CANCEL)
+        dialogo.add_button(self.translate(boton_texto), Gtk.ResponseType.OK)
+        dialogo.set_default_response(Gtk.ResponseType.OK)
+        self.dialogo_solucion = dialogo
+
+        def respondido(d, respuesta):
+            d.destroy()
+            self.dialogo_solucion = None
+            if respuesta == Gtk.ResponseType.OK:
+                self._aplicar_solucion(problema)
+        dialogo.connect("response", respondido)
+        dialogo.show_all()
+        return GLib.SOURCE_REMOVE
+
+    def _aplicar_solucion(self, problema):
+        accion = problema["action"]
+        if accion == "maintenance":
+            self._on_run_standard_maintenance()
+        elif accion == "refresh-apt":
+            self._on_run_diagnostics()
+        elif accion == "update":
+            self._on_update_app(None)
+        elif problema.get("command"):
+            self._ejecutar_comando(problema["command"])
+
+    def _on_run_standard_maintenance(self):
+        """Prepara el perfil estándar y lanza el mantenimiento desde la ventana principal."""
+        ventana = getattr(self.window, "ventana_salud", None)
+        if ventana is not None:
+            ventana.hide()
+        self.window.present()
+        botones = getattr(self.window, "botones_preset", {})
+        if "estandar" in botones:
+            self.window._aplicar_preset(botones["estandar"], "estandar")
+        self.window.notebook.set_current_page(0)
+        self.window._iniciar(None)
 
     # ------------------------------------------------------------------
     # Acciones sin salir de la pestaña
