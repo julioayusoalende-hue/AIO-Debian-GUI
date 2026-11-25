@@ -71,7 +71,8 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 ### Lo nuevo en la 1.3.1
 
 - Corregida la limpieza de papelera y miniaturas: los comandos se ejecutan desde el directorio personal del usuario, aunque `pkexec` haya partido de `/root`.
-- Añadida una prueba de regresión para este fallo.
+- Nuevo preset **Limpieza**, junto a Estándar, Completo y Solo Flatpak.
+- Actualización y limpieza de Flatpak y Snap separadas en tareas independientes para evitar redundancias.
 
 [Consultar el historial completo →](CHANGELOG.md)
 

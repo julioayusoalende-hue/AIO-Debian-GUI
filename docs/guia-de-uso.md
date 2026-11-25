@@ -32,7 +32,7 @@ Antes de cambiar kernel, Mesa, repositorios o controladores, haz una copia de se
 
 ## Mantenimiento de Snap
 
-Si `snapd` está instalado en el anfitrión, aparece **Actualizar y limpiar Snap**, seleccionada en el mantenimiento completo y disponible como tarea opcional del programador. También existe **Eliminar revisiones antiguas de Snap** en el apartado de limpieza, para ejecutar solo esa parte. Ejecuta `snap refresh` y, si termina correctamente, elimina mediante `snap remove --revision` las revisiones numéricas deshabilitadas más antiguas. Conserva la revisión activa y una revisión deshabilitada por aplicación para poder volver atrás. No borra datos, instantáneas ni archivos de la caché directamente, y no instala snapd. Si snapd se desinstala después de guardar un horario, la tarea se omite sin interrumpir las demás. Las programaciones existentes mantienen su selección de tareas.
+Si `snapd` está instalado en el anfitrión, aparece **Actualizar aplicaciones Snap**, seleccionada en el mantenimiento estándar y disponible como tarea opcional del programador. Ejecuta `snap refresh` y no elimina revisiones antiguas. La limpieza de revisiones se hace por separado con **Eliminar revisiones antiguas de Snap**, en el apartado **Limpieza del sistema**: usa `snap remove --revision` y conserva la revisión activa y una revisión deshabilitada por aplicación para poder volver atrás. No borra datos, instantáneas ni archivos de la caché directamente, y no instala snapd. Si snapd se desinstala después de guardar un horario, la tarea se omite sin interrumpir las demás. Las programaciones existentes mantienen su selección de tareas.
 
 ## Actualizar AiO desde Salud del sistema
 
@@ -42,7 +42,7 @@ La actualización usa el canal configurado en **Preferencias** (Estable o Testin
 
 ## Limpieza del sistema
 
-En **Configuración y mantenimiento → Tareas**, el apartado **Limpieza del sistema** ofrece opciones independientes, todas desactivadas por defecto. Selecciona solo las que quieras ejecutar y pulsa **Ejecutar**; no es necesario activar el mantenimiento completo.
+En **Configuración y mantenimiento → Tareas**, el apartado **Limpieza del sistema** ofrece opciones independientes, todas desactivadas por defecto. Selecciona solo las que quieras ejecutar y pulsa **Ejecutar**; no es necesario activar el mantenimiento completo. El preset **Limpieza**, junto a Estándar, Completo y Solo Flatpak, selecciona todas las limpiezas disponibles sin actualizar paquetes ni comprobar reinicios.
 
 - **Limpiar caché de APT**: elimina los `.deb` descargados en `/var/cache/apt/archives`. No desinstala paquetes y los archivos pueden volver a descargarse.
 - **Vaciar papelera del usuario**: borra el contenido de `~/.local/share/Trash`. No toca archivos fuera de la papelera.

@@ -88,4 +88,11 @@ paso_clean_flatpak >/dev/null
 grep -Fxq 'flatpak --system uninstall --unused -y' "$TMP/flatpak.log"
 grep -Fxq 'user uninstall --unused -y' "$TMP/flatpak.log"
 
+# Actualizar y limpiar son tareas independientes: update no debe desinstalar.
+: > "$TMP/flatpak.log"
+paso_flatpak_update >/dev/null
+grep -Fxq 'flatpak --system update -y' "$TMP/flatpak.log"
+grep -Fxq 'user update -y' "$TMP/flatpak.log"
+! grep -q 'uninstall' "$TMP/flatpak.log"
+
 echo "✔ Limpieza segura: APT, journal, papelera, miniaturas, enlaces y Flatpak"

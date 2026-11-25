@@ -4,6 +4,8 @@
 
 - Corregida la limpieza de papelera y miniaturas cuando `pkexec` deja el directorio de trabajo en `/root`: el asistente entra al HOME del usuario antes de ejecutar `runuser`.
 - Añadida una prueba de regresión que comprueba el directorio de trabajo de los comandos ejecutados como el usuario solicitante.
+- Nuevo preset **Limpieza**, junto a Estándar, Completo y Solo Flatpak. Selecciona las limpiezas disponibles sin actualizar paquetes ni comprobar reinicios.
+- Separadas actualización y limpieza de Flatpak y Snap: las tareas de actualización ya no eliminan runtimes o revisiones antiguas; esas acciones quedan en el apartado de limpieza.
 
 ## 1.3.0
 
