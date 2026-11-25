@@ -52,3 +52,18 @@ En **Configuración y mantenimiento → Tareas**, el apartado **Limpieza del sis
 - **Eliminar revisiones antiguas de Snap**: conserva la revisión activa y la última revisión deshabilitada de cada snap para permitir volver atrás.
 
 Las tareas de papelera y miniaturas se ejecutan con los permisos de tu cuenta. AiO comprueba que las rutas resueltas permanecen dentro de tu directorio personal y no sigue enlaces que apunten fuera de él. Las tareas de limpieza no se incluyen en la programación automática.
+
+
+## Extensiones recomendadas de GNOME
+
+Cuando AiO detecta el paquete `gnome-shell`, el grupo **Aplicaciones y repositorios** muestra tareas individuales para instalar:
+
+- AppIndicator y KStatusNotifierItem Support.
+- Blur my Shell.
+- Caffeine.
+- Clipboard Indicator.
+- Dash to Dock.
+- Places Status Indicator.
+- Tiling Shell.
+
+AiO consulta `extensions.gnome.org` para elegir una versión compatible con el GNOME Shell instalado, descarga el ZIP por HTTPS y comprueba su integridad, `metadata.json` y UUID antes de instalarlo con los permisos de tu usuario. La extensión se instala pero no se activa automáticamente; puedes activarla desde **Extension Manager** o **Extensiones**. En escritorios distintos de GNOME estas tareas no se muestran.

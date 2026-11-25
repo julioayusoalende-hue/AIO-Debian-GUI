@@ -51,6 +51,7 @@ bash scripts/test-backup-apps.sh && bien "instalación segura de aplicaciones de
 python3 scripts/test-apt-sources-backup.py && bien "copia y restauración de repositorios APT" || fallo "pruebas de copias APT"
 python3 scripts/test-desktop-backup.py && bien "copia y restauración de ajustes del escritorio" || fallo "pruebas de copias del escritorio"
 bash scripts/test-recommended-apps.sh && bien "instalación segura de apps recomendadas" || fallo "pruebas de apps recomendadas"
+bash scripts/test-gnome-extensions.sh && bien "extensiones GNOME seguras" || fallo "extensiones GNOME"
 
 if python3 -c 'import gi; gi.require_version("Gtk", "3.0")' >/dev/null 2>&1; then
     # Las pruebas GTK simulan el paquete DEB: sin estas variables, lanzar
