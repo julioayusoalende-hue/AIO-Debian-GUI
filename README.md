@@ -68,10 +68,9 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.4.3
+### Lo nuevo en la 1.4.4
 
-- Corregido el falso fallo al confirmar la instalación de una extensión de GNOME.
-- La llamada espera la confirmación del usuario y comprueba el estado real de la extensión si la respuesta D-Bus llega tarde.
+- Se corrige el error D-Bus `NoReply: Message recipient disconnected from message bus without replying` al instalar extensiones de GNOME: la llamada ahora se dirige directamente a `org.gnome.Shell`, que espera la confirmación del usuario sin cortar la conexión.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -79,7 +78,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.4.3**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.4.4**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 

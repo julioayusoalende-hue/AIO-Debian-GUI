@@ -8,8 +8,9 @@ import urllib.parse
 import urllib.request
 
 INFO_URL = "https://extensions.gnome.org/extension-info/?{query}"
-SHELL_BUS = "org.gnome.Shell.Extensions"
-SHELL_PATH = "/org/gnome/Shell/Extensions"
+SHELL_BUS = "org.gnome.Shell"
+SHELL_PATH = "/org/gnome/Shell"
+SHELL_IFACE = "org.gnome.Shell.Extensions"
 
 EXTENSIONS = {
     "gnome-ext-appindicator": "appindicatorsupport@rgcjonas.gmail.com",
@@ -64,7 +65,7 @@ def install_remote(task):
     result = subprocess.run(
         ["gdbus", "call", "--session", "--dest", SHELL_BUS,
          "--object-path", SHELL_PATH, "--timeout=600",
-         "--method", f"{SHELL_BUS}.InstallRemoteExtension", uuid],
+         "--method", f"{SHELL_IFACE}.InstallRemoteExtension", uuid],
         stdin=subprocess.DEVNULL, capture_output=True, text=True,
         timeout=660, check=False,
     )

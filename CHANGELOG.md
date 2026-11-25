@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.4.4
+
+- Se corrige el error D-Bus `NoReply: Message recipient disconnected from message bus without replying` al instalar extensiones de GNOME: la llamada ahora se dirige directamente a `org.gnome.Shell` (`/org/gnome/Shell`), que mantiene viva la conexión mientras el usuario confirma el diálogo, evitando que el servicio intermedio `org.gnome.Shell.Extensions` (que se apaga a los 2 s de inactividad) corte la respuesta.
+
 ## 1.4.3
 
 - La confirmación de instalación de extensiones de GNOME ya no provoca un falso fallo por timeout: la llamada D-Bus espera hasta 10 minutos.

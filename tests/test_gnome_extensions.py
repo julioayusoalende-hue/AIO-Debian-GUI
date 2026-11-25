@@ -71,8 +71,8 @@ def test_install_remote_uses_shell_api():
         gnome_extensions.install_remote(TASK)
     command = run.call_args.args[0]
     assert command == [
-        'gdbus', 'call', '--session', '--dest', 'org.gnome.Shell.Extensions',
-        '--object-path', '/org/gnome/Shell/Extensions', '--timeout=600',
+        'gdbus', 'call', '--session', '--dest', 'org.gnome.Shell',
+        '--object-path', '/org/gnome/Shell', '--timeout=600',
         '--method', 'org.gnome.Shell.Extensions.InstallRemoteExtension', UUID,
     ]
     assert run.call_args.kwargs['timeout'] == 660
