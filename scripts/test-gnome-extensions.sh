@@ -13,6 +13,7 @@ CALLS="$TMP/calls"
 : > "$CALLS"
 
 paquete_instalado() { [ "${1:-}" = gnome-shell ] && [ "${TEST_GNOME:-yes}" = yes ]; }
+gnome-extensions() { :; }
 ejecutar_como_usuario_solicitante() {
     printf '%s\n' "$*" >> "$CALLS"
     case "$1 $2 $3" in
