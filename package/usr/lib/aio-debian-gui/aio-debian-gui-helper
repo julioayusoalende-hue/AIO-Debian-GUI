@@ -50,7 +50,7 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.2.5
+HELPER_VERSION=1.3.0
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -191,6 +191,37 @@ pkexec_username() {
         return 1
     fi
     printf '%s\n' "$username"
+}
+
+ejecutar_como_usuario_solicitante() {
+    local uid username entry home runtime
+    local -a entorno
+    uid=$(pkexec_uid) || return 1
+    username=$(pkexec_username) || return 1
+    entry=$(getent passwd "$uid") || return 1
+    IFS=: read -r _ _ _ _ _ home _ <<< "$entry"
+    case "$home" in
+        /*) ;;
+        *) err "El directorio personal del usuario no es válido."; return 1 ;;
+    esac
+    [ -d "$home" ] || { err "No se encontró el directorio personal del usuario."; return 1; }
+    runtime="/run/user/$uid"
+    entorno=(HOME="$home")
+    if [ -d "$runtime" ]; then
+        entorno+=(XDG_RUNTIME_DIR="$runtime" DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime/bus")
+    fi
+    runuser -u "$username" -- env "${entorno[@]}" "$@"
+}
+
+ejecutar_flatpak_usuario() {
+    local uid runtime
+    uid=$(pkexec_uid) || return 1
+    runtime="/run/user/$uid"
+    if [ ! -d "$runtime" ]; then
+        warn "No se encontró el runtime de sesión del usuario; se omite Flatpak de usuario."
+        return 2
+    fi
+    ejecutar_como_usuario_solicitante flatpak --user "$@"
 }
 
 ejecutar_programador() {
@@ -1163,60 +1194,76 @@ paso_autoclean() {
     ok "Limpieza realizada."
 }
 
+paso_clean_apt() {
+    info "Limpiando archivos .deb descargados del caché APT..."
+    if ! apt-get clean; then
+        err "No se pudo limpiar la caché APT."
+        return 1
+    fi
+    ok "Caché APT limpia."
+}
+
+paso_limpiar_flatpak_sin_uso() {
+    if ! command -v flatpak &> /dev/null; then
+        info "Flatpak no está instalado en este sistema. Omitiendo..."
+        return 0
+    fi
+
+    local fallos=0 codigo=0
+    if flatpak --system uninstall --unused -y; then
+        ok "Runtimes Flatpak del sistema sin uso eliminados."
+    else
+        err "No se pudieron eliminar runtimes Flatpak del sistema sin uso."
+        fallos=1
+    fi
+    if ejecutar_flatpak_usuario uninstall --unused -y; then
+        ok "Runtimes Flatpak del usuario sin uso eliminados."
+    else
+        codigo=$?
+        if [ "$codigo" -ne 2 ]; then
+            err "No se pudieron eliminar runtimes Flatpak del usuario sin uso."
+            fallos=1
+        fi
+    fi
+    [ "$fallos" -eq 0 ] || return 1
+    ok "Limpieza de Flatpak finalizada."
+}
+
+paso_clean_flatpak() {
+    paso_limpiar_flatpak_sin_uso
+}
+
 paso_flatpak_update() {
     if ! command -v flatpak &> /dev/null; then
         info "Flatpak no está instalado en este sistema. Omitiendo..."
         return 0
     fi
 
-    local uid entry username home runtime fallos=0
-    info "Actualizando instalaciones Flatpak del sistema..."
-    if flatpak --system update -y && flatpak --system uninstall --unused -y; then
-        ok "Instalación Flatpak del sistema actualizada."
-    else
+    local fallos=0 codigo=0
+    info "Actualizando instalación Flatpak del sistema..."
+    if ! flatpak --system update -y; then
         err "Hubo problemas al actualizar la instalación Flatpak del sistema."
         fallos=1
     fi
-
-    # pkexec conserva el UID solicitante en PKEXEC_UID. Nunca se ejecuta Flatpak
-    # de usuario como root: runuser usa su HOME y el runtime de su sesión.
-    uid=$(pkexec_uid) || return 1
-    entry=$(getent passwd "$uid") || {
-        err "No se pudo localizar la cuenta que inició el mantenimiento."
-        return 1
-    }
-    IFS=: read -r username _ _ _ _ home _ <<< "$entry"
-    runtime="/run/user/$uid"
-    if [ -d "$runtime" ] && [ -n "$home" ]; then
-        info "Actualizando la instalación Flatpak del usuario $username..."
-        if runuser -u "$username" -- env HOME="$home" XDG_RUNTIME_DIR="$runtime" \
-            DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime/bus" \
-            flatpak --user update -y &&
-           runuser -u "$username" -- env HOME="$home" XDG_RUNTIME_DIR="$runtime" \
-            DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime/bus" \
-            flatpak --user uninstall --unused -y; then
-            ok "Instalación Flatpak del usuario actualizada."
-        else
+    if ejecutar_flatpak_usuario update -y; then
+        ok "Instalación Flatpak del usuario actualizada."
+    else
+        codigo=$?
+        if [ "$codigo" -ne 2 ]; then
             err "Hubo problemas al actualizar la instalación Flatpak del usuario."
             fallos=1
         fi
-    else
-        warn "No se encontró el runtime de sesión del usuario; se omite Flatpak de usuario."
     fi
-
+    paso_limpiar_flatpak_sin_uso || fallos=1
     [ "$fallos" -eq 0 ] || return 1
     ok "Comprobación de instalaciones Flatpak finalizada."
 }
+
 # Only snapd owns its revisions. Never remove files directly from /var/lib/snapd.
-paso_snap_update() {
+limpiar_revisiones_snap() {
     if ! paquete_instalado snapd || ! command -v snap >/dev/null 2>&1; then
-        info "snapd no está instalado; se omite el mantenimiento Snap."
+        info "snapd no está instalado; se omite la limpieza Snap."
         return 0
-    fi
-    info "Actualizando aplicaciones Snap..."
-    if ! snap refresh; then
-        err "No se pudieron actualizar los snaps; no se realizará la limpieza."
-        return 1
     fi
     local listado nombre version revision tracking publisher notas resto
     local fallos=0
@@ -1244,7 +1291,84 @@ paso_snap_update() {
         fi
     done <<< "$listado"
     [ "$fallos" -eq 0 ] || return 1
-    ok "Snap actualizado; se conserva una revisión anterior por aplicación y sus datos."
+    ok "Snap limpiado; se conserva una revisión anterior por aplicación y sus datos."
+}
+
+paso_snap_update() {
+    if ! paquete_instalado snapd || ! command -v snap >/dev/null 2>&1; then
+        info "snapd no está instalado; se omite el mantenimiento Snap."
+        return 0
+    fi
+    info "Actualizando aplicaciones Snap..."
+    if ! snap refresh; then
+        err "No se pudieron actualizar los snaps; no se realizará la limpieza."
+        return 1
+    fi
+    limpiar_revisiones_snap || return 1
+    ok "Snap actualizado y limpiado."
+}
+
+paso_clean_snap() {
+    limpiar_revisiones_snap
+}
+
+limpiar_directorio_usuario() {
+    local etiqueta=$1 relativa=$2 modo=$3
+    local uid entry home base ruta resuelta
+    uid=$(pkexec_uid) || return 1
+    entry=$(getent passwd "$uid") || return 1
+    IFS=: read -r _ _ _ _ _ home _ <<< "$entry"
+    case "$home" in
+        /*) ;;
+        *) err "El directorio personal del usuario no es válido."; return 1 ;;
+    esac
+    [ -d "$home" ] || { err "No se encontró el directorio personal del usuario."; return 1; }
+    base=$(readlink -f -- "$home") || return 1
+    ruta="$base/$relativa"
+
+    # Un enlace directo se elimina sin seguirlo. Si un padre es un enlace,
+    # readlink -m detecta si el destino final sale del directorio personal.
+    if [ -L "$ruta" ]; then
+        ejecutar_como_usuario_solicitante rm -f -- "$ruta" || return 1
+        ok "$etiqueta: enlace eliminado sin seguir su destino."
+        return 0
+    fi
+    [ -d "$ruta" ] || { info "$etiqueta: no hay contenido que limpiar."; return 0; }
+    resuelta=$(readlink -m -- "$ruta") || return 1
+    case "$resuelta" in
+        "$base"/*) ;;
+        *) err "$etiqueta: la ruta resolvió fuera del directorio personal; se cancela."; return 1 ;;
+    esac
+
+    if [ "$modo" = trash ]; then
+        ejecutar_como_usuario_solicitante find "$ruta" -mindepth 1 -maxdepth 1 \
+            -exec rm -rf -- {} + || return 1
+    else
+        ejecutar_como_usuario_solicitante find "$ruta" -mindepth 1 -type f -mtime +7 -delete || return 1
+        ejecutar_como_usuario_solicitante find "$ruta" -mindepth 1 -depth -type d -empty -delete || return 1
+    fi
+    ok "$etiqueta limpiado."
+}
+
+paso_clean_trash() {
+    limpiar_directorio_usuario "Papelera" ".local/share/Trash" trash
+}
+
+paso_clean_thumbnails() {
+    limpiar_directorio_usuario "Miniaturas antiguas" ".cache/thumbnails" thumbnails
+}
+
+paso_clean_journal() {
+    if ! command -v journalctl >/dev/null 2>&1; then
+        info "systemd-journald no está disponible; se omite la limpieza de registros."
+        return 0
+    fi
+    info "Eliminando registros rotados de systemd anteriores a 30 días..."
+    if ! journalctl --vacuum-time=30d; then
+        err "No se pudo limpiar el diario de systemd."
+        return 1
+    fi
+    ok "Registros antiguos eliminados; se conservan los últimos 30 días."
 }
 
 paso_rebootcheck() {
@@ -1614,6 +1738,12 @@ declare -A TITULOS=(
     [autoclean]="Limpiar caché de paquetes"
     [snap-update]="Actualizar y limpiar Snap"
     [flatpak-update]="Actualizar aplicaciones Flatpak"
+    [clean-apt]="Limpiar caché de APT"
+    [clean-trash]="Vaciar papelera del usuario"
+    [clean-thumbnails]="Eliminar miniaturas antiguas"
+    [clean-journal]="Limpiar registros del sistema"
+    [clean-flatpak]="Eliminar Flatpak sin uso"
+    [clean-snap]="Eliminar revisiones antiguas de Snap"
     [rebootcheck]="Comprobar si hace falta reiniciar"
 )
 # Pasos cuyo fallo detiene la ejecución (el resto solo se anota)

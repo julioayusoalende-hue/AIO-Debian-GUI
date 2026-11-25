@@ -26,6 +26,8 @@ with patch.object(mod, "_apt_locks", return_value=[]), \
      patch.object(mod, "_run", side_effect=run):
     assert mod.check(["upgrade"]).blocked
     assert not mod.check(["flatpak-update"]).blocked
+    for tarea in ("clean-trash", "clean-thumbnails", "clean-journal", "clean-flatpak", "clean-snap"):
+        assert not mod.check([tarea]).blocked
     assert not mod.check(["autoclean"]).blocked
 with patch.object(mod, "_apt_locks", return_value=[]), \
      patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=500*1024**2)), \

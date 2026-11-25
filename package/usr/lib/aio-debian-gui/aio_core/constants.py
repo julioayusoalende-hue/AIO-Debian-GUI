@@ -283,6 +283,18 @@ PASOS = [
      "Permite gestionar apps Flatpak desde la tienda de GNOME.", False, "gnome"),
     ("ext-manager", "Extension Manager",
      "Instila gnome-shell-extension-manager para gestionar extensiones de GNOME Shell.", False, "gnome"),
+    ("clean-apt", "Limpiar caché de APT",
+     "Elimina los .deb descargados en /var/cache/apt/archives; no borra paquetes instalados.", False, "cleanup"),
+    ("clean-trash", "Vaciar papelera del usuario",
+     "Elimina el contenido de ~/.local/share/Trash. No toca archivos fuera de la papelera.", False, "cleanup"),
+    ("clean-thumbnails", "Eliminar miniaturas antiguas",
+     "Borra miniaturas de más de 7 días en ~/.cache/thumbnails; se regeneran al abrir archivos.", False, "cleanup"),
+    ("clean-journal", "Limpiar registros del sistema",
+     "Conserva los últimos 30 días del diario de systemd y elimina registros rotados más antiguos.", False, "cleanup"),
+    ("clean-flatpak", "Eliminar Flatpak sin uso",
+     "flatpak uninstall --unused para el sistema y el usuario; no elimina aplicaciones instaladas.", False, "cleanup"),
+    ("clean-snap", "Eliminar revisiones antiguas de Snap",
+     "Quita revisiones deshabilitadas y conserva la última revisión anterior de cada snap para poder volver atrás.", False, "cleanup"),
     ("rebootcheck", "Comprobar si hace falta reiniciar",
      "Revisa kernel y servicios críticos al terminar.", True, "final"),
 ]
@@ -291,6 +303,7 @@ GRUPOS = [
     ("apt", "Sistema (APT)"),
     ("flatpak", "Flatpak"),
     ("gnome", "GNOME"),
+    ("cleanup", "Limpieza del sistema"),
     ("final", "Al terminar"),
 ]
 

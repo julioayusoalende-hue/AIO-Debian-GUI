@@ -59,7 +59,8 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | Área | Funciones |
 |---|---|
 | **Mantenimiento** | Actualizar APT, limpiar caché y retirar dependencias innecesarias. Revisar la simulación de APT antes de continuar cuando requiere confirmación. |
-| **Diagnóstico** | Consultar espacio, estado de APT/dpkg, actualizaciones, DKMS, servicios y necesidad de reinicio. Informa cuando una comprobación queda incompleta. |
+| **Limpieza segura** | Apartado independiente para limpiar caché APT, papelera, miniaturas antiguas, registros de systemd, Flatpak sin uso y revisiones antiguas de Snap. |
+| **Diagnóstico** | Consultar espacio, estado de APT/dpkg, actualizaciones, DKMS, servicios y necesidad de reinicio. Desde **Salud del sistema** puedes actualizar solo AiO sin ejecutar el mantenimiento completo. |
 | **Programación** | Ejecutar mantenimiento diario, semanal o mensual mediante systemd y consultar próximas ejecuciones y resultados, incluso con AiO cerrado. |
 | **Backup** | Copiar y restaurar repositorios APT y ajustes de GNOME o KDE Plasma. Acceder a Timeshift y Respaldos (Déjà Dup), con instalación opcional. |
 | **Kernel y hardware** | Gestionar Backports de kernel/Mesa en Debian, volver a Stable y comprobar la instalación NVIDIA. Las tareas disponibles dependen de la distribución y la compatibilidad. |
@@ -67,10 +68,11 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.2.5
+### Lo nuevo en la 1.3.0
 
-- La autorización opcional sin contraseña permanece activada tras reiniciar o volver a iniciar sesión, aunque Debian restaure los permisos del directorio de reglas de Polkit.
-- Las reglas existentes se migran automáticamente al actualizar y se limpian al desinstalar.
+- Salud del sistema tiene un botón **Actualizar AiO** en la cabecera para actualizar solo la aplicación, sin ejecutar el mantenimiento completo.
+- Nuevo apartado **Limpieza del sistema** en Tareas: caché APT, papelera, miniaturas antiguas, registros de systemd, Flatpak sin uso y revisiones antiguas de Snap.
+- Las limpiezas son independientes, están desactivadas por defecto y validan las rutas personales para no borrar fuera del directorio del usuario.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -78,7 +80,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.2.5**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.3.0**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -102,10 +104,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.2.5:
+Para la versión 1.3.0:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.2.5_all.deb
+sudo apt install ./aio-debian-gui_1.3.0_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.

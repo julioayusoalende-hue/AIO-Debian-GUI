@@ -223,4 +223,6 @@ bash scripts/test-snap-maintenance.sh && bien "mantenimiento Snap" || fallo "man
 
 python3 scripts/test-snap-maintenance.py && bien "detección y programación Snap" || fallo "detección Snap"
 
+bash scripts/test-cleanup.sh && bien "limpieza segura del sistema" || fallo "limpieza segura del sistema"
+
 exit $fallos

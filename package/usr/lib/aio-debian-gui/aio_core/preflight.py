@@ -11,6 +11,11 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+NON_APT_TASKS = {
+    "flatpak-update", "snap-update", "clean-trash", "clean-thumbnails",
+    "clean-journal", "clean-flatpak", "clean-snap",
+}
+
 
 @dataclass
 class Report:
@@ -67,7 +72,7 @@ def _apt_locks():
 
 
 def check(tasks):
-    if tasks and set(tasks) <= {"flatpak-update", "snap-update"}:
+    if tasks and set(tasks) <= NON_APT_TASKS:
         return Report(False, [])
     if os.environ.get("FLATPAK_ID") or Path("/.flatpak-info").exists():
         return _check_host(tasks)
@@ -108,7 +113,7 @@ def _check_host(tasks):
 
 def _check_local(tasks):
     """Bloquear errores conocidos; avisar de comprobaciones no concluyentes."""
-    if tasks and set(tasks) <= {"flatpak-update", "snap-update"}:
+    if tasks and set(tasks) <= NON_APT_TASKS:
         return Report(False, [])
     if {"autoremove", "autopurge"}.issubset(tasks):
         return Report(True, ["Selecciona una sola tarea de limpieza de dependencias."])

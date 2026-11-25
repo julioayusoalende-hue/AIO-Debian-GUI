@@ -1026,13 +1026,30 @@ PASOS = [
      "Permite gestionar apps Flatpak desde la tienda de GNOME.", False, "gnome"),
     ("ext-manager", "Extension Manager",
      "Instala gnome-shell-extension-manager para gestionar extensiones de GNOME Shell.", False, "gnome"),
+    ("clean-apt", "Limpiar caché de APT",
+     "Elimina los .deb descargados en /var/cache/apt/archives; no borra paquetes instalados.", False, "cleanup"),
+    ("clean-trash", "Vaciar papelera del usuario",
+     "Elimina el contenido de ~/.local/share/Trash. No toca archivos fuera de la papelera.", False, "cleanup"),
+    ("clean-thumbnails", "Eliminar miniaturas antiguas",
+     "Borra miniaturas de más de 7 días en ~/.cache/thumbnails; se regeneran al abrir archivos.", False, "cleanup"),
+    ("clean-journal", "Limpiar registros del sistema",
+     "Conserva los últimos 30 días del diario de systemd y elimina registros rotados más antiguos.", False, "cleanup"),
+    ("clean-flatpak", "Eliminar Flatpak sin uso",
+     "flatpak uninstall --unused para el sistema y el usuario; no elimina aplicaciones instaladas.", False, "cleanup"),
+    ("clean-snap", "Eliminar revisiones antiguas de Snap",
+     "Quita revisiones deshabilitadas y conserva la última revisión anterior de cada snap para poder volver atrás.", False, "cleanup"),
     ("rebootcheck", "Comprobar si hace falta reiniciar",
      "Revisa kernel y servicios críticos al terminar.", True, "final"),
 ]
+TAREAS_LIMPIEZA = {
+    "clean-apt", "clean-trash", "clean-thumbnails", "clean-journal",
+    "clean-flatpak", "clean-snap",
+}
 GRUPOS = [
     ("apt", "Sistema (APT)"),
     ("flatpak", "Flatpak"),
     ("gnome", "GNOME"),
+    ("cleanup", "Limpieza del sistema"),
     ("final", "Al terminar"),
 ]
 
@@ -1635,9 +1652,15 @@ class VentanaPrincipal(Gtk.Window):
 
         threading.Thread(target=comprobar, daemon=True).start()
 
+    def _padre_actualizacion(self):
+        ventana = getattr(self, "ventana_salud", None)
+        if ventana is not None and ventana.get_visible():
+            return ventana
+        return self
+
     def _confirmar_actualizacion(self, formato, detalle, datos):
         dialogo = Gtk.MessageDialog(
-            transient_for=self, modal=True, message_type=Gtk.MessageType.QUESTION,
+            transient_for=self._padre_actualizacion(), modal=True, message_type=Gtk.MessageType.QUESTION,
             buttons=Gtk.ButtonsType.NONE, text=traducir("Confirmar actualización"),
         )
         dialogo.add_button(traducir("Cancelar"), Gtk.ResponseType.CANCEL)
@@ -1705,15 +1728,16 @@ class VentanaPrincipal(Gtk.Window):
                                reinicio=None, automatico=False):
         self.comprobando_actualizacion = False
         self._actualizar_sensibilidad()
+        padre = self._padre_actualizacion()
         if tipo != Gtk.MessageType.INFO or reinicio is None:
-            self._mensaje(tipo, titulo, detalle)
+            self._mensaje(tipo, titulo, detalle, parent=padre)
             return False
         if automatico:
             self._reiniciar_aplicacion_actualizada(reinicio)
             return False
 
         pregunta = Gtk.MessageDialog(
-            transient_for=self, modal=True,
+            transient_for=padre, modal=True,
             message_type=Gtk.MessageType.QUESTION,
             buttons=Gtk.ButtonsType.NONE, text=traducir(titulo))
         pregunta.format_secondary_text(
@@ -1770,11 +1794,17 @@ class VentanaPrincipal(Gtk.Window):
         dialogo.set_default_response(Gtk.ResponseType.CANCEL)
         detalle = (traducir("Ejecutar 1 tarea") if len(pasos) == 1 else traducir("Ejecutar %d tareas") % len(pasos))
         detalle += "\n\n" + "\n".join("• " + traducir(nombres[p]) for p in pasos)
-        detalle += ("\n\n" + traducir(
-            "Esta es una vista previa de las tareas seleccionadas, no una simulación de APT. "
-            "APT puede instalar, actualizar o eliminar dependencias. "
-            "Comprueba especialmente las tareas de Backports y eliminación de paquetes."
-        ))
+        if set(pasos) <= TAREAS_LIMPIEZA:
+            detalle += ("\n\n" + traducir(
+                "Esta es una vista previa de las limpiezas seleccionadas. "
+                "Se eliminarán los archivos indicados; revisa la selección antes de continuar."
+            ))
+        else:
+            detalle += ("\n\n" + traducir(
+                "Esta es una vista previa de las tareas seleccionadas, no una simulación de APT. "
+                "APT puede instalar, actualizar o eliminar dependencias. "
+                "Comprueba especialmente las tareas de Backports y eliminación de paquetes."
+            ))
         if avisos:
             detalle += "\n\n" + "\n\n".join(avisos)
         dialogo.format_secondary_text(detalle)
@@ -4471,6 +4501,7 @@ class VentanaPrincipal(Gtk.Window):
 
         grupos = (
             ("Mantenimiento habitual", "view-refresh-symbolic", {"clock", "upgrade", "autoremove", "autopurge", "autoclean", "flatpak-update", "snap-update", "rebootcheck"}),
+            ("Limpieza del sistema", "user-trash-symbolic", {"clean-apt", "clean-trash", "clean-thumbnails", "clean-journal", "clean-flatpak", "clean-snap"}),
             ("Aplicaciones y repositorios", "system-software-install-symbolic", {"repos", "tools", "flatpak-setup", "gnome-plugin", "ext-manager"}),
             ("Kernel y controladores · Avanzado", "preferences-system-symbolic", {"backports-kernel-mesa", "revertir-backports", "nvidia-driver", "ubuntu-hwe"}),
         )
@@ -4745,7 +4776,7 @@ class VentanaPrincipal(Gtk.Window):
         self.recommended_retry.set_sensitive(recomendaciones_disponibles and hay_fallidas)
 
     def _visible(self, pid):
-        if pid == "snap-update":
+        if pid in ("snap-update", "clean-snap"):
             return self.snapd_presente
         if pid in ("backports-kernel-mesa", "revertir-backports"):
             return self.distribucion == "debian"
@@ -4753,7 +4784,7 @@ class VentanaPrincipal(Gtk.Window):
             return self.distribucion == "debian"
         if pid == "ubuntu-hwe":
             return self.distribucion == "ubuntu"
-        if pid == "flatpak-update":
+        if pid in ("flatpak-update", "clean-flatpak"):
             return self.flatpak_presente
         if pid == "flatpak-setup":
             return not self.flatpak_presente

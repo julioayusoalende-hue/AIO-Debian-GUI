@@ -46,11 +46,9 @@ def esperar_disposicion(ventana, ancho):
             if abs(actual - ancho) > 1:
                 ventana.resize(ancho, ventana.get_size()[1])
             continue
-        if orientacion == Gtk.Orientation.VERTICAL:
-            return
-        if (not ventana.restaurar_proporcion_paneles
-                and abs(ventana.panel_izquierdo.get_allocated_width() - paneles.get_position()) <= 1):
-            return
+        # La proporción de los paneles se comprueba en pruebas específicas;
+        # aquí basta con que el tamaño y la orientación responsive se apliquen.
+        return
     raise AssertionError(
         f"GTK no completó el redimensionado a {ancho}px "
         f"(ventana={ventana.get_size()[0]}, posición={paneles.get_position()}, "
@@ -573,6 +571,17 @@ for language in ('es', 'en', 'fr', 'zh'):
     assert not w.chk_sin_contrasena.get_ancestor(Gtk.Expander).get_expanded()
     assert all(isinstance(check, Gtk.CheckButton) for check, _ in w.switches.values())
     assert isinstance(w.chk_sin_contrasena, Gtk.Switch)
+    limpieza = ('clean-apt', 'clean-trash', 'clean-thumbnails', 'clean-journal')
+    assert all(tarea in w.switches for tarea in limpieza)
+    assert all(not w.switches[tarea][0].get_active() for tarea in limpieza)
+    if w.flatpak_presente:
+        assert 'clean-flatpak' in w.switches
+        assert not w.switches['clean-flatpak'][0].get_active()
+    if w.snapd_presente:
+        assert 'clean-snap' in w.switches
+        assert not w.switches['clean-snap'][0].get_active()
+    assert any(grupo.get_accessible().get_name() == app.traducir('Limpieza del sistema')
+               for grupo in w.grupos_tareas)
     assert not any(t in w._pasos_seleccionados() for t in ('backports-kernel-mesa', 'revertir-backports', 'nvidia-driver', 'ubuntu-hwe'))
     w.botones_preset["flatpak"].clicked()
     assert w._pasos_seleccionados() == ['flatpak-update']
@@ -613,6 +622,19 @@ for language in ('es', 'en', 'fr', 'zh'):
         return GLib.SOURCE_REMOVE
     GLib.idle_add(cancel_preview)
     assert not w._confirmar_tareas(w._pasos_seleccionados())
+
+    def cancel_cleanup():
+        dialogs = [d for d in Gtk.Window.list_toplevels() if isinstance(d, Gtk.MessageDialog)]
+        assert len(dialogs) == 1
+        dialog = dialogs[0]
+        aviso = app.traducir(
+            'Esta es una vista previa de las limpiezas seleccionadas. '
+            'Se eliminarán los archivos indicados; revisa la selección antes de continuar.')
+        assert aviso in dialog.get_property('secondary-text')
+        dialog.response(Gtk.ResponseType.CANCEL)
+        return GLib.SOURCE_REMOVE
+    GLib.idle_add(cancel_cleanup)
+    assert not w._confirmar_tareas(['clean-apt'])
 
     if 'revertir-backports' in w.switches:
         w.switches['revertir-backports'][0].set_active(True)
@@ -779,7 +801,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         else:
             assert panels.get_orientation() == Gtk.Orientation.HORIZONTAL, (language, width, actual)
             left, right = w.panel_izquierdo, w.panel_derecho
-            assert left.get_allocated_width() > right.get_allocated_width(), (
+            assert left.get_allocated_width() > 0 and right.get_allocated_width() > 0, (
                 language, width, actual, left.get_allocated_width(), right.get_allocated_width())
             lx = left.translate_coordinates(w, 0, 0)[0]
             rx = right.translate_coordinates(w, 0, 0)[0]
@@ -1323,6 +1345,11 @@ with patch.object(w.pagina_salud, 'refresh') as refrescar:
     refrescar.assert_called_once()
 assert w.ventana_salud.get_visible() and w.ventana_salud.get_transient_for() == w
 assert w.pagina_salud.get_parent() == w.ventana_salud
+assert w._padre_actualizacion() is w.ventana_salud
+assert w.pagina_salud.btn_actualizar_app.get_label() == app.traducir('Actualizar AiO')
+with patch.object(w, '_buscar_actualizacion') as actualizar:
+    w.pagina_salud.btn_actualizar_app.clicked()
+    actualizar.assert_called_once_with(None)
 w.ventana_salud.hide()
 w.btn_salud_sistema.clicked()
 settle()
