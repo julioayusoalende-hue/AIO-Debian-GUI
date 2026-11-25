@@ -12,6 +12,8 @@ from .translations import TRADUCCIONES
 PRGNAME = "aio-debian-gui"
 APP_ICON_NAME = "aio-debian-gui"
 POLKIT_ACTION = "es.aiodebian.gui.mantenimiento"
+POLKIT_RULES_DIR = "/etc/polkit-1/rules.d"
+PASSWORDLESS_STATE_DIR = "/var/lib/aio-debian-gui/passwordless"
 
 # aio_core vive en <prefijo>/lib/aio-debian-gui/aio_core; el asistente, en el
 # directorio padre, y los recursos compartidos en <prefijo>/share/aio-debian-gui.
@@ -470,20 +472,61 @@ def helper_admite_tarea(ruta, tarea):
     contenido = leer_texto(ruta)
     return contenido is not None and "[%s]=" % tarea in contenido
 
-def autorizacion_sin_contrasena_activa():
-    uid = os.getuid()
-    rule_path = "/etc/polkit-1/rules.d/50-aiodebian-gui-%s.rules" % uid
-    try:
-        username = pwd.getpwuid(uid).pw_name
-        contenido = leer_texto(rule_path)
-    except (OSError, KeyError):
-        return False
-    if contenido is None:
-        return os.path.exists(rule_path)
+def _regla_passwordless_valida(contenido, username):
     return (('action.id === "%s"' % POLKIT_ACTION) in contenido
             and ('action.lookup("program") === "%s"' % HELPER_SISTEMA) in contenido
             and ("subject.user === %s" % json.dumps(username)) in contenido
             and "subject.local" in contenido and "subject.active" in contenido)
+
+
+def _existe_en_anfitrion(ruta):
+    if es_flatpak():
+        try:
+            import subprocess
+            return subprocess.run(
+                comando_host("test", "-e", ruta), stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL, timeout=10,
+            ).returncode == 0
+        except (OSError, subprocess.SubprocessError):
+            return False
+    return os.path.exists(ruta)
+
+
+def _directorio_legible_en_anfitrion(ruta):
+    if es_flatpak():
+        try:
+            import subprocess
+            return subprocess.run(
+                comando_host("sh", "-c", 'test -r "$1" && test -x "$1"', "sh", ruta),
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10,
+            ).returncode == 0
+        except (OSError, subprocess.SubprocessError):
+            return False
+    return os.access(ruta, os.R_OK | os.X_OK)
+
+
+def autorizacion_sin_contrasena_activa():
+    uid = os.getuid()
+    rule_path = os.path.join(POLKIT_RULES_DIR, "50-aiodebian-gui-%s.rules" % uid)
+    marker_path = os.path.join(PASSWORDLESS_STATE_DIR, "%s.rules" % uid)
+    try:
+        username = pwd.getpwuid(uid).pw_name
+    except (OSError, KeyError):
+        return False
+
+    contenido = leer_texto(rule_path)
+    if contenido is not None:
+        return _regla_passwordless_valida(contenido, username)
+
+    # Debian deja rules.d en 0750 root:polkitd. El usuario no puede entrar a
+    # comprobar el fichero, aunque polkitd sí lo lee. Si el directorio es
+    # accesible y la regla no existe, no hay excepción; en caso contrario se
+    # consulta la copia de estado que escribe el asistente privilegiado.
+    if (not _existe_en_anfitrion(rule_path)
+            and _directorio_legible_en_anfitrion(POLKIT_RULES_DIR)):
+        return False
+    marcador = leer_texto(marker_path)
+    return marcador is not None and _regla_passwordless_valida(marcador, username)
 
 
 def novedades_version(version):

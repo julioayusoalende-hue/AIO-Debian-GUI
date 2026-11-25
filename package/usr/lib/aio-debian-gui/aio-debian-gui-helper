@@ -50,12 +50,13 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.2.4
+HELPER_VERSION=1.2.5
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
 MAINTENANCE_LOCK=/run/aio-debian-gui/maintenance.lock
 POLKIT_RULES_DIR=/etc/polkit-1/rules.d
+PASSWORDLESS_STATE_DIR=/var/lib/aio-debian-gui/passwordless
 
 # ------------------------------------------------------------------------------
 # Utilidades
@@ -241,16 +242,34 @@ instalar_componentes_polkit() {
     fi
 }
 
+guardar_marcador_passwordless() {
+    local uid=$1 origen=$2 directorio archivo temp
+    directorio=$PASSWORDLESS_STATE_DIR
+    archivo="$directorio/${uid}.rules"
+    install -d -o root -g root -m 0755 "$directorio" || return 1
+    temp=$(mktemp "$directorio/.${uid}.XXXXXX") || return 1
+    if ! cat -- "$origen" > "$temp" || ! chmod 0644 "$temp" \
+            || ! chown root:root "$temp" || ! mv -f -- "$temp" "$archivo"; then
+        rm -f -- "$temp"
+        return 1
+    fi
+}
+
 habilitar_sin_contrasena() {
-    local uid username rule_file temp
+    local uid username rule_file temp marcador
     uid=$(pkexec_uid) || return 1
     username=$(pkexec_username) || return 1
     instalar_componentes_polkit || return 1
-    if ! install -d -o root -g root -m 0755 "$POLKIT_RULES_DIR"; then
-        err "No se pudo preparar el directorio de reglas polkit."
-        return 1
+    # No cambiar los permisos de un directorio existente: Debian lo deja en
+    # 0750 root:polkitd y systemd-tmpfiles los restaura en cada arranque.
+    if [ ! -d "$POLKIT_RULES_DIR" ]; then
+        install -d -o root -g root -m 0755 "$POLKIT_RULES_DIR" || {
+            err "No se pudo preparar el directorio de reglas polkit."
+            return 1
+        }
     fi
     rule_file="$POLKIT_RULES_DIR/50-aiodebian-gui-${uid}.rules"
+    marcador="$PASSWORDLESS_STATE_DIR/${uid}.rules"
     temp=$(mktemp "$POLKIT_RULES_DIR/.aiodebian-gui-${uid}.XXXXXX") || {
         err "No se pudo crear la regla polkit."
         return 1
@@ -263,6 +282,11 @@ habilitar_sin_contrasena() {
     if ! chmod 0644 "$temp" || ! chown root:root "$temp" || ! mv -f -- "$temp" "$rule_file"; then
         rm -f -- "$temp"
         err "No se pudo activar la regla polkit."
+        return 1
+    fi
+    if ! guardar_marcador_passwordless "$uid" "$rule_file"; then
+        rm -f -- "$rule_file" "$marcador"
+        err "No se pudo guardar el estado de la autorización sin contraseña."
         return 1
     fi
     ok "Excepción de Polkit activada para el usuario y la acción específica de AiO Debian GUI."
@@ -289,11 +313,12 @@ EOF
 }
 
 deshabilitar_sin_contrasena() {
-    local uid rule_file
+    local uid rule_file marcador
     uid=$(pkexec_uid) || return 1
     rule_file="$POLKIT_RULES_DIR/50-aiodebian-gui-${uid}.rules"
-    if ! rm -f -- "$rule_file"; then
-        err "No se pudo quitar la regla polkit."
+    marcador="$PASSWORDLESS_STATE_DIR/${uid}.rules"
+    if ! rm -f -- "$rule_file" "$marcador"; then
+        err "No se pudo quitar la autorización sin contraseña de AiO Debian GUI."
         return 1
     fi
     ok "Se quitó la autorización sin contraseña de AiO Debian GUI."
