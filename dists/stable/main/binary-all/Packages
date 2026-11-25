@@ -1,17 +1,17 @@
 Package: aio-debian-gui
-Version: 1:1.2.5
+Version: 1:1.3.0
 Architecture: all
 Maintainer: Julio Ayuso <epdc@msn.com>
-Installed-Size: 1738
+Installed-Size: 1751
 Depends: bash, apt, dconf-cli, coreutils, diffutils, grep, sed, util-linux, pciutils, libnotify-bin, needrestart, python3, python3-apt, python3-gi, gir1.2-gtk-3.0, gir1.2-vte-2.91, librsvg2-common, pkexec | policykit-1, flatpak
 Recommends: systemd-timesyncd | time-daemon, fwupd
 Conflicts: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
 Replaces: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
-Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.2.5_all.deb
-Size: 948324
-MD5sum: 9f8fee6660dd3f02a0523eda6270de36
-SHA1: 4148ecbd52f73a08520f8997f2958aa3bf8536de
-SHA256: 772c1329b8c5b8c91db7f24954e824eb47b587e19e5cc5eb7b7cf2e354b853f6
+Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.3.0_all.deb
+Size: 950792
+MD5sum: caafad63f3fc32c58b192cb4ce0ef915
+SHA1: 44212b40015f7418e6216f3ce92e294c4627084d
+SHA256: 584546d008837d75c95dbd4d095db42fc63112865fd2685c3dd0ad518aa294c9
 Section: admin
 Priority: optional
 Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
