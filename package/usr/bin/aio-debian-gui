@@ -54,6 +54,7 @@ from aio_core.constants import autorizacion_sin_contrasena_activa
 from aio_core.fastfetch import instalar_layout, restaurar_layout  # noqa: E402
 from aio_core.gtk_appearance import aplicar_tema  # noqa: E402
 from aio_core.gtk_scheduler import ControladorProgramacion  # noqa: E402
+from aio_core.operations import coordinator as operation_coordinator  # noqa: E402
 from aio_core.translations import TRADUCCIONES  # noqa: E402
 
 PRGNAME = "aio-debian-gui"
@@ -1198,6 +1199,10 @@ class VentanaPrincipal(Gtk.Window):
         self.preferencias = (preferencias or PREFERENCIAS_DEFECTO).copy()
         self.handler_cierre = None
         self.destruida = False
+        self.operaciones_activas = {}
+        self.operacion_mantenimiento = None
+        self.operacion_actualizacion = None
+        operation_coordinator.add_listener(self._operaciones_actualizadas)
         self.connect("destroy", self._ventana_destruida)
         global IDIOMA_ACTUAL
         IDIOMA_ACTUAL = self.preferencias["idioma"]
@@ -1229,6 +1234,7 @@ class VentanaPrincipal(Gtk.Window):
         self.comprobando_actualizacion = False
         self.backup_action_in_progress = False
         self.grub_action_in_progress = False
+        self.firmware_section = None
         self.grub_estado = None
         self.backup_buttons = {}
         self.recommended_scan_generation = 0
@@ -1333,6 +1339,12 @@ class VentanaPrincipal(Gtk.Window):
 
     def _ventana_destruida(self, _ventana):
         self.destruida = True
+        operation_coordinator.remove_listener(self._operaciones_actualizadas)
+        for token in tuple(self.operaciones_activas):
+            operation_coordinator.release(token)
+        self.operaciones_activas.clear()
+        self.operacion_mantenimiento = None
+        self.operacion_actualizacion = None
         if self.ventana_terminal is not None:
             self.ventana_terminal.destroy()
             self.ventana_terminal = None
@@ -1593,6 +1605,12 @@ class VentanaPrincipal(Gtk.Window):
         if self.comprobando_actualizacion or self.en_curso:
             return
         self.comprobando_actualizacion = True
+        self.operacion_actualizacion = self._iniciar_operacion("Actualizar AiO")
+        if self.operacion_actualizacion is None:
+            self.comprobando_actualizacion = False
+            self._mensaje(Gtk.MessageType.INFO, "Operación en curso",
+                          "Espera a que termine la operación actual antes de actualizar AiO.")
+            return
         self._actualizar_sensibilidad()
         formato = formato_actualizacion()
         testing = self.preferencias.get("canal_actualizaciones") == "testing"
@@ -1696,6 +1714,8 @@ class VentanaPrincipal(Gtk.Window):
         dialogo.destroy()
         if not aceptar:
             self.comprobando_actualizacion = False
+            self._finalizar_operacion(self.operacion_actualizacion)
+            self.operacion_actualizacion = None
             self._actualizar_sensibilidad()
             return False
 
@@ -1746,6 +1766,8 @@ class VentanaPrincipal(Gtk.Window):
     def _terminar_actualizacion(self, tipo, titulo, detalle,
                                reinicio=None, automatico=False):
         self.comprobando_actualizacion = False
+        self._finalizar_operacion(self.operacion_actualizacion)
+        self.operacion_actualizacion = None
         self._actualizar_sensibilidad()
         padre = self._padre_actualizacion()
         if tipo != Gtk.MessageType.INFO or reinicio is None:
@@ -4548,7 +4570,8 @@ class VentanaPrincipal(Gtk.Window):
             grupo.set_label_widget(cabecera_mantenimiento(
                 "Firmware", "computer-symbolic", "aio-group"))
             grupo.get_accessible().set_name(traducir("Firmware"))
-            grupo.add(FirmwareSection(self, traducir))
+            self.firmware_section = FirmwareSection(self, traducir)
+            grupo.add(self.firmware_section)
             tarjeta.pack_start(grupo, False, False, 2)
             self.grupos_tareas.append(grupo)
         tarjeta.pack_start(Gtk.Separator(), False, False, 0)
@@ -4723,14 +4746,21 @@ class VentanaPrincipal(Gtk.Window):
         self._escribir("[!] %s\n" % mensaje, "aviso")
 
     def _actualizar_sensibilidad(self):
+        if self.destruida:
+            return
         disponible = (not self.sincronizando_reloj and not self.en_curso
                      and not self.comprobando_actualizacion and not self.programando
                      and not self.diagnostico_en_curso and not self.backup_action_in_progress
                      and not self.grub_action_in_progress
+                     and not operation_coordinator.busy()
                      and self.distribucion != "no-soportada")
         self.grub_pagina.set_sensitive(disponible)
         if self.pagina_software is not None:
-            self.pagina_software.set_sensitive(not self.sincronizando_reloj)
+            self.pagina_software.set_sensitive(disponible)
+        if getattr(self, "pagina_salud", None) is not None:
+            self.pagina_salud.set_sensitive(disponible)
+        if getattr(self, "firmware_section", None) is not None:
+            self.firmware_section.set_sensitive(disponible)
         self._actualizar_seleccion()
         self.btn_iniciar.set_sensitive(disponible and not self.consultando_estados and bool(self._pasos_seleccionados()))
         if self.btn_actualizar is not None:
@@ -5374,7 +5404,36 @@ class VentanaPrincipal(Gtk.Window):
         self.chk_sin_contrasena.set_active(activa)
         self.actualizando_sin_contrasena = False
 
+    def _operaciones_actualizadas(self):
+        if not self.destruida:
+            self._actualizar_sensibilidad()
+
+    def _iniciar_operacion(self, nombre):
+        if self.destruida:
+            return None
+        token = operation_coordinator.try_acquire(nombre)
+        if token is None:
+            return None
+        self.operaciones_activas[token] = nombre
+        self._actualizar_sensibilidad()
+        return token
+
+    def _finalizar_operacion(self, token):
+        if token is None:
+            return
+        self.operaciones_activas.pop(token, None)
+        operation_coordinator.release(token)
+        if not self.destruida:
+            self._actualizar_sensibilidad()
+
     def _poner_ocupado(self, ocupado):
+        if self.destruida:
+            return
+        if ocupado and not self.en_curso:
+            self.operacion_mantenimiento = self._iniciar_operacion("Mantenimiento")
+        elif not ocupado and self.en_curso:
+            self._finalizar_operacion(self.operacion_mantenimiento)
+            self.operacion_mantenimiento = None
         self.en_curso = ocupado
         self._actualizar_sensibilidad()
         if ocupado:
@@ -5834,6 +5893,12 @@ class VentanaPrincipal(Gtk.Window):
             d.destroy()
 
     def _al_cerrar(self, *_a):
+        if (operation_coordinator.busy()
+                or (getattr(self, "pagina_salud", None) is not None
+                    and self.pagina_salud.loading)):
+            self._mensaje(Gtk.MessageType.INFO, "Operación en curso",
+                          "Espera a que termine la operación actual antes de cerrar la ventana.")
+            return True
         if self.pagina_software is not None and self.pagina_software.applying_changes:
             self._mensaje(Gtk.MessageType.INFO, "Gestor de software",
                           "Espera a que termine la operación de software antes de cerrar.")

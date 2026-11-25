@@ -64,8 +64,12 @@ class HealthDashboard(Gtk.Box):
         self.passwordless = passwordless
         self.cards = {}  # name -> dict de widgets
         self.loading = False
+        self.destroyed = False
+        self.operation_token = None
+        self.command_token = None
         self.resultados = []
         self.formato = self._formato_actualizacion()
+        self.connect('destroy', self._on_destroy)
 
         # Cabecera: título y botón de ejecución.
         title_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
@@ -299,13 +303,35 @@ class HealthDashboard(Gtk.Box):
                                 resultado.get("command"))
 
     def _progreso(self, fraccion, texto=None):
+        if self.destroyed:
+            return False
         self.progress.set_fraction(min(max(fraccion, 0.0), 1.0))
         if texto:
             self.progress.set_text(texto)
         return False
 
+    def _on_destroy(self, _widget):
+        self.destroyed = True
+        self._liberar_operacion(self.operation_token)
+        self._liberar_operacion(self.command_token)
+        self.operation_token = None
+        self.command_token = None
+
+    def _iniciar_operacion(self, nombre):
+        if self.destroyed or not hasattr(self.window, '_iniciar_operacion'):
+            return None
+        return self.window._iniciar_operacion(nombre)
+
+    def _liberar_operacion(self, token):
+        if token is not None and hasattr(self.window, '_finalizar_operacion'):
+            self.window._finalizar_operacion(token)
+
     def _on_run_diagnostics(self, _boton=None):
-        if self.loading:
+        if self.loading or self.destroyed:
+            return
+        self.operation_token = self._iniciar_operacion('Diagnóstico del sistema')
+        if self.operation_token is None:
+            self.status_label.set_text(self.translate('Espera a que termine la operación actual.'))
             return
         self.loading = True
         self.status_label.set_text(self.translate("Diagnóstico en curso…"))
@@ -435,6 +461,10 @@ class HealthDashboard(Gtk.Box):
 
     def _on_diagnostics_done(self, results, error):
         self.loading = False
+        self._liberar_operacion(self.operation_token)
+        self.operation_token = None
+        if self.destroyed:
+            return GLib.SOURCE_REMOVE
 
         if error:
             self.progress.set_fraction(0.0)
@@ -592,6 +622,10 @@ class HealthDashboard(Gtk.Box):
 
         from .constants import comando_host
 
+        self.command_token = self._iniciar_operacion('Solución de Salud del sistema')
+        if self.command_token is None:
+            self.status_label.set_text(self.translate('Espera a que termine la operación actual.'))
+            return
         self.status_label.set_text(self.translate("Ejecutando: ") + " ".join(comando))
         self._progreso(0.5, self.translate("Aplicando la solución…"))
 
@@ -607,6 +641,10 @@ class HealthDashboard(Gtk.Box):
         threading.Thread(target=worker, daemon=True).start()
 
     def _comando_terminado(self, error):
+        self._liberar_operacion(self.command_token)
+        self.command_token = None
+        if self.destroyed:
+            return GLib.SOURCE_REMOVE
         if error:
             self.status_label.set_text(self.translate("No se pudo ejecutar: ") + error)
         self._on_run_diagnostics()

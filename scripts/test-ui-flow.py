@@ -56,6 +56,19 @@ def esperar_disposicion(ventana, ancho):
         f"columna={ventana.panel_izquierdo.get_allocated_width()})")
 
 
+# Una operación privilegiada debe bloquear todas las páginas y rechazar otra simultánea.
+ventana_operaciones = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+assert ventana_operaciones.pagina_software.get_sensitive()
+token_operacion = ventana_operaciones._iniciar_operacion('Prueba de coordinación')
+assert token_operacion is not None
+assert not ventana_operaciones.pagina_software.get_sensitive()
+assert not ventana_operaciones.grub_pagina.get_sensitive()
+assert ventana_operaciones._iniciar_operacion('Segunda operación') is None
+ventana_operaciones._finalizar_operacion(token_operacion)
+assert ventana_operaciones.pagina_software.get_sensitive()
+ventana_operaciones.destroy()
+
+
 for distro, version, expected in (
     ('debian', '13', ['appimage']),
     ('ayusos', '0.1', ['appimage']),
@@ -1223,6 +1236,10 @@ assert not w.log.get_mapped()
 inicio, fin = w.buf.get_bounds()
 assert 'error registrado en modo simple' in w.buf.get_text(inicio, fin, True)
 w.destroy()
+
+w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+w.show_all()
+settle()
 
 # El refresco precede al diagnóstico y un fallo no se presenta como lectura actual,
 # y todo ocurre dentro de la ventana «Salud del sistema», sin otra ventana.

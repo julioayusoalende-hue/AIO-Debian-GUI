@@ -19,6 +19,7 @@ class ControladorProgramacion:
     def __init__(self, ventana):
         self.ventana = ventana
         self.ventana_programacion = None
+        self.operacion_programacion = None
 
     def abrir(self):
         contexto = self.ventana._contexto_programacion()
@@ -230,6 +231,12 @@ class ControladorProgramacion:
             self.ventana._mensaje(Gtk.MessageType.ERROR, "Programar mantenimiento", "Selecciona al menos una tarea programable, sin duplicados.")
             return
         self.ventana.programando = True
+        self.operacion_programacion = self.ventana._iniciar_operacion("Programar mantenimiento")
+        if self.operacion_programacion is None:
+            self.ventana.programando = False
+            self.ventana._mensaje(Gtk.MessageType.INFO, "Operación en curso",
+                                  "Espera a que termine la operación actual antes de programar tareas.")
+            return
         self.ventana._actualizar_sensibilidad()
         for nombre in ('formulario', 'guardar', 'pausar', 'eliminar', 'actualizar', 'integracion'):
             w[nombre].set_sensitive(False)
@@ -278,6 +285,8 @@ class ControladorProgramacion:
     def _programacion_guardada(self, dialogo, error):
         traducir = self.ventana._contexto_programacion()["traducir"]
         self.ventana.programando = False
+        self.ventana._finalizar_operacion(self.operacion_programacion)
+        self.operacion_programacion = None
         self.ventana._actualizar_sensibilidad()
         if self.ventana_programacion is not dialogo:
             return GLib.SOURCE_REMOVE

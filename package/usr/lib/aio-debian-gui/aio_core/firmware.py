@@ -19,6 +19,8 @@ class FirmwareSection(Gtk.Box):
         self.tr = translate
         self.set_border_width(6)
         self.closed = False
+        self.operation_token = None
+        self.update_token = None
         self.connect("destroy", self._on_destroy)
 
         label = Gtk.Label(xalign=0, wrap=True, label=translate(
@@ -47,11 +49,28 @@ class FirmwareSection(Gtk.Box):
 
     def _on_destroy(self, _widget):
         self.closed = True
+        self._liberar(self.operation_token)
+        self._liberar(self.update_token)
+        self.operation_token = None
+        self.update_token = None
+
+    def _iniciar(self, nombre):
+        if self.closed or not hasattr(self.parent, '_iniciar_operacion'):
+            return None
+        return self.parent._iniciar_operacion(nombre)
+
+    def _liberar(self, token):
+        if token is not None and hasattr(self.parent, '_finalizar_operacion'):
+            self.parent._finalizar_operacion(token)
 
     def _selection_changed(self, _widget):
         self.install.set_sensitive(self.devices.get_active_id() is not None)
 
     def _check(self, _button):
+        self.operation_token = self._iniciar('Consulta de firmware')
+        if self.operation_token is None:
+            self.status.set_text(self.tr('Espera a que termine la operación actual.'))
+            return
         self.devices.remove_all()
         self.check.set_sensitive(False)
         self.status.set_text(self.tr("Buscando actualizaciones de firmware…"))
@@ -84,6 +103,8 @@ class FirmwareSection(Gtk.Box):
             GLib.idle_add(self._show_updates, devices, None)
 
     def _show_updates(self, devices, error):
+        self._liberar(self.operation_token)
+        self.operation_token = None
         if self.closed:
             return
         for device_id, label in devices:
@@ -119,6 +140,10 @@ class FirmwareSection(Gtk.Box):
             self._open_update(device_id)
 
     def _open_update(self, device_id):
+        self.update_token = self._iniciar('Actualización de firmware')
+        if self.update_token is None:
+            self.status.set_text(self.tr('Espera a que termine la operación actual.'))
+            return
         # fwupd conserva su propia autorización y sus preguntas interactivas.
         window = Gtk.Window(title=self.tr("Actualizar firmware"), transient_for=self.parent,
                             modal=True, destroy_with_parent=True, default_width=760, default_height=420)
@@ -132,6 +157,8 @@ class FirmwareSection(Gtk.Box):
         def finished(_terminal, status):
             nonlocal running
             running = False
+            self._liberar(self.update_token)
+            self.update_token = None
             self.devices.remove_all()
             if status == 0:
                 self.status.set_text(self.tr("Consulta el resultado. El firmware puede requerir reiniciar."))

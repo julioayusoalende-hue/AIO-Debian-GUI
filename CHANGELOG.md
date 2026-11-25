@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.4.5
+
+- Coordinador global de operaciones: las páginas se bloquean durante mantenimiento, actualización, programación, gestor de software, Salud y firmware, y no se permiten dos operaciones privilegiadas simultáneas.
+- Las fuentes APT se actualizan de forma transaccional: temporal, respaldo previo y sustitución atómica, conservando el respaldo anterior y rechazando enlaces simbólicos.
+- La revisión interactiva de `autoremove` usa un canal independiente de stdin, que permanece cerrado para APT.
+- NVIDIA registra la regeneración correcta de dracut; un fallo deja la tarea pendiente y se reintenta aunque la configuración ya esté escrita.
+
 ## 1.4.4
 
 - Se corrige el error D-Bus `NoReply: Message recipient disconnected from message bus without replying` al instalar extensiones de GNOME: la llamada ahora se dirige directamente a `org.gnome.Shell` (`/org/gnome/Shell`), que mantiene viva la conexión mientras el usuario confirma el diálogo, evitando que el servicio intermedio `org.gnome.Shell.Extensions` (que se apaga a los 2 s de inactividad) corte la respuesta.

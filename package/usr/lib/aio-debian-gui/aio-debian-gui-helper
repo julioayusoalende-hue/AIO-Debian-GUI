@@ -32,6 +32,15 @@ if [[ "${BASH_SOURCE[0]}" == "$0" && "$EUID" == 0 ]]; then
         --apt-backup) shift; exec /usr/lib/aio-debian-gui/aio-apt-sources-backup "$@" ;;
     esac
 fi
+# La revisión interactiva de autoremove usa un canal propio: stdin debe seguir
+# cerrado para APT y sus hooks, pero la GUI necesita poder aprobar el nuevo plan.
+_aio_review_cleanup=0
+for _aio_arg in "$@"; do
+    [ "$_aio_arg" = "--review-cleanup" ] && _aio_review_cleanup=1
+done
+if [ "$_aio_review_cleanup" -eq 1 ]; then
+    exec {_aio_review_fd}<&0 || { echo "[-] No se pudo preparar el canal de revisión de limpieza." >&2; exit 1; }
+fi
 exec </dev/null   # nunca esperar entrada: no hay terminal
 
 info() { echo "[*] $*"; }
@@ -625,19 +634,24 @@ versiones_paquetes() {
     done
 }
 
-# Añade 'contrib' y 'non-free' a los repositorios oficiales de Debian
-# Soporta formato clásico (.list) y deb822 (.sources)
+# Añade 'contrib' y 'non-free' a los repositorios oficiales de Debian.
+# Devuelve 0 si cambió, 1 si no había cambios y 2 si falló.
+# Soporta formato clásico (.list) y deb822 (.sources).
 anadir_componentes() {
-    local f="$1" copia
-    copia=$(mktemp)
-    cp -a "$f" "$copia"
+    local f="$1" temporal backup_tmp
+    [ -f "$f" ] && [ ! -L "$f" ] || {
+        err "Fuente APT no válida o enlace simbólico: $f"
+        return 2
+    }
+    temporal=$(mktemp "${f}.aio.XXXXXX") || {
+        err "No se pudo preparar la actualización de $f."
+        return 2
+    }
 
     case "$f" in
         *.sources)
             # Procesa cada stanza Deb822 por separado. Solo modifica Components
             # cuando la stanza contiene una URI oficial de Debian.
-            local temporal
-            temporal=$(mktemp) || { rm -f "$copia"; return 1; }
             if ! awk '
                 function emitir( i, uri_activa, debian, linea) {
                     if (n == 0) return
@@ -670,30 +684,71 @@ anadir_componentes() {
                 { stanza[++n] = $0 }
                 END { emitir() }
             ' "$f" > "$temporal"; then
-                rm -f "$temporal" "$copia"
-                return 1
+                rm -f -- "$temporal"
+                err "No se pudo generar la nueva fuente APT: $f"
+                return 2
             fi
-            cat "$temporal" > "$f"
-            rm -f "$temporal"
             ;;
         *.list)
-            # Solo líneas deb/deb-src de Debian que tengan el componente 'main'
-            sed -i -E '/^[[:space:]]*deb(-src)?[[:space:]].*(debian\.org|\/debian\/?[[:space:]])/ {
+            # Solo líneas deb/deb-src de Debian que tengan el componente 'main'.
+            if ! sed -E '/^[[:space:]]*deb(-src)?[[:space:]].*(debian\.org|\/debian\/?[[:space:]])/ {
                 /[[:space:]]main([[:space:]]|$)/ {
                     /[[:space:]]contrib([[:space:]]|$)/! s/[[:space:]]*$/ contrib/
                     /[[:space:]]non-free([[:space:]]|$)/! s/[[:space:]]*$/ non-free/
                 }
-            }' "$f"
+            }' "$f" > "$temporal"; then
+                rm -f -- "$temporal"
+                err "No se pudo generar la nueva fuente APT: $f"
+                return 2
+            fi
+            ;;
+        *)
+            rm -f -- "$temporal"
+            return 1
             ;;
     esac
 
-    if ! cmp -s "$f" "$copia"; then
-        cp -a "$copia" "${f}.bak"     # copia de seguridad (apt ignora .bak)
-        rm -f "$copia"
-        return 0                      # hubo cambios
+    if cmp -s "$f" "$temporal"; then
+        rm -f -- "$temporal"
+        return 1
     fi
-    rm -f "$copia"
-    return 1                          # sin cambios
+    if ! chmod --reference="$f" "$temporal"; then
+        rm -f -- "$temporal"
+        err "No se pudieron conservar los permisos de $f."
+        return 2
+    fi
+    if [ "$EUID" -eq 0 ] && ! chown --reference="$f" "$temporal"; then
+        rm -f -- "$temporal"
+        err "No se pudo conservar el propietario de $f."
+        return 2
+    fi
+
+    backup_tmp=$(mktemp "${f}.bak.XXXXXX") || {
+        rm -f -- "$temporal"
+        err "No se pudo preparar el respaldo de $f."
+        return 2
+    }
+    if ! cp -a -- "$f" "$backup_tmp"; then
+        rm -f -- "$temporal" "$backup_tmp"
+        err "No se pudo crear el respaldo de $f."
+        return 2
+    fi
+    if [ -e "${f}.bak" ] && ! mv -f -- "${f}.bak" "${f}.bak.previous"; then
+        rm -f -- "$temporal" "$backup_tmp"
+        err "No se pudo conservar el respaldo anterior de $f."
+        return 2
+    fi
+    if ! mv -f -- "$backup_tmp" "${f}.bak"; then
+        rm -f -- "$temporal" "$backup_tmp"
+        err "No se pudo publicar el respaldo de $f."
+        return 2
+    fi
+    if ! mv -f -- "$temporal" "$f"; then
+        rm -f -- "$temporal"
+        err "No se pudo sustituir la fuente APT: $f"
+        return 2
+    fi
+    return 0
 }
 
 # ------------------------------------------------------------------------------
@@ -745,16 +800,22 @@ paso_repos() {
         return $?
     fi
     info "Verificando los repositorios 'contrib' y 'non-free'..."
-    local cambios=0 f
+    local cambios=0 fallos=0 f estado
     shopt -s nullglob
     for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
         [ -f "$f" ] || continue
-        if anadir_componentes "$f"; then
-            ok "Actualizado: $f (copia en ${f}.bak)"
-            cambios=1
-        fi
+        anadir_componentes "$f"; estado=$?
+        case "$estado" in
+            0)
+                ok "Actualizado: $f (copia en ${f}.bak)"
+                cambios=1
+                ;;
+            1) ;;
+            *) fallos=1 ;;
+        esac
     done
     shopt -u nullglob
+    [ "$fallos" -eq 0 ] || return 1
 
     if [ "$cambios" -eq 0 ]; then
         ok "'contrib' y 'non-free' ya estaban configurados."
@@ -796,15 +857,17 @@ estado_repos() {
         fuente_debian_relevante "$f" || continue
         relevantes=1
         indice=$((indice + 1))
-        local copia="$temporal/$indice-$(basename "$f")"
+        local copia="$temporal/$indice-$(basename "$f")" estado
         if ! cp -- "$f" "$copia"; then
             rm -rf -- "$temporal"
             return 1
         fi
-        if anadir_componentes "$copia"; then
-            pendientes=1
-            break
-        fi
+        anadir_componentes "$copia"; estado=$?
+        case "$estado" in
+            0) pendientes=1; break ;;
+            1) ;;
+            *) rm -rf -- "$temporal"; return 1 ;;
+        esac
     done
     rm -rf -- "$temporal"
     [ "$relevantes" -eq 1 ] && [ "$pendientes" -eq 0 ]
@@ -1201,7 +1264,7 @@ limpiar_dependencias() {
         local detalle
         detalle=$(printf '%s' "$cambios" | base64 -w0) || return 1
         printf '##CLEANUP-REVIEW:%s:%s:%s\n' "$modo" "$plan" "$detalle"
-        if ! IFS= read -r -t 300 respuesta; then
+        if ! IFS= read -r -t 300 -u "${_aio_review_fd:-8}" respuesta; then
             err "No se recibió una respuesta para el nuevo plan de limpieza."
             return 1
         fi
@@ -1586,9 +1649,41 @@ NVIDIA_POWER_CONF=${NVIDIA_POWER_CONF:-/etc/modprobe.d/nvidia-aio-power.conf}
 NVIDIA_POWER_CONTENIDO=$'# Creado por AiO Debian GUI: suspensión del controlador NVIDIA (wiki de Debian).\noptions nvidia-current NVreg_PreserveVideoMemoryAllocations=1\noptions nvidia-current NVreg_TemporaryFilePath=/var/tmp'
 NVIDIA_DRACUT_CONF=${NVIDIA_DRACUT_CONF:-/etc/dracut.conf.d/10-nvidia.conf}
 NVIDIA_DRACUT_CONTENIDO='install_items+=" /etc/modprobe.d/nvidia* "'
+NVIDIA_DRACUT_STAMP=${NVIDIA_DRACUT_STAMP:-/var/lib/aio-debian-gui/nvidia-dracut.state}
 
 nvidia_fichero_igual() { [ -f "$1" ] && [ "$(cat "$1" 2>/dev/null)" = "$2" ]; }
 nvidia_usa_dracut() { paquete_instalado dracut; }
+
+nvidia_dracut_huella() {
+    sha256sum "$NVIDIA_DRACUT_CONF" 2>/dev/null | awk '{print $1}'
+}
+
+# 0 = falta regenerar; 1 = la última regeneración corresponde a este kernel/config.
+nvidia_dracut_pendiente() {
+    nvidia_usa_dracut || return 1
+    [ -f "$NVIDIA_DRACUT_CONF" ] || return 0
+    [ -r "$NVIDIA_DRACUT_STAMP" ] || return 0
+    local kernel huella kernel_guardado huella_guardada
+    kernel=$(uname -r)
+    huella=$(nvidia_dracut_huella) || return 0
+    IFS=: read -r kernel_guardado huella_guardada < "$NVIDIA_DRACUT_STAMP" || return 0
+    [ "$kernel" = "$kernel_guardado" ] && [ "$huella" = "$huella_guardada" ] || return 0
+    return 1
+}
+
+nvidia_dracut_marcar() {
+    local kernel huella temporal
+    kernel=$(uname -r)
+    huella=$(nvidia_dracut_huella) || return 1
+    install -d -m 0755 "$(dirname "$NVIDIA_DRACUT_STAMP")" || return 1
+    temporal=$(mktemp "${NVIDIA_DRACUT_STAMP}.XXXXXX") || return 1
+    if ! printf '%s:%s\n' "$kernel" "$huella" > "$temporal" ||
+       ! chmod 0644 "$temporal" ||
+       ! mv -f -- "$temporal" "$NVIDIA_DRACUT_STAMP"; then
+        rm -f -- "$temporal"
+        return 1
+    fi
+}
 
 # Paquetes que faltan para seguir la wiki (uno por línea).
 nvidia_paquetes_extra() {
@@ -1618,6 +1713,7 @@ nvidia_configuracion_ok() {
     fi
     if nvidia_usa_dracut; then
         nvidia_fichero_igual "$NVIDIA_DRACUT_CONF" "$NVIDIA_DRACUT_CONTENIDO" || return 1
+        nvidia_dracut_pendiente && return 1
     fi
     [ -z "$(nvidia_paquetes_extra)" ]
 }
@@ -1632,20 +1728,28 @@ nvidia_escribir() {
 # Devuelve 0 si ha cambiado algo, 1 si ya estaba todo y 2 si ha fallado.
 nvidia_configurar_wiki() {
     local cambio=1 estado
-    nvidia_escribir "$NVIDIA_MODESET_CONF" "$NVIDIA_MODESET_CONTENIDO"; estado=$?
+    if nvidia_escribir "$NVIDIA_MODESET_CONF" "$NVIDIA_MODESET_CONTENIDO"; then estado=0; else estado=$?; fi
     [ "$estado" -eq 2 ] && return 2; [ "$estado" -eq 0 ] && cambio=0
     if nvidia_hibrida; then
         info "Portátil híbrido: no se activa PreserveVideoMemoryAllocations (la wiki lo desaconseja en Optimus). GDM usará X11."
     else
-        nvidia_escribir "$NVIDIA_POWER_CONF" "$NVIDIA_POWER_CONTENIDO"; estado=$?
+        if nvidia_escribir "$NVIDIA_POWER_CONF" "$NVIDIA_POWER_CONTENIDO"; then estado=0; else estado=$?; fi
         [ "$estado" -eq 2 ] && return 2; [ "$estado" -eq 0 ] && cambio=0
     fi
     if nvidia_usa_dracut; then
-        nvidia_escribir "$NVIDIA_DRACUT_CONF" "$NVIDIA_DRACUT_CONTENIDO"; estado=$?
+        if nvidia_escribir "$NVIDIA_DRACUT_CONF" "$NVIDIA_DRACUT_CONTENIDO"; then estado=0; else estado=$?; fi
         [ "$estado" -eq 2 ] && return 2
-        if [ "$estado" -eq 0 ]; then
+        if nvidia_dracut_pendiente; then
             cambio=0
-            dracut --force --kver "$(uname -r)" || { err "No se pudo regenerar el initramfs con dracut."; return 2; }
+            info "Regenerando el initramfs con dracut para $(uname -r)…"
+            dracut --force --kver "$(uname -r)" || {
+                err "No se pudo regenerar el initramfs con dracut. Se reintentará en la próxima ejecución."
+                return 2
+            }
+            nvidia_dracut_marcar || {
+                err "No se pudo registrar la regeneración correcta del initramfs."
+                return 2
+            }
         fi
     fi
     return "$cambio"

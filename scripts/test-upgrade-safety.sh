@@ -2,6 +2,11 @@
 # Todas las operaciones APT están simuladas; nunca se modifica el sistema.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+(
+    set -- --review-cleanup
+    source package/usr/lib/aio-debian-gui/aio-debian-gui-helper
+    [ -n "${_aio_review_fd:-}" ] && [ -e "/proc/self/fd/$_aio_review_fd" ]
+)
 source package/usr/lib/aio-debian-gui/aio-debian-gui-helper
 TEST_DIR=$(mktemp -d)
 trap 'rm -rf -- "$TEST_DIR"' EXIT
@@ -121,12 +126,12 @@ AUTOREMOVE_PLAN=$(huella_plan_apt <<< 'Purg old-package [1]')
 SIMULATION='Purg another-package [1]'
 UPDATED_PLAN=$(huella_plan_apt <<< "$SIMULATION")
 reset_calls
-output=$(paso_autopurge <<< "$UPDATED_PLAN")
+output=$(paso_autopurge 8<<< "$UPDATED_PLAN")
 [[ "$output" == *"##CLEANUP-REVIEW:--purge:$UPDATED_PLAN:"* ]]
 grep -qE '^-y .*autoremove --purge$' "$TEST_DIR/calls"
 reset_calls
 result=0
-output=$(paso_autopurge <<< omitir) || result=$?
+output=$(paso_autopurge 8<<< omitir) || result=$?
 [ "$result" -eq 3 ]
 if grep -qE '^-y .*autoremove --purge$' "$TEST_DIR/calls"; then
     echo 'ERROR: se aplicó la purga omitida'; exit 1

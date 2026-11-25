@@ -229,14 +229,33 @@ class SoftwareManagerPage(Gtk.Box):
         self.load()
         self.show_details()
 
-    def job(self, message, task, completed):
+    def job(self, message, task, completed, privileged=False):
         self.busy = True
         for widget in (self.page, self.scope, self.actions, self.queue_actions):
             widget.set_sensitive(False)
         self.status.set_text(message)
-        future = self.pool.submit(task)
+        token = None
+        if privileged and hasattr(self.window, '_iniciar_operacion'):
+            token = self.window._iniciar_operacion('Gestor de software')
+            if token is None:
+                self.busy = False
+                for widget in (self.page, self.scope, self.actions, self.queue_actions):
+                    widget.set_sensitive(True)
+                self.status.set_text(self.translate('Espera a que termine la operación actual.'))
+                return
+        try:
+            future = self.pool.submit(task)
+        except Exception:
+            if token is not None:
+                self.window._finalizar_operacion(token)
+            self.busy = False
+            for widget in (self.page, self.scope, self.actions, self.queue_actions):
+                widget.set_sensitive(True)
+            raise
 
         def finish():
+            if token is not None:
+                self.window._finalizar_operacion(token)
             if self.destroyed:
                 return False
             self.applying_changes = False
@@ -624,7 +643,7 @@ class SoftwareManagerPage(Gtk.Box):
             self.load(force=True)
 
         self.applying_changes = True
-        self.job(self.translate('Aplicando la cola…'), run_all, finished)
+        self.job(self.translate('Aplicando la cola…'), run_all, finished, privileged=True)
 
     def admin(self, *args):
         if self.passwordless():
@@ -661,7 +680,7 @@ class SoftwareManagerPage(Gtk.Box):
         if command[:2] == ['/usr/bin/flatpak', '--system'] and self.passwordless():
             command = self.admin('flatpak-system', *command[2:])
         self.applying_changes = True
-        self.job('Aplicando cambios…', lambda: backend.run(command), finished)
+        self.job('Aplicando cambios…', lambda: backend.run(command), finished, privileged=True)
 
     def package_action(self, page, scope, row, action):
         name, identifier, _, _, origin = row
@@ -768,7 +787,8 @@ class SoftwareManagerPage(Gtk.Box):
                 command = backend.flatpak('user', 'install', '-y', '--noninteractive', '--from')
             self.applying_changes = True
             self.job('Instalando la aplicación Flatpak…',
-                     lambda: backend.install_flatpakref(data, command), installed)
+                     lambda: backend.install_flatpakref(data, command), installed,
+                     privileged=True)
 
         def installed(_output):
             self.catalogues.clear()
@@ -796,7 +816,7 @@ class SoftwareManagerPage(Gtk.Box):
                 command = (self.admin('install-trusted-local', digest, package) if trusted else
                            ['/usr/bin/pkexec', backend.ADMIN, 'install-local', digest])
                 self.job('Instalando el paquete…', lambda: backend.install_local_deb(filename, command),
-                         installed)
+                         installed, privileged=True)
 
         def installed(_output):
             self.catalogues.clear()

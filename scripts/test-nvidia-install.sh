@@ -66,6 +66,7 @@ apt-get() {
 NVIDIA_MODESET_CONF="$tmp/nvidia-modeset.conf"
 NVIDIA_POWER_CONF="$tmp/nvidia-aio-power.conf"
 NVIDIA_DRACUT_CONF="$tmp/dracut/10-nvidia.conf"
+NVIDIA_DRACUT_STAMP="$tmp/nvidia-dracut.state"
 EXTRA=""
 nvidia_paquetes_extra() { [ -z "$EXTRA" ] || printf '%s\n' $EXTRA; }
 # Driver ya instalado, equipo con una sola GPU: configura modeset y suspensión.
