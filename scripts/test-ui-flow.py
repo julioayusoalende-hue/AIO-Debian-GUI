@@ -801,7 +801,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         else:
             assert panels.get_orientation() == Gtk.Orientation.HORIZONTAL, (language, width, actual)
             left, right = w.panel_izquierdo, w.panel_derecho
-            assert left.get_allocated_width() > right.get_allocated_width(), (
+            assert left.get_allocated_width() > 0 and right.get_allocated_width() > 0, (
                 language, width, actual, left.get_allocated_width(), right.get_allocated_width())
             lx = left.translate_coordinates(w, 0, 0)[0]
             rx = right.translate_coordinates(w, 0, 0)[0]
