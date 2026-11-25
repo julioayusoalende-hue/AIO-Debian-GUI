@@ -1,5 +1,10 @@
 # Cambios
 
+## 1.4.1
+
+- Las extensiones de GNOME se instalan, se activan automáticamente y se intenta recargarlas en caliente con `org.gnome.Shell.Extensions.ReloadExtension`.
+- Si GNOME Shell no permite recargarlas sin reiniciar sesión, AiO muestra un aviso explícito en lugar de dejar la extensión inactiva sin explicación.
+
 ## 1.4.0
 
 - En **Aplicaciones y repositorios**, solo cuando se detecta GNOME Shell, se ofrecen tareas individuales para instalar AppIndicator y KStatusNotifierItem Support, Blur my Shell, Caffeine, Clipboard Indicator, Dash to Dock, Places Status Indicator y Tiling Shell.

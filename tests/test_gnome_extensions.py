@@ -102,15 +102,29 @@ def test_download_url_rejects_external_host(tmp_path):
             gnome_extensions.download_url(TASK)
 
 
-def test_install_uses_gnome_extensions_as_user(tmp_path):
+def test_install_enables_and_reloads_extension(tmp_path):
     path = tmp_path / 'extension.zip'
     path.write_bytes(bundle())
     with patch.object(gnome_extensions.subprocess, 'run') as run:
         gnome_extensions.install(TASK, path)
-    args, kwargs = run.call_args
-    assert args[0] == ['gnome-extensions', 'install', '--force', str(path)]
-    assert kwargs['check'] is True
-    assert kwargs['stdin'] is gnome_extensions.subprocess.DEVNULL
+    commands = [call.args[0] for call in run.call_args_list]
+    assert commands[0] == ['gnome-extensions', 'install', '--force', str(path)]
+    assert commands[1] == ['gnome-extensions', 'enable', UUID]
+    assert commands[2] == [
+        'gdbus', 'call', '--session', '--dest', 'org.gnome.Shell.Extensions',
+        '--object-path', '/org/gnome/Shell/Extensions',
+        '--method', 'org.gnome.Shell.Extensions.ReloadExtension', UUID,
+    ]
+    assert all(call.kwargs['check'] is True for call in run.call_args_list)
+
+
+def test_reload_failure_warns_without_failing_install(tmp_path, capsys):
+    path = tmp_path / 'extension.zip'
+    path.write_bytes(bundle())
+    failure = gnome_extensions.subprocess.CalledProcessError(1, ['gdbus'])
+    with patch.object(gnome_extensions.subprocess, 'run', side_effect=[None, None, failure]):
+        gnome_extensions.install(TASK, path)
+    assert 'Cierra sesión y vuelve a entrar' in capsys.readouterr().err
 
 
 def test_installed_parses_uuid_lines():
