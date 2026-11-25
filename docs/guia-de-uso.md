@@ -32,4 +32,23 @@ Antes de cambiar kernel, Mesa, repositorios o controladores, haz una copia de se
 
 ## Mantenimiento de Snap
 
-Si `snapd` está instalado en el anfitrión, aparece **Actualizar y limpiar Snap**, seleccionada en el mantenimiento completo y disponible como tarea opcional del programador. Ejecuta `snap refresh` y, si termina correctamente, elimina mediante `snap remove --revision` las revisiones numéricas deshabilitadas más antiguas. Conserva la revisión activa y una revisión deshabilitada por aplicación para poder volver atrás. No borra datos, instantáneas ni archivos de la caché directamente, y no instala snapd. Si snapd se desinstala después de guardar un horario, la tarea se omite sin interrumpir las demás. Las programaciones existentes mantienen su selección de tareas.
+Si `snapd` está instalado en el anfitrión, aparece **Actualizar y limpiar Snap**, seleccionada en el mantenimiento completo y disponible como tarea opcional del programador. También existe **Eliminar revisiones antiguas de Snap** en el apartado de limpieza, para ejecutar solo esa parte. Ejecuta `snap refresh` y, si termina correctamente, elimina mediante `snap remove --revision` las revisiones numéricas deshabilitadas más antiguas. Conserva la revisión activa y una revisión deshabilitada por aplicación para poder volver atrás. No borra datos, instantáneas ni archivos de la caché directamente, y no instala snapd. Si snapd se desinstala después de guardar un horario, la tarea se omite sin interrumpir las demás. Las programaciones existentes mantienen su selección de tareas.
+
+## Actualizar AiO desde Salud del sistema
+
+Abre **Salud del sistema** desde la tarjeta **Información del sistema**. El botón **Actualizar AiO** de la cabecera busca e instala únicamente la actualización de la aplicación; no ejecuta el mantenimiento completo ni actualiza el resto de paquetes. La tarjeta **Versión de AiO Debian GUI** también ofrece el mismo acceso cuando detecta una versión nueva.
+
+La actualización usa el canal configurado en **Preferencias** (Estable o Testing) y el formato instalado (DEB, Flatpak o AppImage). En DEB se realiza mediante APT y el repositorio firmado del proyecto.
+
+## Limpieza del sistema
+
+En **Configuración y mantenimiento → Tareas**, el apartado **Limpieza del sistema** ofrece opciones independientes, todas desactivadas por defecto. Selecciona solo las que quieras ejecutar y pulsa **Ejecutar**; no es necesario activar el mantenimiento completo.
+
+- **Limpiar caché de APT**: elimina los `.deb` descargados en `/var/cache/apt/archives`. No desinstala paquetes y los archivos pueden volver a descargarse.
+- **Vaciar papelera del usuario**: borra el contenido de `~/.local/share/Trash`. No toca archivos fuera de la papelera.
+- **Eliminar miniaturas antiguas**: borra miniaturas de más de 7 días en `~/.cache/thumbnails`. Se regeneran al abrir los archivos.
+- **Limpiar registros del sistema**: conserva los últimos 30 días del diario de systemd y elimina registros rotados más antiguos.
+- **Eliminar Flatpak sin uso**: ejecuta `flatpak uninstall --unused` para el sistema y el usuario. No elimina aplicaciones instaladas.
+- **Eliminar revisiones antiguas de Snap**: conserva la revisión activa y la última revisión deshabilitada de cada snap para permitir volver atrás.
+
+Las tareas de papelera y miniaturas se ejecutan con los permisos de tu cuenta. AiO comprueba que las rutas resueltas permanecen dentro de tu directorio personal y no sigue enlaces que apunten fuera de él. Las tareas de limpieza no se incluyen en la programación automática.

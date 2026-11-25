@@ -35,6 +35,7 @@ invalid = [None, {}, {**base, 'extra': 'bad'}, {**base, 'hour': True},
            {**base, 'tasks': ['backports-kernel-mesa']}, {**base, 'tasks': ['reboot']},
            {**base, 'tasks': ['upgrade; reboot']}, {**base, 'tasks': ['repos']},
            {**base, 'tasks': ['autoremove']}, {**base, 'tasks': ['clock']},
+           {**base, 'tasks': ['clean-apt']}, {**base, 'tasks': ['clean-trash']},
            {**base, 'launcher': {'format': 'shell', 'path': '/tmp/run'}},
            {**base, 'launcher': {'format': 'appimage', 'path': 'relative.AppImage'}},
            {**base, 'launcher': {'format': 'deb', 'path': '/tmp/custom'}}]

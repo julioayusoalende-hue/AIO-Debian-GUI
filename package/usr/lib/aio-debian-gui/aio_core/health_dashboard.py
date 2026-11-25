@@ -74,6 +74,13 @@ class HealthDashboard(Gtk.Box):
         title.set_xalign(0)
         title_box.pack_start(title, True, True, 0)
 
+        self.btn_actualizar_app = Gtk.Button(label=self.translate("Actualizar AiO"))
+        self.btn_actualizar_app.get_style_context().add_class("suggested-action")
+        self.btn_actualizar_app.set_tooltip_text(self.translate(
+            "Buscar e instalar solo la actualización de AiO, sin ejecutar el mantenimiento del sistema"))
+        self.btn_actualizar_app.connect("clicked", self._on_update_app)
+        title_box.pack_end(self.btn_actualizar_app, False, False, 0)
+
         self.pack_start(title_box, False, False, 0)
 
         # Rejilla de tarjetas con desplazamiento.
