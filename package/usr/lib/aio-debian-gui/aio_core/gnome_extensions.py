@@ -118,10 +118,29 @@ def installed():
 
 def install(task, bundle):
     validate(task, bundle)
+    uuid = uuid_for(task)
     subprocess.run(
         ["gnome-extensions", "install", "--force", str(bundle)],
         stdin=subprocess.DEVNULL, timeout=120, check=True,
     )
+    subprocess.run(
+        ["gnome-extensions", "enable", uuid],
+        stdin=subprocess.DEVNULL, timeout=60, check=True,
+    )
+    try:
+        subprocess.run(
+            ["gdbus", "call", "--session", "--dest", "org.gnome.Shell.Extensions",
+             "--object-path", "/org/gnome/Shell/Extensions",
+             "--method", "org.gnome.Shell.Extensions.ReloadExtension", uuid],
+            stdin=subprocess.DEVNULL, capture_output=True, text=True,
+            timeout=30, check=True,
+        )
+    except (OSError, subprocess.SubprocessError):
+        print(
+            "La extensión se instaló y activó, pero GNOME Shell no pudo recargarla "
+            "en caliente. Cierra sesión y vuelve a entrar para verla.",
+            file=sys.stderr,
+        )
 
 
 def main(argv):

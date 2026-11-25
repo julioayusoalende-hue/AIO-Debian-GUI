@@ -66,4 +66,4 @@ Cuando AiO detecta el paquete `gnome-shell`, el grupo **Aplicaciones y repositor
 - Places Status Indicator.
 - Tiling Shell.
 
-AiO consulta `extensions.gnome.org` para elegir una versión compatible con el GNOME Shell instalado, descarga el ZIP por HTTPS y comprueba su integridad, `metadata.json` y UUID antes de instalarlo con los permisos de tu usuario. La extensión se instala pero no se activa automáticamente; puedes activarla desde **Extension Manager** o **Extensiones**. En escritorios distintos de GNOME estas tareas no se muestran.
+AiO consulta `extensions.gnome.org` para elegir una versión compatible con el GNOME Shell instalado, descarga el ZIP por HTTPS y comprueba su integridad, `metadata.json` y UUID antes de instalarlo con los permisos de tu usuario. La extensión se instala y se activa automáticamente. AiO intenta recargarla en caliente mediante la API de GNOME Shell; si el escritorio no permite hacerlo sin reiniciar la sesión, muestra un aviso para que cierres sesión y vuelvas a entrar. En escritorios distintos de GNOME estas tareas no se muestran.

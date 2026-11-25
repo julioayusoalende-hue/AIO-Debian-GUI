@@ -68,11 +68,10 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.4.0
+### Lo nuevo en la 1.4.1
 
-- En **Aplicaciones y repositorios**, si se detecta GNOME Shell, puedes instalar individualmente siete extensiones recomendadas: AppIndicator, Blur my Shell, Caffeine, Clipboard Indicator, Dash to Dock, Places Status Indicator y Tiling Shell.
-- La descarga usa una lista blanca de UUID, selecciona una versión compatible con tu GNOME Shell y valida el paquete antes de instalarlo como tu usuario.
-- Las extensiones ya instaladas se marcan automáticamente y las opciones no aparecen en otros escritorios.
+- Las extensiones recomendadas de GNOME se instalan y **se activan automáticamente**.
+- AiO intenta recargarlas en caliente; si el escritorio no lo permite, avisa de que hay que cerrar sesión y volver a entrar.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -80,7 +79,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.4.0**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.4.1**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -104,10 +103,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.4.0:
+Para la versión 1.4.1:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.4.0_all.deb
+sudo apt install ./aio-debian-gui_1.4.1_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.
