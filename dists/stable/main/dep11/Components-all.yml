@@ -96,13 +96,14 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
 Releases:
-- version: 1.4.1
+- version: 1.4.2
   type: stable
   unix-timestamp: 1795564800
   description:
     C: >-
-      <ul><li>Las extensiones de GNOME se instalan, se activan automáticamente y se intenta recargarlas en caliente con org.gnome.Shell.Extensions.ReloadExtension.</li><li>Si
-      GNOME Shell no permite recargarlas sin reiniciar sesión, AiO muestra un aviso explícito en lugar de dejar la extensión
-      inactiva sin explicación.</li></ul>
+      <ul><li>Las extensiones de GNOME se instalan ahora con la API oficial org.gnome.Shell.Extensions.InstallRemoteExtension,
+      la misma que usan Extension Manager y la integración web. GNOME Shell muestra la confirmación, descarga la versión compatible,
+      la instala, la carga y la activa sin reiniciar sesión.</li><li>Corregido el fallo de Blur my Shell y de cualquier extensión
+      que no podía cargarse tras una instalación local desde ZIP.</li></ul>
 ContentRating:
   oars-1.1: {}
