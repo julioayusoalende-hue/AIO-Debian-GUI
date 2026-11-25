@@ -96,16 +96,14 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
 Releases:
-- version: 1.2.4
+- version: 1.2.5
   type: stable
-  unix-timestamp: 1795478400
+  unix-timestamp: 1795564800
   description:
     C: >-
-      <ul><li>Gestor de software: instala aplicaciones desde archivos .flatpakref. Se pueden abrir con doble clic, desde el
-      botón de la pestaña Flatpak o arrastrándolos a la ventana. La instalación es para el usuario o para todo el sistema,
-      según el ámbito elegido.</li><li>Arrastrar un .deb o un .flatpakref a cualquier parte de la ventana lo abre en el gestor
-      de software.</li><li>El archivo .flatpakref se valida antes de instalar: debe ser una aplicación, con identificador
-      válido y direcciones HTTPS.</li><li>Inicio: nuevo interruptor para activar o desactivar os-prober (detección de otros
-      sistemas operativos). Al cambiarlo se regenera GRUB, como con update-grub, para que el cambio surta efecto.</li></ul>
+      <ul><li>La autorización opcional sin contraseña permanece activada tras reiniciar o volver a iniciar sesión. AiO conserva
+      un marcador de estado legible por el usuario porque Debian restaura /etc/polkit-1/rules.d a 0750 root:polkitd en cada
+      arranque.</li><li>Al actualizar, las reglas de Polkit existentes se migran automáticamente al nuevo marcador. Al desinstalar,
+      se eliminan tanto las reglas como el estado asociado.</li></ul>
 ContentRating:
   oars-1.1: {}
