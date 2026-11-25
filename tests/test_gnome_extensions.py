@@ -1,10 +1,9 @@
-"""Instalación segura de extensiones de GNOME desde una lista blanca."""
+"""Instalación de extensiones de GNOME mediante la API oficial de Shell."""
 
 import io
 import json
 import os
 import sys
-import zipfile
 from unittest.mock import patch
 
 import pytest
@@ -17,14 +16,11 @@ TASK = 'gnome-ext-appindicator'
 UUID = 'appindicatorsupport@rgcjonas.gmail.com'
 
 
-def bundle(metadata=None, nested=False):
-    data = io.BytesIO()
-    metadata = metadata or {'uuid': UUID}
-    with zipfile.ZipFile(data, 'w') as archive:
-        prefix = f'{UUID}/' if nested else ''
-        archive.writestr(prefix + 'metadata.json', json.dumps(metadata))
-        archive.writestr(prefix + 'extension.js', '// test')
-    return data.getvalue()
+def info(download_url=None):
+    return {
+        'uuid': UUID,
+        'download_url': download_url or f'/download-extension/{UUID}.shell-extension.zip?version_tag=123',
+    }
 
 
 def test_allowlist_has_expected_extensions():
@@ -44,87 +40,50 @@ def test_unknown_task_is_rejected():
         gnome_extensions.uuid_for('gnome-ext-arbitrary')
 
 
-def test_validate_root_metadata(tmp_path):
-    path = tmp_path / 'extension.zip'
-    path.write_bytes(bundle())
-    gnome_extensions.validate(TASK, path)
+def test_shell_version_is_parsed():
+    result = type('Result', (), {'returncode': 0, 'stdout': 'GNOME Shell 48.7\n', 'stderr': ''})()
+    with patch.object(gnome_extensions.subprocess, 'run', return_value=result):
+        assert gnome_extensions.shell_version() == '48.7'
 
 
-def test_validate_nested_metadata(tmp_path):
-    path = tmp_path / 'extension.zip'
-    path.write_bytes(bundle(nested=True))
-    gnome_extensions.validate(TASK, path)
-
-
-def test_validate_rejects_wrong_uuid(tmp_path):
-    path = tmp_path / 'extension.zip'
-    path.write_bytes(bundle({'uuid': 'other@example.com'}))
-    with pytest.raises(ValueError, match='UUID'):
-        gnome_extensions.validate(TASK, path)
-
-
-def test_validate_rejects_missing_metadata(tmp_path):
-    path = tmp_path / 'extension.zip'
-    with zipfile.ZipFile(path, 'w') as archive:
-        archive.writestr('extension.js', '// test')
-    with pytest.raises(ValueError, match='metadata.json'):
-        gnome_extensions.validate(TASK, path)
-
-
-def test_download_uses_compatible_version_from_extensions_site(tmp_path):
-    content = bundle()
-    info = io.BytesIO(json.dumps({
-        "uuid": UUID,
-        "download_url": f"/download-extension/{UUID}.shell-extension.zip?version_tag=123",
-    }).encode())
-    response = io.BytesIO(content)
-    output = tmp_path / 'extension.zip'
+def test_extension_info_uses_installed_shell_version():
+    response = io.BytesIO(json.dumps(info()).encode())
     with patch.object(gnome_extensions, 'shell_version', return_value='48.7'), \
-         patch.object(gnome_extensions.urllib.request, 'urlopen', side_effect=[info, response]) as open_url:
-        gnome_extensions.download(TASK, output)
-    info_request = open_url.call_args_list[0][0][0]
-    download_request = open_url.call_args_list[1][0][0]
-    assert info_request.full_url.startswith('https://extensions.gnome.org/extension-info/?')
-    assert f'uuid={UUID.replace("@", "%40")}' in info_request.full_url
-    assert download_request.full_url == (
-        f'https://extensions.gnome.org/download-extension/{UUID}.shell-extension.zip?version_tag=123')
-    assert output.read_bytes() == content
+         patch.object(gnome_extensions.urllib.request, 'urlopen', return_value=response) as open_url:
+        assert gnome_extensions.extension_info(TASK)['uuid'] == UUID
+    request = open_url.call_args[0][0]
+    assert request.full_url.startswith('https://extensions.gnome.org/extension-info/?')
+    assert 'shell_version=48.7' in request.full_url
 
 
-def test_download_url_rejects_external_host(tmp_path):
-    info = io.BytesIO(json.dumps({
-        "uuid": UUID,
-        "download_url": "https://evil.example/extension.zip",
-    }).encode())
+def test_extension_info_rejects_external_download_host():
+    response = io.BytesIO(json.dumps(info('https://evil.example/extension.zip')).encode())
     with patch.object(gnome_extensions, 'shell_version', return_value='48.7'), \
-         patch.object(gnome_extensions.urllib.request, 'urlopen', return_value=info):
+         patch.object(gnome_extensions.urllib.request, 'urlopen', return_value=response):
         with pytest.raises(ValueError, match='origen'):
-            gnome_extensions.download_url(TASK)
+            gnome_extensions.extension_info(TASK)
 
 
-def test_install_enables_and_reloads_extension(tmp_path):
-    path = tmp_path / 'extension.zip'
-    path.write_bytes(bundle())
-    with patch.object(gnome_extensions.subprocess, 'run') as run:
-        gnome_extensions.install(TASK, path)
-    commands = [call.args[0] for call in run.call_args_list]
-    assert commands[0] == ['gnome-extensions', 'install', '--force', str(path)]
-    assert commands[1] == ['gnome-extensions', 'enable', UUID]
-    assert commands[2] == [
+def test_install_remote_uses_shell_api():
+    result = type('Result', (), {'returncode': 0, 'stdout': "('successful',)\n", 'stderr': ''})()
+    with patch.object(gnome_extensions, 'extension_info', return_value=info()), \
+         patch.object(gnome_extensions.subprocess, 'run', return_value=result) as run:
+        gnome_extensions.install_remote(TASK)
+    command = run.call_args.args[0]
+    assert command == [
         'gdbus', 'call', '--session', '--dest', 'org.gnome.Shell.Extensions',
         '--object-path', '/org/gnome/Shell/Extensions',
-        '--method', 'org.gnome.Shell.Extensions.ReloadExtension', UUID,
+        '--method', 'org.gnome.Shell.Extensions.InstallRemoteExtension', UUID,
     ]
-    assert all(call.kwargs['check'] is True for call in run.call_args_list)
+    assert run.call_args.kwargs['timeout'] == 180
 
 
-def test_reload_failure_warns_without_failing_install(tmp_path, capsys):
-    path = tmp_path / 'extension.zip'
-    path.write_bytes(bundle())
-    failure = gnome_extensions.subprocess.CalledProcessError(1, ['gdbus'])
-    with patch.object(gnome_extensions.subprocess, 'run', side_effect=[None, None, failure]):
-        gnome_extensions.install(TASK, path)
-    assert 'Cierra sesión y vuelve a entrar' in capsys.readouterr().err
+def test_install_remote_reports_cancelled_or_failed():
+    result = type('Result', (), {'returncode': 0, 'stdout': "('cancelled',)\n", 'stderr': ''})()
+    with patch.object(gnome_extensions, 'extension_info', return_value=info()), \
+         patch.object(gnome_extensions.subprocess, 'run', return_value=result):
+        with pytest.raises(RuntimeError, match='canceló'):
+            gnome_extensions.install_remote(TASK)
 
 
 def test_installed_parses_uuid_lines():
@@ -135,27 +94,3 @@ def test_installed_parses_uuid_lines():
     })()
     with patch.object(gnome_extensions.subprocess, 'run', return_value=result):
         assert gnome_extensions.installed() == {UUID, 'other@example.com'}
-
-
-def test_validate_rejects_unsafe_paths(tmp_path):
-    path = tmp_path / 'extension.zip'
-    with zipfile.ZipFile(path, 'w') as archive:
-        archive.writestr('../metadata.json', json.dumps({'uuid': UUID}))
-    with pytest.raises(ValueError, match='rutas no seguras'):
-        gnome_extensions.validate(TASK, path)
-
-
-def test_validate_enforces_unpacked_size_limit(tmp_path, monkeypatch):
-    path = tmp_path / 'extension.zip'
-    path.write_bytes(bundle())
-    monkeypatch.setattr(gnome_extensions, 'MAX_UNPACKED_BYTES', 1)
-    with pytest.raises(ValueError, match='límites de tamaño'):
-        gnome_extensions.validate(TASK, path)
-
-
-def test_validate_enforces_file_count_limit(tmp_path, monkeypatch):
-    path = tmp_path / 'extension.zip'
-    path.write_bytes(bundle())
-    monkeypatch.setattr(gnome_extensions, 'MAX_FILES', 0)
-    with pytest.raises(ValueError, match='límites de tamaño'):
-        gnome_extensions.validate(TASK, path)

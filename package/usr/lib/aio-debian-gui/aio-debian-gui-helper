@@ -50,7 +50,7 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.4.1
+HELPER_VERSION=1.4.2
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -1118,16 +1118,9 @@ instalar_extension_gnome() {
         return 0
     fi
 
-    (
-        temp=$(ejecutar_como_usuario_solicitante mktemp -d /tmp/aio-gnome-extension.XXXXXXXX) || exit 1
-        trap 'rm -rf -- "$temp"' EXIT
-        bundle="$temp/$uuid.zip"
-        info "Descargando y verificando la extensión $uuid..."
-        ejecutar_como_usuario_solicitante python3 -I "$GNOME_EXTENSIONS_MODULE" \
-            download "$tarea" "$bundle" || exit 1
-        ejecutar_como_usuario_solicitante python3 -I "$GNOME_EXTENSIONS_MODULE" \
-            install "$tarea" "$bundle" || exit 1
-    ) || return 1
+    info "GNOME Shell mostrará una confirmación para instalar y activar $uuid..."
+    ejecutar_como_usuario_solicitante python3 -I "$GNOME_EXTENSIONS_MODULE" \
+        install-remote "$tarea" || return 1
     ok "Extensión $uuid instalada y activada para el usuario."
 }
 

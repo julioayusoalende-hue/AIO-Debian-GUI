@@ -1,5 +1,10 @@
 # Cambios
 
+## 1.4.2
+
+- Las extensiones de GNOME se instalan ahora con la API oficial `org.gnome.Shell.Extensions.InstallRemoteExtension`, la misma que usan Extension Manager y la integración web. GNOME Shell muestra la confirmación, descarga la versión compatible, la instala, la carga y la activa sin reiniciar sesión.
+- Corregido el fallo de Blur my Shell y de cualquier extensión que no podía cargarse tras una instalación local desde ZIP.
+
 ## 1.4.1
 
 - Las extensiones de GNOME se instalan, se activan automáticamente y se intenta recargarlas en caliente con `org.gnome.Shell.Extensions.ReloadExtension`.
