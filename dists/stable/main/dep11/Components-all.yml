@@ -96,16 +96,13 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
 Releases:
-- version: 1.4.0
+- version: 1.4.1
   type: stable
   unix-timestamp: 1795564800
   description:
     C: >-
-      <ul><li>En **Aplicaciones y repositorios**, solo cuando se detecta GNOME Shell, se ofrecen tareas individuales para
-      instalar AppIndicator y KStatusNotifierItem Support, Blur my Shell, Caffeine, Clipboard Indicator, Dash to Dock, Places
-      Status Indicator y Tiling Shell.</li><li>Las extensiones se descargan desde extensions.gnome.org usando una lista blanca
-      de UUID y una versión compatible con el GNOME Shell instalado. El ZIP se valida (integridad, metadata.json y UUID) y
-      se instala con los permisos del usuario.</li><li>Las tareas de extensión muestran el estado «Ya instalada» y no aparecen
-      en escritorios que no sean GNOME.</li></ul>
+      <ul><li>Las extensiones de GNOME se instalan, se activan automáticamente y se intenta recargarlas en caliente con org.gnome.Shell.Extensions.ReloadExtension.</li><li>Si
+      GNOME Shell no permite recargarlas sin reiniciar sesión, AiO muestra un aviso explícito en lugar de dejar la extensión
+      inactiva sin explicación.</li></ul>
 ContentRating:
   oars-1.1: {}
