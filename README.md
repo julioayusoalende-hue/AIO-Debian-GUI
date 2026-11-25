@@ -68,11 +68,10 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.3.0
+### Lo nuevo en la 1.3.1
 
-- Salud del sistema tiene un botón **Actualizar AiO** en la cabecera para actualizar solo la aplicación, sin ejecutar el mantenimiento completo.
-- Nuevo apartado **Limpieza del sistema** en Tareas: caché APT, papelera, miniaturas antiguas, registros de systemd, Flatpak sin uso y revisiones antiguas de Snap.
-- Las limpiezas son independientes, están desactivadas por defecto y validan las rutas personales para no borrar fuera del directorio del usuario.
+- Corregida la limpieza de papelera y miniaturas: los comandos se ejecutan desde el directorio personal del usuario, aunque `pkexec` haya partido de `/root`.
+- Añadida una prueba de regresión para este fallo.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -80,7 +79,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.3.0**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.3.1**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -104,10 +103,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.3.0:
+Para la versión 1.3.1:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.3.0_all.deb
+sudo apt install ./aio-debian-gui_1.3.1_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.

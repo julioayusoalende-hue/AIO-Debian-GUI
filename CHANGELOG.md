@@ -1,5 +1,10 @@
 # Cambios
 
+## 1.3.1
+
+- Corregida la limpieza de papelera y miniaturas cuando `pkexec` deja el directorio de trabajo en `/root`: el asistente entra al HOME del usuario antes de ejecutar `runuser`.
+- Añadida una prueba de regresión que comprueba el directorio de trabajo de los comandos ejecutados como el usuario solicitante.
+
 ## 1.3.0
 
 - Salud del sistema incorpora un botón propio **Actualizar AiO** en la cabecera. Busca e instala solo la actualización de la aplicación, sin iniciar el mantenimiento completo ni actualizar el resto del sistema.

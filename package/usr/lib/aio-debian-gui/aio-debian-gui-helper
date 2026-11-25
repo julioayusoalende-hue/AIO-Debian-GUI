@@ -50,7 +50,7 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.3.0
+HELPER_VERSION=1.3.1
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -210,7 +210,12 @@ ejecutar_como_usuario_solicitante() {
     if [ -d "$runtime" ]; then
         entorno+=(XDG_RUNTIME_DIR="$runtime" DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime/bus")
     fi
-    runuser -u "$username" -- env "${entorno[@]}" "$@"
+    # pkexec puede dejar el CWD en /root; runuser lo hereda y comandos como
+    # find fallan al no poder entrar/restaurar ese directorio como el usuario.
+    (
+        cd "$home" || exit 1
+        runuser -u "$username" -- env "${entorno[@]}" "$@"
+    )
 }
 
 ejecutar_flatpak_usuario() {

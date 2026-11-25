@@ -16,6 +16,24 @@ paso_clean_journal >/dev/null
 grep -Fxq 'apt-get clean' "$TMP/apt.log"
 grep -Fxq 'journalctl --vacuum-time=30d' "$TMP/journal.log"
 
+# Regresión: pkexec deja el CWD en /root y runuser lo heredaba. El helper
+# debe entrar al HOME antes de ejecutar cualquier comando como el usuario.
+CWD_HOME="$TMP/cwd-home"
+mkdir -p "$CWD_HOME"
+pkexec_uid() { echo 1000; }
+pkexec_username() { echo test_user; }
+getent() {
+    if [ "$1" = passwd ]; then
+        printf 'test:x:1000:1000:Test:%s:/bin/bash\n' "$CWD_HOME"
+    else
+        command getent "$@"
+    fi
+}
+runuser() { shift 4; env "$@"; }
+cd /tmp
+test "$(ejecutar_como_usuario_solicitante pwd)" = "$CWD_HOME"
+cd "$OLDPWD"
+
 # Limpieza personal: ejecutar como el usuario simulado equivale a ejecutar
 # directamente porque el HOME temporal pertenece a este mismo usuario.
 HOME_TEST="$TMP/home"
