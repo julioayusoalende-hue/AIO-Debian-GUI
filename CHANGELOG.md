@@ -1,5 +1,10 @@
 # Cambios
 
+## 1.4.3
+
+- La confirmación de instalación de extensiones de GNOME ya no provoca un falso fallo por timeout: la llamada D-Bus espera hasta 10 minutos.
+- Si la respuesta D-Bus expira o llega tarde, AiO comprueba el estado real de la extensión antes de marcar la tarea como fallida.
+
 ## 1.4.2
 
 - Las extensiones de GNOME se instalan ahora con la API oficial `org.gnome.Shell.Extensions.InstallRemoteExtension`, la misma que usan Extension Manager y la integración web. GNOME Shell muestra la confirmación, descarga la versión compatible, la instala, la carga y la activa sin reiniciar sesión.

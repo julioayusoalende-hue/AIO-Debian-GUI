@@ -72,10 +72,10 @@ def test_install_remote_uses_shell_api():
     command = run.call_args.args[0]
     assert command == [
         'gdbus', 'call', '--session', '--dest', 'org.gnome.Shell.Extensions',
-        '--object-path', '/org/gnome/Shell/Extensions',
+        '--object-path', '/org/gnome/Shell/Extensions', '--timeout=600',
         '--method', 'org.gnome.Shell.Extensions.InstallRemoteExtension', UUID,
     ]
-    assert run.call_args.kwargs['timeout'] == 180
+    assert run.call_args.kwargs['timeout'] == 660
 
 
 def test_install_remote_reports_cancelled_or_failed():
@@ -84,6 +84,14 @@ def test_install_remote_reports_cancelled_or_failed():
          patch.object(gnome_extensions.subprocess, 'run', return_value=result):
         with pytest.raises(RuntimeError, match='canceló'):
             gnome_extensions.install_remote(TASK)
+
+
+def test_install_remote_accepts_installed_state_after_timeout():
+    result = type('Result', (), {'returncode': 1, 'stdout': '', 'stderr': 'timeout'})()
+    with patch.object(gnome_extensions, 'extension_info', return_value=info()), \
+         patch.object(gnome_extensions.subprocess, 'run', return_value=result), \
+         patch.object(gnome_extensions, 'installed', return_value={UUID}):
+        gnome_extensions.install_remote(TASK)
 
 
 def test_installed_parses_uuid_lines():
