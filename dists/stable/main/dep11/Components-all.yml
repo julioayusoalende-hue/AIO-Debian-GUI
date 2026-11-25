@@ -96,16 +96,16 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
 Releases:
-- version: 1.3.0
+- version: 1.3.1
   type: stable
   unix-timestamp: 1795564800
   description:
     C: >-
-      <ul><li>Salud del sistema incorpora un botón propio **Actualizar AiO** en la cabecera. Busca e instala solo la actualización
-      de la aplicación, sin iniciar el mantenimiento completo ni actualizar el resto del sistema.</li><li>Nuevo apartado **Limpieza
-      del sistema** en Tareas, con opciones independientes y desactivadas por defecto: caché APT, papelera, miniaturas antiguas,
-      registros de systemd, Flatpak sin uso y revisiones antiguas de Snap.</li><li>La limpieza personal valida que las rutas
-      resueltas permanecen dentro del directorio del usuario y no sigue enlaces que apunten fuera. Las tareas de limpieza
-      no se añaden a la programación automática.</li></ul>
+      <ul><li>Corregida la limpieza de papelera y miniaturas cuando pkexec deja el directorio de trabajo en /root: el asistente
+      entra al HOME del usuario antes de ejecutar runuser.</li><li>Añadida una prueba de regresión que comprueba el directorio
+      de trabajo de los comandos ejecutados como el usuario solicitante.</li><li>Nuevo preset **Limpieza**, junto a Estándar,
+      Completo y Solo Flatpak. Selecciona las limpiezas disponibles sin actualizar paquetes ni comprobar reinicios.</li><li>Separadas
+      actualización y limpieza de Flatpak y Snap: las tareas de actualización ya no eliminan runtimes o revisiones antiguas;
+      esas acciones quedan en el apartado de limpieza.</li></ul>
 ContentRating:
   oars-1.1: {}
