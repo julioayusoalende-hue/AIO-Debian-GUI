@@ -96,13 +96,14 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
 Releases:
-- version: 1.4.3
+- version: 1.4.4
   type: stable
   unix-timestamp: 1795564800
   description:
     C: >-
-      <ul><li>La confirmación de instalación de extensiones de GNOME ya no provoca un falso fallo por timeout: la llamada
-      D-Bus espera hasta 10 minutos.</li><li>Si la respuesta D-Bus expira o llega tarde, AiO comprueba el estado real de la
-      extensión antes de marcar la tarea como fallida.</li></ul>
+      <ul><li>Se corrige el error D-Bus NoReply: Message recipient disconnected from message bus without replying al instalar
+      extensiones de GNOME: la llamada ahora se dirige directamente a org.gnome.Shell (/org/gnome/Shell), que mantiene viva
+      la conexión mientras el usuario confirma el diálogo, evitando que el servicio intermedio org.gnome.Shell.Extensions
+      (que se apaga a los 2 s de inactividad) corte la respuesta.</li></ul>
 ContentRating:
   oars-1.1: {}
