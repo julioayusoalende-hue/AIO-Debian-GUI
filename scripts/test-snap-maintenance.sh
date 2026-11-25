@@ -34,12 +34,20 @@ paso_snap_update
 [ ! -e "$TEST_DIR/calls" ]
 TEST_MODE=ok
 paso_snap_update
-diff -u <(printf '%s\n' 'refresh' 'list --all' 'remove app --revision=10') "$TEST_DIR/calls"
-for TEST_MODE in refresh-error list-error remove-error; do
+diff -u <(printf '%s\n' 'refresh') "$TEST_DIR/calls"
+TEST_MODE=refresh-error
+: > "$TEST_DIR/calls"
+if paso_snap_update; then echo "Failure swallowed: refresh-error" >&2; exit 1; fi
+
+TEST_MODE=ok
+: > "$TEST_DIR/calls"
+paso_clean_snap
+diff -u <(printf '%s\n' 'list --all' 'remove app --revision=10') "$TEST_DIR/calls"
+for TEST_MODE in list-error remove-error; do
     : > "$TEST_DIR/calls"
-    if paso_snap_update; then echo "Failure swallowed: $TEST_MODE" >&2; exit 1; fi
+    if paso_clean_snap; then echo "Failure swallowed: $TEST_MODE" >&2; exit 1; fi
     if [ "$TEST_MODE" != remove-error ]; then
         ! grep -q '^remove ' "$TEST_DIR/calls"
     fi
 done
-printf '✔ Snap: detection, refresh, retained rollback, bounded cleanup and errors\n'
+printf '✔ Snap: actualización y limpieza independientes, rollback acotado y errores\n'

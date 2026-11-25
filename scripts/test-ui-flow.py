@@ -582,6 +582,11 @@ for language in ('es', 'en', 'fr', 'zh'):
         assert not w.switches['clean-snap'][0].get_active()
     assert any(grupo.get_accessible().get_name() == app.traducir('Limpieza del sistema')
                for grupo in w.grupos_tareas)
+    assert 'limpieza' in w.botones_preset
+    w.botones_preset["limpieza"].clicked()
+    limpieza_visible = [p[0] for p in app.PASOS
+                        if p[0] in app.TAREAS_LIMPIEZA and w._visible(p[0])]
+    assert w._pasos_seleccionados() == limpieza_visible
     assert not any(t in w._pasos_seleccionados() for t in ('backports-kernel-mesa', 'revertir-backports', 'nvidia-driver', 'ubuntu-hwe'))
     w.botones_preset["flatpak"].clicked()
     assert w._pasos_seleccionados() == ['flatpak-update']

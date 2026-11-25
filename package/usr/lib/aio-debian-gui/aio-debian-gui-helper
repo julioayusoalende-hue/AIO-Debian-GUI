@@ -50,7 +50,7 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.3.0
+HELPER_VERSION=1.3.1
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -210,7 +210,12 @@ ejecutar_como_usuario_solicitante() {
     if [ -d "$runtime" ]; then
         entorno+=(XDG_RUNTIME_DIR="$runtime" DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime/bus")
     fi
-    runuser -u "$username" -- env "${entorno[@]}" "$@"
+    # pkexec puede dejar el CWD en /root; runuser lo hereda y comandos como
+    # find fallan al no poder entrar/restaurar ese directorio como el usuario.
+    (
+        cd "$home" || exit 1
+        runuser -u "$username" -- env "${entorno[@]}" "$@"
+    )
 }
 
 ejecutar_flatpak_usuario() {
@@ -1254,9 +1259,8 @@ paso_flatpak_update() {
             fallos=1
         fi
     fi
-    paso_limpiar_flatpak_sin_uso || fallos=1
     [ "$fallos" -eq 0 ] || return 1
-    ok "Comprobación de instalaciones Flatpak finalizada."
+    ok "Actualización de Flatpak finalizada."
 }
 
 # Only snapd owns its revisions. Never remove files directly from /var/lib/snapd.
@@ -1301,11 +1305,10 @@ paso_snap_update() {
     fi
     info "Actualizando aplicaciones Snap..."
     if ! snap refresh; then
-        err "No se pudieron actualizar los snaps; no se realizará la limpieza."
+        err "No se pudieron actualizar los snaps."
         return 1
     fi
-    limpiar_revisiones_snap || return 1
-    ok "Snap actualizado y limpiado."
+    ok "Snap actualizado."
 }
 
 paso_clean_snap() {
@@ -1736,7 +1739,7 @@ declare -A TITULOS=(
     [autoremove]="Eliminar dependencias huérfanas"
     [autopurge]="Purgar dependencias huérfanas"
     [autoclean]="Limpiar caché de paquetes"
-    [snap-update]="Actualizar y limpiar Snap"
+    [snap-update]="Actualizar aplicaciones Snap"
     [flatpak-update]="Actualizar aplicaciones Flatpak"
     [clean-apt]="Limpiar caché de APT"
     [clean-trash]="Vaciar papelera del usuario"
