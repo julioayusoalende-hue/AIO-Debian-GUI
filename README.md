@@ -68,11 +68,10 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.4.2
+### Lo nuevo en la 1.4.3
 
-- Las extensiones de GNOME se instalan mediante la API oficial de GNOME Shell, la misma que usa Extension Manager.
-- GNOME Shell pide confirmación, descarga la versión compatible, instala, carga y activa la extensión sin reiniciar sesión.
-- Corregido el fallo de instalación de Blur my Shell.
+- Corregido el falso fallo al confirmar la instalación de una extensión de GNOME.
+- La llamada espera la confirmación del usuario y comprueba el estado real de la extensión si la respuesta D-Bus llega tarde.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -80,7 +79,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.4.2**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.4.3**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -104,10 +103,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.4.2:
+Para la versión 1.4.3:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.4.2_all.deb
+sudo apt install ./aio-debian-gui_1.4.3_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.

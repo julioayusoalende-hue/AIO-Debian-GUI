@@ -63,12 +63,20 @@ def install_remote(task):
     uuid = uuid_for(task)
     result = subprocess.run(
         ["gdbus", "call", "--session", "--dest", SHELL_BUS,
-         "--object-path", SHELL_PATH,
+         "--object-path", SHELL_PATH, "--timeout=600",
          "--method", f"{SHELL_BUS}.InstallRemoteExtension", uuid],
         stdin=subprocess.DEVNULL, capture_output=True, text=True,
-        timeout=180, check=False,
+        timeout=660, check=False,
     )
-    if result.returncode or "successful" not in result.stdout:
+    success = result.returncode == 0 and "successful" in result.stdout
+    if not success:
+        # Algunas versiones de Shell responden tarde o la llamada expira
+        # mientras el usuario confirma. El estado real manda sobre el timeout.
+        try:
+            success = uuid in installed()
+        except RuntimeError:
+            success = False
+    if not success:
         if "cancelled" in result.stdout:
             raise RuntimeError("La instalación de la extensión se canceló.")
         raise RuntimeError((result.stderr or result.stdout).strip()
