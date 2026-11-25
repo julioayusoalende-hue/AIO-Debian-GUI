@@ -1,5 +1,11 @@
 # Cambios
 
+## 1.4.0
+
+- En **Aplicaciones y repositorios**, solo cuando se detecta GNOME Shell, se ofrecen tareas individuales para instalar AppIndicator y KStatusNotifierItem Support, Blur my Shell, Caffeine, Clipboard Indicator, Dash to Dock, Places Status Indicator y Tiling Shell.
+- Las extensiones se descargan desde `extensions.gnome.org` usando una lista blanca de UUID y una versión compatible con el GNOME Shell instalado. El ZIP se valida (integridad, `metadata.json` y UUID) y se instala con los permisos del usuario.
+- Las tareas de extensión muestran el estado «Ya instalada» y no aparecen en escritorios que no sean GNOME.
+
 ## 1.3.1
 
 - Corregida la limpieza de papelera y miniaturas cuando `pkexec` deja el directorio de trabajo en `/root`: el asistente entra al HOME del usuario antes de ejecutar `runuser`.

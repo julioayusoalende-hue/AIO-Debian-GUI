@@ -36,9 +36,10 @@ def settle():
 def esperar_disposicion(ventana, ancho):
     paneles = ventana.paneles_principales
     orientacion = Gtk.Orientation.VERTICAL if ancho < 900 else Gtk.Orientation.HORIZONTAL
-    # Un runner lento puede tardar en procesar el redimensionado: se reintenta
-    # la petición en cada vuelta y se da más margen que el timeout de un clic.
-    limite = time.monotonic() + 10
+    # Un runner lento puede tardar en procesar el redimensionado: se asegura
+    # el mapeo, se reintenta la petición y se da margen de sobra.
+    ventana.present()
+    limite = time.monotonic() + 30
     while time.monotonic() < limite:
         settle()
         actual = ventana.get_size()[0]
@@ -580,6 +581,8 @@ for language in ('es', 'en', 'fr', 'zh'):
     if w.snapd_presente:
         assert 'clean-snap' in w.switches
         assert not w.switches['clean-snap'][0].get_active()
+    assert all((tarea in w.switches) == w.gnome_presente
+               for tarea in app.TAREAS_EXTENSIONES_GNOME)
     assert any(grupo.get_accessible().get_name() == app.traducir('Limpieza del sistema')
                for grupo in w.grupos_tareas)
     assert 'limpieza' in w.botones_preset

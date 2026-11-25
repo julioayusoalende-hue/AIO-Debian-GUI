@@ -1026,6 +1026,20 @@ PASOS = [
      "Permite gestionar apps Flatpak desde la tienda de GNOME.", False, "gnome"),
     ("ext-manager", "Extension Manager",
      "Instala gnome-shell-extension-manager para gestionar extensiones de GNOME Shell.", False, "gnome"),
+    ("gnome-ext-appindicator", "AppIndicator y KStatusNotifierItem Support",
+     "Muestra indicadores de bandeja y KStatusNotifierItem en el panel de GNOME.", False, "gnome"),
+    ("gnome-ext-blur-shell", "Blur my Shell",
+     "Añade desenfoque configurable al fondo de GNOME Shell.", False, "gnome"),
+    ("gnome-ext-caffeine", "Caffeine",
+     "Evita temporalmente que GNOME suspenda la sesión.", False, "gnome"),
+    ("gnome-ext-clipboard-indicator", "Clipboard Indicator",
+     "Añade un indicador y gestor del portapapeles.", False, "gnome"),
+    ("gnome-ext-dash-to-dock", "Dash to Dock",
+     "Convierte el dash de GNOME en un dock configurable.", False, "gnome"),
+    ("gnome-ext-places-status", "Places Status Indicator",
+     "Añade un acceso rápido a lugares del sistema.", False, "gnome"),
+    ("gnome-ext-tiling-shell", "Tiling Shell",
+     "Organiza las ventanas en mosaico desde GNOME Shell.", False, "gnome"),
     ("clean-apt", "Limpiar caché de APT",
      "Elimina los .deb descargados en /var/cache/apt/archives; no borra paquetes instalados.", False, "cleanup"),
     ("clean-trash", "Vaciar papelera del usuario",
@@ -1041,6 +1055,11 @@ PASOS = [
     ("rebootcheck", "Comprobar si hace falta reiniciar",
      "Revisa kernel y servicios críticos al terminar.", True, "final"),
 ]
+TAREAS_EXTENSIONES_GNOME = {
+    "gnome-ext-appindicator", "gnome-ext-blur-shell", "gnome-ext-caffeine",
+    "gnome-ext-clipboard-indicator", "gnome-ext-dash-to-dock",
+    "gnome-ext-places-status", "gnome-ext-tiling-shell",
+}
 TAREAS_LIMPIEZA = {
     "clean-apt", "clean-trash", "clean-thumbnails", "clean-journal",
     "clean-flatpak", "clean-snap",
@@ -4503,7 +4522,7 @@ class VentanaPrincipal(Gtk.Window):
         grupos = (
             ("Mantenimiento habitual", "view-refresh-symbolic", {"clock", "upgrade", "autoremove", "autopurge", "autoclean", "flatpak-update", "snap-update", "rebootcheck"}),
             ("Limpieza del sistema", "user-trash-symbolic", {"clean-apt", "clean-trash", "clean-thumbnails", "clean-journal", "clean-flatpak", "clean-snap"}),
-            ("Aplicaciones y repositorios", "system-software-install-symbolic", {"repos", "tools", "flatpak-setup", "gnome-plugin", "ext-manager"}),
+            ("Aplicaciones y repositorios", "system-software-install-symbolic", {"repos", "tools", "flatpak-setup", "gnome-plugin", "ext-manager"} | TAREAS_EXTENSIONES_GNOME),
             ("Kernel y controladores · Avanzado", "preferences-system-symbolic", {"backports-kernel-mesa", "revertir-backports", "nvidia-driver", "ubuntu-hwe"}),
         )
         self.grupos_tareas = []
@@ -4607,12 +4626,13 @@ class VentanaPrincipal(Gtk.Window):
             if (len(campos) == 3 and campos[0] == "##STATUS"
                     and campos[1] in (
                         "repos", "tools", "backports-kernel-mesa", "ubuntu-hwe",
-                        "gnome-plugin", "ext-manager",
+                        "gnome-plugin", "ext-manager", *TAREAS_EXTENSIONES_GNOME,
                     )
                     and campos[2] in ("0", "1")):
                 estados[campos[1]] = campos[2] == "1"
         requeridos = {
             "repos", "tools", "backports-kernel-mesa", "ubuntu-hwe", "gnome-plugin", "ext-manager",
+            *TAREAS_EXTENSIONES_GNOME,
         }
         if codigo != 0 or set(estados) != requeridos:
             self._finalizar_consulta_estados(
@@ -4649,6 +4669,7 @@ class VentanaPrincipal(Gtk.Window):
             "nvidia-driver": "✓ Driver NVIDIA instalado",
             "gnome-plugin": "✓ Ya instalado",
             "ext-manager": "✓ Ya instalado",
+            **dict.fromkeys(TAREAS_EXTENSIONES_GNOME, "✓ Ya instalada"),
         }
         for pid, completada in estados.items():
             indicador = self.indicadores.get(pid)
@@ -4789,7 +4810,7 @@ class VentanaPrincipal(Gtk.Window):
             return self.flatpak_presente
         if pid == "flatpak-setup":
             return not self.flatpak_presente
-        if pid in ("gnome-plugin", "ext-manager"):
+        if pid in ("gnome-plugin", "ext-manager") or pid in TAREAS_EXTENSIONES_GNOME:
             return self.gnome_presente
         return True
 

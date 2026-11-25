@@ -74,6 +74,8 @@ essential = (
     "Último índice de paquetes: hace %d días.",
     "Crea instantáneas de los archivos del sistema para restaurarlo tras una actualización fallida u otro problema. Por defecto no incluye los archivos personales.",
     "Crea copias de seguridad de las carpetas personales seleccionadas para recuperar archivos perdidos o modificados. No restaura el sistema operativo.",
+    "AppIndicator y KStatusNotifierItem Support",
+    "✓ Ya instalada",
     "Apps recomendadas", "Aplicaciones recomendadas",
     "Abrir nueva sesión", "La sesión de terminal ha terminado.",
     "No se pudo iniciar la terminal.",

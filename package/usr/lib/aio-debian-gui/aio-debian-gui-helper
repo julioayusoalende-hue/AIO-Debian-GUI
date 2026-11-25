@@ -50,13 +50,23 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.3.1
+HELPER_VERSION=1.4.0
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
 MAINTENANCE_LOCK=/run/aio-debian-gui/maintenance.lock
 POLKIT_RULES_DIR=/etc/polkit-1/rules.d
 PASSWORDLESS_STATE_DIR=/var/lib/aio-debian-gui/passwordless
+GNOME_EXTENSIONS_MODULE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/aio_core/gnome_extensions.py"
+declare -A EXTENSIONES_GNOME=(
+    [gnome-ext-appindicator]="appindicatorsupport@rgcjonas.gmail.com"
+    [gnome-ext-blur-shell]="blur-my-shell@aunetx"
+    [gnome-ext-caffeine]="caffeine@patapon.info"
+    [gnome-ext-clipboard-indicator]="clipboard-indicator@tudmotu.com"
+    [gnome-ext-dash-to-dock]="dash-to-dock@micxgx.gmail.com"
+    [gnome-ext-places-status]="places-menu@gnome-shell-extensions.gcampax.github.com"
+    [gnome-ext-tiling-shell]="tilingshell@ferrarodomenico.com"
+)
 
 # ------------------------------------------------------------------------------
 # Utilidades
@@ -1092,6 +1102,35 @@ paso_ext_manager() {
     fi
 }
 
+instalar_extension_gnome() {
+    local tarea=$1 uuid lista
+    uuid=${EXTENSIONES_GNOME[$tarea]:-}
+    [ -n "$uuid" ] || { err "Extensión de GNOME no permitida."; return 2; }
+    paquete_instalado gnome-shell || { info "GNOME no detectado. Omitiendo."; return 0; }
+    command -v gnome-extensions >/dev/null 2>&1 || {
+        err "No se encontró gnome-extensions en el sistema."
+        return 1
+    }
+
+    lista=$(ejecutar_como_usuario_solicitante python3 -I "$GNOME_EXTENSIONS_MODULE" list 2>/dev/null || true)
+    if grep -Fxq "$uuid" <<< "$lista"; then
+        ok "La extensión $uuid ya está instalada."
+        return 0
+    fi
+
+    (
+        temp=$(ejecutar_como_usuario_solicitante mktemp -d /tmp/aio-gnome-extension.XXXXXXXX) || exit 1
+        trap 'rm -rf -- "$temp"' EXIT
+        bundle="$temp/$uuid.zip"
+        info "Descargando y verificando la extensión $uuid..."
+        ejecutar_como_usuario_solicitante python3 -I "$GNOME_EXTENSIONS_MODULE" \
+            download "$tarea" "$bundle" || exit 1
+        ejecutar_como_usuario_solicitante python3 -I "$GNOME_EXTENSIONS_MODULE" \
+            install "$tarea" "$bundle" || exit 1
+    ) || return 1
+    ok "Extensión $uuid instalada para el usuario."
+}
+
 estado_gnome_plugin() {
     paquete_instalado gnome-software-plugin-flatpak
 }
@@ -1735,6 +1774,13 @@ declare -A TITULOS=(
     [flatpak-setup]="Instalar Flatpak y Flathub"
     [gnome-plugin]="Plugin Flatpak para GNOME Software"
     [ext-manager]="Extension Manager de GNOME"
+    [gnome-ext-appindicator]="AppIndicator y KStatusNotifierItem Support"
+    [gnome-ext-blur-shell]="Blur my Shell"
+    [gnome-ext-caffeine]="Caffeine"
+    [gnome-ext-clipboard-indicator]="Clipboard Indicator"
+    [gnome-ext-dash-to-dock]="Dash to Dock"
+    [gnome-ext-places-status]="Places Status Indicator"
+    [gnome-ext-tiling-shell]="Tiling Shell"
     [upgrade]="Actualizar paquetes del sistema"
     [autoremove]="Eliminar dependencias huérfanas"
     [autopurge]="Purgar dependencias huérfanas"
@@ -1772,6 +1818,26 @@ mostrar_estados() {
             ext-manager) funcion=estado_ext_manager ;;
         esac
         if "$funcion"; then
+            printf '##STATUS:%s:1\n' "$tarea"
+        else
+            printf '##STATUS:%s:0\n' "$tarea"
+        fi
+    done
+
+    local extensiones=""
+    if paquete_instalado gnome-shell && command -v gnome-extensions >/dev/null 2>&1; then
+        if [ "$EUID" -eq 0 ]; then
+            [ -z "${PKEXEC_UID:-}" ] || extensiones=$(
+                ejecutar_como_usuario_solicitante python3 -I "$GNOME_EXTENSIONS_MODULE" list 2>/dev/null || true
+            )
+        else
+            extensiones=$(python3 -I "$GNOME_EXTENSIONS_MODULE" list 2>/dev/null || true)
+        fi
+    fi
+    for tarea in gnome-ext-appindicator gnome-ext-blur-shell gnome-ext-caffeine \
+                 gnome-ext-clipboard-indicator gnome-ext-dash-to-dock \
+                 gnome-ext-places-status gnome-ext-tiling-shell; do
+        if grep -Fxq "${EXTENSIONES_GNOME[$tarea]}" <<< "$extensiones"; then
             printf '##STATUS:%s:1\n' "$tarea"
         else
             printf '##STATUS:%s:0\n' "$tarea"
@@ -2076,7 +2142,11 @@ main() {
         i=$((i + 1))
         echo "##STEP:${i}:${total}:${TITULOS[$s]}"
         resultado=0
-        "paso_${s//-/_}" || resultado=$?
+        if [[ "$s" == gnome-ext-* ]]; then
+            instalar_extension_gnome "$s" || resultado=$?
+        else
+            "paso_${s//-/_}" || resultado=$?
+        fi
         if [ "$resultado" -eq 3 ] && [[ "$s" == autoremove || "$s" == autopurge ]]; then
             echo "##RESULT:${s}:2"
         elif [ "$resultado" -ne 0 ]; then

@@ -64,15 +64,15 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Programación** | Ejecutar mantenimiento diario, semanal o mensual mediante systemd y consultar próximas ejecuciones y resultados, incluso con AiO cerrado. |
 | **Backup** | Copiar y restaurar repositorios APT y ajustes de GNOME o KDE Plasma. Acceder a Timeshift y Respaldos (Déjà Dup), con instalación opcional. |
 | **Kernel y hardware** | Gestionar Backports de kernel/Mesa en Debian, volver a Stable y comprobar la instalación NVIDIA. Las tareas disponibles dependen de la distribución y la compatibilidad. |
-| **Aplicaciones** | Instalar aplicaciones recomendadas en los formatos disponibles para cada una. Actualizar Flatpak y, si está instalado, Snap. |
+| **Aplicaciones** | Instalar aplicaciones recomendadas en los formatos disponibles para cada una. En GNOME, instalar extensiones recomendadas desde una lista blanca. Actualizar Flatpak y, si está instalado, Snap. |
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.3.1
+### Lo nuevo en la 1.4.0
 
-- Corregida la limpieza de papelera y miniaturas: los comandos se ejecutan desde el directorio personal del usuario, aunque `pkexec` haya partido de `/root`.
-- Nuevo preset **Limpieza**, junto a Estándar, Completo y Solo Flatpak.
-- Actualización y limpieza de Flatpak y Snap separadas en tareas independientes para evitar redundancias.
+- En **Aplicaciones y repositorios**, si se detecta GNOME Shell, puedes instalar individualmente siete extensiones recomendadas: AppIndicator, Blur my Shell, Caffeine, Clipboard Indicator, Dash to Dock, Places Status Indicator y Tiling Shell.
+- La descarga usa una lista blanca de UUID, selecciona una versión compatible con tu GNOME Shell y valida el paquete antes de instalarlo como tu usuario.
+- Las extensiones ya instaladas se marcan automáticamente y las opciones no aparecen en otros escritorios.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -80,7 +80,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.3.1**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.4.0**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -104,10 +104,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.3.1:
+Para la versión 1.4.0:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.3.1_all.deb
+sudo apt install ./aio-debian-gui_1.4.0_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.
