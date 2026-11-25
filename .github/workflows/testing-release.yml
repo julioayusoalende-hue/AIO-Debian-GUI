@@ -17,7 +17,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Install build and test dependencies
@@ -69,7 +69,7 @@ jobs:
             --notes-file dist/testing-notes.md
 
       - name: Checkout APT repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: gh-pages
           path: apt-site
