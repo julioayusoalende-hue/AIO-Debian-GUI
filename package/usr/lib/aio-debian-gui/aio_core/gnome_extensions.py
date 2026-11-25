@@ -6,13 +6,10 @@ import subprocess
 import sys
 import urllib.parse
 import urllib.request
-import zipfile
-from pathlib import Path
 
 INFO_URL = "https://extensions.gnome.org/extension-info/?{query}"
-MAX_BYTES = 25 * 1024 * 1024
-MAX_UNPACKED_BYTES = 50 * 1024 * 1024
-MAX_FILES = 5000
+SHELL_BUS = "org.gnome.Shell.Extensions"
+SHELL_PATH = "/org/gnome/Shell/Extensions"
 
 EXTENSIONS = {
     "gnome-ext-appindicator": "appindicatorsupport@rgcjonas.gmail.com",
@@ -32,36 +29,6 @@ def uuid_for(task):
         raise ValueError("Extensión de GNOME no permitida.") from exc
 
 
-def validate(task, bundle):
-    """Comprueba integridad, metadata y UUID antes de instalar."""
-    uuid = uuid_for(task)
-    with zipfile.ZipFile(bundle) as archive:
-        entries = archive.infolist()
-        if len(entries) > MAX_FILES or sum(entry.file_size for entry in entries) > MAX_UNPACKED_BYTES:
-            raise ValueError("El paquete de extensión supera los límites de tamaño.")
-        for entry in entries:
-            parts = entry.filename.replace("\\", "/").split("/")
-            if entry.filename.startswith("/") or ".." in parts:
-                raise ValueError("El paquete contiene rutas no seguras.")
-        damaged = archive.testzip()
-        if damaged:
-            raise ValueError("El paquete de extensión está dañado.")
-        names = archive.namelist()
-        metadata_path = "metadata.json"
-        if metadata_path not in names:
-            candidates = [name for name in names
-                          if name.count("/") == 1 and name.endswith("/metadata.json")]
-            if len(candidates) != 1:
-                raise ValueError("El paquete no contiene metadata.json.")
-            metadata_path = candidates[0]
-        try:
-            metadata = json.loads(archive.read(metadata_path))
-        except (UnicodeError, json.JSONDecodeError) as exc:
-            raise ValueError("metadata.json no es válido.") from exc
-        if not isinstance(metadata, dict) or metadata.get("uuid") != uuid:
-            raise ValueError("El UUID de la extensión no coincide.")
-
-
 def shell_version():
     result = subprocess.run(
         ["gnome-shell", "--version"], capture_output=True, text=True,
@@ -73,8 +40,8 @@ def shell_version():
     return match.group(1)
 
 
-def download_url(task):
-    """Consulta una versión compatible y valida el origen de la descarga."""
+def extension_info(task):
+    """Comprueba que existe una versión compatible en el sitio oficial."""
     uuid = uuid_for(task)
     query = urllib.parse.urlencode({"uuid": uuid, "shell_version": shell_version()})
     request = urllib.request.Request(
@@ -87,22 +54,25 @@ def download_url(task):
     parsed = urllib.parse.urlsplit(url)
     if parsed.scheme != "https" or parsed.hostname != "extensions.gnome.org":
         raise ValueError("El origen de la extensión no es seguro.")
-    return url
+    return info
 
 
-def download(task, output):
-    """Descarga un UUID permitido y valida el paquete resultante."""
-    url = download_url(task)
-    request = urllib.request.Request(url, headers={"User-Agent": "aio-debian-gui"})
-    output = Path(output)
-    total = 0
-    with urllib.request.urlopen(request, timeout=60) as response, output.open("wb") as target:
-        while block := response.read(1024 * 1024):
-            total += len(block)
-            if total > MAX_BYTES:
-                raise ValueError("La extensión supera el límite de tamaño.")
-            target.write(block)
-    validate(task, output)
+def install_remote(task):
+    """Usa la API oficial de GNOME Shell: descarga, confirma, instala y activa."""
+    extension_info(task)
+    uuid = uuid_for(task)
+    result = subprocess.run(
+        ["gdbus", "call", "--session", "--dest", SHELL_BUS,
+         "--object-path", SHELL_PATH,
+         "--method", f"{SHELL_BUS}.InstallRemoteExtension", uuid],
+        stdin=subprocess.DEVNULL, capture_output=True, text=True,
+        timeout=180, check=False,
+    )
+    if result.returncode or "successful" not in result.stdout:
+        if "cancelled" in result.stdout:
+            raise RuntimeError("La instalación de la extensión se canceló.")
+        raise RuntimeError((result.stderr or result.stdout).strip()
+                           or "No se pudo instalar la extensión.")
 
 
 def installed():
@@ -116,40 +86,9 @@ def installed():
     return set(result.stdout.splitlines())
 
 
-def install(task, bundle):
-    validate(task, bundle)
-    uuid = uuid_for(task)
-    subprocess.run(
-        ["gnome-extensions", "install", "--force", str(bundle)],
-        stdin=subprocess.DEVNULL, timeout=120, check=True,
-    )
-    subprocess.run(
-        ["gnome-extensions", "enable", uuid],
-        stdin=subprocess.DEVNULL, timeout=60, check=True,
-    )
-    try:
-        subprocess.run(
-            ["gdbus", "call", "--session", "--dest", "org.gnome.Shell.Extensions",
-             "--object-path", "/org/gnome/Shell/Extensions",
-             "--method", "org.gnome.Shell.Extensions.ReloadExtension", uuid],
-            stdin=subprocess.DEVNULL, capture_output=True, text=True,
-            timeout=30, check=True,
-        )
-    except (OSError, subprocess.SubprocessError):
-        print(
-            "La extensión se instaló y activó, pero GNOME Shell no pudo recargarla "
-            "en caliente. Cierra sesión y vuelve a entrar para verla.",
-            file=sys.stderr,
-        )
-
-
 def main(argv):
-    if len(argv) == 3 and argv[0] == "download":
-        download(argv[1], argv[2])
-    elif len(argv) == 3 and argv[0] == "validate":
-        validate(argv[1], argv[2])
-    elif len(argv) == 3 and argv[0] == "install":
-        install(argv[1], argv[2])
+    if len(argv) == 2 and argv[0] == "install-remote":
+        install_remote(argv[1])
     elif argv == ["list"]:
         for uuid in sorted(installed()):
             print(uuid)
