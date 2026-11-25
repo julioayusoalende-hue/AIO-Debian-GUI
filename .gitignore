@@ -1,3 +1,9 @@
 portable/payload.json
 __pycache__/
 *.pyc
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+.venv-tools/

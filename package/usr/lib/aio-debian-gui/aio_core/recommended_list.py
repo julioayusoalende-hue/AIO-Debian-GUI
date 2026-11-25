@@ -3,7 +3,6 @@
 import json
 import re
 
-
 LIMITE = 64 * 1024
 FORMATO = "aio-debian-gui.recommended-apps"
 

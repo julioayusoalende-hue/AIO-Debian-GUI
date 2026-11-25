@@ -9,8 +9,9 @@ soluciona sin salir de la pestaña.
 import threading
 
 import gi
+
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GLib
+from gi.repository import GLib, Gtk
 
 from . import diagnostics as core_diagnostics
 
@@ -581,6 +582,7 @@ class HealthDashboard(Gtk.Box):
     def _ejecutar_comando(self, comando):
         """Ejecuta una solución concreta y repite el diagnóstico al terminar."""
         import subprocess
+
         from .constants import comando_host
 
         self.status_label.set_text(self.translate("Ejecutando: ") + " ".join(comando))

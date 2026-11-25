@@ -1,15 +1,21 @@
 """Read APT and Flatpak catalogues without elevation."""
 
-from pathlib import Path
 import hashlib
-import shutil
-import tempfile
 import os
 import re
+import shutil
 import subprocess
+import tempfile
+from pathlib import Path
 
-from .admin import (APT_SOURCE, FLATPAKREF_MAX, MANAGED, SOURCES, parse_flatpakref,
-                    source_contents, trusted_archive)
+from .admin import (
+    APT_SOURCE,
+    FLATPAKREF_MAX,
+    MANAGED,
+    SOURCES,
+    parse_flatpakref,
+    trusted_archive,
+)
 
 FLATPAK_REPO = 'https://dl.flathub.org/repo/flathub.flatpakrepo'
 MAINTENANCE = '/usr/lib/aio-debian-gui/aio-debian-gui-helper'
@@ -108,7 +114,7 @@ def _deb822_records(output):
         key = None
         for line in stanza.splitlines():
             if line.startswith((' ', '\t')):
-                if key in ('Pre-Depends', 'Depends', 'Recommends'):
+                if key in ('Pre-Depends', 'Depends', 'Recommends', 'Description', 'Description-en'):
                     fields[key] += ' ' + line.strip()
                 continue
             key, separator, value = line.partition(':')

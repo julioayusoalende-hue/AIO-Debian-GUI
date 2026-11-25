@@ -11,7 +11,6 @@
 import base64
 import binascii
 import calendar
-import hashlib
 import datetime
 import json
 import os
@@ -23,8 +22,8 @@ import sys
 import tempfile
 import threading
 import unicodedata
-import urllib.request
 import urllib.error
+import urllib.request
 import zipfile
 from pathlib import Path
 from urllib.parse import unquote
@@ -35,7 +34,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("Vte", "2.91")
-from gi.repository import GObject, Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango, Vte  # noqa: E402
+from gi.repository import Gdk, GdkPixbuf, Gio, GLib, GObject, Gtk, Pango, Vte  # noqa: E402
 
 # Ruta equivalente en DEB (/usr), AppImage (AppDir/usr) y Flatpak (/app).
 CORE_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -43,8 +42,15 @@ CORE_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file_
 if CORE_DIR not in sys.path:
     sys.path.insert(0, CORE_DIR)
 from aio_core import clock as core_clock  # noqa: E402
-from aio_core import history as core_history, preferences as core_preferences, updates as core_updates, diagnostics as core_diagnostics, preflight as core_preflight, scheduler as core_scheduler, host_integration as core_host_integration  # noqa: E402
-from aio_core import desktop_backup as core_desktop_backup, recommended_list as core_recommended_list  # noqa: E402
+from aio_core import desktop_backup as core_desktop_backup  # noqa: E402
+from aio_core import diagnostics as core_diagnostics
+from aio_core import history as core_history  # noqa: E402
+from aio_core import host_integration as core_host_integration
+from aio_core import preferences as core_preferences
+from aio_core import preflight as core_preflight
+from aio_core import recommended_list as core_recommended_list
+from aio_core import scheduler as core_scheduler
+from aio_core import updates as core_updates
 from aio_core.fastfetch import instalar_layout, restaurar_layout  # noqa: E402
 from aio_core.gtk_appearance import aplicar_tema  # noqa: E402
 from aio_core.gtk_scheduler import ControladorProgramacion  # noqa: E402

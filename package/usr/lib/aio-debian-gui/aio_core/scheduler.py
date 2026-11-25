@@ -1,18 +1,18 @@
 """Programación systemd con configuración validada y persistencia exclusiva de root."""
 import argparse
-from contextlib import contextmanager, suppress
-from datetime import datetime, timezone
 import fcntl
-from html import escape
 import json
 import os
-from pathlib import Path
 import pwd
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
+from contextlib import contextmanager, suppress
+from datetime import UTC, datetime
+from html import escape
+from pathlib import Path
 
 VERSION = '1.2.4'
 
@@ -534,8 +534,8 @@ def run_schedule(uid):
     pwd.getpwuid(int(uid))
     config = validate_config(config)
     errors = {}
-    result = {'started': datetime.now(timezone.utc).isoformat(), 'finished': None,
-              'status': 'running', 'detail': '', 'reboot_required': False, 'tasks': {t: 'not-run' for t in config['tasks']}}
+    result = {'started': datetime.now(UTC).isoformat(), 'finished': None,
+              'status': 'running', 'detail': '', 'reboot_required': False, 'tasks': dict.fromkeys(config['tasks'], 'not-run')}
     path = STATE_DIR / (uid + '.json')
 
     def archive_previous():
@@ -545,7 +545,7 @@ def run_schedule(uid):
 
     def finish(state, detail, private_detail=""):
         archive_previous()
-        result.update(status=state, detail=detail, finished=datetime.now(timezone.utc).isoformat())
+        result.update(status=state, detail=detail, finished=datetime.now(UTC).isoformat())
         _archive_result(uid, {**result, 'errors': errors,
                               'detail': private_detail or detail})
         _atomic(path, json.dumps(result) + '\n')

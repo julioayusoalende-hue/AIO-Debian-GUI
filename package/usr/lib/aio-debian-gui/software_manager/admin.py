@@ -3,17 +3,17 @@
 
 import hashlib
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 from urllib.parse import urlsplit
 
 SOURCES = Path('/etc/apt/sources.list.d')
 KEY_DIRS = (Path('/etc/apt/keyrings'), Path('/usr/share/keyrings'))
 PACKAGE = re.compile(r'[a-z0-9][a-z0-9+.-]*(?::[a-z0-9][a-z0-9-]*)?')
-TOKEN = re.compile(r'[A-Za-z0-9][A-Za-z0-9+._/-]*')
+TOKEN = re.compile(r'[A-Za-z0-9][A-Za-z0-9+._-]*')
 APT_SOURCE = re.compile(r'[A-Za-z0-9_.-]+\.(?:list|sources)(?:\.disabled)?')
 MANAGED = re.compile(r'ayusos-manager-[a-f0-9]{16}\.sources(?:\.disabled)?')
 MAX_QUEUE = 100

@@ -1,12 +1,12 @@
 #!/usr/bin/python3
 """AyusOS Software Manager GTK interface."""
 
-from concurrent.futures import ThreadPoolExecutor
-
 import os
+from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import unquote, urlsplit
 
 import gi
+
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gdk', '3.0')
 from gi.repository import Gdk, GLib, Gtk

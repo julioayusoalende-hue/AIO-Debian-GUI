@@ -26,6 +26,9 @@ SALIDA="dist/aio-debian-gui_${PUBLIC_VERSION}_all.deb"
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
 cp -a package/. "$STAGE/"
+# Nunca publicar bytecode ni cachés de Python (p. ej. al ejecutar desde el árbol).
+find "$STAGE" -name '__pycache__' -type d -prune -exec rm -rf -- {} +
+find "$STAGE" -name '*.py[co]' -type f -delete
 
 if [ -n "$TESTING_VERSION" ]; then
     python3 - "$STAGE" "$EPOCH" "$VERSION" "$TESTING_VERSION" "assets/testing-icons" <<'PY'

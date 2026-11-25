@@ -3,6 +3,7 @@ import json
 import os
 import tempfile
 
+
 def cargar_preferencias(ruta, defaults=None):
     PREFERENCIAS_DEFECTO = defaults or {'idioma': 'es', 'tema': 'sistema', 'modo_simple': False}
     IDIOMAS = {'es','en','fr','zh'}

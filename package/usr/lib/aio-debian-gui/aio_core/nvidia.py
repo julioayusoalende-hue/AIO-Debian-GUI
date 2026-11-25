@@ -1,11 +1,11 @@
 """Selecciona módulos usando exclusivamente los datos del paquete APT candidato."""
 import gzip
 import json
-from pathlib import Path
 import re
 import subprocess
 import sys
 import tarfile
+from pathlib import Path
 
 
 def select_module(chips, devices, version):

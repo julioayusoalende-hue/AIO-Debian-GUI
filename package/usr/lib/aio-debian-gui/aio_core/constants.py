@@ -1,11 +1,10 @@
 """Constantes y datos compartidos para AIO Debian GUI."""
 
+import json
 import os
+import pwd
 import re
 import sys
-import json
-import pwd
-from pathlib import Path
 
 from .translations import TRADUCCIONES
 
@@ -14,9 +13,12 @@ PRGNAME = "aio-debian-gui"
 APP_ICON_NAME = "aio-debian-gui"
 POLKIT_ACTION = "es.aiodebian.gui.mantenimiento"
 
-HELPER = os.path.normpath(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "aio-debian-gui-helper")
-)
+# aio_core vive en <prefijo>/lib/aio-debian-gui/aio_core; el asistente, en el
+# directorio padre, y los recursos compartidos en <prefijo>/share/aio-debian-gui.
+_LIB_DIR = os.path.dirname(os.path.abspath(__file__))
+_SHARE_DIR = os.path.normpath(os.path.join(_LIB_DIR, "../../../share/aio-debian-gui"))
+
+HELPER = os.path.normpath(os.path.join(_LIB_DIR, "../aio-debian-gui-helper"))
 HELPER_SISTEMA = "/usr/lib/aio-debian-gui/aio-debian-gui-helper"
 GRUB_HELPER = "/usr/lib/aio-debian-gui/aio-grub-settings"
 APT_BACKUP_HELPER = "/usr/lib/aio-debian-gui/aio-apt-sources-backup"
@@ -25,31 +27,17 @@ APT_BACKUP_LIMIT = 32 * 1024 * 1024
 
 HOMEPAGE = "https://github.com/julioayusoalende-hue/AIO-Debian-GUI"
 
-DEBIAN_LOGO = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "debian-openlogo.png")
-)
-UBUNTU_LOGO = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "ubuntu-logo.svg")
-)
-AYUSOS_LOGO = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "ayusos-logo.png")
-)
+DEBIAN_LOGO = os.path.join(_SHARE_DIR, "debian-openlogo.png")
+UBUNTU_LOGO = os.path.join(_SHARE_DIR, "ubuntu-logo.svg")
+AYUSOS_LOGO = os.path.join(_SHARE_DIR, "ayusos-logo.png")
 
 NOMBRE_AYUSOS = re.compile(r"^AyusOS(?: Linux)?\b", re.IGNORECASE)
 
-FASTFETCH_LAYOUT = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "fastfetch-layout.jsonc")
-)
-NOTAS_VERSION = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "release-notes.txt")
-)
+FASTFETCH_LAYOUT = os.path.join(_SHARE_DIR, "fastfetch-layout.jsonc")
+NOTAS_VERSION = os.path.join(_SHARE_DIR, "release-notes.txt")
 
-RECOMMENDED_ICON_DIR = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "recommended-icons")
-)
-BACKUP_ICON_DIR = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "backup-icons")
-)
+RECOMMENDED_ICON_DIR = os.path.join(_SHARE_DIR, "recommended-icons")
+BACKUP_ICON_DIR = os.path.join(_SHARE_DIR, "backup-icons")
 
 # Preferencias por defecto
 PREFERENCIAS_DEFECTO = {
@@ -106,8 +94,9 @@ def traducir_detalle_diagnostico(texto):
 MAX_HISTORIAL = 100
 
 def ruta_historial():
-    from .history import ruta_historial as _ruta_historial
     from gi.repository import GLib
+
+    from .history import ruta_historial as _ruta_historial
     return _ruta_historial(GLib.get_user_state_dir())
 
 def leer_historial(ruta=None):
@@ -240,7 +229,7 @@ def logo_distribucion(distribucion):
     return None, None
 
 def imagen_logo_distribucion(datos, tamano):
-    from gi.repository import GdkPixbuf, Gtk
+    from gi.repository import GdkPixbuf, GLib, Gtk
     ruta, nombre_logo = logo_distribucion(identidad_distribucion(datos))
     if ruta is None:
         return None
@@ -352,7 +341,7 @@ def nombre_icono_recomendada(app, tema=None):
 
 
 def icono_recomendada(app):
-    from gi.repository import Gtk, GdkPixbuf
+    from gi.repository import GdkPixbuf, GLib, Gtk
     if "bundled_icon" in app:
         ruta = os.path.join(RECOMMENDED_ICON_DIR, app["bundled_icon"])
         try:
@@ -482,7 +471,6 @@ def helper_admite_tarea(ruta, tarea):
     return contenido is not None and "[%s]=" % tarea in contenido
 
 def autorizacion_sin_contrasena_activa():
-    import pwd, json
     uid = os.getuid()
     rule_path = "/etc/polkit-1/rules.d/50-aiodebian-gui-%s.rules" % uid
     try:

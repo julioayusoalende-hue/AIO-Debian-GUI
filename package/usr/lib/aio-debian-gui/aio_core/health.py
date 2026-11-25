@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 
+
 def run(args):
     try:
         return subprocess.run(args, capture_output=True, text=True, timeout=12, env={**os.environ, "LC_ALL": "C"})

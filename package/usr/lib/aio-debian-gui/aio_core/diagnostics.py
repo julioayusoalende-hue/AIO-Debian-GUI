@@ -7,13 +7,13 @@ como un sistema sano.
 from __future__ import annotations
 
 import base64
-import os
 import json
-from pathlib import Path
+import os
 import re
 import shutil
 import subprocess
 import time
+from pathlib import Path
 
 
 def _check(name, status, detail, advice=""):
@@ -160,7 +160,7 @@ def run_diagnostics(dpkg_audit=None):
                 "warning" if pending else "ok",
                 f"{pending} actualizaciones disponibles según los índices APT locales.",
                 "Revisa y aplica las actualizaciones del sistema cuando corresponda." if pending else ""))
-    
+
     # Una caché antigua NO significa cero actualizaciones. Esta comprobación
     # informa de la frescura de los índices existentes, sin actualizar APT.
     try:

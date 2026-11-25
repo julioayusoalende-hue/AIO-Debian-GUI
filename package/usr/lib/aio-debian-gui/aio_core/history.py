@@ -87,7 +87,7 @@ def guardar_registro_mantenimiento(tareas, resultado, reinicio=False, ruta=None,
     ruta = ruta or ruta_historial()
     registros = leer_historial(ruta)
     registro = {
-        "fecha": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "fecha": datetime.datetime.now(datetime.UTC).isoformat(),
         "formato": formato,
         "version": version,
         "tareas": [str(t) for t in tareas][:40],

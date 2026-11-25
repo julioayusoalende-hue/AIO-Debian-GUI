@@ -36,11 +36,15 @@ def settle():
 def esperar_disposicion(ventana, ancho):
     paneles = ventana.paneles_principales
     orientacion = Gtk.Orientation.VERTICAL if ancho < 900 else Gtk.Orientation.HORIZONTAL
-    limite = time.monotonic() + 3
+    # Un runner lento puede tardar en procesar el redimensionado: se reintenta
+    # la petición en cada vuelta y se da más margen que el timeout de un clic.
+    limite = time.monotonic() + 10
     while time.monotonic() < limite:
         settle()
         actual = ventana.get_size()[0]
         if abs(actual - ancho) > 1 or paneles.get_orientation() != orientacion:
+            if abs(actual - ancho) > 1:
+                ventana.resize(ancho, ventana.get_size()[1])
             continue
         if orientacion == Gtk.Orientation.VERTICAL:
             return

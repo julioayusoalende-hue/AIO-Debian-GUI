@@ -3,13 +3,13 @@ import base64
 import hashlib
 import json
 import os
-from pathlib import Path
 import re
 import select
 import shlex
 import stat
 import subprocess
 import time
+from pathlib import Path
 
 APP_ID = "io.github.julioayusoalende_hue.aio_debian_gui"
 

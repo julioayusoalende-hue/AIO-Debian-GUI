@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aio-debian-gui"
-version = "1.1.9"
+version = "1.2.4"
 description = "Mantenimiento, diagnóstico y copias de configuración para Debian y Ubuntu LTS, desde una interfaz gráfica GTK"
 readme = "README.md"
 license = {text = "GPL-3.0-or-later"}
 authors = [
-    {name = "Julio Ayuso", email = "julio@example.com"}
+    {name = "Julio Ayuso", email = "epdc@msn.com"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -49,6 +49,8 @@ dev = [
 [tool.ruff]
 target-version = "py311"
 line-length = 100
+
+[tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
@@ -63,10 +65,17 @@ select = [
 ignore = [
     "E501",  # line too long (handled by formatter)
     "B008",  # do not perform function calls in argument defaults
+    "E402",  # imports after sys.path / gi.require_version in entry points
+    "T201",  # print is the CLI output of helpers and maintenance scripts
+    "UP031", # %-formatting is required by the translation catalogues
+    "SIM102", "SIM105", "SIM117",  # nested ifs / try-except-pass / with are explicit here
+    "C408",  # dict() calls are intentional in option dictionaries
+    "UP022", # explicit stdout/stderr pipes keep error messages separate
+    "B905",  # zip() without strict: lists are built to the same length
 ]
-per-file-ignores = {
-    "tests/*": ["S101", "T201"],  # assert and print allowed in tests
-}
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "T201"]  # assert and print allowed in tests
 
 [tool.ruff.format]
 quote-style = "single"
@@ -82,8 +91,6 @@ disallow_untyped_defs = false
 ignore_missing_imports = true
 exclude = [
     "tests/",
-    "software_manager_enhanced/",
-    "gtk4_prototype/",
 ]
 
 [tool.pytest.ini_options]

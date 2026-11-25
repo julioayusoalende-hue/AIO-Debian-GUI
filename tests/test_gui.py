@@ -3,12 +3,14 @@
 import pytest
 import os
 import sys
+import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'package', 'usr', 'lib', 'aio-debian-gui'))
 
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GLib
+gi.require_version('Gdk', '3.0')
+from gi.repository import Gdk, Gtk, GLib
 
 
 class TestGUI:
@@ -52,10 +54,11 @@ class TestGUI:
         provider = Gtk.CssProvider()
         provider.load_from_data(css)
 
-        # Verificar que se cargó
-        screen = Gdk.Screen.get_default()
-        context = screen.get_root_window().get_style_context()
+        # Verificar que se cargó sin depender del backend (X11/Wayland):
+        # GdkWaylandWindow no expone get_style_context().
+        context = Gtk.StyleContext.new()
         context.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        assert context.get_color(Gtk.StateFlags.NORMAL) is not None
 
     def test_dialog_creation(self):
         """Test creación de diálogos."""
@@ -149,10 +152,15 @@ class TestAsyncOperations:
 
         GLib.timeout_add(10, callback)
 
-        # Procesar main loop por un tiempo
+        # Procesar el main loop sin bloquear: iteration(True) puede esperar
+        # indefinidamente si otra fuente mantiene el contexto ocupado.
         context = GLib.MainContext.default()
-        for _ in range(10):
-            context.iteration(True)
+        deadline = time.monotonic() + 2
+        while len(results) < 3 and time.monotonic() < deadline:
+            if context.pending():
+                context.iteration(False)
+            else:
+                time.sleep(0.01)
 
         assert len(results) >= 3
 

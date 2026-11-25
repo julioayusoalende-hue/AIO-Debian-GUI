@@ -1,14 +1,13 @@
 """Backup and restore user-owned GNOME and Plasma settings."""
-from contextlib import contextmanager
-from datetime import datetime
 import json
 import os
-from pathlib import Path
 import stat
 import subprocess
 import tempfile
 import zipfile
-
+from contextlib import contextmanager
+from datetime import datetime
+from pathlib import Path
 
 LABELS = {"gnome": "GNOME", "plasma": "KDE Plasma"}
 COMMANDS = {"gnome": "gnome-shell", "plasma": "plasmashell"}

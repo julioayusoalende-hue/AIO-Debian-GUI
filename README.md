@@ -67,12 +67,12 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.1.8
+### Lo nuevo en la 1.2.4
 
-- Pestañas reordenadas (Configuración y mantenimiento, Gestor de software, Apps recomendadas, Backup e Inicio) y Terminal disponible como botón con icono en el encabezado, junto al menú de preferencias.
-- Gestor de software: selección múltiple de paquetes DEB y aplicaciones Flatpak con cola de instalación, actualización o desinstalación, y botón «Actualizar todo».
-- Inicio muestra los ajustes vigentes de GRUB y el mantenimiento añade un apartado de firmware con búsqueda y actualización por dispositivo mediante fwupd.
-- Las actualizaciones Testing comprueban antes las incidencias pendientes de dpkg con la autorización del diagnóstico preventivo.
+- Gestor de software: instala aplicaciones desde archivos `.flatpakref`, con doble clic, desde el botón de la pestaña Flatpak o arrastrándolos a la ventana, para el usuario o para todo el sistema.
+- Arrastrar un `.deb` o un `.flatpakref` a cualquier parte de la ventana lo abre en el gestor de software.
+- El `.flatpakref` se valida antes de instalar: debe ser una aplicación, con identificador válido y direcciones HTTPS.
+- Inicio: nuevo interruptor para activar o desactivar os-prober (detección de otros sistemas operativos); al cambiarlo se regenera GRUB.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -80,7 +80,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.1.8**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.2.4**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -104,10 +104,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.1.8:
+Para la versión 1.2.4:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.1.8_all.deb
+sudo apt install ./aio-debian-gui_1.2.4_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.
