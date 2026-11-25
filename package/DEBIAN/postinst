@@ -1,5 +1,28 @@
 #!/bin/sh
 set -eu
+
+# Migrar reglas creadas por versiones anteriores: systemd-tmpfiles deja
+# /etc/polkit-1/rules.d en 0750 root:polkitd y el usuario no puede comprobar
+# el fichero. La copia en /var/lib permite que la GUI mantenga el interruptor.
+if [ "${1:-}" = configure ] && [ -d /etc/polkit-1/rules.d ]; then
+    install -d -o root -g root -m 0755 /var/lib/aio-debian-gui/passwordless
+    for rule in /etc/polkit-1/rules.d/50-aiodebian-gui-*.rules; do
+        [ -f "$rule" ] || continue
+        uid=${rule##*/50-aiodebian-gui-}
+        uid=${uid%.rules}
+        case "$uid" in
+            ''|*[!0-9]*) continue ;;
+        esac
+        marker="/var/lib/aio-debian-gui/passwordless/${uid}.rules"
+        temp=$(mktemp /var/lib/aio-debian-gui/passwordless/.${uid}.XXXXXX)
+        if ! cat "$rule" > "$temp" || ! chmod 0644 "$temp" \
+                || ! chown root:root "$temp" || ! mv -f "$temp" "$marker"; then
+            rm -f "$temp"
+            exit 1
+        fi
+    done
+fi
+
 # Actualiza las definiciones; instalar o actualizar nunca activa una programación.
 if [ "${1:-}" = configure ] && command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
     systemctl daemon-reload || true

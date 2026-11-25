@@ -1,5 +1,10 @@
 # Cambios
 
+## 1.2.5
+
+- La autorización opcional sin contraseña permanece activada tras reiniciar o volver a iniciar sesión. AiO conserva un marcador de estado legible por el usuario porque Debian restaura `/etc/polkit-1/rules.d` a `0750 root:polkitd` en cada arranque.
+- Al actualizar, las reglas de Polkit existentes se migran automáticamente al nuevo marcador. Al desinstalar, se eliminan tanto las reglas como el estado asociado.
+
 ## 1.2.4
 
 - Gestor de software: instala aplicaciones desde archivos .flatpakref. Se pueden abrir con doble clic, desde el botón de la pestaña Flatpak o arrastrándolos a la ventana. La instalación es para el usuario o para todo el sistema, según el ámbito elegido.

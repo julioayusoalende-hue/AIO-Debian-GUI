@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-# No interrumpir un mantenimiento que ya esté ejecutándose. Solo detener timers.
+# No interrumpir un mantenimiento en curso; retirar timers y excepciones al desinstalar.
 case "${1:-}" in
     remove|deconfigure)
         if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
@@ -9,6 +9,9 @@ case "${1:-}" in
                 systemctl disable --now "${unit##*/}" || true
             done
         fi
+        # No dejar excepciones de Polkit ni su estado si se desinstala la app.
+        rm -f /etc/polkit-1/rules.d/50-aiodebian-gui-*.rules
+        rm -rf /var/lib/aio-debian-gui/passwordless
         ;;
 esac
 exit 0

@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from html import escape
 from pathlib import Path
 
-VERSION = '1.2.4'
+VERSION = '1.2.5'
 
 
 HOST_PROTOCOL = 1

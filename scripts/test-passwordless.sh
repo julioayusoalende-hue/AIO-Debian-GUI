@@ -16,12 +16,18 @@ grep -Fq -- '--enable-passwordless)' "$HELPER"
 grep -Fq 'habilitar_sin_contrasena' "$HELPER"
 grep -Fq -- '--disable-passwordless)' "$HELPER"
 grep -Fq 'deshabilitar_sin_contrasena' "$HELPER"
+grep -Fq 'PASSWORDLESS_STATE_DIR=/var/lib/aio-debian-gui/passwordless' "$HELPER"
+grep -Fq 'guardar_marcador_passwordless' "$HELPER"
 grep -Fq -- '--flatpak-user-update' "$HELPER"
 grep -Fq 'flatpak --user update -y' "$HELPER"
 # No desactivar la política por defecto para todos ni borrar opciones guardadas.
 grep -Fq '<allow_active>auth_admin</allow_active>' package/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 ! grep -Fq '<allow_active>yes</allow_active>' package/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 ! grep -Eq 'rm -f.*50-aiodebian-gui' package/DEBIAN/postinst
+grep -Fq 'rm -f /etc/polkit-1/rules.d/50-aiodebian-gui-*.rules' package/DEBIAN/prerm
+grep -Fq 'rm -rf /var/lib/aio-debian-gui/passwordless' package/DEBIAN/prerm
+grep -Fq '/var/lib/aio-debian-gui/passwordless' package/DEBIAN/postinst
+grep -Fq '50-aiodebian-gui-*.rules' package/DEBIAN/postinst
 python3 - "$GUI" <<'PY'
 import ast
 import sys
@@ -34,5 +40,56 @@ assert 'comando_host("bash", "-c", script)' in source
 assert 'flatpak --user update -y' in source
 assert 'flatpak --user uninstall --unused -y' in source
 assert 'No solicitar contraseña de administrador en AiO (opcional)' in source
+assert 'from aio_core.constants import autorizacion_sin_contrasena_activa' in source
 PY
 echo "✔ excepción Polkit específica y reversible; tarea Flatpak de usuario sin pkexec"
+
+# Probar creación/eliminación de regla y marcador en un directorio temporal,
+# sin privilegios reales ni cambios en el anfitrión.
+TMP_POLKIT=$(mktemp -d)
+trap 'rm -rf -- "$TMP_POLKIT"' EXIT
+bash -c '
+    set -e
+    source "$1"
+    POLKIT_RULES_DIR="$2/rules"
+    PASSWORDLESS_STATE_DIR="$2/state"
+    pkexec_uid() { echo 1000; }
+    pkexec_username() { echo test_user; }
+    instalar_componentes_polkit() { :; }
+    chown() { :; }
+    install() {
+        local args=()
+        while [ "$#" -gt 0 ]; do
+            case "$1" in
+                -o|-g) shift 2 ;;
+                *) args+=("$1"); shift ;;
+            esac
+        done
+        command install "${args[@]}"
+    }
+    mkdir -p "$POLKIT_RULES_DIR"
+    habilitar_sin_contrasena >/dev/null
+    test -s "$POLKIT_RULES_DIR/50-aiodebian-gui-1000.rules"
+    test -s "$PASSWORDLESS_STATE_DIR/1000.rules"
+    cmp "$POLKIT_RULES_DIR/50-aiodebian-gui-1000.rules" "$PASSWORDLESS_STATE_DIR/1000.rules"
+    deshabilitar_sin_contrasena >/dev/null
+    test ! -e "$POLKIT_RULES_DIR/50-aiodebian-gui-1000.rules"
+    test ! -e "$PASSWORDLESS_STATE_DIR/1000.rules"
+' _ "$HELPER" "$TMP_POLKIT"
+echo "✔ regla Polkit y marcador persistente se crean y eliminan juntos"
+
+# Simular la migración del postinst sin root ni rutas reales.
+TMP_MIGRATE=$(mktemp -d)
+trap 'rm -rf -- "$TMP_POLKIT" "$TMP_MIGRATE"' EXIT
+mkdir -p "$TMP_MIGRATE/etc/polkit-1/rules.d"
+printf '%s\n' 'regla existente' > "$TMP_MIGRATE/etc/polkit-1/rules.d/50-aiodebian-gui-1000.rules"
+sed \
+    -e "s|/etc/polkit-1/rules.d|$TMP_MIGRATE/etc/polkit-1/rules.d|g" \
+    -e "s|/var/lib/aio-debian-gui/passwordless|$TMP_MIGRATE/var/lib/aio-debian-gui/passwordless|g" \
+    -e 's/ -o root -g root//g' \
+    -e 's/chown root:root/:/g' \
+    package/DEBIAN/postinst > "$TMP_MIGRATE/postinst"
+sh "$TMP_MIGRATE/postinst" configure
+cmp "$TMP_MIGRATE/etc/polkit-1/rules.d/50-aiodebian-gui-1000.rules" \
+    "$TMP_MIGRATE/var/lib/aio-debian-gui/passwordless/1000.rules"
+echo "✔ postinst migra reglas Polkit existentes al marcador persistente"

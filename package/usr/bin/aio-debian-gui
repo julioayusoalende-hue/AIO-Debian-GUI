@@ -14,7 +14,6 @@ import calendar
 import datetime
 import json
 import os
-import pwd
 import re
 import shutil
 import subprocess
@@ -51,6 +50,7 @@ from aio_core import preflight as core_preflight
 from aio_core import recommended_list as core_recommended_list
 from aio_core import scheduler as core_scheduler
 from aio_core import updates as core_updates
+from aio_core.constants import autorizacion_sin_contrasena_activa
 from aio_core.fastfetch import instalar_layout, restaurar_layout  # noqa: E402
 from aio_core.gtk_appearance import aplicar_tema  # noqa: E402
 from aio_core.gtk_scheduler import ControladorProgramacion  # noqa: E402
@@ -799,37 +799,6 @@ def helper_admite_autorizacion_sin_contrasena(ruta):
 def helper_admite_tarea(ruta, tarea):
     contenido = leer_texto(ruta)
     return contenido is not None and "[%s]=" % tarea in contenido
-
-
-def regla_existe_sin_lectura(ruta):
-    if es_flatpak():
-        try:
-            return subprocess.run(comando_host("test", "-e", ruta), capture_output=True,
-                                  timeout=10).returncode == 0
-        except (OSError, subprocess.SubprocessError):
-            return False
-    return os.path.exists(ruta)
-
-
-def autorizacion_sin_contrasena_activa():
-    uid = os.getuid()
-    rule_path = "/etc/polkit-1/rules.d/50-aiodebian-gui-%s.rules" % uid
-    try:
-        username = pwd.getpwuid(uid).pw_name
-        contenido = leer_texto(rule_path)
-    except (OSError, KeyError):
-        return False
-    if contenido is None:
-        # La regla solo la crea el asistente al activar la opción. Si existe pero este
-        # usuario no puede leerla (permisos del sistema), cuenta como activa.
-        return regla_existe_sin_lectura(rule_path)
-    return (
-        ('action.id === "%s"' % POLKIT_ACTION) in contenido
-        and ('action.lookup("program") === "%s"' % HELPER_SISTEMA) in contenido
-        and ("subject.user === %s" % json.dumps(username)) in contenido
-        and "subject.local" in contenido
-        and "subject.active" in contenido
-    )
 
 
 def fecha_instalacion():
