@@ -326,7 +326,7 @@ class HealthDashboard(Gtk.Box):
         if token is not None and hasattr(self.window, '_finalizar_operacion'):
             self.window._finalizar_operacion(token)
 
-    def _on_run_diagnostics(self, _boton=None):
+    def _on_run_diagnostics(self, _boton=None, refresh_apt=False):
         if self.loading or self.destroyed:
             return
         self.operation_token = self._iniciar_operacion('Diagnóstico del sistema')
@@ -349,11 +349,11 @@ class HealthDashboard(Gtk.Box):
 
         def worker():
             try:
-                GLib.idle_add(self._progreso, 0.10,
-                              self.translate("Actualizando índices APT…"))
                 error_apt = None
                 auditoria = None
-                if formato == "deb":
+                if refresh_apt and formato == "deb":
+                    GLib.idle_add(self._progreso, 0.10,
+                                  self.translate("Actualizando índices APT…"))
                     try:
                         error_apt, auditoria = core_diagnostics.refresh_apt_indices(
                             self.window.comando_refresco_diagnostico())
@@ -365,6 +365,13 @@ class HealthDashboard(Gtk.Box):
                 resultados = (core_diagnostics.run_host_diagnostics(auditoria)
                               if formato == "flatpak"
                               else core_diagnostics.run_diagnostics(auditoria))
+
+                if formato == "deb" and not refresh_apt:
+                    for resultado in resultados:
+                        if resultado.get("name") in ("Actualizaciones pendientes", "Índices de APT"):
+                            detalle_actual = resultado.get("detail", "")
+                            resultado["detail"] = (detalle_actual + " " if detalle_actual else "") + \
+                                self.translate("Índices locales; no se actualizó APT.")
 
                 if error_apt:
                     resultados.insert(0, {
@@ -393,10 +400,12 @@ class HealthDashboard(Gtk.Box):
                         formato, version_instalada, APP_ID_FLATPAK)
                 except Exception as exc:
                     estado_app = {"status": "unknown", "detail": str(exc)}
-                if error_apt and formato == "deb":
+                if formato == "deb" and (error_apt or not refresh_apt):
                     estado_app = {"status": "unknown",
-                                  "detail": "No se pudieron verificar las actualizaciones "
-                                            "con índices APT actualizados."}
+                                  "detail": ("No se pudieron verificar las actualizaciones "
+                                             "con índices APT actualizados." if error_apt else
+                                             self.translate("No se actualizaron los índices APT; "
+                                                            "la versión disponible puede estar desactualizada."))}
                 estado = {"available": "warning", "current": "ok"}.get(
                     estado_app["status"], "unknown")
                 resultados.append({
@@ -551,7 +560,7 @@ class HealthDashboard(Gtk.Box):
             t for t in (detalle, consejo, self.translate(explicacion)) if t))
         dialogo.add_button(self.translate("Ahora no"), Gtk.ResponseType.CANCEL)
         dialogo.add_button(self.translate(boton_texto), Gtk.ResponseType.OK)
-        dialogo.set_default_response(Gtk.ResponseType.OK)
+        dialogo.set_default_response(Gtk.ResponseType.CANCEL)
         self.dialogo_solucion = dialogo
 
         def respondido(d, respuesta):
@@ -568,11 +577,11 @@ class HealthDashboard(Gtk.Box):
         if accion == "maintenance":
             self._on_run_standard_maintenance()
         elif accion == "refresh-apt":
-            self._on_run_diagnostics()
+            self._on_refresh_apt(None)
         elif accion == "update":
             self._on_update_app(None)
         elif problema.get("command"):
-            self._ejecutar_comando(problema["command"])
+            self._ejecutar_comando_confirmado(problema["command"])
 
     def _on_run_standard_maintenance(self):
         """Prepara el perfil estándar y lanza el mantenimiento desde la ventana principal."""
@@ -607,14 +616,60 @@ class HealthDashboard(Gtk.Box):
             self.window.present()
 
     def _on_refresh_apt(self, _boton):
-        self._on_run_diagnostics()
+        dialogo = Gtk.MessageDialog(
+            transient_for=self.get_toplevel(), modal=True,
+            message_type=Gtk.MessageType.QUESTION,
+            text=self.translate("¿Actualizar los índices APT?"),
+        )
+        dialogo.format_secondary_text(self.translate(
+            "Se ejecutará apt update con autorización de administrador. No se instalarán paquetes."))
+        dialogo.add_button(self.translate("Cancelar"), Gtk.ResponseType.CANCEL)
+        dialogo.add_button(self.translate("Actualizar índices"), Gtk.ResponseType.OK)
+        dialogo.set_default_response(Gtk.ResponseType.CANCEL)
+        aceptado = dialogo.run() == Gtk.ResponseType.OK
+        dialogo.destroy()
+        if aceptado:
+            self._on_run_diagnostics(refresh_apt=True)
+
+    @staticmethod
+    def _comando_destructivo(comando):
+        return bool(comando) and (
+            comando[0] == "gnome-session-quit"
+            or (comando[0] == "pkexec" and len(comando) > 1
+                and comando[1] in ("dpkg", "apt-get", "dkms"))
+        )
+
+    def _confirmar_comando_destructivo(self, comando):
+        if comando and comando[0] == "gnome-session-quit":
+            detalle = self.translate(
+                "Se reiniciará el equipo y se cerrarán las aplicaciones. Guarda tu trabajo antes de continuar.")
+        else:
+            detalle = self.translate(
+                "Esta acción puede modificar paquetes del sistema. Guarda tu trabajo y revisa la advertencia antes de continuar.")
+        dialogo = Gtk.MessageDialog(
+            transient_for=self.get_toplevel(), modal=True,
+            message_type=Gtk.MessageType.WARNING,
+            text=self.translate("Confirmar acción del sistema"),
+        )
+        dialogo.format_secondary_text(detalle + "\n\n" + " ".join(comando))
+        dialogo.add_button(self.translate("Cancelar"), Gtk.ResponseType.CANCEL)
+        dialogo.add_button(self.translate("Continuar"), Gtk.ResponseType.OK)
+        dialogo.set_default_response(Gtk.ResponseType.CANCEL)
+        aceptado = dialogo.run() == Gtk.ResponseType.OK
+        dialogo.destroy()
+        return aceptado
+
+    def _ejecutar_comando_confirmado(self, comando):
+        if self._comando_destructivo(comando) and not self._confirmar_comando_destructivo(comando):
+            return
+        self._ejecutar_comando(comando)
 
     def _on_solution(self, boton):
         comando = getattr(boton, "aio_command", None)
         if not comando:
             self._on_open_maintenance(boton)
             return
-        self._ejecutar_comando(comando)
+        self._ejecutar_comando_confirmado(comando)
 
     def _ejecutar_comando(self, comando):
         """Ejecuta una solución concreta y repite el diagnóstico al terminar."""
@@ -631,8 +686,11 @@ class HealthDashboard(Gtk.Box):
 
         def worker():
             try:
-                subprocess.run(comando_host(*comando), capture_output=True,
-                               text=True, timeout=600, check=False)
+                resultado = subprocess.run(comando_host(*comando), capture_output=True,
+                                           text=True, timeout=600, check=False)
+                if resultado.returncode:
+                    detalle = (resultado.stderr or resultado.stdout or "").strip()
+                    raise RuntimeError(detalle or f"código de salida {resultado.returncode}")
                 error = None
             except Exception as exc:
                 error = str(exc)
@@ -647,6 +705,16 @@ class HealthDashboard(Gtk.Box):
             return GLib.SOURCE_REMOVE
         if error:
             self.status_label.set_text(self.translate("No se pudo ejecutar: ") + error)
+            dialogo = Gtk.MessageDialog(
+                transient_for=self.get_toplevel(), modal=True,
+                message_type=Gtk.MessageType.ERROR,
+                text=self.translate("No se pudo ejecutar la solución"),
+            )
+            dialogo.format_secondary_text(error)
+            dialogo.add_button(self.translate("Cerrar"), Gtk.ResponseType.CLOSE)
+            dialogo.run()
+            dialogo.destroy()
+            return GLib.SOURCE_REMOVE
         self._on_run_diagnostics()
         return GLib.SOURCE_REMOVE
 

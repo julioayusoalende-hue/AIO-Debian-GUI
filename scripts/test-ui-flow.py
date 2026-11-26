@@ -1241,52 +1241,84 @@ w = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False}
 w.show_all()
 settle()
 
-# El refresco precede al diagnóstico y un fallo no se presenta como lectura actual,
-# y todo ocurre dentro de la ventana «Salud del sistema», sin otra ventana.
+# El diagnóstico automático es de solo lectura: no actualiza APT ni pide privilegios.
+calls = []
+def diagnose(audit):
+    assert audit is None
+    calls.append('diagnose')
+    return [{'name': 'Actualizaciones pendientes', 'status': 'ok',
+             'detail': '0 actualizaciones disponibles según los índices APT locales.', 'advice': ''}]
+def app_update(*args):
+    calls.append('app')
+    return {'status': 'current', 'detail': 'Al día'}
+from aio_core import constants as core_constants
+from aio_core import updates as core_updates
+
+with patch.object(app.core_diagnostics, 'refresh_apt_indices', side_effect=AssertionError('no debe actualizar APT')), \
+     patch.object(app.core_diagnostics, 'run_diagnostics', side_effect=diagnose), \
+     patch.object(core_updates, 'estado_actualizacion_app', side_effect=app_update), \
+     patch.object(core_constants, 'formato_actualizacion', return_value='deb'), \
+     patch.object(core_constants, 'version_app', return_value='2.7.7'), \
+     patch.object(w.pagina_salud, '_ofrecer_solucion', return_value=False):
+    w.pagina_salud.formato = 'deb'
+    w._abrir_diagnostico()
+    deadline = time.monotonic() + 8
+    while (len(calls) < 2 or w.pagina_salud.loading) and time.monotonic() < deadline:
+        settle()
+        time.sleep(0.01)
+    assert w.ventana_salud is not None and w.ventana_salud.get_visible()
+    assert w.notebook.page_num(w.pagina_salud) == -1
+    assert not w.pagina_salud.loading
+    assert calls == ['diagnose', 'app'], calls
+    results = w.pagina_salud.resultados
+    pending = next(item for item in results if item['name'] == 'Actualizaciones pendientes')
+    version = next(item for item in results if item['name'] == 'Versión de AiO Debian GUI')
+    assert pending['status'] == 'ok'
+    assert 'Índices locales' in pending['detail']
+    assert version['status'] == 'unknown'
+    assert w.pagina_salud.cards['Versión de AiO Debian GUI']['status_label'].get_text() == 'Sin comprobar'
+
+# Actualizar índices exige consentimiento y puede terminar en una lectura desconocida.
 for refresh_error in (None, 'Autorización cancelada'):
     calls = []
-    def refresh(command):
-        calls.append('refresh')
+    def refresh(command, _calls=calls, _error=refresh_error):
+        _calls.append('refresh')
         assert command == ['test-refresh']
-        return refresh_error, (0, '', '')
-    def diagnose(audit):
+        return _error, (0, '', '')
+    def diagnose(audit, _calls=calls):
         assert audit == (0, '', '')
-        calls.append('diagnose')
+        _calls.append('diagnose')
         return [{'name': 'Actualizaciones pendientes', 'status': 'ok',
-                 'detail': '0 actualizaciones disponibles según los índices APT locales.', 'advice': ''}]
-    def app_update(*args):
-        calls.append('app')
+                 'detail': '0 actualizaciones disponibles.', 'advice': ''}]
+    def app_update(*args, _calls=calls):
+        _calls.append('app')
         return {'status': 'current', 'detail': 'Al día'}
-    from aio_core import constants as core_constants, updates as core_updates
     with patch.object(app.core_diagnostics, 'refresh_apt_indices', side_effect=refresh), \
          patch.object(app.core_diagnostics, 'run_diagnostics', side_effect=diagnose), \
          patch.object(core_updates, 'estado_actualizacion_app', side_effect=app_update), \
-         patch.object(core_constants, 'formato_actualizacion', return_value='deb'), \
-         patch.object(core_constants, 'version_app', return_value='2.7.7'), \
          patch.object(core_constants, 'helper_mantenimiento', return_value='helper'), \
          patch.object(core_constants, 'comando_pkexec', return_value=['test-refresh']), \
          patch.object(app, 'helper_mantenimiento', return_value='helper'), \
          patch.object(app, 'comando_pkexec', return_value=['test-refresh']), \
-         patch.object(w.pagina_salud, '_ofrecer_solucion', return_value=False):
-        w.pagina_salud.formato = 'deb'
-        w._abrir_diagnostico()
+         patch.object(w.pagina_salud, '_ofrecer_solucion', return_value=False), \
+         patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.OK):
+        w.pagina_salud._on_refresh_apt(None)
         deadline = time.monotonic() + 8
         while (len(calls) < 3 or w.pagina_salud.loading) and time.monotonic() < deadline:
             settle()
             time.sleep(0.01)
-        assert w.ventana_salud is not None and w.ventana_salud.get_visible()
-        assert w.notebook.page_num(w.pagina_salud) == -1
-        assert not w.pagina_salud.loading
         assert calls == ['refresh', 'diagnose', 'app'], calls
         results = w.pagina_salud.resultados
         pending = next(item for item in results if item['name'] == 'Actualizaciones pendientes')
         version = next(item for item in results if item['name'] == 'Versión de AiO Debian GUI')
         assert pending['status'] == ('unknown' if refresh_error else 'ok')
         assert version['status'] == ('unknown' if refresh_error else 'ok')
-        assert w.pagina_salud.cards['Versión de AiO Debian GUI']['status_label'].get_text() == (
-            'Sin comprobar' if refresh_error else 'Correcto')
-        assert not [d for d in Gtk.Window.list_toplevels()
-                    if isinstance(d, Gtk.Dialog) and d.get_visible()]
+
+with patch.object(app.core_diagnostics, 'refresh_apt_indices') as refrescar, \
+     patch.object(Gtk.MessageDialog, 'run', return_value=Gtk.ResponseType.CANCEL):
+    w.pagina_salud._on_refresh_apt(None)
+    refrescar.assert_not_called()
+
 # El diagnóstico se ejecuta dentro de la ventana «Salud del sistema»: barra de
 # progreso, semáforo por apartado y botón de solución, sin abrir otra ventana.
 salud = w.pagina_salud
@@ -1319,12 +1351,21 @@ assert 'Correctos: 1' in salud.status_label.get_text()
 assert not [d for d in Gtk.Window.list_toplevels()
             if isinstance(d, Gtk.Dialog) and d.get_visible()]
 
-# El botón de la tarjeta lanza la solución concreta y repite el diagnóstico.
+# El botón de la tarjeta pide confirmación para acciones destructivas.
+assert salud._comando_destructivo(('gnome-session-quit', '--reboot'))
+assert salud._comando_destructivo(('pkexec', 'dpkg', '--configure', '-a'))
+assert not salud._comando_destructivo(('xdg-open', 'trash:///'))
 lanzados = []
-with patch.object(salud, '_ejecutar_comando', side_effect=lanzados.append):
+with patch.object(salud, '_confirmar_comando_destructivo', return_value=True), \
+     patch.object(salud, '_ejecutar_comando', side_effect=lanzados.append):
     for boton in salud.cards['Estado de dpkg']['actions'].get_children():
         boton.clicked()
 assert lanzados == [('pkexec', 'dpkg', '--configure', '-a')], lanzados
+with patch.object(salud, '_confirmar_comando_destructivo', return_value=False), \
+     patch.object(salud, '_ejecutar_comando') as ejecutar:
+    for boton in salud.cards['Estado de dpkg']['actions'].get_children():
+        boton.clicked()
+    ejecutar.assert_not_called()
 
 
 w.destroy()

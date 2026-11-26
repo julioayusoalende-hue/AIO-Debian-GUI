@@ -4,14 +4,14 @@ import fcntl
 import hashlib
 import json
 import os
-from pathlib import Path
 import re
 import shlex
+import shutil
 import stat
 import subprocess
 import sys
 import tempfile
-
+from pathlib import Path
 
 # GRUB lee grub.d en orden alfabético: las letras van después de los números y de
 # archivos como ayusos.cfg, así que "zz-" se lee el último y sus valores mandan.
@@ -22,6 +22,9 @@ FIELDS = ("GRUB_DEFAULT", "GRUB_TIMEOUT", "GRUB_TIMEOUT_STYLE", "GRUB_DISABLE_OS
 OS_PROBER = Path("/usr/bin/os-prober")
 ENTRY_ID = re.compile(r"[A-Za-z0-9_.:+-]+")
 TIMEOUT = re.compile(r"-1|0|[1-9][0-9]{0,2}")
+REGENERATE_TIMEOUT = 180
+SCRIPT_CHECK_TIMEOUT = 30
+BACKUP_SUFFIX = ".aio-backup"
 
 
 def menu_entries(config):
@@ -234,21 +237,57 @@ def manage(defaults, config, regenerate, action, request=None):
             "os_prober_installed": OS_PROBER.exists()}
 
 
+def backup_configuration(config, original):
+    """Conserva el grub.cfg anterior sin seguir enlaces ni modificar el original."""
+    backup = config.with_name(config.name + BACKUP_SUFFIX)
+    with tempfile.NamedTemporaryFile(prefix=".aio-grub-backup-", dir=config.parent,
+                                     delete=False) as handle:
+        pending = Path(handle.name)
+        try:
+            with config.open("rb") as source:
+                shutil.copyfileobj(source, handle)
+            handle.flush()
+            os.fchown(handle.fileno(), original.st_uid, original.st_gid)
+            os.fchmod(handle.fileno(), stat.S_IMODE(original.st_mode))
+            os.fsync(handle.fileno())
+            os.replace(pending, backup)
+        finally:
+            pending.unlink(missing_ok=True)
+
+
 def regenerate(config, required_entry):
     # Generate and validate in the same filesystem before replacing grub.cfg.
     original = config.lstat()
     with tempfile.TemporaryDirectory(prefix=".aio-grub-", dir=config.parent,
                                      ignore_cleanup_errors=True) as tmp:
         candidate = Path(tmp) / "grub.cfg"
-        subprocess.run(
-            ["/usr/sbin/grub-mkconfig", "-o", str(candidate)], stdin=subprocess.DEVNULL,
-            capture_output=True, text=True, errors="replace", check=True,
-        )
+        try:
+            subprocess.run(
+                ["/usr/sbin/grub-mkconfig", "-o", str(candidate)], stdin=subprocess.DEVNULL,
+                capture_output=True, text=True, errors="replace", check=True,
+                timeout=REGENERATE_TIMEOUT,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise ValueError("GRUB regeneration timed out. Previous configuration preserved.") from exc
         generated = candidate.read_text(errors="replace")
         if not generated.strip():
             raise ValueError("GRUB produced an empty configuration.")
-        if required_entry and required_entry not in {entry["id"] for entry in menu_entries(generated)}:
+        entries = menu_entries(generated)
+        if not entries:
+            raise ValueError("GRUB produced no bootable menu entries.")
+        if required_entry and required_entry not in {entry["id"] for entry in entries}:
             raise ValueError("The selected entry is missing from the new GRUB menu.")
+        try:
+            subprocess.run(
+                ["/usr/bin/grub-script-check", str(candidate)], stdin=subprocess.DEVNULL,
+                capture_output=True, text=True, errors="replace", check=True,
+                timeout=SCRIPT_CHECK_TIMEOUT,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise ValueError("GRUB syntax validation timed out. Previous configuration preserved.") from exc
+        except subprocess.CalledProcessError as exc:
+            detail = (exc.stderr or exc.stdout or str(exc)).strip()
+            raise ValueError(f"GRUB produced an invalid configuration. Previous configuration preserved.\n{detail}") from exc
         with candidate.open("rb") as handle:
             os.fchown(handle.fileno(), original.st_uid, original.st_gid)
             os.fchmod(handle.fileno(), stat.S_IMODE(original.st_mode))
@@ -258,6 +297,12 @@ def regenerate(config, required_entry):
             original.st_dev, original.st_ino, original.st_mtime_ns, original.st_size
         ):
             raise ValueError("GRUB configuration changed during regeneration.")
+        backup_configuration(config, original)
+        active = config.lstat()
+        if (active.st_dev, active.st_ino, active.st_mtime_ns, active.st_size) != (
+            original.st_dev, original.st_ino, original.st_mtime_ns, original.st_size
+        ):
+            raise ValueError("GRUB configuration changed while creating the recovery copy.")
         os.replace(candidate, config)
 
 
@@ -267,6 +312,8 @@ def main():
     os.environ["PATH"] = "/usr/sbin:/usr/bin:/sbin:/bin"
     if not os.access("/usr/sbin/grub-mkconfig", os.X_OK):
         raise ValueError("grub-mkconfig is not installed.")
+    if not os.access("/usr/bin/grub-script-check", os.X_OK):
+        raise ValueError("grub-script-check is not installed.")
     args = sys.argv[1:]
     if args == ["status"]:
         action, request = "status", None

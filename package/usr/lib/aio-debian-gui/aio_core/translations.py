@@ -2,6 +2,15 @@
 
 TRADUCCIONES = {
     "en": {
+        "¿Actualizar los índices APT?": "Update APT indexes?",
+        "Se ejecutará apt update con autorización de administrador. No se instalarán paquetes.": "apt update will run with administrator authorization. No packages will be installed.",
+        "Actualizar índices": "Update indexes",
+        "Índices locales; no se actualizó APT.": "Local indexes; APT was not refreshed.",
+        "No se actualizaron los índices APT; la versión disponible puede estar desactualizada.": "APT indexes were not refreshed; the available version may be outdated.",
+        "Confirmar acción del sistema": "Confirm system action",
+        "Se reiniciará el equipo y se cerrarán las aplicaciones. Guarda tu trabajo antes de continuar.": "The computer will restart and applications will close. Save your work before continuing.",
+        "Esta acción puede modificar paquetes del sistema. Guarda tu trabajo y revisa la advertencia antes de continuar.": "This action may modify system packages. Save your work and review the warning before continuing.",
+        "No se pudo ejecutar la solución": "The solution could not be run",
         "Firmware": "Firmware",
         "Dispositivo": "Device",
         "Consulta actualizaciones para los dispositivos compatibles con fwupd.": "Check for updates for devices supported by fwupd.",
@@ -179,6 +188,15 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Authorization wait cancelled.",
     },
     "fr": {
+        "¿Actualizar los índices APT?": "Actualiser les index APT ?",
+        "Se ejecutará apt update con autorización de administrador. No se instalarán paquetes.": "apt update sera exécuté avec une autorisation d’administrateur. Aucun paquet ne sera installé.",
+        "Actualizar índices": "Actualiser les index",
+        "Índices locales; no se actualizó APT.": "Index locaux ; APT n’a pas été actualisé.",
+        "No se actualizaron los índices APT; la versión disponible puede estar desactualizada.": "Les index APT n’ont pas été actualisés ; la version disponible peut être obsolète.",
+        "Confirmar acción del sistema": "Confirmer l’action système",
+        "Se reiniciará el equipo y se cerrarán las aplicaciones. Guarda tu trabajo antes de continuar.": "L’ordinateur va redémarrer et les applications vont se fermer. Enregistrez votre travail avant de continuer.",
+        "Esta acción puede modificar paquetes del sistema. Guarda tu trabajo y revisa la advertencia antes de continuar.": "Cette action peut modifier des paquets système. Enregistrez votre travail et vérifiez l’avertissement avant de continuer.",
+        "No se pudo ejecutar la solución": "La solution n’a pas pu être exécutée",
         "Navegador web con bloqueo de anuncios y rastreadores integrado.": "Navigateur web avec blocage intégré des publicités et des traqueurs.",
         "Organiza e integra aplicaciones AppImage en el menú del escritorio y gestiona sus actualizaciones.": "Organise et intègre les applications AppImage au menu du bureau et gère leurs mises à jour.",
 
@@ -338,6 +356,15 @@ TRADUCCIONES = {
         "Espera de autorización cancelada.": "Attente d’autorisation annulée.",
     },
     "zh": {
+        "¿Actualizar los índices APT?": "更新 APT 索引？",
+        "Se ejecutará apt update con autorización de administrador. No se instalarán paquetes.": "将以管理员授权运行 apt update，不会安装软件包。",
+        "Actualizar índices": "更新索引",
+        "Índices locales; no se actualizó APT.": "使用本地索引；未更新 APT。",
+        "No se actualizaron los índices APT; la versión disponible puede estar desactualizada.": "未更新 APT 索引；可用版本可能已过时。",
+        "Confirmar acción del sistema": "确认系统操作",
+        "Se reiniciará el equipo y se cerrarán las aplicaciones. Guarda tu trabajo antes de continuar.": "计算机将重启，应用程序将关闭。继续前请保存工作。",
+        "Esta acción puede modificar paquetes del sistema. Guarda tu trabajo y revisa la advertencia antes de continuar.": "此操作可能修改系统软件包。继续前请保存工作并查看警告。",
+        "No se pudo ejecutar la solución": "无法执行解决方案",
         "Navegador web con bloqueo de anuncios y rastreadores integrado.": "内置广告和跟踪器拦截功能的网页浏览器。",
         "Organiza e integra aplicaciones AppImage en el menú del escritorio y gestiona sus actualizaciones.": "整理 AppImage 应用，将其集成到桌面菜单并管理更新。",
 

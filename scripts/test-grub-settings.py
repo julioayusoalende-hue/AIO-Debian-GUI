@@ -2,12 +2,11 @@
 """Exercise GRUB settings against an isolated boot/configuration fixture."""
 import importlib.machinery
 import importlib.util
-from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import Mock, patch
-
 
 helper_path = Path(__file__).resolve().parents[1] / "package/usr/lib/aio-debian-gui/aio-grub-settings"
 loader = importlib.machinery.SourceFileLoader("grub_settings", str(helper_path))
@@ -122,7 +121,12 @@ class BootSettingsTests(unittest.TestCase):
         original = self.config.read_text()
 
         def generate(argv, **_kwargs):
-            Path(argv[-1]).write_text("menuentry 'Debian' --id=debian {\n}\n")
+            if argv[0] == "/usr/sbin/grub-mkconfig":
+                Path(argv[-1]).write_text("menuentry 'Debian' --id=debian {\n}\n")
+                return subprocess.CompletedProcess(argv, 0, "", "")
+            if argv[0] == "/usr/bin/grub-script-check":
+                return subprocess.CompletedProcess(argv, 0, "", "")
+            raise AssertionError(f"Comando inesperado: {argv}")
 
         with patch.object(grub.subprocess, "run", side_effect=generate):
             with self.assertRaisesRegex(ValueError, "selected entry is missing"):
@@ -130,6 +134,45 @@ class BootSettingsTests(unittest.TestCase):
             self.assertEqual(self.config.read_text(), original)
             grub.regenerate(self.config, "debian")
         self.assertIn("--id=debian", self.config.read_text())
+        backup = self.config.with_name(self.config.name + grub.BACKUP_SUFFIX)
+        self.assertEqual(backup.read_text(), original)
+
+    def test_reject_empty_or_entryless_configuration(self):
+        original = self.config.read_text()
+        for contents, message in (("", "empty configuration"),
+                                  ("set timeout=5\n", "no bootable menu entries")):
+            with self.subTest(contents=contents):
+                def empty(argv, _contents=contents, **_kwargs):
+                    if argv[0] == "/usr/sbin/grub-mkconfig":
+                        Path(argv[-1]).write_text(_contents)
+                    return subprocess.CompletedProcess(argv, 0, "", "")
+
+                with patch.object(grub.subprocess, "run", side_effect=empty):
+                    with self.assertRaisesRegex(ValueError, message):
+                        grub.regenerate(self.config, None)
+                self.assertEqual(self.config.read_text(), original)
+
+    def test_reject_invalid_grub_syntax(self):
+        original = self.config.read_text()
+
+        def generate(argv, **_kwargs):
+            if argv[0] == "/usr/sbin/grub-mkconfig":
+                Path(argv[-1]).write_text("menuentry 'Debian' --id=debian {\n")
+                return subprocess.CompletedProcess(argv, 0, "", "")
+            raise subprocess.CalledProcessError(1, argv, stderr="syntax error")
+
+        with patch.object(grub.subprocess, "run", side_effect=generate):
+            with self.assertRaisesRegex(ValueError, "invalid configuration"):
+                grub.regenerate(self.config, None)
+        self.assertEqual(self.config.read_text(), original)
+        self.assertFalse(self.config.with_name(self.config.name + grub.BACKUP_SUFFIX).exists())
+
+    def test_reject_regeneration_timeout(self):
+        original = self.config.read_text()
+        with patch.object(grub.subprocess, "run", side_effect=subprocess.TimeoutExpired(["grub-mkconfig"], 1)):
+            with self.assertRaisesRegex(ValueError, "timed out"):
+                grub.regenerate(self.config, None)
+        self.assertEqual(self.config.read_text(), original)
 
     def test_decline_modified_fragment_and_missing_grub(self):
         self.fragment.parent.mkdir()

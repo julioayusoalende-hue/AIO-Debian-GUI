@@ -1,5 +1,14 @@
 # Cambios
 
+## 1.4.8
+
+- Salud del sistema ejecuta el diagnóstico automático sin modificar el sistema y pide consentimiento antes de actualizar los índices APT.
+- Las soluciones destructivas usan Cancelar como acción predeterminada, exigen confirmación adicional y muestran errores reales si fallan.
+
+## 1.4.7
+
+- La regeneración de GRUB usa timeout, valida la sintaxis con `grub-script-check`, exige entradas arrancables y conserva una copia de recuperación del `grub.cfg` anterior antes de sustituirlo.
+
 ## 1.4.6
 
 - La autoactualización estable audita `dpkg`, simula el plan con `--no-remove` y `--only-upgrade`, e instala exactamente la versión aprobada por el usuario aunque cambie el candidato en APT.
