@@ -68,9 +68,12 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.4.4
+### Lo nuevo en la 1.4.5
 
-- Se corrige el error D-Bus `NoReply: Message recipient disconnected from message bus without replying` al instalar extensiones de GNOME: la llamada ahora se dirige directamente a `org.gnome.Shell`, que espera la confirmación del usuario sin cortar la conexión.
+- Coordinador global de operaciones: las páginas se bloquean durante cualquier operación administrativa y no se permiten dos tareas privilegiadas simultáneas.
+- Las fuentes APT se actualizan de forma transaccional, con respaldo previo y sustitución atómica.
+- La revisión interactiva de `autoremove` usa un canal independiente de stdin.
+- NVIDIA registra la regeneración correcta de dracut y reintenta la tarea si falla.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -78,7 +81,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.4.4**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.4.5**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -102,10 +105,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.4.3:
+Para la versión 1.4.5:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.4.3_all.deb
+sudo apt install ./aio-debian-gui_1.4.5_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.
