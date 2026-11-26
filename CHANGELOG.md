@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.4.6
+
+- La autoactualización estable audita `dpkg`, simula el plan con `--no-remove` y `--only-upgrade`, e instala exactamente la versión aprobada por el usuario aunque cambie el candidato en APT.
+
 ## 1.4.5
 
 - Coordinador global de operaciones: las páginas se bloquean durante mantenimiento, actualización, programación, gestor de software, Salud y firmware, y no se permiten dos operaciones privilegiadas simultáneas.

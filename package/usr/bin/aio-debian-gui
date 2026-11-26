@@ -1640,7 +1640,7 @@ class VentanaPrincipal(Gtk.Window):
                                       "Ya tienes la última versión", f"Versión instalada: {actual}.")
                         return
                     detalle = f"Versión instalada: {actual}.\nVersión disponible: {nueva}.\n\n¿Actualizar mediante APT?"
-                    datos = nueva if testing else None
+                    datos = nueva
                 elif formato == "flatpak":
                     # Sin privilegios: actualizar metadatos y consultar revisiones pendientes.
                     metadatos = subprocess.run(
@@ -1722,7 +1722,9 @@ class VentanaPrincipal(Gtk.Window):
         def aplicar():
             try:
                 if formato == "deb":
-                    argumentos = ("--update-self-testing", datos) if datos else ("--update-self",)
+                    testing = self.preferencias.get("canal_actualizaciones") == "testing"
+                    argumentos = (("--update-self-testing", datos) if testing
+                                  else ("--update-self", datos))
                     resultado = subprocess.run(
                         comando_pkexec(HELPER_SISTEMA, "C.UTF-8", *argumentos),
                         capture_output=True, text=True, timeout=300,

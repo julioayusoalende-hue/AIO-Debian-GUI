@@ -24,6 +24,7 @@ python3 -c 'import ast, pathlib; [ast.parse(p.read_text(encoding="utf-8"), filen
     bien "módulos core Python válidos" || fallo "sintaxis módulos core"
 python3 scripts/test-core-preferences.py && bien "preferencias modulares" || fallo "pruebas de preferencias core"
 bash scripts/test-update-testing.sh && bien "actualizador Testing" || fallo "actualizador Testing"
+bash scripts/test-self-update.sh && bien "autoactualización estable segura" || fallo "autoactualización estable segura"
 python3 scripts/test-gtk-versions.py && bien "compatibilidad GTK/GDK 3" || fallo "compatibilidad GTK/GDK 3"
 python3 scripts/test-appearance.py && bien "tema automático y preferencia manual" || fallo "pruebas de apariencia"
 bash scripts/test-polkit-escaping.sh && bien "validación de usuario Polkit" || fallo "validación de usuario Polkit"

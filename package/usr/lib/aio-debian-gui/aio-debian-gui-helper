@@ -1943,6 +1943,103 @@ mostrar_estados() {
 }
 
 
+aiodebian_auditoria_dpkg() {
+    local auditoria
+    if ! auditoria=$(LC_ALL=C timeout --kill-after=2s 12s dpkg --audit 2>&1) || [ -n "$auditoria" ]; then
+        err "Hay una incidencia de dpkg pendiente. Revisa el diagnóstico antes de actualizar AiO."
+        [ -z "$auditoria" ] || printf '%s\n' "$auditoria" >&2
+        return 1
+    fi
+}
+
+aiodebian_candidata_estable() {
+    local disponible
+    disponible=$(LC_ALL=C apt-cache policy aio-debian-gui | awk '/^[[:space:]]*Candidate:/ { print $2; exit }')
+    [ -n "$disponible" ] && [ "$disponible" != "(none)" ] || {
+        err "No existe versión candidata de AiO Debian GUI en los repositorios APT."
+        return 1
+    }
+    printf '%s\n' "$disponible"
+}
+
+# Resuelve la versión mostrada por la GUI (sin época) a la versión completa
+# disponible en APT y rechaza ambigüedades o versiones ausentes.
+aiodebian_resolver_version() {
+    local solicitada="$1" completa="" version
+    [[ "$solicitada" =~ ^[0-9][0-9A-Za-z.+~:-]*$ ]] || {
+        err "Versión de actualización no válida."
+        return 1
+    }
+    while IFS='|' read -r _ version _; do
+        version=${version//[[:space:]]/}
+        [ -n "$version" ] || continue
+        if [ "$version" = "$solicitada" ] || [ "${version#*:}" = "$solicitada" ]; then
+            if [ -n "$completa" ] && [ "$completa" != "$version" ]; then
+                err "La versión aprobada es ambigua en los repositorios APT."
+                return 1
+            fi
+            completa="$version"
+        fi
+    done < <(LC_ALL=C apt-cache madison aio-debian-gui)
+    [ -n "$completa" ] || {
+        err "La versión aprobada ya no está disponible en APT. Vuelve a buscar actualizaciones."
+        return 1
+    }
+    printf '%s\n' "$completa"
+}
+
+actualizar_aiodebian_estable() (
+    local accion=$1 aprobada=${2:-} instalada disponible completa simulation
+    [ "$accion" = comprobar ] || [ "$accion" = instalar ] || return 2
+    paquete_instalado aio-debian-gui || { err "AiO Debian GUI no está instalado como DEB."; return 1; }
+    instalada=$(dpkg-query -W -f='${Version}' aio-debian-gui) || return 1
+    aiodebian_auditoria_dpkg || return 1
+    asegurar_listas || return 1
+
+    if [ "$accion" = comprobar ]; then
+        disponible=$(aiodebian_candidata_estable) || return 1
+        if dpkg --compare-versions "$disponible" gt "$instalada"; then
+            simulation=$(LC_ALL=C apt-get -s --only-upgrade --no-remove install "aio-debian-gui=$disponible" 2>&1) || {
+                err "No se pudo simular la actualización de AiO Debian GUI."
+                printf '%s\n' "$simulation" >&2
+                return 1
+            }
+            if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
+                err "La actualización de AiO Debian GUI propone eliminar paquetes. Se cancela por seguridad."
+                return 1
+            fi
+            printf '##UPDATE:%s:%s\n' "${instalada#*:}" "${disponible#*:}"
+        else
+            printf '##NOUPDATE:%s:%s\n' "${instalada#*:}" "${disponible#*:}"
+        fi
+        return 0
+    fi
+
+    if [ -n "$aprobada" ]; then
+        completa=$(aiodebian_resolver_version "$aprobada") || return 1
+    else
+        completa=$(aiodebian_candidata_estable) || return 1
+    fi
+    if ! dpkg --compare-versions "$completa" gt "$instalada"; then
+        err "La actualización estable de AiO Debian GUI ya no es aplicable."
+        return 1
+    fi
+    simulation=$(LC_ALL=C apt-get -s --only-upgrade --no-remove install "aio-debian-gui=$completa" 2>&1) || {
+        err "No se pudo simular la actualización de AiO Debian GUI."
+        printf '%s\n' "$simulation" >&2
+        return 1
+    }
+    if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
+        err "La actualización de AiO Debian GUI propone eliminar paquetes. Se cancela por seguridad."
+        return 1
+    fi
+    apt-get "${APT_OPTS[@]}" --only-upgrade --no-remove install "aio-debian-gui=$completa" || {
+        err "No se pudo actualizar AiO Debian GUI mediante APT."
+        return 1
+    }
+    ok "Comprobación y actualización del paquete DEB completadas."
+)
+
 # Consulta un origen firmado solo para esta operación. El APT del equipo
 # conserva sus fuentes y la instalación resuelve allí las dependencias.
 actualizar_aiodebian_testing() (
@@ -2144,36 +2241,13 @@ main() {
             ;;
         --check-update-self)
             [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --check-update-self"; exit 2; }
-            paquete_instalado aio-debian-gui || { err "AiO Debian GUI no está instalado como DEB."; exit 1; }
-            asegurar_listas || exit 1
-            instalada=$(dpkg-query -W -f='${Version}' aio-debian-gui) || exit 1
-            disponible=$(LC_ALL=C apt-cache policy aio-debian-gui | awk '/^[[:space:]]*Candidate:/ { print $2; exit }')
-            [ -n "$disponible" ] && [ "$disponible" != "(none)" ] || {
-                err "No existe versión candidata de AiO Debian GUI en los repositorios APT."
-                exit 1
-            }
-            if dpkg --compare-versions "$disponible" gt "$instalada"; then
-                printf '##UPDATE:%s:%s\n' "${instalada#*:}" "${disponible#*:}"
-            else
-                printf '##NOUPDATE:%s:%s\n' "${instalada#*:}" "${disponible#*:}"
-            fi
-            exit 0
+            actualizar_aiodebian_estable comprobar
+            exit $?
             ;;
         --update-self)
-            [ "$#" -eq 1 ] || { err "Uso: $0 [--lang LOCALE] --update-self"; exit 2; }
-            # Solo actualiza el paquete oficial ya instalado por APT. No hay rutas,
-            # URLs ni argumentos controlados por el usuario.
-            if ! dpkg-query -W -f='${db:Status-Status}' aio-debian-gui 2>/dev/null | grep -qx installed; then
-                err "AiO Debian GUI no está instalado como paquete DEB."
-                exit 1
-            fi
-            asegurar_listas || exit 1
-            if ! apt-get "${APT_OPTS[@]}" --only-upgrade install aio-debian-gui; then
-                err "No se pudo actualizar AiO Debian GUI mediante APT."
-                exit 1
-            fi
-            ok "Comprobación y actualización del paquete DEB completadas."
-            exit 0
+            [ "$#" -ge 1 ] && [ "$#" -le 2 ] || { err "Uso: $0 [--lang LOCALE] --update-self [VERSION]"; exit 2; }
+            actualizar_aiodebian_estable instalar "${2:-}"
+            exit $?
             ;;
         --backup-install)
             [ "$#" -eq 2 ] || { err "Uso: $0 [--lang LOCALE] --backup-install timeshift|deja-dup"; exit 2; }
