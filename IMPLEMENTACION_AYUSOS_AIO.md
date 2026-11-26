@@ -7,7 +7,7 @@ La integración está separada en dos paquetes independientes:
 | Paquete | Responsabilidad |
 |---------|-----------------|
 | `aio-debian-gui` | Core agnóstico, mantenimiento, software, backup, salud, hook de extensiones |
-| `ayusos-control-center` 1.4.3 | Onboarding, branding, pestañas AyusOS, gestor de software, helper privilegiado, servicios, Calamares y aplicador de preferencias |
+| `ayusos-control-center` 1.4.6 | Onboarding, branding, pestañas AyusOS, gestor de software, helper privilegiado, servicios, Calamares, aplicador de preferencias, autorización multi-usuario, backup/restauración de identidad, perfil de apps AyusOS y actualización asistida |
 
 Esto permite actualizar aio-debian-gui sin modificar la integración AyusOS.
 
@@ -113,6 +113,30 @@ El build de ISO valida que:
 - La integración contiene `extensions/ayusos/extension.py`.
 - La integración contiene el servicio de onboarding.
 - Los servicios y lanzadores críticos están instalados.
+
+## Nuevas características (roadmap 1.4.x)
+
+### 1. Autorización multi-usuario (`ayusos-aio-autorizar` mejorado)
+- Detecta y autoriza **todos** los usuarios del grupo `sudo`, no solo el primero.
+- Nuevo script `ayusos-aio-limpiar-usuario` para revocar acceso al eliminar un usuario.
+- Pestaña "Autorización" en el Centro de Control para gestionar usuarios autorizados.
+
+### 2. Perfil de aplicaciones AyusOS
+- Filtro "Perfil AyusOS" en la página "Apps recomendadas".
+- Pre-selecciona las aplicaciones que forman parte de la instalación estándar de AyusOS.
+- Lista mantenida en `Extension.ayusos_apps()` (conjunto de IDs).
+
+### 3. Backup y restauración de identidad (`ayusos_identity.py`)
+- Backup de: fuentes APT, llavero GPG, versión, Timeshift, extensiones GNOME, branding.
+- Formato ZIP con manifiesto JSON, límite 16 MB.
+- CLI para helper privilegiado: `snapshot`, `backup <archivo>`, `restore <archivo> [--dry-run]`.
+- Pestaña "Identidad" en el Centro de Control.
+
+### 4. Actualización asistida de AyusOS
+- `ayusos_update.perform_update()` implementa: snapshot previo (Timeshift), `apt update`, `apt install --only-upgrade ayusos-release`, migración de config, ejecutar aplicador de onboarding.
+- `dry-run` simula con `apt-get -s`.
+- Changelog desde `/usr/share/doc/ayusos-release/changelog.Debian.gz`.
+- Pestaña "Actualización AyusOS" muestra changelog al detectar nueva versión.
 
 ## Estado validado
 

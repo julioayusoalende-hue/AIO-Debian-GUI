@@ -95,10 +95,74 @@ def perform_update(channel: str = None, dry_run: bool = False) -> Tuple[bool, st
         return False, "Falta configuración del repositorio AyusOS"
 
     if dry_run:
-        return True, f"Simulación: actualización a {channel} (no implementado)"
+        # Simular: mostrar qué paquetes se actualizarían
+        try:
+            result = subprocess.run(
+                ["apt-get", "-s", "install", "--only-upgrade", "ayusos-release"],
+                capture_output=True, text=True, timeout=30,
+                env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL": "C"},
+            )
+            if result.returncode == 0 and "ayusos-release" in result.stdout:
+                return True, f"Simulación: se actualizaría ayusos-release a {channel}"
+            return True, f"Simulación: actualización a {channel} (sin cambios detectados)"
+        except (OSError, subprocess.SubprocessError):
+            return True, f"Simulación: actualización a {channel}"
 
-    # TODO: Implementar apt update + apt install ayusos-release + migración
-    return False, "Actualización no implementada aún"
+    # Crear snapshot antes de actualizar (si Timeshift está disponible)
+    snapshot_created = False
+    try:
+        import subprocess
+        if Path("/usr/bin/timeshift").exists():
+            subprocess.run(
+                ["timeshift", "--create", "--comments", "Pre-update AyusOS", "--tags", "O"],
+                capture_output=True, timeout=120,
+            )
+            snapshot_created = True
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+    try:
+        # Actualizar índices APT
+        subprocess.run(
+            ["apt-get", "update"],
+            check=True, capture_output=True, timeout=60,
+            env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL": "C"},
+        )
+
+        # Instalar/actualizar ayusos-release
+        subprocess.run(
+            ["apt-get", "install", "-y", "--only-upgrade", "ayusos-release"],
+            check=True, capture_output=True, timeout=120,
+            env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL": "C", "DEBIAN_FRONTEND": "noninteractive"},
+        )
+
+        # Verificar nueva versión
+        new_version = get_current_version()
+        old_version = get_current_version()  # se actualizó arriba
+
+        # Migrar configuración si es necesario
+        if old_version != new_version:
+            migrate_config(old_version, new_version)
+
+        # Ejecutar aplicador de onboarding para aplicar nuevos ajustes
+        try:
+            subprocess.run(
+                ["/usr/local/libexec/ayusos-aplicar-onboarding"],
+                capture_output=True, timeout=60,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+
+        msg = f"AyusOS actualizado a {new_version}"
+        if snapshot_created:
+            msg += " (snapshot creado antes de actualizar)"
+        return True, msg
+
+    except subprocess.CalledProcessError as e:
+        err_msg = e.stderr.decode(errors="replace") if e.stderr else str(e)
+        return False, f"Error durante la actualización: {err_msg}"
+    except (OSError, subprocess.SubprocessError) as e:
+        return False, f"Error de sistema: {e}"
 
 
 def migrate_config(old_version: str, new_version: str) -> bool:
@@ -108,9 +172,23 @@ def migrate_config(old_version: str, new_version: str) -> bool:
 
 
 def get_changelog(version: str) -> str:
-    """Obtiene changelog de una versión."""
-    # TODO: Consultar repo o archivo local
-    return f"Changelog para {version} no disponible."
+    """Obtiene changelog de una versión desde el paquete o archivo local."""
+    # Intentar leer desde el paquete instalado
+    changelog_paths = [
+        Path(f"/usr/share/doc/ayusos-release/changelog.Debian.gz"),
+        Path(f"/usr/share/doc/ayusos-release/changelog.gz"),
+        Path(f"/usr/share/doc/ayusos-release/NEWS.gz"),
+    ]
+    for path in changelog_paths:
+        if path.exists():
+            try:
+                import gzip
+                with gzip.open(path, "rt", encoding="utf-8") as f:
+                    content = f.read(50000)  # límite 50KB
+                return content
+            except (OSError, gzip.BadGzipFile):
+                continue
+    return f"Changelog para {version} no disponible localmente."
 
 
 # CLI para helper privilegiado

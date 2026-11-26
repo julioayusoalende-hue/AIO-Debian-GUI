@@ -21,6 +21,19 @@ from .pages import AyusOSPagesMixin
 from .aio_core.onboarding import launch_onboarding, should_launch_onboarding
 
 
+# IDs de aplicaciones que forman parte de la instalación estándar de AyusOS.
+# Estos coinciden con los IDs en APPS_RECOMENDADAS del core.
+AYUSOS_APPS = {
+    "audacity", "bitwarden", "brave", "btop", "celluloid", "deluge",
+    "feishin", "flameshot", "gimp", "gnome-boxes", "gnome-calendar",
+    "gnome-clocks", "gnome-disk-utility", "gnome-text-editor", "gnome-tweaks",
+    "google-chrome", "handbrake", "htop", "inkscape", "kdenlive", "krita",
+    "libreoffice", "loupe", "neofetch", "obs-studio", "onlyoffice", "peek",
+    "pipewire", "signal", "thunderbird", "timeshift", "transmission", "vscode",
+    "vlc", "wireguard", "youtube-dl", "zoom",
+}
+
+
 class Extension:
     name = "ayusos"
 
@@ -43,6 +56,10 @@ class Extension:
         if not es_ayusos():
             return None
         return get_ayusos_version() or datos.get("VERSION_ID")
+
+    def ayusos_apps(self):
+        """Devuelve el conjunto de IDs de aplicaciones incluidas en AyusOS."""
+        return AYUSOS_APPS
 
     def install(self, window):
         """Añade métodos y pestañas AyusOS a la ventana principal."""
@@ -71,9 +88,46 @@ class Extension:
             (traducir("Perfil Hardware"), window._pagina_ayusos_hardware),
             (traducir("Diagnósticos"), window._pagina_ayusos_diagnostics),
             (traducir("Apariencia"), window._pagina_ayusos_branding),
+            (traducir("Autorización"), window._pagina_ayusos_autorizacion),
+            (traducir("Identidad"), window._pagina_ayusos_identity),
         ]
         for title, factory in pages:
             window.notebook.append_page(factory(), Gtk.Label(label=title))
+
+        # Añadir filtro "Perfil AyusOS" a la página de Apps recomendadas
+        self._añadir_filtro_ayusos(window)
+
+    def _añadir_filtro_ayusos(self, window):
+        """Añade un botón para filtrar apps del perfil AyusOS."""
+        if not hasattr(window, "recommended_category") or not hasattr(window, "recommended_grid"):
+            return
+        # Buscar el contenedor de filtros (search + category)
+        filtro_box = window.recommended_category.get_parent()
+        if not filtro_box or not isinstance(filtro_box, Gtk.Box):
+            return
+        # Añadir combo de perfil
+        perfil_combo = Gtk.ComboBoxText()
+        perfil_combo.append("", traducir("Todos los perfiles"))
+        perfil_combo.append("ayusos", traducir("Perfil AyusOS"))
+        perfil_combo.set_active_id("")
+        perfil_combo.get_accessible().set_name(traducir("Perfil de aplicaciones"))
+        perfil_combo.connect("changed", self._on_perfil_changed, window)
+        filtro_box.pack_start(perfil_combo, False, False, 0)
+        filtro_box.show_all()
+        window.ayusos_perfil_combo = perfil_combo
+
+    def _on_perfil_changed(self, combo, window):
+        perfil = combo.get_active_id()
+        if perfil != "ayusos":
+            # Restaurar filtro original (solo búsqueda y categoría)
+            window._filtrar_recomendadas(window.recommended_search, None)
+            return
+        # Filtrar para mostrar solo apps del perfil AyusOS
+        ayusos_ids = self.ayusos_apps()
+        coincidencias = []
+        for app in window.canales_recomendados.keys():
+            coincidencias.append(app in ayusos_ids)
+        window.recommended_grid.set_filter_func(lambda t: coincidencias[t.get_index()])
 
     def should_launch_onboarding(self):
         return should_launch_onboarding()

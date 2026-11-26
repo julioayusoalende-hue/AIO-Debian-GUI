@@ -5,6 +5,7 @@ nada de AyusOS. Los métodos se enlazan a la ventana principal en install().
 """
 
 import json
+import os
 import subprocess
 import threading
 
@@ -397,6 +398,197 @@ class AyusOSPagesMixin:
 
         pagina.pack_start(self._scroll_tarjetas(contenido), True, True, 0)
         return pagina
+
+    def _pagina_ayusos_autorizacion(self):
+        """Pestaña: Autorización sin contraseña para administradores."""
+        pagina = self._pagina_tarjetas()
+        contenido = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+
+        # Tarjeta: Estado actual
+        tarjeta, caja = tarjeta_mantenimiento(10)
+        caja.pack_start(cabecera_mantenimiento("Autorización AiO", "preferences-system-symbolic"), False, False, 0)
+
+        self.autorizacion_status = self._etiqueta_estado()
+        caja.pack_start(self.autorizacion_status, False, False, 0)
+
+        grid = Gtk.Grid(column_spacing=14, row_spacing=8)
+        grid.set_border_width(4)
+        caja.pack_start(grid, False, False, 0)
+
+        self.autorizacion_usuarios_label = etiqueta("Administradores autorizados: —")
+        grid.attach(self.autorizacion_usuarios_label, 0, 0, 2, 1)
+
+        btn_row = Gtk.Box(spacing=8)
+        self.autorizacion_refresh_btn = Gtk.Button(label=traducir("Actualizar estado"))
+        self.autorizacion_refresh_btn.connect("clicked", self._autorizacion_refresh)
+        btn_row.pack_start(self.autorizacion_refresh_btn, False, False, 0)
+
+        self.autorizacion_aplicar_btn = Gtk.Button(label=traducir("Aplicar a todos los administradores"))
+        self.autorizacion_aplicar_btn.get_style_context().add_class("suggested-action")
+        self.autorizacion_aplicar_btn.connect("clicked", self._autorizacion_aplicar)
+        btn_row.pack_start(self.autorizacion_aplicar_btn, False, False, 0)
+        grid.attach(btn_row, 0, 1, 2, 1)
+
+        caja.pack_start(grid, False, False, 0)
+        contenido.pack_start(tarjeta, False, False, 0)
+
+        # Tarjeta: Usuarios actuales
+        tarjeta2, caja2 = tarjeta_mantenimiento(10)
+        caja2.pack_start(cabecera_mantenimiento("Usuarios con acceso sin contraseña", "system-users-symbolic"), False, False, 0)
+
+        self.autorizacion_list = Gtk.TreeView()
+        self.autorizacion_list.set_headers_visible(True)
+        store = Gtk.ListStore(str, str, str)  # username, uid, status
+        self.autorizacion_list.set_model(store)
+
+        for i, title in enumerate([traducir("Usuario"), traducir("UID"), traducir("Estado")]):
+            renderer = Gtk.CellRendererText()
+            col = Gtk.TreeViewColumn(title, renderer, text=i)
+            col.set_resizable(True)
+            self.autorizacion_list.append_column(col)
+
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scrolled.set_size_request(-1, 200)
+        scrolled.add(self.autorizacion_list)
+        caja2.pack_start(scrolled, True, True, 0)
+
+        actions = Gtk.Box(spacing=8)
+        self.autorizacion_remove_btn = Gtk.Button(label=traducir("Revocar acceso"))
+        self.autorizacion_remove_btn.connect("clicked", self._autorizacion_revocar)
+        actions.pack_end(self.autorizacion_remove_btn, False, False, 0)
+        caja2.pack_start(actions, False, False, 0)
+
+        contenido.pack_start(tarjeta2, True, True, 0)
+
+        pagina.pack_start(self._scroll_tarjetas(contenido), True, True, 0)
+        return pagina
+
+    def _autorizacion_refresh(self, _boton):
+        self.autorizacion_refresh_btn.set_sensitive(False)
+        self.autorizacion_status.set_text(traducir("Cargando estado…"))
+
+        def cargar():
+            try:
+                import subprocess, json
+                result = subprocess.run(
+                    ["/usr/local/libexec/ayusos-aio-autorizar", "status"],
+                    capture_output=True, text=True, timeout=10
+                )
+                # El script imprime a stdout, no JSON. Parseamos.
+                usuarios = []
+                for line in result.stdout.strip().split('\n'):
+                    if line.strip().startswith('- '):
+                        # Formato: "  - user (UID 1000)"
+                        parts = line.strip()[2:].split(' (UID ')
+                        if len(parts) == 2:
+                            usuarios.append((parts[0], parts[1].rstrip(')')))
+                GLib.idle_add(self._autorizacion_refresh_done, True, usuarios)
+            except (OSError, subprocess.SubprocessError) as exc:
+                GLib.idle_add(self._autorizacion_refresh_done, False, str(exc))
+
+        threading.Thread(target=cargar, daemon=True).start()
+
+    def _autorizacion_refresh_done(self, ok, data):
+        self.autorizacion_refresh_btn.set_sensitive(True)
+        if not ok:
+            self.autorizacion_status.set_text(traducir("Error: %s") % data)
+            return GLib.SOURCE_REMOVE
+
+        # Actualizar etiqueta resumen
+        count = len(data)
+        self.autorizacion_usuarios_label.set_text(traducir("Administradores autorizados: %d") % count)
+
+        # Actualizar lista
+        store = self.autorizacion_list.get_model()
+        store.clear()
+        for username, uid in data:
+            store.append([username, uid, traducir("Activo")])
+
+        self.autorizacion_status.set_text(traducir("Estado actualizado."))
+        return GLib.SOURCE_REMOVE
+
+    def _autorizacion_aplicar(self, _boton):
+        self.autorizacion_aplicar_btn.set_sensitive(False)
+        self.autorizacion_status.set_text(traducir("Aplicando autorización a todos los administradores…"))
+
+        def aplicar():
+            try:
+                import subprocess, json
+                result = subprocess.run(
+                    ["/usr/local/libexec/ayusos-aio-autorizar", "apply"],
+                    capture_output=True, text=True, timeout=30
+                )
+                if result.returncode == 0:
+                    GLib.idle_add(self._autorizacion_aplicar_done, True, result.stdout)
+                else:
+                    GLib.idle_add(self._autorizacion_aplicar_done, False, result.stderr or result.stdout)
+            except (OSError, subprocess.SubprocessError) as exc:
+                GLib.idle_add(self._autorizacion_aplicar_done, False, str(exc))
+
+        threading.Thread(target=aplicar, daemon=True).start()
+
+    def _autorizacion_aplicar_done(self, ok, data):
+        self.autorizacion_aplicar_btn.set_sensitive(True)
+        if not ok:
+            self.autorizacion_status.set_text(traducir("Error: %s") % data)
+            return GLib.SOURCE_REMOVE
+
+        self.autorizacion_status.set_text(traducir("Autorización aplicada correctamente."))
+        self._autorizacion_refresh(None)
+        return GLib.SOURCE_REMOVE
+
+    def _autorizacion_revocar(self, _boton):
+        selection = self.autorizacion_list.get_selection()
+        model, treeiter = selection.get_selected()
+        if not treeiter:
+            return
+        username = model[treeiter][0]
+        uid = model[treeiter][1]
+
+        # Confirmar
+        dialog = Gtk.MessageDialog(
+            transient_for=self.get_toplevel(),
+            modal=True,
+            message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.YES_NO,
+            text=traducir("¿Revocar el acceso sin contraseña para %s?") % username,
+        )
+        dialog.format_secondary_text(traducir("El usuario seguirá siendo administrador, pero necesitará contraseña para operaciones de AiO."))
+        response = dialog.run()
+        dialog.destroy()
+
+        if response != Gtk.ResponseType.YES:
+            return
+
+        self.autorizacion_remove_btn.set_sensitive(False)
+        self.autorizacion_status.set_text(traducir("Revocando acceso para %s…") % username)
+
+        def revocar():
+            try:
+                import subprocess, json
+                result = subprocess.run(
+                    ["/usr/local/libexec/ayusos-aio-limpiar-usuario", username],
+                    capture_output=True, text=True, timeout=10
+                )
+                if result.returncode == 0:
+                    GLib.idle_add(self._autorizacion_revocar_done, True, username)
+                else:
+                    GLib.idle_add(self._autorizacion_revocar_done, False, result.stderr or result.stdout)
+            except (OSError, subprocess.SubprocessError) as exc:
+                GLib.idle_add(self._autorizacion_revocar_done, False, str(exc))
+
+        threading.Thread(target=revocar, daemon=True).start()
+
+    def _autorizacion_revocar_done(self, ok, data):
+        self.autorizacion_remove_btn.set_sensitive(True)
+        if not ok:
+            self.autorizacion_status.set_text(traducir("Error: %s") % data)
+            return GLib.SOURCE_REMOVE
+
+        self.autorizacion_status.set_text(traducir("Acceso revocado para %s.") % data)
+        self._autorizacion_refresh(None)
+        return GLib.SOURCE_REMOVE
 
     def _ayusos_check_updates(self, _boton):
         self.ayusos_check_btn.set_sensitive(False)
@@ -927,3 +1119,206 @@ class AyusOSPagesMixin:
         contenido.pack_start(btn, False, False, 0)
 
         return tarjeta
+
+    def _pagina_ayusos_identity(self):
+        """Pestaña: Backup y restauración de la identidad de AyusOS."""
+        pagina = self._pagina_tarjetas()
+        contenido = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+
+        # Tarjeta: Estado
+        tarjeta, caja = tarjeta_mantenimiento(10)
+        caja.pack_start(cabecera_mantenimiento("Identidad de AyusOS", "preferences-desktop-symbolic"), False, False, 0)
+
+        self.identity_status = self._etiqueta_estado()
+        caja.pack_start(self.identity_status, False, False, 0)
+
+        grid = Gtk.Grid(column_spacing=14, row_spacing=8)
+        grid.set_border_width(4)
+        caja.pack_start(grid, False, False, 0)
+
+        self.identity_sources_label = etiqueta("Fuentes APT: —")
+        self.identity_keyring_label = etiqueta("Llavero GPG: —")
+        grid.attach(self.identity_sources_label, 0, 0, 1, 1)
+        grid.attach(self.identity_keyring_label, 1, 0, 1, 1)
+
+        btn_row = Gtk.Box(spacing=8)
+        self.identity_refresh_btn = Gtk.Button(label=traducir("Actualizar estado"))
+        self.identity_refresh_btn.connect("clicked", self._identity_refresh)
+        btn_row.pack_start(self.identity_refresh_btn, False, False, 0)
+        grid.attach(btn_row, 0, 1, 2, 1)
+
+        caja.pack_start(grid, False, False, 0)
+        contenido.pack_start(tarjeta, False, False, 0)
+
+        # Tarjeta: Backup
+        tarjeta2, caja2 = tarjeta_mantenimiento(10)
+        caja2.pack_start(cabecera_mantenimiento("Backup de identidad", "document-save-symbolic"), False, False, 0)
+
+        backup_box = Gtk.Box(spacing=8)
+        backup_box.pack_start(etiqueta("Archivo:"), False, False, 0)
+        self.identity_backup_entry = Gtk.Entry(placeholder_text=traducir("~/ayusos-identity.zip"))
+        backup_box.pack_start(self.identity_backup_entry, True, True, 0)
+        caja2.pack_start(backup_box, False, False, 0)
+
+        self.identity_backup_btn = Gtk.Button(label=traducir("Crear backup"))
+        self.identity_backup_btn.get_style_context().add_class("suggested-action")
+        self.identity_backup_btn.connect("clicked", self._identity_backup)
+        caja2.pack_start(self.identity_backup_btn, False, False, 0)
+
+        contenido.pack_start(tarjeta2, False, False, 0)
+
+        # Tarjeta: Restaurar
+        tarjeta3, caja3 = tarjeta_mantenimiento(10)
+        caja3.pack_start(cabecera_mantenimiento("Restaurar identidad", "document-revert-symbolic"), False, False, 0)
+
+        restore_box = Gtk.Box(spacing=8)
+        restore_box.pack_start(etiqueta("Archivo:"), False, False, 0)
+        self.identity_restore_entry = Gtk.Entry(placeholder_text=traducir("~/ayusos-identity.zip"))
+        restore_box.pack_start(self.identity_restore_entry, True, True, 0)
+        caja3.pack_start(restore_box, False, False, 0)
+
+        restore_btns = Gtk.Box(spacing=8)
+        self.identity_dryrun_check = Gtk.CheckButton(label=traducir("Solo simular (dry-run)"))
+        restore_btns.pack_start(self.identity_dryrun_check, False, False, 0)
+
+        self.identity_restore_btn = Gtk.Button(label=traducir("Restaurar ahora"))
+        self.identity_restore_btn.get_style_context().add_class("suggested-action")
+        self.identity_restore_btn.connect("clicked", self._identity_restore)
+        restore_btns.pack_end(self.identity_restore_btn, False, False, 0)
+        caja3.pack_start(restore_btns, False, False, 0)
+
+        contenido.pack_start(tarjeta3, False, False, 0)
+
+        # Tarjeta: Qué incluye
+        tarjeta4, caja4 = tarjeta_mantenimiento(10)
+        caja4.pack_start(cabecera_mantenimiento("Contenido del backup", "help-browser-symbolic"), False, False, 0)
+        caja4.pack_start(etiqueta(
+            "El backup de identidad incluye:\n"
+            "• Fuentes APT de AyusOS (/etc/apt/sources.list.d/ayusos.sources)\n"
+            "• Llavero GPG del repositorio (/usr/share/keyrings/ayusos-archive.gpg)\n"
+            "• Archivo de versión (/etc/ayusos-release)\n"
+            "• Configuración de Timeshift\n"
+            "• Extensiones GNOME habilitadas y su configuración\n"
+            "• Branding (tema GTK, color de acento, fondos de pantalla)"
+        ), False, False, 0)
+        contenido.pack_start(tarjeta4, False, False, 0)
+
+        pagina.pack_start(self._scroll_tarjetas(contenido), True, True, 0)
+        return pagina
+
+    def _identity_refresh(self, _boton):
+        self.identity_refresh_btn.set_sensitive(False)
+        self.identity_status.set_text(traducir("Cargando estado…"))
+
+        def cargar():
+            try:
+                import subprocess, json
+                result = subprocess.run(
+                    ["/usr/local/libexec/ayusos-aio-autorizar", "status"],
+                    capture_output=True, text=True, timeout=10
+                )
+                # Verificar existencia de archivos
+                import os
+                sources = os.path.exists("/etc/apt/sources.list.d/ayusos.sources")
+                keyring = os.path.exists("/usr/share/keyrings/ayusos-archive.gpg")
+                release = os.path.exists("/etc/ayusos-release")
+                timeshift = os.path.exists("/etc/timeshift.json") or os.path.exists("/etc/timeshift/default.json")
+                GLib.idle_add(self._identity_refresh_done, True, {
+                    "sources": sources, "keyring": keyring, "release": release, "timeshift": timeshift
+                })
+            except (OSError, subprocess.SubprocessError) as exc:
+                GLib.idle_add(self._identity_refresh_done, False, str(exc))
+
+        threading.Thread(target=cargar, daemon=True).start()
+
+    def _identity_refresh_done(self, ok, data):
+        self.identity_refresh_btn.set_sensitive(True)
+        if not ok:
+            self.identity_status.set_text(traducir("Error: %s") % data)
+            return GLib.SOURCE_REMOVE
+
+        self.identity_sources_label.set_text(traducir("Fuentes APT: %s") % (traducir("Sí") if data["sources"] else traducir("No")))
+        self.identity_keyring_label.set_text(traducir("Llavero GPG: %s") % (traducir("Sí") if data["keyring"] else traducir("No")))
+
+        items = []
+        if data["release"]:
+            items.append(traducir("versión"))
+        if data["timeshift"]:
+            items.append(traducir("Timeshift"))
+        if items:
+            self.identity_status.set_text(traducir("Identidad detectada: %s") % ", ".join(items))
+        else:
+            self.identity_status.set_text(traducir("Identidad de AyusOS no detectada."))
+        return GLib.SOURCE_REMOVE
+
+    def _identity_backup(self, _boton):
+        path = self.identity_backup_entry.get_text().strip()
+        if not path:
+            path = "~/ayusos-identity.zip"
+        path = os.path.expanduser(path)
+
+        self.identity_backup_btn.set_sensitive(False)
+        self.identity_status.set_text(traducir("Creando backup…"))
+
+        def backup():
+            try:
+                import subprocess, json
+                result = subprocess.run(
+                    ["/usr/local/libexec/ayusos-aio-autorizar", "status"],
+                    capture_output=True, text=True, timeout=30
+                )
+                # Usar el módulo directamente
+                from .aio_core import ayusos_identity
+                result = json.loads(ayusos_identity.cli_backup(path))
+                GLib.idle_add(self._identity_backup_done, True, result)
+            except (OSError, ValueError, RuntimeError, ImportError, subprocess.SubprocessError) as exc:
+                GLib.idle_add(self._identity_backup_done, False, str(exc))
+
+        threading.Thread(target=backup, daemon=True).start()
+
+    def _identity_backup_done(self, ok, data):
+        self.identity_backup_btn.set_sensitive(True)
+        if not ok:
+            self.identity_status.set_text(traducir("Error: %s") % data)
+            return GLib.SOURCE_REMOVE
+
+        if data.get("success"):
+            self.identity_status.set_text(traducir("Backup guardado en %s") % data.get("path", ""))
+        else:
+            self.identity_status.set_text(traducir("Error creando backup."))
+        return GLib.SOURCE_REMOVE
+
+    def _identity_restore(self, _boton):
+        path = self.identity_restore_entry.get_text().strip()
+        if not path:
+            self.identity_status.set_text(traducir("Falta archivo de backup."))
+            return
+        path = os.path.expanduser(path)
+        dry_run = self.identity_dryrun_check.get_active()
+
+        self.identity_restore_btn.set_sensitive(False)
+        self.identity_status.set_text(traducir("Restaurando identidad%s…") % (" (simulación)" if dry_run else ""))
+
+        def restore():
+            try:
+                import subprocess, json
+                from .aio_core import ayusos_identity
+                result = json.loads(ayusos_identity.cli_restore(path, dry_run))
+                GLib.idle_add(self._identity_restore_done, True, result)
+            except (OSError, ValueError, RuntimeError, ImportError, subprocess.SubprocessError) as exc:
+                GLib.idle_add(self._identity_restore_done, False, str(exc))
+
+        threading.Thread(target=restore, daemon=True).start()
+
+    def _identity_restore_done(self, ok, data):
+        self.identity_restore_btn.set_sensitive(True)
+        if not ok:
+            self.identity_status.set_text(traducir("Error: %s") % data)
+            return GLib.SOURCE_REMOVE
+
+        if data.get("success"):
+            self.identity_status.set_text(traducir("Identidad restaurada correctamente."))
+            self._identity_refresh(None)
+        else:
+            self.identity_status.set_text(traducir("Error: %s") % data.get("message", ""))
+        return GLib.SOURCE_REMOVE
