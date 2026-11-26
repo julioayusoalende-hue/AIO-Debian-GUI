@@ -1246,8 +1246,12 @@ calls = []
 def diagnose(audit):
     assert audit is None
     calls.append('diagnose')
-    return [{'name': 'Actualizaciones pendientes', 'status': 'ok',
-             'detail': '0 actualizaciones disponibles según los índices APT locales.', 'advice': ''}]
+    return [
+        {'name': 'Índices de APT', 'status': 'ok',
+         'detail': 'Último índice de paquetes: hace 0 días.', 'advice': ''},
+        {'name': 'Actualizaciones pendientes', 'status': 'ok',
+         'detail': '0 actualizaciones disponibles según los índices APT locales.', 'advice': ''},
+    ]
 def app_update(*args):
     calls.append('app')
     return {'status': 'current', 'detail': 'Al día'}
@@ -1274,9 +1278,9 @@ with patch.object(app.core_diagnostics, 'refresh_apt_indices', side_effect=Asser
     pending = next(item for item in results if item['name'] == 'Actualizaciones pendientes')
     version = next(item for item in results if item['name'] == 'Versión de AiO Debian GUI')
     assert pending['status'] == 'ok'
-    assert 'Índices locales' in pending['detail']
-    assert version['status'] == 'unknown'
-    assert w.pagina_salud.cards['Versión de AiO Debian GUI']['status_label'].get_text() == 'Sin comprobar'
+    assert 'Índices locales' not in pending['detail']
+    assert version['status'] == 'ok'
+    assert w.pagina_salud.cards['Versión de AiO Debian GUI']['status_label'].get_text() == 'Correcto'
 
 # Actualizar índices exige consentimiento y puede terminar en una lectura desconocida.
 for refresh_error in (None, 'Autorización cancelada'):

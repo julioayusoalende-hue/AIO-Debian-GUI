@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.4.9
+
+- Salud del sistema aprovecha los índices APT frescos después del mantenimiento y solo marca la versión de AiO como «Sin comprobar» cuando los índices están realmente desactualizados.
+
 ## 1.4.8
 
 - Salud del sistema ejecuta el diagnóstico automático sin modificar el sistema y pide consentimiento antes de actualizar los índices APT.

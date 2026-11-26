@@ -366,7 +366,13 @@ class HealthDashboard(Gtk.Box):
                               if formato == "flatpak"
                               else core_diagnostics.run_diagnostics(auditoria))
 
-                if formato == "deb" and not refresh_apt:
+                indices_frescos = any(
+                    resultado.get("name") == "Índices de APT"
+                    and resultado.get("status") == "ok"
+                    for resultado in resultados
+                )
+
+                if formato == "deb" and not refresh_apt and not indices_frescos:
                     for resultado in resultados:
                         if resultado.get("name") in ("Actualizaciones pendientes", "Índices de APT"):
                             detalle_actual = resultado.get("detail", "")
@@ -400,7 +406,7 @@ class HealthDashboard(Gtk.Box):
                         formato, version_instalada, APP_ID_FLATPAK)
                 except Exception as exc:
                     estado_app = {"status": "unknown", "detail": str(exc)}
-                if formato == "deb" and (error_apt or not refresh_apt):
+                if formato == "deb" and (error_apt or (not refresh_apt and not indices_frescos)):
                     estado_app = {"status": "unknown",
                                   "detail": ("No se pudieron verificar las actualizaciones "
                                              "con índices APT actualizados." if error_apt else
