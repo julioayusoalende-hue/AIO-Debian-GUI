@@ -13,7 +13,10 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import GdkPixbuf, GLib, Gtk, Pango
 
-from aio_core.constants import traducir, etiqueta, tarjeta_mantenimiento, cabecera_mantenimiento
+from aio_core.constants import (
+    traducir, etiqueta, tarjeta_mantenimiento, cabecera_mantenimiento,
+    comando_host, HELPER_SISTEMA,
+)
 from .aio_core.ayusos_branding import ACENTOS
 
 
@@ -286,6 +289,14 @@ class AyusOSPagesMixin:
         self.diagnostics_run_btn.get_style_context().add_class("suggested-action")
         self.diagnostics_run_btn.connect("clicked", self._diagnostics_run)
         caja.pack_start(self.diagnostics_run_btn, False, False, 0)
+
+        self.diagnostics_extensions_btn = Gtk.Button(label=traducir("Reparar extensiones de GNOME"))
+        self.diagnostics_extensions_btn.connect("clicked", self._diagnostics_repair_extensions)
+        caja.pack_start(self.diagnostics_extensions_btn, False, False, 0)
+
+        self.diagnostics_recovery_btn = Gtk.Button(label=traducir("Abrir recuperación"))
+        self.diagnostics_recovery_btn.connect("clicked", lambda _boton: self._abrir_recuperacion())
+        caja.pack_start(self.diagnostics_recovery_btn, False, False, 0)
 
         contenido.pack_start(tarjeta, False, False, 0)
 

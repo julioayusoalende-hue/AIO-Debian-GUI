@@ -6,6 +6,7 @@ Requires=ayusos-aio-autorizacion.service
 After=ayusos-aio-autorizacion.service ayusos-snapshot-inicial.service ayusos-onboarding.service network-online.target
 ConditionPathExists=!/var/lib/ayusos/aio-inicial
 ConditionKernelCommandLine=!boot=live
+ConditionKernelCommandLine=!ayusos-recovery
 StartLimitIntervalSec=0
 
 [Service]

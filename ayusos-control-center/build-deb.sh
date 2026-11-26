@@ -18,8 +18,10 @@ chmod 755 "$STAGE/DEBIAN/postinst" "$STAGE/DEBIAN/prerm" \
     "$STAGE/usr/local/libexec/ayusos-aio-autorizar" \
     "$STAGE/usr/local/libexec/ayusos-aplicar-onboarding" \
     "$STAGE/usr/local/libexec/ayusos-timeshift" \
+    "$STAGE/usr/local/libexec/ayusos-recovery-session" \
     "$STAGE/usr/lib/aio-debian-gui/extensions/ayusos/software_manager/admin.py" \
-    "$STAGE/usr/lib/aio-debian-gui/extensions/ayusos/aio-run"
+    "$STAGE/usr/lib/aio-debian-gui/extensions/ayusos/aio-run" \
+    "$STAGE/usr/lib/aio-debian-gui/extensions/ayusos/ayusos-recovery"
 mkdir -p dist
 rm -f "dist/ayusos-control-center_${VERSION}_all.deb"
 dpkg-deb --root-owner-group -Zxz --build "$STAGE" "dist/ayusos-control-center_${VERSION}_all.deb"

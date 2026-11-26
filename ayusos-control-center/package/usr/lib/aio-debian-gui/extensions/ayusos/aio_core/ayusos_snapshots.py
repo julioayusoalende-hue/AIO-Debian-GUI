@@ -102,10 +102,14 @@ def restore_timeshift_snapshot(snapshot_id: str) -> Tuple[bool, str]:
     if not is_timeshift_installed():
         return False, "Timeshift no instalado"
     try:
-        # Timeshift restore requiere interacción; usamos --skip-grub para no tocar GRUB
+        # La restauración debe responder sola: no hay terminal interactiva bajo pkexec.
         result = subprocess.run(
-            comando_host(TIMESHIFT_CMD, "--restore", "--snapshot", snapshot_id, "--skip-grub"),
-            capture_output=True, text=True, timeout=300
+            comando_host(
+                TIMESHIFT_CMD, "--restore", "--snapshot", snapshot_id,
+                "--skip-grub", "--scripted", "--yes",
+            ),
+            capture_output=True, text=True, timeout=300,
+            stdin=subprocess.DEVNULL,
         )
         return result.returncode == 0, result.stdout or result.stderr
     except (OSError, subprocess.SubprocessError) as e:

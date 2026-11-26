@@ -136,12 +136,51 @@ paso_ayusos_diagnostics() {
     /usr/bin/python3 -I "$AIO_AYUSOS_RUNNER" ayusos_diagnostics
 }
 
+paso_ayusos_extensiones() {
+    local accion="${1:-status}"
+    local tarea uuid lista resultado=0
+    command -v gnome-extensions >/dev/null 2>&1 || {
+        err "No se encontró gnome-extensions en el sistema."
+        return 1
+    }
+
+    case "$accion" in
+        status)
+            lista=$(ejecutar_como_usuario_solicitante gnome-extensions list --enabled 2>/dev/null || true)
+            for tarea in "${!EXTENSIONES_GNOME[@]}"; do
+                uuid=${EXTENSIONES_GNOME[$tarea]}
+                if grep -Fxq "$uuid" <<< "$lista"; then
+                    ok "Extensión activa: $uuid"
+                else
+                    warn "Extensión no activa: $uuid"
+                    resultado=1
+                fi
+            done
+            ;;
+        repair)
+            for tarea in "${!EXTENSIONES_GNOME[@]}"; do
+                instalar_extension_gnome "$tarea" || resultado=1
+            done
+            for tarea in "${!EXTENSIONES_GNOME[@]}"; do
+                uuid=${EXTENSIONES_GNOME[$tarea]}
+                if ! ejecutar_como_usuario_solicitante gnome-extensions enable "$uuid" >/dev/null 2>&1; then
+                    warn "No se pudo activar $uuid"
+                    resultado=1
+                fi
+            done
+            ;;
+        *) err "Acción desconocida: $accion"; return 1 ;;
+    esac
+    return "$resultado"
+}
+
 # Registro de pasos: el core declara TITULOS antes de cargar extensiones.
 TITULOS[ayusos-update]="Actualizar AyusOS (stable/testing)"
 TITULOS[ayusos-snapshot]="Crear/restablecer snapshot del sistema (Timeshift/Btrfs)"
 TITULOS[ayusos-hardware]="Aplicar perfil de hardware (laptop/gaming/desktop)"
 TITULOS[ayusos-branding]="Aplicar tema, acento y fondos de AyusOS"
 TITULOS[ayusos-diagnostics]="Ejecutar diagnóstico completo del sistema"
+TITULOS[ayusos-extensiones]="Verificar y reparar extensiones de GNOME de AyusOS"
 
 ayusos_extension_status() {
     local update_status
@@ -169,6 +208,14 @@ ayusos_extension_status() {
             printf '##STATUS:ayusos-%s:0\n' "$tarea"
         fi
     done
+
+    if [ -d /usr/share/gnome-shell/extensions/dash-to-dock@micxgx.gmail.com ] &&
+       [ -d /usr/share/gnome-shell/extensions/blur-my-shell@aunetx ] &&
+       [ -d /usr/share/gnome-shell/extensions/appindicatorsupport@rgcjonas.gmail.com ]; then
+        printf '##STATUS:ayusos-extensiones:1\n'
+    else
+        printf '##STATUS:ayusos-extensiones:0\n'
+    fi
 }
 
 EXTENSION_STATUS_HOOKS+=(ayusos_extension_status)

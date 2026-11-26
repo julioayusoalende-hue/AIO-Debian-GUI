@@ -1,0 +1,9 @@
+#!/bin/sh
+# Abre el Centro de Control solo cuando el kernel solicita modo Recovery.
+set -eu
+case " $(cat /proc/cmdline 2>/dev/null || true) " in
+    *" ayusos-recovery "*)
+        exec /usr/bin/aio-debian-gui
+        ;;
+esac
+exit 0

@@ -207,6 +207,93 @@ def check_flatpak_flathub() -> Tuple[bool, str]:
         return False, "Error consultando Flatpak"
 
 
+EXTENSIONES_INCLUIDAS = {
+    "appindicatorsupport@rgcjonas.gmail.com": "AppIndicator",
+    "blur-my-shell@aunetx": "Blur my Shell",
+    "dash-to-dock@micxgx.gmail.com": "Dash to Dock",
+}
+EXTENSIONES_SISTEMA = Path("/usr/share/gnome-shell/extensions")
+DCONF_AYUSOS = Path("/etc/dconf/db/local.d/20-ayusos-extensions")
+ESTADO_MANTENIMIENTO = Path("/var/lib/aio-debian-gui/schedules")
+
+
+def _uid_solicitante() -> str:
+    for variable in ("PKEXEC_UID", "SUDO_UID"):
+        valor = os.environ.get(variable, "")
+        if valor.isdigit():
+            return valor
+    return str(os.getuid())
+
+
+def check_gnome_extensions() -> Tuple[bool, str]:
+    """Comprueba que las extensiones incluidas están instaladas y activadas."""
+    faltan = [nombre for uuid, nombre in EXTENSIONES_INCLUIDAS.items()
+              if not (EXTENSIONES_SISTEMA / uuid).is_dir()]
+    texto = leer_texto(str(DCONF_AYUSOS)) or ""
+    desactivadas = [nombre for uuid, nombre in EXTENSIONES_INCLUIDAS.items()
+                    if uuid not in texto]
+    if faltan:
+        return False, f"Faltan extensiones: {', '.join(faltan)}"
+    if desactivadas:
+        return False, f"Desactivadas por defecto: {', '.join(desactivadas)}"
+    return True, "Dash to Dock, Blur my Shell y AppIndicator incluidos"
+
+
+def check_scheduled_maintenance() -> Tuple[bool, str]:
+    """Último resultado del mantenimiento programado de AiO."""
+    estado = ESTADO_MANTENIMIENTO / f"{_uid_solicitante()}.json"
+    if not estado.is_file():
+        return True, "Sin mantenimiento programado"
+    try:
+        datos = json.loads(estado.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False, "No se pudo leer el estado del mantenimiento"
+    situacion = datos.get("status", "")
+    fecha = datos.get("finished") or datos.get("started") or "sin fecha"
+    if situacion == "success":
+        return True, f"Último mantenimiento correcto ({fecha})"
+    if situacion == "running":
+        return True, "Mantenimiento en curso"
+    detalle = datos.get("detail") or situacion or "desconocido"
+    return False, f"Último mantenimiento: {situacion} ({fecha}). {detalle}"[:300]
+
+
+def check_reboot_required() -> Tuple[bool, str]:
+    """Avisa si el sistema o el kernel necesitan reinicio."""
+    if Path("/var/run/reboot-required").exists() or Path("/run/reboot-required").exists():
+        return False, "El sistema requiere reinicio"
+    try:
+        result = subprocess.run(
+            comando_host("needrestart", "-b"),
+            capture_output=True, text=True, timeout=60,
+        )
+        if result.returncode == 0 and "NEEDRESTART-KSTA: 3" in result.stdout:
+            return False, "Hay un kernel nuevo; reinicia para usarlo"
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return True, "No hay reinicio pendiente"
+
+
+def check_ayusos_identity() -> Tuple[bool, str]:
+    """Comprueba que la identidad de la distro está completa."""
+    os_release = Path("/etc/os-release")
+    try:
+        contenido = os_release.read_text(encoding="utf-8")
+    except OSError:
+        return False, "Falta /etc/os-release"
+    if not any(line.startswith("ID=ayusos") for line in contenido.splitlines()):
+        return False, "os-release no identifica AyusOS"
+    faltan = [ruta for ruta in (
+        "/etc/ayusos-release",
+        "/etc/apt/sources.list.d/ayusos.sources",
+        "/usr/share/keyrings/ayusos-archive.gpg",
+        "/usr/share/backgrounds/ayusos",
+    ) if not Path(ruta).exists()]
+    if faltan:
+        return False, f"Faltan recursos de identidad: {', '.join(faltan)}"
+    return True, "Identidad de AyusOS completa"
+
+
 def run_full_diagnostics() -> Dict:
     """Ejecuta todos los diagnósticos y devuelve reporte completo."""
     checks = [
@@ -217,6 +304,10 @@ def run_full_diagnostics() -> Dict:
         ("timeshift_config", check_timeshift_config),
         ("grub_btrfs", check_grub_btrfs),
         ("ayusos_packages", check_ayusos_packages),
+        ("ayusos_identity", check_ayusos_identity),
+        ("gnome_extensions", check_gnome_extensions),
+        ("scheduled_maintenance", check_scheduled_maintenance),
+        ("reboot_required", check_reboot_required),
         ("snapshots_recent", check_snapshots_recent),
         ("firmware_updates", check_firmware_updates),
         ("flatpak_flathub", check_flatpak_flathub),

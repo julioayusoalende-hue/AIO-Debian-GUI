@@ -25,6 +25,14 @@ Una extensión puede:
 El helper core carga `/usr/lib/aio-debian-gui/extensions/*/helper.sh` después de declarar `TITULOS`.
 Cada extensión puede añadir entradas a `TITULOS` y hooks a `EXTENSION_STATUS_HOOKS`.
 
+## Runner de submódulos
+
+La extensión AyusOS incluye `/usr/lib/aio-debian-gui/extensions/ayusos/aio-run`.
+Este runner ejecuta los módulos de `ayusos.aio_core` con `runpy`, conservando el
+contexto de paquete y las rutas del core y de la extensión. El helper y
+`ayusos-aplicar-onboarding` lo invocan con `python3 -I`, evitando imports
+relativos rotos sin modificar el core.
+
 ## Paquete ayusos-control-center
 
 ```
@@ -35,6 +43,7 @@ ayusos-control-center/
 │   │   ├── apt/apt.conf.d/80ayusos-timeshift
 │   │   ├── calamares/modules/ayusos-aio-setup.conf
 │   │   ├── gdm3/conf.d/99-ayusos-onboarding.conf
+│   │   ├── xdg/autostart/ayusos-recovery.desktop
 │   │   └── systemd/system/
 │   │       ├── ayusos-onboarding.service
 │   │       ├── ayusos-aio-inicial.service
@@ -48,7 +57,10 @@ ayusos-control-center/
 │       │   ├── extension.py
 │       │   ├── branding.py
 │       │   ├── pages.py
+│       │   ├── recovery.py
 │       │   ├── helper.sh
+│       │   ├── aio-run
+│       │   ├── ayusos-recovery
 │       │   ├── software_manager/
 │       │   │   ├── admin.py
 │       │   │   ├── backend.py
@@ -60,14 +72,19 @@ ayusos-control-center/
 │       │       ├── ayusos_branding.py
 │       │       ├── ayusos_diagnostics.py
 │       │       ├── ayusos_hardware.py
+│       │       ├── ayusos_recovery.py
 │       │       ├── onboarding.py
 │       │       └── ayusos_onboarding_apply.py
 │       ├── local/libexec/
 │       │   ├── ayusos-aio-inicial
 │       │   ├── ayusos-aio-autorizar
 │       │   ├── ayusos-aplicar-onboarding
+│       │   ├── ayusos-recovery-session
 │       │   └── ayusos-timeshift
-│       └── share/ayusos-control-center/
+│       └── share/
+│           ├── ayusos-control-center/
+│           ├── backgrounds/ayusos/
+│           └── plymouth/themes/ayusos/
 └── build-deb.sh
 ```
 
@@ -97,32 +114,79 @@ En modo Live, el onboarding y el mantenimiento inicial se omiten para no interru
 
 El script de primer arranque usa el marcador `/var/lib/ayusos/onboarding-applied` para ejecutarlo una sola vez.
 
+## Ajustes recientes de 1.4.3
+
+- El helper y el aplicador de onboarding usan `aio-run`, que conserva el contexto
+  de paquete al ejecutar submódulos Python.
+- Timeshift utiliza `/etc/timeshift/timeshift.json`; el diagnóstico consulta esa
+  misma ruta. `ayusos-timeshift` admite cualquier raíz Btrfs, sin exigir el
+  subvolumen `/@`.
+- `paso_flatpak_setup` asegura el remoto Flathub incluso cuando Flatpak ya está
+  instalado.
+- Los fondos `/usr/share/backgrounds/ayusos/` y el tema Plymouth AyusOS forman
+  parte de `ayusos-control-center`. La rejilla de fondos se refresca con
+  `show_all()`.
+- `grub-btrfsd` se incluye localmente en la ISO y el build protege su binario,
+  servicio, configuración y módulo GRUB frente a la limpieza. No se solicita a
+  APT porque Debian 13 no publica ese paquete.
+- La pestaña de actualización abre `/usr/lib/ayusos/actualizar-terminal`. Se han
+  eliminado el lanzador `ayusos-actualizar.desktop` y su icono, y
+  `ayusos-instalar.desktop` ya no está en los favoritos del dock.
+- La comprobación de actualizaciones consulta el candidato de `ayusos-release`
+  mediante `apt-cache policy`, usando los índices APT locales.
+
+## Modo Recovery
+
+- La ISO añade la entrada `AyusOS Recovery` en GRUB e ISOLINUX. Es un clon de la
+  entrada Live normal con el parámetro de kernel `ayusos-recovery` y no cambia
+  la entrada predeterminada.
+- En el sistema instalado, `GRUB_RECOVERY_TITLE` y
+  `GRUB_CMDLINE_LINUX_RECOVERY` añaden la opción equivalente en las entradas de
+  recuperación generadas por GRUB.
+- Al detectar el parámetro, la extensión abre una ventana independiente de
+  recuperación y omite el onboarding. La ventana también se puede abrir desde
+  **Diagnósticos → Abrir recuperación**.
+- Un autostart de GNOME inicia la aplicación solo cuando existe
+  `ayusos-recovery`; los servicios automáticos de onboarding, autorización,
+  mantenimiento inicial y snapshot se omiten en ese modo.
+- La ventana permite reparar APT/dpkg, regenerar GRUB, ejecutar diagnóstico,
+  listar y restaurar snapshots de Timeshift y abrir una terminal de usuario.
+- Las acciones privilegiadas usan `ayusos-recovery` con una política Polkit
+  específica (`auth_admin`), sin ejecutar la terminal como root.
+
 ## Construcción
 
 ```bash
 ./scripts/build-deb.sh
 ./ayusos-control-center/build-deb.sh
 cd AyusOS-Linux
-sudo ./construir.sh
+pkexec env AYUSOS_OUTPUT="$PWD/AyusOS-Linux-1.4-release-final-v4-amd64.iso" "$PWD/construir.sh"
 ```
 
 El build de ISO valida que:
 
 - El core contiene `aio_core/extensions.py`.
 - El core no contiene `ayusos_*.py` ni `onboarding.py`.
-- La integración contiene `extensions/ayusos/extension.py`.
-- La integración contiene el servicio de onboarding.
-- Los servicios y lanzadores críticos están instalados.
+- La integración contiene `extensions/ayusos/extension.py` y el runner `aio-run`.
+- La integración contiene el servicio de onboarding y el modo Recovery.
+- Los servicios, `grub-btrfsd`, fondos, Plymouth y lanzadores críticos están instalados.
+- El lanzador redundante `ayusos-actualizar.desktop` no está presente.
+- GRUB e ISOLINUX contienen `AyusOS Recovery` con el parámetro `ayusos-recovery`.
 
 ## Estado validado
 
 - 75 tests pytest del core.
-- 8 tests de extensión, configuración TOML y aplicador de onboarding.
+- 20 tests de extensión, configuración TOML, aplicador de onboarding y Recovery.
+- 4 tests de arranque GRUB/ISOLINUX del modo Recovery.
 - Flujos GTK y gestor de software.
 - `scripts/check.sh` completo.
-- Sistema de archivos de la ISO: paquetes, extensión, helper, servicios, Calamares, Polkit y sintaxis.
+- Sistema de archivos de la ISO: paquetes, core limpio, extensión, `aio-run`,
+  helper, servicios, Timeshift/Flathub, `grub-btrfsd`, recursos, actualización
+  unificada, Recovery, Calamares, Polkit y sintaxis.
 
-ISO de referencia: `AyusOS-Linux-1.4-release-final-amd64.iso`.
+ISO validada: `AyusOS-Linux/AyusOS-Linux-1.4-release-final-v4-amd64.iso`.
+
+SHA-256: `d24b3443b46ba1ad898c3a1b1f817f1491d547326ba6c20ca07c03606af68b9f`.
 
 ## Verificación en una VM
 

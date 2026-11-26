@@ -1,0 +1,4 @@
+#!/bin/sh
+# Punto de entrada privilegiado y acotado al modo de recuperación de AyusOS.
+set -eu
+exec /usr/bin/python3 -I /usr/lib/aio-debian-gui/extensions/ayusos/aio-run ayusos_recovery "$@"

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=AyusOS Recovery
+Comment=Abrir las herramientas de recuperación al arrancar con ayusos-recovery
+Exec=/usr/local/libexec/ayusos-recovery-session
+OnlyShowIn=GNOME;
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

@@ -5,7 +5,7 @@ import os
 import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gtk
+from gi.repository import Gtk, GLib
 
 from aio_core.constants import (
     autorizacion_sin_contrasena_activa,
@@ -18,6 +18,8 @@ from .branding import (
     logo_cabecera,
 )
 from .pages import AyusOSPagesMixin
+from .recovery import open_recovery
+from .aio_core.ayusos_recovery import is_recovery_boot
 from .aio_core.onboarding import launch_onboarding, should_launch_onboarding
 
 
@@ -53,6 +55,8 @@ class Extension:
                 continue
             setattr(window, name, value.__get__(window, type(window)))
 
+        window._abrir_recuperacion = lambda: open_recovery(window)
+
         # El gestor de software también vive en la extensión. Se inserta en la
         # misma posición que ocupaba en el core para no cambiar la navegación.
         if not (es_flatpak() or os.environ.get("APPIMAGE") or os.environ.get("SNAP")):
@@ -75,8 +79,15 @@ class Extension:
         for title, factory in pages:
             window.notebook.append_page(factory(), Gtk.Label(label=title))
 
+        if is_recovery_boot():
+            def mostrar_recuperacion():
+                open_recovery(window)
+                return GLib.SOURCE_REMOVE
+
+            GLib.idle_add(mostrar_recuperacion)
+
     def should_launch_onboarding(self):
-        return should_launch_onboarding()
+        return False if is_recovery_boot() else should_launch_onboarding()
 
     def launch_onboarding(self, parent):
         return launch_onboarding(parent)

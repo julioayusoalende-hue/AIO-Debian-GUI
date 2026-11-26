@@ -87,10 +87,14 @@ else
     echo "- shellcheck no instalado: se omite"
 fi
 if command -v xmllint >/dev/null; then
-    xmllint --noout package/usr/share/polkit-1/actions/*.policy && bien "XML polkit" || fallo "XML polkit"
+    xmllint --noout package/usr/share/polkit-1/actions/*.policy \
+        ayusos-control-center/package/usr/share/polkit-1/actions/*.policy &&
+        bien "XML polkit" || fallo "XML polkit"
 fi
 if command -v desktop-file-validate >/dev/null; then
-    desktop-file-validate package/usr/share/applications/*.desktop && bien "archivo .desktop" || fallo "archivo .desktop"
+    desktop-file-validate package/usr/share/applications/*.desktop \
+        ayusos-control-center/package/etc/xdg/autostart/*.desktop &&
+        bien "archivo .desktop" || fallo "archivo .desktop"
 fi
 
 # La política no debe autorizar sesiones inactivas ni retener privilegios.

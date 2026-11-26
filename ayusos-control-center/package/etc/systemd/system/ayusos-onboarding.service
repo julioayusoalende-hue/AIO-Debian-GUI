@@ -10,6 +10,7 @@ Before=ayusos-aio-inicial.service
 ConditionPathExists=!/var/lib/ayusos/onboarding-done
 ConditionPathExists=!/run/live/medium
 ConditionKernelCommandLine=!boot=live
+ConditionKernelCommandLine=!ayusos-recovery
 StartLimitIntervalSec=0
 
 [Service]
