@@ -96,16 +96,12 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
 Releases:
-- version: 1.4.5
+- version: 1.4.9
   type: stable
   unix-timestamp: 1795651200
   description:
     C: >-
-      <ul><li>Coordinador global de operaciones: las páginas se bloquean durante mantenimiento, actualización, programación,
-      gestor de software, Salud y firmware, y no se permiten dos operaciones privilegiadas simultáneas.</li><li>Las fuentes
-      APT se actualizan de forma transaccional: temporal, respaldo previo y sustitución atómica, conservando el respaldo anterior
-      y rechazando enlaces simbólicos.</li><li>La revisión interactiva de autoremove usa un canal independiente de stdin,
-      que permanece cerrado para APT.</li><li>NVIDIA registra la regeneración correcta de dracut; un fallo deja la tarea pendiente
-      y se reintenta aunque la configuración ya esté escrita.</li></ul>
+      <ul><li>Salud del sistema aprovecha los índices APT frescos después del mantenimiento y solo marca la versión de AiO
+      como «Sin comprobar» cuando los índices están realmente desactualizados.</li></ul>
 ContentRating:
   oars-1.1: {}
