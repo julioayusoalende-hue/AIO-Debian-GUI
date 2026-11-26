@@ -1,6 +1,10 @@
 #!/bin/bash
+# Autorización inicial de AiO Debian GUI para AyusOS.
+# Crea reglas Polkit para todos los usuarios administradores locales.
+# Se ejecuta al primer arranque (servicio systemd) y en Live.
 set -euo pipefail
 umask 022
+
 state=/var/lib/ayusos
 helper=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 install -d -m 0755 "$state"
@@ -10,29 +14,50 @@ if [[ -d /run/live/medium ]] || grep -qw 'boot=live' /proc/cmdline; then
     live=true
 fi
 
+# Obtener todos los usuarios administradores (UID >= 1000, grupo sudo)
+admins=()
 if "$live"; then
-    username=user
-    uid=$(id -u "$username")
+    # En Live: usuario 'user' con UID 999 (o el que sea)
+    if id -u user >/dev/null 2>&1; then
+        admins+=("user")
+    fi
 else
     while IFS=: read -r username _ uid _ _ _ _; do
-        if (( uid >= 1000 && uid < 60000 )) && id -nG "$username" | grep -qw sudo; then
-            break
+        if (( uid >= 1000 && uid < 60000 )) && id -nG "$username" 2>/dev/null | grep -qw sudo; then
+            admins+=("$username")
         fi
-        uid=
     done < /etc/passwd
-    [[ -n "$uid" ]] || { echo 'Aún no hay una cuenta administradora local.' >&2; exit 1; }
 fi
+
+if [[ ${#admins[@]} -eq 0 ]]; then
+    echo 'Aún no hay cuentas administradoras locales.' >&2
+    exit 1
+fi
+
 directory=/etc/polkit-1/rules.d
 test -d "$directory"
+
+# En Live el overlay no admite ACL POSIX; en instalado sí.
 if "$live"; then
-    # El overlay de la sesión Live no admite ACL POSIX.
-    chmod o+x "$directory"
+    chmod o+x "$directory" 2>/dev/null || true
 else
-    setfacl -m "u:$uid:--x" "$directory"
+    # Dar acceso al directorio a cada admin (para que pueda leer su regla)
+    for u in "${admins[@]}"; do
+        setfacl -m "u:$u:--x" "$directory" 2>/dev/null || true
+    done
 fi
-rule=$(mktemp "$directory/.ayusos-aio.XXXXXX")
-trap 'rm -f -- "$rule"' EXIT
-bash -c 'source "$1"; generar_regla_polkit "$2"' _ "$helper" "$username" > "$rule"
-chmod 0644 "$rule"
-mv -f -- "$rule" "$directory/50-aiodebian-gui-$uid.rules"
-printf '%s\n' "$uid" > "$state/aio-usuario"
+
+# Generar una regla por cada administrador
+for username in "${admins[@]}"; do
+    uid=$(id -u "$username" 2>/dev/null) || continue
+    rule=$(mktemp "$directory/.ayusos-aio.XXXXXX")
+    trap 'rm -f -- "$rule"' EXIT
+    bash -c 'source "$1"; generar_regla_polkit "$2"' _ "$helper" "$username" > "$rule"
+    chmod 0644 "$rule"
+    mv -f -- "$rule" "$directory/50-aiodebian-gui-$uid.rules"
+done
+
+# Guardar lista de UIDs autorizados (uno por línea)
+printf '%s\n' "${admins[@]}" | while read -r u; do id -u "$u"; done > "$state/aio-usuarios"
+
+echo "Autorización AiO activada para ${#admins[@]} usuario(s): ${admins[*]}"

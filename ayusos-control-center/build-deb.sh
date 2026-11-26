@@ -16,6 +16,7 @@ chmod 755 "$STAGE/DEBIAN/postinst" "$STAGE/DEBIAN/prerm" \
     "$STAGE/usr/bin/ayusos-onboarding-graphical" \
     "$STAGE/usr/local/libexec/ayusos-aio-inicial" \
     "$STAGE/usr/local/libexec/ayusos-aio-autorizar" \
+    "$STAGE/usr/local/libexec/ayusos-aio-limpiar-usuario" \
     "$STAGE/usr/local/libexec/ayusos-aplicar-onboarding" \
     "$STAGE/usr/local/libexec/ayusos-timeshift" \
     "$STAGE/usr/local/libexec/ayusos-recovery-session" \

@@ -136,42 +136,59 @@ paso_ayusos_diagnostics() {
     /usr/bin/python3 -I "$AIO_AYUSOS_RUNNER" ayusos_diagnostics
 }
 
-paso_ayusos_extensiones() {
-    local accion="${1:-status}"
-    local tarea uuid lista resultado=0
-    command -v gnome-extensions >/dev/null 2>&1 || {
-        err "No se encontró gnome-extensions en el sistema."
-        return 1
-    }
-
+paso_ayusos_autorizacion() {
+    local accion="${1:-apply}"
+    local username="${2:-}"
     case "$accion" in
-        status)
-            lista=$(ejecutar_como_usuario_solicitante gnome-extensions list --enabled 2>/dev/null || true)
-            for tarea in "${!EXTENSIONES_GNOME[@]}"; do
-                uuid=${EXTENSIONES_GNOME[$tarea]}
-                if grep -Fxq "$uuid" <<< "$lista"; then
-                    ok "Extensión activa: $uuid"
-                else
-                    warn "Extensión no activa: $uuid"
-                    resultado=1
-                fi
-            done
+        apply)
+            info "Configurando autorización AiO para todos los administradores..."
+            /usr/local/libexec/ayusos-aio-autorizar
             ;;
-        repair)
-            for tarea in "${!EXTENSIONES_GNOME[@]}"; do
-                instalar_extension_gnome "$tarea" || resultado=1
-            done
-            for tarea in "${!EXTENSIONES_GNOME[@]}"; do
-                uuid=${EXTENSIONES_GNOME[$tarea]}
-                if ! ejecutar_como_usuario_solicitante gnome-extensions enable "$uuid" >/dev/null 2>&1; then
-                    warn "No se pudo activar $uuid"
-                    resultado=1
-                fi
-            done
+        remove-user)
+            [ -n "$username" ] || { err "Falta nombre de usuario."; return 1; }
+            info "Eliminando autorización AiO para $username..."
+            /usr/local/libexec/ayusos-aio-limpiar-usuario "$username"
+            ;;
+        status)
+            info "Estado de autorización AiO..."
+            state=/var/lib/ayusos
+            if [[ -f "$state/aio-usuarios" ]]; then
+                echo "Usuarios autorizados:"
+                while read -r uid; do
+                    user=$(getent passwd "$uid" | cut -d: -f1)
+                    echo "  - $user (UID $uid)"
+                done < "$state/aio-usuarios"
+            else
+                echo "Sin usuarios autorizados."
+            fi
             ;;
         *) err "Acción desconocida: $accion"; return 1 ;;
     esac
-    return "$resultado"
+}
+
+paso_ayusos_identity() {
+    local accion="${1:-snapshot}"
+    local archivo="${2:-}"
+    local modulo="$AIO_AYUSOS_MODULE_DIR/ayusos_identity.py"
+    [ -f "$modulo" ] || { err "Módulo ayusos_identity no encontrado."; return 1; }
+
+    case "$accion" in
+        snapshot)
+            info "Capturando identidad de AyusOS..."
+            /usr/bin/python3 -I "$AIO_AYUSOS_RUNNER" ayusos_identity snapshot
+            ;;
+        backup)
+            [ -n "$archivo" ] || { err "Falta ruta de archivo para backup."; return 1; }
+            info "Guardando backup de identidad en $archivo..."
+            /usr/bin/python3 -I "$AIO_AYUSOS_RUNNER" ayusos_identity backup "$archivo"
+            ;;
+        restore)
+            [ -n "$archivo" ] || { err "Falta archivo de backup para restaurar."; return 1; }
+            info "Restaurando identidad de AyusOS desde $archivo..."
+            /usr/bin/python3 -I "$AIO_AYUSOS_RUNNER" ayusos_identity restore "$archivo"
+            ;;
+        *) err "Acción desconocida: $accion"; return 1 ;;
+    esac
 }
 
 # Registro de pasos: el core declara TITULOS antes de cargar extensiones.
@@ -180,7 +197,8 @@ TITULOS[ayusos-snapshot]="Crear/restablecer snapshot del sistema (Timeshift/Btrf
 TITULOS[ayusos-hardware]="Aplicar perfil de hardware (laptop/gaming/desktop)"
 TITULOS[ayusos-branding]="Aplicar tema, acento y fondos de AyusOS"
 TITULOS[ayusos-diagnostics]="Ejecutar diagnóstico completo del sistema"
-TITULOS[ayusos-extensiones]="Verificar y reparar extensiones de GNOME de AyusOS"
+TITULOS[ayusos-autorizacion]="Gestionar autorización sin contraseña para administradores"
+TITULOS[ayusos-identity]="Backup y restauración de la identidad de AyusOS"
 
 ayusos_extension_status() {
     local update_status
@@ -209,12 +227,20 @@ ayusos_extension_status() {
         fi
     done
 
-    if [ -d /usr/share/gnome-shell/extensions/dash-to-dock@micxgx.gmail.com ] &&
-       [ -d /usr/share/gnome-shell/extensions/blur-my-shell@aunetx ] &&
-       [ -d /usr/share/gnome-shell/extensions/appindicatorsupport@rgcjonas.gmail.com ]; then
-        printf '##STATUS:ayusos-extensiones:1\n'
+    # Estado de autorización
+    state=/var/lib/ayusos
+    if [[ -f "$state/aio-usuarios" ]]; then
+        count=$(wc -l < "$state/aio-usuarios")
+        printf '##STATUS:ayusos-autorizacion:%d\n' "$count"
     else
-        printf '##STATUS:ayusos-extensiones:0\n'
+        printf '##STATUS:ayusos-autorizacion:0\n'
+    fi
+
+    # Estado de identidad (si existen fuentes APT o llavero)
+    if [[ -f /etc/apt/sources.list.d/ayusos.sources ]] || [[ -f /usr/share/keyrings/ayusos-archive.gpg ]]; then
+        printf '##STATUS:ayusos-identity:1\n'
+    else
+        printf '##STATUS:ayusos-identity:0\n'
     fi
 }
 

@@ -1,0 +1,43 @@
+#!/bin/bash
+# Limpia la regla Polkit de AiO cuando se elimina un usuario administrador.
+# Se invoca desde /usr/local/sbin/ayusos-aio-limpiar-usuario <username>
+# y también puede llamarse manualmente.
+set -euo pipefail
+
+username="${1:-}"
+if [[ -z "$username" ]]; then
+    echo "Uso: $0 <username>" >&2
+    exit 1
+fi
+
+# Validar nombre de usuario
+[[ "$username" =~ ^[a-zA-Z_][a-zA-Z0-9_.-]*[$]?$ ]] || {
+    echo "Nombre de usuario no válido." >&2
+    exit 1
+}
+
+uid=$(id -u "$username" 2>/dev/null) || {
+    echo "Usuario '$username' no existe." >&2
+    exit 1
+}
+
+POLKIT_RULES_DIR=/etc/polkit-1/rules.d
+PASSWORDLESS_STATE_DIR=/var/lib/ayusos/passwordless
+
+# Eliminar regla Polkit
+rule_file="$POLKIT_RULES_DIR/50-aiodebian-gui-${uid}.rules"
+[[ -f "$rule_file" ]] && rm -f -- "$rule_file"
+
+# Eliminar marcador de estado
+marker="$PASSWORDLESS_STATE_DIR/${uid}.rules"
+[[ -f "$marker" ]] && rm -f -- "$marker"
+
+# Actualizar lista de usuarios autorizados
+state=/var/lib/ayusos
+if [[ -f "$state/aio-usuarios" ]]; then
+    # Filtrar el UID eliminado
+    grep -v "^${uid}$" "$state/aio-usuarios" > "$state/aio-usuarios.tmp" 2>/dev/null || true
+    mv -f "$state/aio-usuarios.tmp" "$state/aio-usuarios"
+fi
+
+echo "Regla Polkit de AiO eliminada para $username (UID $uid)."
