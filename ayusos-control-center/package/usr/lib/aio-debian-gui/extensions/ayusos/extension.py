@@ -5,7 +5,7 @@ import os
 import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gtk
+from gi.repository import Gtk, GLib
 
 from aio_core.constants import (
     autorizacion_sin_contrasena_activa,
@@ -18,6 +18,8 @@ from .branding import (
     logo_cabecera,
 )
 from .pages import AyusOSPagesMixin
+from .recovery import open_recovery
+from .aio_core.ayusos_recovery import is_recovery_boot
 from .aio_core.onboarding import launch_onboarding, should_launch_onboarding
 
 
@@ -97,6 +99,14 @@ class Extension:
         # Añadir filtro "Perfil AyusOS" a la página de Apps recomendadas
         self._añadir_filtro_ayusos(window)
 
+        # Soporte de modo recuperación
+        if is_recovery_boot():
+            def mostrar_recuperacion():
+                open_recovery(window)
+                return GLib.SOURCE_REMOVE
+
+            GLib.idle_add(mostrar_recuperacion)
+
     def _añadir_filtro_ayusos(self, window):
         """Añade un botón para filtrar apps del perfil AyusOS."""
         if not hasattr(window, "recommended_category") or not hasattr(window, "recommended_grid"):
@@ -130,7 +140,10 @@ class Extension:
         window.recommended_grid.set_filter_func(lambda t: coincidencias[t.get_index()])
 
     def should_launch_onboarding(self):
-        return should_launch_onboarding()
+        return False if is_recovery_boot() else should_launch_onboarding()
 
     def launch_onboarding(self, parent):
         return launch_onboarding(parent)
+
+    def is_recovery_boot(self):
+        return is_recovery_boot()
