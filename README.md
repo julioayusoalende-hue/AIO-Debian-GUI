@@ -68,12 +68,15 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.4.5
+### Lo nuevo en la 1.4.9
 
 - Coordinador global de operaciones: las páginas se bloquean durante cualquier operación administrativa y no se permiten dos tareas privilegiadas simultáneas.
-- Las fuentes APT se actualizan de forma transaccional, con respaldo previo y sustitución atómica.
-- La revisión interactiva de `autoremove` usa un canal independiente de stdin.
+- Autoactualización estable segura: audita `dpkg`, simula sin eliminaciones e instala exactamente la versión aprobada.
+- Fuentes APT transaccionales, con respaldo previo y sustitución atómica.
+- `autoremove` usa un canal independiente de stdin.
 - NVIDIA registra la regeneración correcta de dracut y reintenta la tarea si falla.
+- GRUB se valida con `grub-script-check`, exige entradas arrancables y conserva una copia de recuperación.
+- Salud es de solo lectura por defecto, pide consentimiento antes de actualizar APT y usa índices frescos sin volver a pedir privilegios.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -81,7 +84,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.4.5**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.4.9**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -105,10 +108,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.4.5:
+Para la versión 1.4.9:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.4.5_all.deb
+sudo apt install ./aio-debian-gui_1.4.9_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.
