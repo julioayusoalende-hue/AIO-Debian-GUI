@@ -1,5 +1,11 @@
 # Cambios
 
+## Sin publicar
+
+- API genérica de extensiones: las distribuciones pueden añadir branding, páginas, onboarding y pasos privilegiados sin modificar el core.
+- El helper carga asistentes de extensión y hooks de estado desde `/usr/lib/aio-debian-gui/extensions/`.
+- El gestor de software y el branding específico de AyusOS se trasladan al paquete independiente `ayusos-control-center`; aio-debian-gui queda agnóstico.
+
 ## 1.4.9
 
 - Salud del sistema aprovecha los índices APT frescos después del mantenimiento y solo marca la versión de AiO como «Sin comprobar» cuando los índices están realmente desactualizados.

@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'package', 'usr', 'lib', 'aio-debian-gui'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'ayusos-control-center', 'package', 'usr', 'lib', 'aio-debian-gui', 'extensions', 'ayusos'))
 
 from software_manager import admin
 

@@ -19,7 +19,7 @@ from .admin import (
 
 FLATPAK_REPO = 'https://dl.flathub.org/repo/flathub.flatpakrepo'
 MAINTENANCE = '/usr/lib/aio-debian-gui/aio-debian-gui-helper'
-ADMIN = '/usr/lib/aio-debian-gui/software_manager/admin.py'
+ADMIN = '/usr/lib/aio-debian-gui/extensions/ayusos/software_manager/admin.py'
 
 
 def run(args, timeout=None, stdin=None):

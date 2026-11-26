@@ -31,9 +31,6 @@ HOMEPAGE = "https://github.com/julioayusoalende-hue/AIO-Debian-GUI"
 
 DEBIAN_LOGO = os.path.join(_SHARE_DIR, "debian-openlogo.png")
 UBUNTU_LOGO = os.path.join(_SHARE_DIR, "ubuntu-logo.svg")
-AYUSOS_LOGO = os.path.join(_SHARE_DIR, "ayusos-logo.png")
-
-NOMBRE_AYUSOS = re.compile(r"^AyusOS(?: Linux)?\b", re.IGNORECASE)
 
 FASTFETCH_LAYOUT = os.path.join(_SHARE_DIR, "fastfetch-layout.jsonc")
 NOTAS_VERSION = os.path.join(_SHARE_DIR, "release-notes.txt")
@@ -213,22 +210,15 @@ def distribucion_anfitrion(valores=None):
     return maintenance_distro(valores) or "no-soportada"
 
 def identidad_distribucion(datos):
-    sistema = datos.get("ID")
-    if sistema == "debian" and (
-        any(NOMBRE_AYUSOS.match(datos.get(campo, "")) for campo in ("NAME", "PRETTY_NAME"))
-        or datos.get("LOGO") in ("ayusos", "ayusos-logo")
-    ):
-        return "ayusos"
-    return sistema
+    return datos.get("ID")
 
 def logo_distribucion(distribucion):
-    if distribucion == "ayusos":
-        return AYUSOS_LOGO, "Logotipo de AyusOS Linux"
     if distribucion == "ubuntu":
         return UBUNTU_LOGO, "Logotipo de Ubuntu"
     if distribucion == "debian":
         return DEBIAN_LOGO, "Logotipo de Debian"
     return None, None
+
 
 def imagen_logo_distribucion(datos, tamano):
     from gi.repository import GdkPixbuf, GLib, Gtk
@@ -390,7 +380,7 @@ def canales_ghostty(distribucion):
     sistema = distribucion.get("ID")
     version = distribucion.get("VERSION_ID", "")
     appimage = {"type": "appimage"}
-    if sistema in ("debian", "ayusos"):
+    if sistema == "debian":
         return [appimage]
     if sistema == "ubuntu":
         if re.fullmatch(r"[0-9]{2,}\.[0-9]{2}", version) and tuple(map(int, version.split("."))) >= (26, 4):

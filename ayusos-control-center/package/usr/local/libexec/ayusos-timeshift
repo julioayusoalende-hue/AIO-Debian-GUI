@@ -1,0 +1,67 @@
+#!/bin/sh
+set -eu
+
+live() {
+    [ -d /run/live/medium ] || grep -qw 'boot=live' /proc/cmdline
+}
+
+compatible() {
+    ! live && [ -d /run/systemd/system ] && [ "$(findmnt -n -o FSTYPE --mountpoint /)" = 'btrfs' ]
+}
+
+if [ "${1:-}" = compatible ]; then
+    compatible
+    exit $?
+fi
+
+case "${1:-}" in
+    inicial|apt) ;;
+    *) exit 2 ;;
+esac
+
+# No se ejecuta en la sesión Live, en un chroot ni desde un snapshot.
+if ! compatible || [ ! -s /boot/grub/grub.cfg ]; then
+    exit 0
+fi
+
+exec 9>/run/lock/ayusos-timeshift.lock
+flock 9
+marca=/var/lib/ayusos/snapshot-inicial
+if [ "$1" = inicial ] && [ -e "$marca" ]; then
+    exit 0
+fi
+
+config=/etc/timeshift/timeshift.json
+if [ ! -s "$config" ]; then
+    uuid=$(findmnt -n -o UUID --mountpoint /)
+    [ -n "$uuid" ]
+    install -d /etc/timeshift
+    temporal=$(mktemp /etc/timeshift/.timeshift.XXXXXXXX)
+    trap 'rm -f "$temporal"' EXIT
+    cat > "$temporal" <<JSON
+{
+  "backup_device_uuid": "$uuid",
+  "btrfs_mode": "true",
+  "include_btrfs_home_for_backup": "false",
+  "include_btrfs_home_for_restore": "false",
+  "schedule_boot": "false",
+  "schedule_hourly": "false",
+  "schedule_daily": "false",
+  "schedule_weekly": "false",
+  "schedule_monthly": "false"
+}
+JSON
+    mv "$temporal" "$config"
+    trap - EXIT
+fi
+
+case "$1" in
+    inicial) comentario='AyusOS: instalación inicial' ;;
+    apt) comentario='AyusOS: antes de cambios de paquetes APT' ;;
+esac
+
+# APT cancela el cambio de paquetes si Timeshift devuelve un error.
+timeshift --create --btrfs --scripted --comments "$comentario"
+update-grub
+install -d /var/lib/ayusos
+touch "$marca"

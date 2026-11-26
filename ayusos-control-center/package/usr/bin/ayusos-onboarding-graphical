@@ -1,0 +1,97 @@
+#!/bin/bash
+# ayusos-onboarding-graphical - Lanza el wizard de onboarding en la sesion grafica
+set -euo pipefail
+
+state=/var/lib/ayusos
+install -d -m 0755 "$state"
+
+# Esperar hasta 30s a que exista una sesion de usuario local.
+USER_NAME=""
+USER_UID=""
+SESSION_TYPE=""
+SESSION_DISPLAY=""
+for _ in $(seq 1 30); do
+    while read -r session_id session_uid session_user _rest; do
+        [[ "$session_id" =~ ^[0-9]+$ && "$session_uid" =~ ^[1-9][0-9]*$ ]] || continue
+        (( session_uid >= 1000 && session_uid < 60000 )) || continue
+        [[ -n "$session_user" && "$session_user" != root ]] || continue
+
+        props=$(loginctl show-session "$session_id" \
+            -p Name -p UID -p Type -p Remote -p Active -p Display 2>/dev/null || true)
+        name=$(sed -n 's/^Name=//p' <<< "$props")
+        uid=$(sed -n 's/^UID=//p' <<< "$props")
+        type=$(sed -n 's/^Type=//p' <<< "$props")
+        display=$(sed -n 's/^Display=//p' <<< "$props")
+
+        # En algunos VMs logind reporta Type=tty aunque GNOME corre en Wayland.
+        # Aceptar la sesion si el runtime y el bus de usuario ya existen.
+        if [[ "$uid" =~ ^[1-9][0-9]*$ && -S "/run/user/$uid/bus" ]]; then
+            USER_NAME=${name:-$session_user}
+            USER_UID=$uid
+            SESSION_TYPE=$type
+            SESSION_DISPLAY=$display
+            echo "Sesion detectada: id=$session_id user=$USER_NAME uid=$USER_UID type=$SESSION_TYPE display=$SESSION_DISPLAY"
+            break 2
+        fi
+    done < <(loginctl list-sessions --no-legend 2>/dev/null || true)
+    sleep 1
+done
+
+# Fallback inmediato: primera cuenta local con privilegios de administrador.
+if [[ -z "$USER_NAME" ]]; then
+    while IFS=: read -r username _ uid _ _ _ _; do
+        if (( uid >= 1000 && uid < 60000 )) && id -nG "$username" | grep -qw sudo; then
+            USER_NAME=$username
+            USER_UID=$uid
+            SESSION_TYPE=wayland
+            break
+        fi
+    done < /etc/passwd
+fi
+
+[[ -n "$USER_NAME" && "$USER_UID" =~ ^[1-9][0-9]*$ ]] || {
+    echo 'No se encontro una sesion de usuario de AyusOS.' >&2
+    exit 1
+}
+
+USER_RUNTIME="/run/user/$USER_UID"
+USER_HOME=$(getent passwd "$USER_UID" | cut -d: -f6)
+if [[ ! -S "$USER_RUNTIME/bus" || ! -d "$USER_HOME" ]]; then
+    echo "La sesion de $USER_NAME aun no esta lista (runtime=$USER_RUNTIME)." >&2
+    exit 1
+fi
+
+# Construir entorno de sesion. En Wayland no hay DISPLAY; en X11 puede haberlo.
+DISPLAY_VALUE="${DISPLAY:-:0}"
+WAYLAND_DISPLAY_VALUE="${WAYLAND_DISPLAY:-wayland-0}"
+if [[ -n "$SESSION_DISPLAY" ]]; then
+    if [[ "$SESSION_TYPE" == x11 ]]; then
+        DISPLAY_VALUE="$SESSION_DISPLAY"
+    else
+        WAYLAND_DISPLAY_VALUE="$SESSION_DISPLAY"
+    fi
+fi
+# Si el socket de Wayland no esta en el runtime, probar el display por defecto.
+if [[ ! -S "$USER_RUNTIME/$WAYLAND_DISPLAY_VALUE" && -S "$USER_RUNTIME/wayland-0" ]]; then
+    WAYLAND_DISPLAY_VALUE=wayland-0
+fi
+
+echo "Lanzando onboarding de AyusOS para $USER_NAME ($SESSION_TYPE)."
+runuser -u "$USER_NAME" -- env \
+    HOME="$USER_HOME" \
+    USER="$USER_NAME" \
+    LOGNAME="$USER_NAME" \
+    XDG_RUNTIME_DIR="$USER_RUNTIME" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=$USER_RUNTIME/bus" \
+    XDG_SESSION_TYPE="$SESSION_TYPE" \
+    DISPLAY="$DISPLAY_VALUE" \
+    WAYLAND_DISPLAY="$WAYLAND_DISPLAY_VALUE" \
+    LANG=es_ES.UTF-8 \
+    /usr/bin/aio-debian-gui --onboarding-only
+
+# Marcar como completado para no volver a mostrar (incluso si el usuario salto).
+touch "$state/onboarding-done"
+mkdir -p "$USER_HOME/.config/ayusos"
+touch "$USER_HOME/.config/ayusos/onboarding-done"
+chown "$USER_UID:$USER_UID" "$USER_HOME/.config/ayusos/onboarding-done"
+echo 'Onboarding de AyusOS completado.'

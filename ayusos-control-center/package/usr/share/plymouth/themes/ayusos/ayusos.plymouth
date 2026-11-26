@@ -1,0 +1,4 @@
+[PlymouthTheme]
+imageDir=/usr/share/plymouth/themes/ayusos
+monospaceFont=DejaVu Sans Mono 12
+title=AyusOS Linux

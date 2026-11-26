@@ -1,0 +1,12 @@
+[Unit]
+Description=Configurar la autorización inicial de AiO Debian GUI
+After=live-config.service
+Before=display-manager.service ayusos-aio-inicial.service
+ConditionPathExists=!/var/lib/ayusos/aio-usuario
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/ayusos-aio-autorizar
+
+[Install]
+WantedBy=graphical.target

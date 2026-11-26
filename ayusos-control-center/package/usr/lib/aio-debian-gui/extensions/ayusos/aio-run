@@ -1,0 +1,17 @@
+#!/usr/bin/python3
+"""Ejecuta submódulos AyusOS conservando el contexto de paquete."""
+
+import runpy
+import sys
+from pathlib import Path
+
+base = Path(__file__).resolve().parent
+sys.path.insert(0, str(base.parent))          # .../extensions
+sys.path.insert(0, str(base.parent.parent))   # .../aio-debian-gui
+
+if len(sys.argv) < 2:
+    raise SystemExit("Uso: aio-run <módulo> [argumentos...]")
+
+module = sys.argv[1]
+sys.argv = sys.argv[1:]
+runpy.run_module(f"ayusos.aio_core.{module}", run_name="__main__")

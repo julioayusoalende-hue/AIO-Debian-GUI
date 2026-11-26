@@ -1,0 +1,13 @@
+[Unit]
+Description=Crear la instantánea inicial de AyusOS Linux
+After=local-fs.target
+ConditionPathExists=!/run/live/medium
+ConditionPathExists=!/var/lib/ayusos/snapshot-inicial
+ConditionPathExists=/boot/grub/grub.cfg
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/ayusos-timeshift inicial
+
+[Install]
+WantedBy=multi-user.target

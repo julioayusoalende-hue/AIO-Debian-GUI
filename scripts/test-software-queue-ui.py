@@ -14,7 +14,7 @@ if not Gtk.init_check([])[0]:
     sys.exit(0)
 
 root = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(root / 'package/usr/lib/aio-debian-gui'))
+sys.path.insert(0, str(root / 'ayusos-control-center/package/usr/lib/aio-debian-gui/extensions/ayusos'))
 from software_manager import backend
 from software_manager.manager import SoftwareManagerPage
 

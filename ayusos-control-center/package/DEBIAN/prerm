@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = remove ] && [ -d /run/systemd/system ]; then
+    systemctl disable --now ayusos-onboarding.service \
+        ayusos-aio-inicial.service \
+        ayusos-aio-autorizacion.service \
+        ayusos-snapshot-inicial.service >/dev/null 2>&1 || true
+    systemctl daemon-reload
+fi
+
+exit 0

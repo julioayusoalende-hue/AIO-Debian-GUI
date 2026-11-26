@@ -58,6 +58,8 @@ def esperar_disposicion(ventana, ancho):
 
 # Una operación privilegiada debe bloquear todas las páginas y rechazar otra simultánea.
 ventana_operaciones = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+if ventana_operaciones.pagina_software is None:
+    ventana_operaciones.pagina_software = Gtk.Box()
 assert ventana_operaciones.pagina_software.get_sensitive()
 token_operacion = ventana_operaciones._iniciar_operacion('Prueba de coordinación')
 assert token_operacion is not None
@@ -71,7 +73,6 @@ ventana_operaciones.destroy()
 
 for distro, version, expected in (
     ('debian', '13', ['appimage']),
-    ('ayusos', '0.1', ['appimage']),
     ('ubuntu', '24.04', ['appimage']),
     ('ubuntu', '26.04', ['deb', 'appimage']),
     ('ubuntu', '26.10', ['deb', 'appimage']),
@@ -81,31 +82,13 @@ for distro, version, expected in (
         {'ID': distro, 'VERSION_ID': version})] == expected
 
 for os_release, esperado in (
-    ('ID=ayusos\nVERSION_ID="0.1"\nPRETTY_NAME="AyusOS Linux 0.1 (base Debian 13)"\n',
-     'AyusOS Linux 0.1'),
-    ('ID=debian\nVERSION_ID="13"\nNAME="AyusOS Linux"\nPRETTY_NAME="AyusOS Linux 0.3"\n',
-     'AyusOS Linux 0.3'),
-    ('ID=debian\nVERSION_ID="13"\nLOGO=ayusos-logo\n', 'AyusOS Linux'),
+    ('ID=debian\nVERSION_ID="13"\nPRETTY_NAME="Debian GNU/Linux 13"\n',
+     'Debian GNU/Linux 13'),
+    ('ID=ubuntu\nVERSION_ID="24.04"\nPRETTY_NAME="Ubuntu 24.04 LTS"\n',
+     'Ubuntu 24.04 LTS'),
 ):
     with patch.object(app, 'leer_texto', return_value=os_release):
-        ayusos = app.datos_distribucion_anfitrion()
-        assert app.distribucion_anfitrion() == 'debian'
-        assert app.sistema_operativo().startswith(esperado)
-    with patch.object(app, 'datos_distribucion_anfitrion', return_value=ayusos):
-        ventana = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
-        _, sistema = ventana.get_titlebar().get_custom_title().get_children()
-        logo, nombre = sistema.get_children()
-        assert logo.get_accessible().get_name() == 'Logotipo de AyusOS Linux'
-        assert logo.get_pixbuf().get_width() == 16
-        assert nombre.get_text() == esperado
-        detalles = ventana._crear_detalles_sistema()
-        scroll = next(w for w in detalles.get_content_area().get_children()
-                      if isinstance(w, Gtk.ScrolledWindow))
-        imagen = scroll.get_child().get_child().get_children()[0]
-        assert imagen.get_accessible().get_name() == 'Logotipo de AyusOS Linux'
-        assert imagen.get_pixbuf().get_width() == 100
-        detalles.destroy()
-        ventana.destroy()
+        assert app.sistema_operativo() == esperado
 
 with patch.object(app.urllib.request, 'urlopen') as request:
     request.return_value.__enter__.return_value.geturl.return_value = (
@@ -262,6 +245,8 @@ for formato in ('appimage', 'flatpak', 'deb'):
 
 for sincronizado in (True, False):
     window = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+    if window.pagina_software is None:
+        window.pagina_software = Gtk.Box()
     window.distribucion = 'debian'
     with patch.object(app, 'formato_actualizacion', return_value='deb'), \
          patch.object(app.threading, 'Thread') as worker, \
@@ -319,7 +304,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         w = app.VentanaPrincipal({'idioma': language, 'tema': 'claro', 'modo_simple': False})
     w.show_all()
     settle()
-    assert w.notebook.get_n_pages() == 5
+    assert w.notebook.get_n_pages() == 4
     assert w.notebook.page_num(w.pagina_terminal) == -1
     assert w.btn_terminal_cabecera.get_tooltip_text() == app.traducir('Terminal')
     assert w.btn_terminal_cabecera.get_image().get_icon_name()[0] == 'utilities-terminal-symbolic'
@@ -327,7 +312,7 @@ for language in ('es', 'en', 'fr', 'zh'):
     assert firmware.get_accessible().get_name() == app.traducir('Firmware')
     assert firmware.get_child().get_ancestor(Gtk.Notebook) is w.notebook
     assert not firmware.get_expanded()
-    assert w.notebook.get_nth_page(4) == w.grub_pagina
+    assert w.notebook.get_nth_page(3) == w.grub_pagina
     assert w.notebook.get_tab_label_text(w.grub_pagina) == app.traducir('Inicio')
     assert w.grub_pagina.get_style_context().has_class("aio-page")
     grub_card = w.grub_formulario.get_ancestor(Gtk.Frame)
@@ -379,9 +364,9 @@ for language in ('es', 'en', 'fr', 'zh'):
         w._grub_finalizado('apply', grub_status, None)
     assert [w.notebook.get_tab_label_text(page) for page in w.notebook.get_children()] == [
         app.traducir(name) for name in
-        ('Configuración y mantenimiento', 'Gestor de software', 'Apps recomendadas', 'Backup', 'Inicio')
+        ('Configuración y mantenimiento', 'Apps recomendadas', 'Backup', 'Inicio')
     ]
-    if language == 'es':
+    if language == 'es' and w.pagina_software is not None:
         column = w.pagina_software.view.get_column(0)
         indicator, package_name = column.get_cells()
         model = Gtk.ListStore(str, str, str, str, str)
@@ -490,12 +475,12 @@ for language in ('es', 'en', 'fr', 'zh'):
         name, description = text.get_children()
         assert name.get_text() == app.APLICACIONES_BACKUP[app_id]['name']
         assert description.get_text() == app.traducir(app.APLICACIONES_BACKUP[app_id]['description'])
-    w.notebook.set_current_page(3)
+    w.notebook.set_current_page(2)
     w.resize(600, 900)
     settle()
     assert w.get_size()[0] <= 601, (language, w.get_size())
     assert all(button.get_mapped() for button in w.backup_buttons.values())
-    w.notebook.set_current_page(2)
+    w.notebook.set_current_page(1)
     settle()
     assert w.get_size()[0] <= 601, (language, w.get_size())
     assert all(button.get_mapped() for button in w.recommended_buttons.values())
@@ -1063,10 +1048,10 @@ w._recomendadas_comprobadas(w.recommended_scan_generation - 1, {}, [])
 assert w.recommended_indicators[('video-downloader', 'flatpak')].get_visible()
 
 with patch.object(w, '_cambiar_pestana_recomendadas') as refresh:
-    w.notebook.set_current_page(2)
+    w.notebook.set_current_page(1)
     refresh.reset_mock()
     w._refrescar_recomendadas_al_volver(None, None)
-    refresh.assert_called_once_with(w.notebook, w.pagina_recomendadas, 2)
+    refresh.assert_called_once_with(w.notebook, w.pagina_recomendadas, 1)
 w.notebook.set_current_page(0)
 
 # Selección múltiple: puede mezclar formatos, cambiar de formato y reintentar los fallos.

@@ -1,0 +1,38 @@
+#!/bin/bash
+set -euo pipefail
+umask 022
+state=/var/lib/ayusos
+helper=/usr/lib/aio-debian-gui/aio-debian-gui-helper
+install -d -m 0755 "$state"
+
+live=false
+if [[ -d /run/live/medium ]] || grep -qw 'boot=live' /proc/cmdline; then
+    live=true
+fi
+
+if "$live"; then
+    username=user
+    uid=$(id -u "$username")
+else
+    while IFS=: read -r username _ uid _ _ _ _; do
+        if (( uid >= 1000 && uid < 60000 )) && id -nG "$username" | grep -qw sudo; then
+            break
+        fi
+        uid=
+    done < /etc/passwd
+    [[ -n "$uid" ]] || { echo 'Aún no hay una cuenta administradora local.' >&2; exit 1; }
+fi
+directory=/etc/polkit-1/rules.d
+test -d "$directory"
+if "$live"; then
+    # El overlay de la sesión Live no admite ACL POSIX.
+    chmod o+x "$directory"
+else
+    setfacl -m "u:$uid:--x" "$directory"
+fi
+rule=$(mktemp "$directory/.ayusos-aio.XXXXXX")
+trap 'rm -f -- "$rule"' EXIT
+bash -c 'source "$1"; generar_regla_polkit "$2"' _ "$helper" "$username" > "$rule"
+chmod 0644 "$rule"
+mv -f -- "$rule" "$directory/50-aiodebian-gui-$uid.rules"
+printf '%s\n' "$uid" > "$state/aio-usuario"

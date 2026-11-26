@@ -1,9 +1,6 @@
 """Componentes independientes de la interfaz gráfica de AiO Debian GUI."""
 
-# Re-exportar funciones principales para compatibilidad
 from .clock import sincronizar
-
-# Constantes y utilidades compartidas
 from .constants import (
     APLICACIONES_BACKUP,
     APP_ICON_NAME,
@@ -11,7 +8,6 @@ from .constants import (
     APT_BACKUP_FILENAME,
     APT_BACKUP_HELPER,
     APT_BACKUP_LIMIT,
-    AYUSOS_LOGO,
     BACKUP_ICON_DIR,
     DEBIAN_LOGO,
     ESTILO_APLICACION,
@@ -23,7 +19,6 @@ from .constants import (
     HOMEPAGE,
     IDIOMA_ACTUAL,
     IDIOMAS,
-    NOMBRE_AYUSOS,
     NOTAS_VERSION,
     PASOS,
     POLKIT_ACTION,
@@ -70,6 +65,7 @@ from .desktop_backup import save as desktop_save
 from .desktop_backup import snapshot as desktop_snapshot
 from .desktop_backup import version as desktop_version
 from .diagnostics import run_diagnostics
+from .extensions import load_extensions
 from .fastfetch import instalar_layout, restaurar_layout
 from .gtk_appearance import aplicar_tema
 from .gtk_scheduler import ControladorProgramacion as GtkControladorProgramacion
@@ -85,16 +81,15 @@ __all__ = [
     "sincronizar", "MAX_HISTORIAL", "ruta_historial", "leer_historial",
     "guardar_registro_mantenimiento", "cargar_preferencias", "guardar_preferencias",
     "PREFERENCIAS_DEFECTO", "version_numerica", "obtener_release_actualizacion",
-    "run_diagnostics", "run_preflight",
+    "run_diagnostics", "run_preflight", "load_extensions",
     "prepare_host", "install_host", "detect", "restore", "desktop_version",
     "user_dirs", "desktop_read", "desktop_snapshot", "desktop_save", "LABELS",
     "exportar", "importar", "instalar_layout", "restaurar_layout",
     "aplicar_tema", "GtkControladorProgramacion", "create_health_dashboard",
     "TRADUCCIONES", "IDIOMA_ACTUAL", "PREFERENCIAS_DEFECTO", "IDIOMAS", "TEMAS",
-    # Constants
     "PRGNAME", "APP_ICON_NAME", "POLKIT_ACTION", "HELPER", "HELPER_SISTEMA",
     "GRUB_HELPER", "APT_BACKUP_HELPER", "APT_BACKUP_FILENAME", "APT_BACKUP_LIMIT",
-    "HOMEPAGE", "DEBIAN_LOGO", "UBUNTU_LOGO", "AYUSOS_LOGO", "NOMBRE_AYUSOS",
+    "HOMEPAGE", "DEBIAN_LOGO", "UBUNTU_LOGO",
     "FASTFETCH_LAYOUT", "NOTAS_VERSION", "RECOMMENDED_ICON_DIR", "BACKUP_ICON_DIR",
     "traducir", "traducir_detalle_diagnostico", "novedades_version",
     "ruta_historial", "leer_historial", "guardar_registro_mantenimiento",

@@ -1,0 +1,18 @@
+[Unit]
+Description=Ejecutar el primer mantenimiento de AiO Debian GUI
+Wants=network-online.target ayusos-onboarding.service
+Requires=ayusos-aio-autorizacion.service
+# No competir con el wizard por APT/dpkg: esperar a que termine el onboarding.
+After=ayusos-aio-autorizacion.service ayusos-snapshot-inicial.service ayusos-onboarding.service network-online.target
+ConditionPathExists=!/var/lib/ayusos/aio-inicial
+ConditionKernelCommandLine=!boot=live
+StartLimitIntervalSec=0
+
+[Service]
+Type=exec
+ExecStart=/usr/local/libexec/ayusos-aio-inicial
+Restart=on-failure
+RestartSec=5min
+
+[Install]
+WantedBy=graphical.target

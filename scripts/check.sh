@@ -11,7 +11,7 @@ bien()  { echo "✔ $*"; }
 GUI=package/usr/bin/aio-debian-gui
 HELPER=package/usr/lib/aio-debian-gui/aio-debian-gui-helper
 
-for f in "$HELPER" scripts/*.sh; do
+for f in "$HELPER" scripts/*.sh ayusos-control-center/package/usr/lib/aio-debian-gui/extensions/ayusos/helper.sh; do
     bash -n "$f" && bien "sintaxis bash: $f" || fallo "sintaxis bash: $f"
 done
 
@@ -22,6 +22,10 @@ PY
 
 python3 -c 'import ast, pathlib; [ast.parse(p.read_text(encoding="utf-8"), filename=str(p)) for p in pathlib.Path("package/usr/lib/aio-debian-gui/aio_core").glob("*.py")]' &&
     bien "módulos core Python válidos" || fallo "sintaxis módulos core"
+python3 -c 'import ast, pathlib; [ast.parse(p.read_text(encoding="utf-8"), filename=str(p)) for p in pathlib.Path("ayusos-control-center/package/usr/lib/aio-debian-gui/extensions/ayusos").rglob("*.py")]' &&
+    bien "extensión AyusOS Python válida" || fallo "sintaxis extensión AyusOS"
+python3 -m unittest discover -s ayusos-control-center/tests -q &&
+    bien "pruebas de extensión y onboarding" || fallo "pruebas de extensión y onboarding"
 python3 scripts/test-core-preferences.py && bien "preferencias modulares" || fallo "pruebas de preferencias core"
 bash scripts/test-update-testing.sh && bien "actualizador Testing" || fallo "actualizador Testing"
 bash scripts/test-self-update.sh && bien "autoactualización estable segura" || fallo "autoactualización estable segura"

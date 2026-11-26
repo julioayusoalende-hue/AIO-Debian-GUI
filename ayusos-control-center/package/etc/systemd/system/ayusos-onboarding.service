@@ -1,0 +1,27 @@
+[Unit]
+Description=AyusOS Onboarding (configuracion guiada del primer arranque)
+Documentation=https://github.com/julioayusoalende-hue/AyusOS-Linux
+# Necesita la cuenta de usuario y el display manager ya funcionando.
+Wants=ayusos-aio-autorizacion.service
+After=ayusos-aio-autorizacion.service display-manager.service
+# El mantenimiento inicial de AiO debe esperar a que el usuario cierre el wizard.
+Before=ayusos-aio-inicial.service
+# Solo una vez por instalacion y nunca en la sesion Live (no interrumpir Calamares).
+ConditionPathExists=!/var/lib/ayusos/onboarding-done
+ConditionPathExists=!/run/live/medium
+ConditionKernelCommandLine=!boot=live
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/ayusos-onboarding-graphical
+# Si la sesion grafica aun no esta lista, reintentar sin bloquear el arranque.
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=15min
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical.target

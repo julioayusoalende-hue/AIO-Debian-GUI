@@ -25,7 +25,12 @@ if [[ "${BASH_SOURCE[0]}" == "$0" && "$EUID" == 0 ]]; then
             shift
             case "${1:-}" in
                 install-trusted-local|install-flatpakref|install|remove|upgrade|refresh|flatpak-system|add-source|enable|disable|delete)
-                    exec /usr/lib/aio-debian-gui/software_manager/admin.py "$@" ;;
+                    _aio_extension_root=${AIO_EXTENSIONS_DIR:-/usr/lib/aio-debian-gui/extensions}
+                    for _aio_software_admin in "$_aio_extension_root"/*/software_manager/admin.py; do
+                        [ -f "$_aio_software_admin" ] || continue
+                        exec /usr/bin/python3 -I "$_aio_software_admin" "$@"
+                    done
+                    exit 2 ;;
                 *) exit 2 ;;
             esac ;;
         --grub) shift; exec /usr/lib/aio-debian-gui/aio-grub-settings "$@" ;;
@@ -1095,28 +1100,32 @@ estado_backports() {
 paso_flatpak_setup() {
     if command -v flatpak &> /dev/null; then
         ok "Flatpak ya está instalado."
+    else
+        asegurar_listas || return 1
+        info "Instalando flatpak..."
+        apt-get "${APT_OPTS[@]}" install flatpak ca-certificates
+        if ! command -v flatpak &> /dev/null; then
+            err "No se pudo instalar Flatpak. Comprueba tus repositorios."
+            return 1
+        fi
+        ok "Flatpak instalado correctamente."
+    fi
+
+    # Aunque Flatpak ya exista, el remoto Flathub puede no estar configurado.
+    if flatpak remote-list --system 2>/dev/null | grep -qx 'flathub'; then
+        ok "Repositorio Flathub ya configurado."
         return 0
     fi
-    asegurar_listas || return 1
-
-    info "Instalando flatpak..."
-    apt-get "${APT_OPTS[@]}" install flatpak ca-certificates
-
-    if ! command -v flatpak &> /dev/null; then
-        err "No se pudo instalar Flatpak. Comprueba tus repositorios."
-        return 1
-    fi
-    ok "Flatpak instalado correctamente."
     info "Añadiendo el repositorio de Flathub..."
     update-ca-certificates &> /dev/null
-    if flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo; then
+    if flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo; then
         ok "Repositorio Flathub configurado con éxito."
     else
         err "No se pudo añadir Flathub (error de certificado o de red)."
         err "Fecha del sistema: $(date)"
         err "Reloj sincronizado: $(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo desconocido)"
         err "Si la fecha es correcta, puede que tu red intercepte HTTPS (proxy/antivirus)."
-        err "Reintenta luego con: sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo"
+        err "Reintenta luego con: sudo flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo"
         return 1
     fi
 }
@@ -1895,6 +1904,15 @@ declare -A TITULOS=(
 # Pasos cuyo fallo detiene la ejecución (el resto solo se anota)
 CRITICOS=" upgrade backports-kernel-mesa revertir-backports nvidia-driver "
 
+# Hook genérico: cada paquete de distro puede registrar pasos y estados.
+EXTENSION_STATUS_HOOKS=()
+extension_root=${AIO_EXTENSIONS_DIR:-/usr/lib/aio-debian-gui/extensions}
+for extension_helper in "$extension_root"/*/helper.sh; do
+    [ -f "$extension_helper" ] || continue
+    # shellcheck disable=SC1090
+    source "$extension_helper"
+done
+
 mostrar_estados() {
     local tarea funcion
     local distro
@@ -1940,6 +1958,11 @@ mostrar_estados() {
             printf '##STATUS:%s:0\n' "$tarea"
         fi
     done
+
+    for extension_status_hook in "${EXTENSION_STATUS_HOOKS[@]}"; do
+        "$extension_status_hook"
+    done
+
 }
 
 

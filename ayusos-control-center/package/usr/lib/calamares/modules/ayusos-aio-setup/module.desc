@@ -1,0 +1,5 @@
+---
+type: job
+name: ayusos-aio-setup
+interface: python
+script: main.py

@@ -111,7 +111,7 @@ filterwarnings = [
 [tool.coverage.run]
 source = [
     "package/usr/lib/aio-debian-gui/aio_core",
-    "package/usr/lib/aio-debian-gui/software_manager",
+    "ayusos-control-center/package/usr/lib/aio-debian-gui/extensions/ayusos",
 ]
 omit = [
     "tests/*",

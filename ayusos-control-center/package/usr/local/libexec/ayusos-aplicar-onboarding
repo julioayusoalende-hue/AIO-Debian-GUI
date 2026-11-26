@@ -1,0 +1,17 @@
+#!/bin/bash
+set -euo pipefail
+
+uid=${1:-}
+if [[ "$uid" =~ ^[1-9][0-9]*$ ]]; then
+    username=$(getent passwd "$uid" | cut -d: -f1)
+else
+    username=${1:-}
+    uid=$(id -u "$username")
+fi
+[[ -n "$username" && "$uid" =~ ^[1-9][0-9]*$ ]] || {
+    echo 'Uso: ayusos-aplicar-onboarding [UID|USUARIO]' >&2
+    exit 1
+}
+
+runner=/usr/lib/aio-debian-gui/extensions/ayusos/aio-run
+exec /usr/bin/python3 -I "$runner" ayusos_onboarding_apply --user "$username"
