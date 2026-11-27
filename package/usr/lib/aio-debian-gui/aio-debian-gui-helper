@@ -113,12 +113,7 @@ if [[ "${BASH_SOURCE[0]}" == "$0" && "$EUID" == 0 ]]; then
             shift
             case "${1:-}" in
                 install-trusted-local|install-flatpakref|install|remove|upgrade|refresh|flatpak-system|add-source|enable|disable|delete)
-                    _aio_extension_root=${AIO_EXTENSIONS_DIR:-/usr/lib/aio-debian-gui/extensions}
-                    for _aio_software_admin in "$_aio_extension_root"/*/software_manager/admin.py; do
-                        [ -f "$_aio_software_admin" ] || continue
-                        exec /usr/bin/python3 -I "$_aio_software_admin" "$@"
-                    done
-                    exit 2 ;;
+                    exec /usr/bin/python3 -I /usr/lib/aio-debian-gui/software_manager/admin.py "$@" ;;
                 *) exit 2 ;;
             esac ;;
         --grub) shift; exec /usr/lib/aio-debian-gui/aio-grub-settings "$@" ;;

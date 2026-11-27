@@ -176,7 +176,8 @@ PYVERSION
 # Permisos normalizados (git/zip no los conservan siempre)
 find "$STAGE" -type d -exec chmod 755 {} +
 find "$STAGE" -type f -exec chmod 644 {} +
-chmod 755 "$STAGE/DEBIAN/postinst" "$STAGE/DEBIAN/prerm" "$STAGE/usr/bin/aio-debian-gui" \
+chmod 755 "$STAGE/usr/lib/aio-debian-gui/software_manager/admin.py" \
+    "$STAGE/DEBIAN/postinst" "$STAGE/DEBIAN/prerm" "$STAGE/usr/bin/aio-debian-gui" \
           "$STAGE/usr/lib/aio-debian-gui/"{aio-debian-gui-helper,aio-apt-sources-backup,aio-grub-settings,aio-clock-enable}
 
 # Fecha fija = fecha del último commit (o la actual si no hay git)

@@ -2432,11 +2432,16 @@ class VentanaPrincipal(Gtk.Window):
         pagina_inicio = self._pagina_inicio()
         pagina_backup = self._pagina_backup()
         self.pagina_recomendadas = self._pagina_recomendadas()
-        # Las extensiones pueden rellenar este atributo con su gestor de software.
         self.pagina_software = None
         from aio_core.health_dashboard import create_health_dashboard
         self.pagina_salud = create_health_dashboard(self, traducir, autorizacion_sin_contrasena_activa)
         notebook.append_page(principal, Gtk.Label(label=traducir("Configuración y mantenimiento")))
+        if not (es_flatpak() or os.environ.get("APPIMAGE") or os.environ.get("SNAP")):
+            from software_manager.manager import SoftwareManagerPage
+            self.pagina_software = SoftwareManagerPage(
+                self, traducir, autorizacion_sin_contrasena_activa)
+            notebook.append_page(self.pagina_software, Gtk.Label(label=traducir("Gestor de software")))
+            self.pagina_software.enable_drop(self, self._mostrar_gestor_software)
         notebook.append_page(self.pagina_recomendadas, Gtk.Label(label=traducir("Apps recomendadas")))
         notebook.append_page(pagina_backup, Gtk.Label(label=traducir("Backup")))
         notebook.append_page(pagina_inicio, Gtk.Label(label=traducir("Inicio")))

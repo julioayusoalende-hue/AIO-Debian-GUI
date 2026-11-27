@@ -2,6 +2,7 @@
 
 ## 1.5.4
 
+- El Gestor de software de APT y Flatpak vuelve al paquete principal de AiO Debian GUI.
 - «Ver servicios fallidos» muestra la salida de systemd en una ventana desplazable.
 - Las consultas de Detalles técnicos, NVIDIA y reversión de Backports se ejecutan en segundo plano para mantener la interfaz operativa.
 - El asistente termina los procesos hijos cuando se agota el tiempo de una operación privilegiada, evitando que retengan el bloqueo de mantenimiento.

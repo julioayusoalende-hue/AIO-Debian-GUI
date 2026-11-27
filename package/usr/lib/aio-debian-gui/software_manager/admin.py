@@ -1,5 +1,5 @@
 #!/usr/bin/python3 -I
-"""Privileged operations for AyusOS Software Manager."""
+"""Privileged operations for the AiO Debian GUI software manager."""
 
 import hashlib
 import os

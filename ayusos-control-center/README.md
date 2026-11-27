@@ -7,13 +7,16 @@ Integración independiente de AyusOS Linux en `aio-debian-gui`.
 - Onboarding de primer arranque.
 - Centro de Control con actualización, snapshots, hardware, diagnósticos y apariencia.
 - Modo Recovery con reparación APT/dpkg, GRUB, Timeshift, diagnóstico y terminal.
-- Gestor de software APT/Flatpak.
 - Pasos privilegiados para AyusOS.
 - Servicios de autorización, snapshot y mantenimiento inicial.
 - Aplicador de las preferencias elegidas en el onboarding.
 - Módulo Calamares `ayusos-aio-setup`.
 - Política Polkit y hook APT para Timeshift.
 - Fondos de escritorio y tema Plymouth AyusOS.
+
+## Ajustes de 1.4.10
+
+- El Gestor de software APT/Flatpak vuelve al paquete principal de AiO Debian GUI.
 
 ## Ajustes de 1.4.9
 
@@ -69,7 +72,7 @@ El core descubre la extensión automáticamente. No hay parches de AyusOS en el 
 ./build-deb.sh
 ```
 
-Genera `dist/ayusos-control-center_1.4.9_all.deb`.
+Genera `dist/ayusos-control-center_1.4.10_all.deb`.
 
 La ISO `AyusOS-Linux-1.4-release-final-v4-amd64.iso` fue validada en chroot con
 SHA-256 `d24b3443b46ba1ad898c3a1b1f817f1491d547326ba6c20ca07c03606af68b9f`.

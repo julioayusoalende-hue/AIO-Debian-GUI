@@ -1,16 +1,10 @@
 """Extensión de integración AyusOS para aio-debian-gui."""
 
-import os
-
 import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from aio_core.constants import (
-    autorizacion_sin_contrasena_activa,
-    es_flatpak,
-    traducir,
-)
+from aio_core.constants import traducir
 from gi.repository import GLib, Gtk
 
 from .aio_core.ayusos_recovery import is_recovery_boot
@@ -74,18 +68,6 @@ class Extension:
 
         # Botón "Abrir recuperación" del diagnóstico.
         window._abrir_recuperacion = lambda: open_recovery(window)
-
-        # El gestor de software también vive en la extensión. Se inserta en la
-        # misma posición que ocupaba en el core para no cambiar la navegación.
-        if not (es_flatpak() or os.environ.get("APPIMAGE") or os.environ.get("SNAP")):
-            from .software_manager.manager import SoftwareManagerPage
-            window.pagina_software = SoftwareManagerPage(
-                window, traducir, autorizacion_sin_contrasena_activa
-            )
-            window.notebook.insert_page(
-                window.pagina_software, Gtk.Label(label=traducir("Gestor de software")), 1
-            )
-            window.pagina_software.enable_drop(window, window._mostrar_gestor_software)
 
         pages = [
             (traducir("Actualización AyusOS"), window._pagina_ayusos_update),

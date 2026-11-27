@@ -6,7 +6,9 @@ Architecture: all
 Depends: bash, apt, ca-certificates, libglib2.0-bin, dconf-cli, coreutils, diffutils, grep, sed, util-linux, pciutils, libnotify-bin, needrestart, python3, python3-apt, python3-gi, gir1.2-gtk-3.0, gir1.2-vte-2.91, librsvg2-common, pkexec | policykit-1, flatpak
 Recommends: systemd-timesyncd | time-daemon, fwupd
 Conflicts: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
-Replaces: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
+Provides: aio-debian-gui-software-manager
+Breaks: ayusos-control-center (<< 1.4.10)
+Replaces: ayusos-control-center (<< 1.4.10), aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
 Maintainer: Julio Ayuso <epdc@msn.com>
 Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
 Description: Interfaz gráfica de mantenimiento y configuración para Debian y Ubuntu LTS
@@ -14,6 +16,6 @@ Description: Interfaz gráfica de mantenimiento y configuración para Debian y U
  programar el mantenimiento y guardar o restaurar copias de repositorios APT
  y ajustes del escritorio.
  .
- También permite instalar aplicaciones recomendadas por APT o Flatpak,
+ Incluye un gestor de software para APT y Flatpak, aplicaciones recomendadas,
  configurar GRUB en sistemas compatibles y usar una terminal separable.
  Este paquete configura el repositorio APT de AiO Debian GUI.

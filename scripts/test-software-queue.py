@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 root = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(root / "ayusos-control-center/package/usr/lib/aio-debian-gui/extensions/ayusos"))
+sys.path.insert(0, str(root / "package/usr/lib/aio-debian-gui"))
 from software_manager import admin
 from software_manager.manager import SoftwareManagerPage
 
