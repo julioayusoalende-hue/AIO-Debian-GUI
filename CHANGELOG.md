@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.5.1
+
+- El modo `--onboarding-only` devuelve error si no hay una extensión de onboarding o si su lanzador falla; el servicio puede reintentar y no marca el asistente como completado sin haberlo mostrado.
+- Se refuerzan los scripts de onboarding de AyusOS: entorno gráfico X11/Wayland, código de reinicio 10, limpieza de usuarios y aplicación de ajustes sin redundancias.
+- La extensión AyusOS añade reparación de extensiones GNOME y acceso a recuperación desde Diagnósticos; la restauración de identidad usa privilegios y el modo de simulación no los requiere.
+- Se corrige la actualización de la extensión AyusOS (versión anterior leída antes de actualizar), el filtro de UID y diversos errores de robustez detectados por Ruff y las pruebas.
+
 ## 1.5.0
 
 - API genérica de extensiones: las distribuciones pueden añadir branding, páginas, onboarding y pasos privilegiados sin modificar el core.

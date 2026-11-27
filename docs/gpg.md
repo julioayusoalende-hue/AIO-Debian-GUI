@@ -30,9 +30,9 @@ Cada release estable incluye un archivo `SHA256SUMS` firmado.
 
 ### 1. Descargar DEB, SHA256SUMS y la firma
 ```bash
-wget https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/download/v1.5.0/aio-debian-gui_1.5.0_all.deb
-wget https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/download/v1.5.0/SHA256SUMS
-wget https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/download/v1.5.0/SHA256SUMS.sig
+wget https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/download/v1.5.1/aio-debian-gui_1.5.1_all.deb
+wget https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/download/v1.5.1/SHA256SUMS
+wget https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/download/v1.5.1/SHA256SUMS.sig
 ```
 
 ### 2. Verificar la firma del archivo SHA256SUMS
@@ -55,7 +55,7 @@ sha256sum -c --ignore-missing SHA256SUMS
 ```
 Resultado esperado:
 ```
-aio-debian-gui_1.5.0_all.deb: La suma coincide
+aio-debian-gui_1.5.1_all.deb: La suma coincide
 ```
 
 ## 🔐 Verificar el repositorio APT

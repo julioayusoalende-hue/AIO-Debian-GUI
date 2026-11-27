@@ -73,6 +73,7 @@ if python3 -c 'import gi; gi.require_version("Gtk", "3.0")' >/dev/null 2>&1; the
         bien "preferencias, traducciones, Acerca de y modo simple" ||
         fallo "pruebas de preferencias"
     python3 scripts/test-ui-flow.py && bien "flujos de interfaz y adaptación" || fallo "pruebas de interfaz"
+    python3 scripts/test-onboarding-only.py && bien "onboarding-only falla si el wizard no se abre" || fallo "pruebas de onboarding-only"
     python3 scripts/test-software-queue-ui.py &&
         bien "selección múltiple y cola de instalación" ||
         fallo "pruebas GTK de la cola del gestor de software"

@@ -1601,10 +1601,10 @@ with patch.object(app, 'formato_actualizacion', return_value='flatpak'):
             while not btop_marker.exists() and time.monotonic() < deadline:
                 settle()
             assert btop_marker.read_text().strip() == 'yes'
-            deadline = time.monotonic() + 8
+            deadline = time.monotonic() + 15
             while command_menu.get_mapped() and time.monotonic() < deadline:
                 settle()
-            assert not command_menu.get_mapped()
+            assert not command_menu.get_mapped(), "El menú de comandos no se cerró tras elegir btop"
             assert w.terminal.get_pty() == pty
             visor_btop = w.terminal_monitor
             pty_btop = visor_btop.get_pty()

@@ -385,7 +385,7 @@ git rebase --exec 'git commit --amend --no-edit -S' HEAD~3
 git log --show-signature --oneline -5
 
 # Verificar un tag firmado
-git tag -v 1.5.0
+git tag -v 1.5.1
 ```
 
 ### Clave del proyecto (verificación de releases)

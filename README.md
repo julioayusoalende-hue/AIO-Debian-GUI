@@ -68,14 +68,12 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.5.0
+### Lo nuevo en la 1.5.1
 
-- API genérica de extensiones: las distribuciones añaden branding, páginas, onboarding y pasos privilegiados sin modificar el core; AyusOS pasa a ser un paquete independiente.
-- Accesibilidad: roles ATK, nombres accesibles en botones de icono, regiones en vivo, foco visible y soporte de `prefers-contrast`.
-- La autoactualización en Flatpak y AppImage consulta los metadatos internos (versión y arquitectura) antes de ofrecer la actualización.
-- Cada operación privilegiada se supervisa con lock, timeout y `setsid` cuando se ejecuta como root.
-- Nuevo workflow de integración real en CI (Debian 12/13 y Ubuntu 24.04/26.04) con ciclo de instalación, purge y reinstalación.
-- Empaquetado Flatpak con manifiesto, script de construcción y pruebas de metadatos.
+- El onboarding automático ya no se marca como completado si el asistente no llega a abrirse: el servicio recibe un error y puede reintentar.
+- Scripts de AyusOS más robustos en X11/Wayland, con soporte del código de reinicio y limpieza de usuarios sin cuenta válida.
+- Diagnósticos AyusOS con reparación de extensiones GNOME y acceso a recuperación; restauración de identidad privilegiada y simulación sin privilegios.
+- Correcciones de actualización, UID, imports y robustez en `ayusos-control-center`, con regresión específica para `--onboarding-only`.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -83,7 +81,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.5.0**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.5.1**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -107,10 +105,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.5.0:
+Para la versión 1.5.1:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.5.0_all.deb
+sudo apt install ./aio-debian-gui_1.5.1_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.

@@ -149,7 +149,7 @@ git commit --amend --no-edit -S
 
 ```bash
 # Tag anotado y firmado (recomendado para releases)
-git tag -s 1.5.0 -m "Release 1.5.0
+git tag -s 1.5.1 -m "Release 1.5.1
 
 Cambios:
 - Corrección en autoactualización DEB
@@ -157,7 +157,7 @@ Cambios:
 - Actualizaciones de traducciones"
 
 # Tag ligero firmado
-git tag -s 1.5.0 -m "Release 1.5.0"
+git tag -s 1.5.1 -m "Release 1.5.1"
 ```
 
 ### Verificar que se firmaron
@@ -167,7 +167,7 @@ git tag -s 1.5.0 -m "Release 1.5.0"
 git log --show-signature --oneline -5
 
 # Tags firmados
-git tag -v 1.5.0
+git tag -v 1.5.1
 ```
 
 Salida esperada para commit firmado:
@@ -210,16 +210,16 @@ Estados de verificación (`%G?`):
 ### Verificar tag de release
 
 ```bash
-git tag -v 1.5.0
+git tag -v 1.5.1
 ```
 
 Salida esperada:
 ```
 objeto abc123def4567890abcdef1234567890abcdef12
 tipo commit
-tag 1.5.0
+tag 1.5.1
 etiquetador Julio Ayuso <julio@ayuso.dev> 1701086400 +0100
-Release 1.5.0
+Release 1.5.1
 ...
 gpg: Firma hecha el mié 27 nov 2026 10:00:00 CET
 gpg:                usando clave RSA XXXXXXXXXXXXXXXX
@@ -255,17 +255,17 @@ gpg --verify SHA256SUMS.sig SHA256SUMS
 sha256sum -c --ignore-missing SHA256SUMS
 
 # Salida esperada:
-# aio-debian-gui_1.5.0_all.deb: La suma coincide
+# aio-debian-gui_1.5.1_all.deb: La suma coincide
 ```
 
 ### Verificar paquete DEB instalado
 
 ```bash
 # Verificar firma del paquete (si está firmado con dpkg-sig)
-dpkg-sig --verify aio-debian-gui_1.5.0_all.deb
+dpkg-sig --verify aio-debian-gui_1.5.1_all.deb
 
 # O verificar contenido contra sums oficiales
-dpkg-deb -c aio-debian-gui_1.5.0_all.deb | head -20
+dpkg-deb -c aio-debian-gui_1.5.1_all.deb | head -20
 ```
 
 ---
