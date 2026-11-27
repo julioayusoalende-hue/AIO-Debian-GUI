@@ -50,7 +50,7 @@ jobs:
           cd "$RUNNER_TEMP/release-packages"
           sha256sum --check SHA256SUMS
           test -f "aio-debian-gui_${VERSION#*:}_all.deb"
-          AYUSOS_VERSION="$(sed -n 's/^Version: //p' "$GITHUB_WORKSPACE/source/ayusos-control-center/package/DEBIAN/control)"
+          AYUSOS_VERSION="$(sed -n 's/^Version: //p' "$GITHUB_WORKSPACE/source/ayusos-control-center/package/DEBIAN/control")"
           test -f "ayusos-control-center_${AYUSOS_VERSION}_all.deb"
           echo "RELEASE_PACKAGES=$RUNNER_TEMP/release-packages" >> "$GITHUB_ENV"
       - name: Import signing key
