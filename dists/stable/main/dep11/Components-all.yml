@@ -156,14 +156,13 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/acerca-de.png
 Releases:
-- version: 1.5.8
+- version: 1.5.9
   type: stable
   unix-timestamp: 1795737600
   description:
     C: >-
-      <ul><li>El mantenimiento estándar actualiza los índices una vez y encadena la actualización y las limpiezas seleccionadas
-      hasta el primer fallo de APT, sin simulaciones duplicadas.</li><li>La limpieza de dependencias puede programarse junto
-      con la actualización; los errores de dpkg --audit muestran su causa antes de bloquear el mantenimiento.</li></ul>
+      <ul><li>El asistente de primer arranque se abre directamente al detectar la sesión gráfica y aplica la selección de
+      NVIDIA del usuario que lo completó. La compilación DKMS puede terminar aunque dure más de cinco minutos.</li></ul>
 ContentRating:
   oars-1.1:
     violence-cartoon: none
