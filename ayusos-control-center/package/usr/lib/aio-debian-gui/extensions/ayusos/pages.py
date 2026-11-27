@@ -19,7 +19,7 @@ from aio_core.constants import (
     tarjeta_mantenimiento,
     traducir,
 )
-from gi.repository import GdkPixbuf, GLib, Gtk
+from gi.repository import GdkPixbuf, GLib, Gtk, Pango
 
 from .aio_core.ayusos_branding import ACENTOS
 
@@ -287,6 +287,8 @@ class AyusOSPagesMixin:
         caja.pack_start(cabecera_mantenimiento("Diagnóstico completo", "dialog-information-symbolic"), False, False, 0)
 
         self.diagnostics_status = self._etiqueta_estado()
+        self.diagnostics_status.set_max_width_chars(90)
+        self.diagnostics_status.set_selectable(True)
         caja.pack_start(self.diagnostics_status, False, False, 0)
 
         self.diagnostics_run_btn = Gtk.Button(label=traducir("Ejecutar diagnóstico completo"))
@@ -311,21 +313,39 @@ class AyusOSPagesMixin:
         self.diagnostics_store = Gtk.ListStore(str, str, str)  # check, estado, mensaje
         self.diagnostics_view = Gtk.TreeView(model=self.diagnostics_store)
         self.diagnostics_view.set_headers_visible(True)
+        self.diagnostics_view.set_hexpand(True)
+        self.diagnostics_view.set_vexpand(True)
         for i, title in enumerate([traducir("Comprobación"), traducir("Estado"), traducir("Detalle")]):
             renderer = Gtk.CellRendererText()
+            if i == 2:
+                renderer.set_property("wrap-width", 560)
+                renderer.set_property("wrap-mode", Pango.WrapMode.WORD_CHAR)
             col = Gtk.TreeViewColumn(title, renderer, text=i)
             col.set_resizable(True)
+            col.set_expand(i == 2)
             self.diagnostics_view.append_column(col)
 
         scrolled = Gtk.ScrolledWindow()
-        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scrolled.set_size_request(-1, 350)
+        scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        scrolled.set_overlay_scrolling(False)
+        scrolled.set_min_content_height(180)
+        scrolled.set_max_content_height(420)
+        scrolled.set_propagate_natural_height(True)
         scrolled.add(self.diagnostics_view)
+        self.diagnostics_results_scroll = scrolled
         caja2.pack_start(scrolled, True, True, 0)
 
-        contenido.pack_start(tarjeta2, True, True, 0)
+        # La tarjeta de resultados crece hasta su límite; si la ventana es
+        # pequeña, el desplazamiento corresponde a la página completa.
+        contenido.pack_start(tarjeta2, False, False, 0)
+        contenido.set_valign(Gtk.Align.START)
 
-        pagina.pack_start(self._scroll_tarjetas(contenido), True, True, 0)
+        scroll_pagina = Gtk.ScrolledWindow()
+        scroll_pagina.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        scroll_pagina.set_overlay_scrolling(False)
+        scroll_pagina.add(contenido)
+        self.diagnostics_page_scroll = scroll_pagina
+        pagina.pack_start(scroll_pagina, True, True, 0)
         return pagina
 
     def _pagina_ayusos_branding(self):
@@ -971,6 +991,29 @@ class AyusOSPagesMixin:
 
         threading.Thread(target=diagnosticar, daemon=True).start()
 
+    @staticmethod
+    def _texto_detalle_diagnostico(valor):
+        """Convierte estructuras del diagnóstico en texto legible, sin repr()."""
+        if isinstance(valor, list):
+            partes = []
+            for item in valor:
+                if isinstance(item, dict):
+                    nombre = item.get("name") or item.get("check") or traducir("Comprobación")
+                    detalle = item.get("detail") or item.get("message") or ""
+                    consejo = item.get("advice") or ""
+                    texto = str(nombre)
+                    if detalle:
+                        texto += ": %s" % detalle
+                    if consejo:
+                        texto += " — %s" % consejo
+                    partes.append(texto)
+                else:
+                    partes.append(str(item))
+            return "\n".join(partes)
+        if isinstance(valor, dict):
+            return "\n".join("%s: %s" % (clave, valor) for clave, valor in valor.items())
+        return str(valor or "")
+
     def _diagnostics_done(self, ok, data):
         self.diagnostics_run_btn.set_sensitive(True)
         if not ok:
@@ -986,7 +1029,7 @@ class AyusOSPagesMixin:
             self.diagnostics_store.append([
                 check_name.replace("_", " ").title(),
                 traducir("✓ OK") if ok_check else traducir("✗ FALLO"),
-                str(msg)
+                self._texto_detalle_diagnostico(msg)
             ])
 
         summary = data.get("_summary", {})

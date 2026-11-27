@@ -28,7 +28,12 @@ GNUPG.mkdir(mode=0o700)
 # GnuPG limita la longitud de los sockets Unix; /proc mantiene corta la ruta
 # sin sacar los archivos del árbol de pruebas.
 GPG_HOME = f"/proc/{os.getpid()}/cwd/{WORK.name}/gnupg"
-ENV = {**os.environ, "GNUPGHOME": GPG_HOME, "LC_ALL": "C"}
+ENV = {
+    **os.environ,
+    "GNUPGHOME": GPG_HOME,
+    "LC_ALL": "C",
+    "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+}
 AGENT = None
 AGENT_SOCKET = None
 
@@ -60,6 +65,24 @@ def make_version(deb, version, destination):
     assert count == 1
     control.write_text(text)
     output = destination / (field(deb, "Package") + "_" + version + "_all.deb")
+    run("dpkg-deb", "--root-owner-group", "--build", str(stage), str(output))
+    return output
+
+
+def make_ayusos_fixture(version, destination):
+    stage = WORK / ("ayusos-control-center-" + version)
+    (stage / "DEBIAN").mkdir(parents=True)
+    (stage / "DEBIAN/control").write_text(
+        "Package: ayusos-control-center\n"
+        f"Version: {version}\n"
+        "Section: admin\n"
+        "Priority: optional\n"
+        "Architecture: all\n"
+        "Depends: aio-debian-gui (>= 1.5.1)\n"
+        "Maintainer: fixture <fixture@example.invalid>\n"
+        "Description: fixture\n"
+    )
+    output = destination / f"ayusos-control-center_{version}_all.deb"
     run("dpkg-deb", "--root-owner-group", "--build", str(stage), str(output))
     return output
 
@@ -139,6 +162,8 @@ try:
     data = contents(host, "--fsys-tarfile")
     expected = {
         "usr/lib/aio-debian-gui/aio-debian-gui-helper",
+        "usr/lib/aio-debian-gui/aio-apt-sources-backup",
+        "usr/lib/aio-debian-gui/aio-grub-settings",
         "usr/lib/aio-debian-gui/aio-host-scheduler",
         "usr/lib/aio-debian-gui/aio_core/__init__.py",
         "usr/lib/aio-debian-gui/aio_core/scheduler.py",
@@ -168,7 +193,10 @@ try:
             "aio-debian-gui-host-update.timer")) else "package")
         assert payload == (ROOT / source / source_path).read_bytes()
         assert member.uid == member.gid == 0
-        assert member.mode == (0o755 if path.endswith(("aio-debian-gui-helper", "aio-host-scheduler", "aio-host-update")) else 0o644)
+        assert member.mode == (0o755 if path.endswith((
+            "aio-debian-gui-helper", "aio-apt-sources-backup", "aio-grub-settings",
+            "aio-host-scheduler", "aio-host-update",
+        )) else 0o644)
     assert all(not path.startswith(("etc/", "var/")) for path in data)
 
     # Prueba la puerta con rutas temporales y un programador simulado, sin systemd real.
@@ -236,6 +264,7 @@ try:
     uid = os.getuid() or 65534
     authorized = request_reader.CONFIG_DIR / "host-users"
     authorized.write_text(f"{uid}\n")
+    authorized.chmod(0o644)
     assert request_reader.authorized_users() == [uid]
     authorized.write_text(f"{uid}\n{uid}\n")
     try:
@@ -361,24 +390,31 @@ try:
     site.mkdir()
     fixtures = WORK / "fixtures"
     fixtures.mkdir()
+    ayusos = make_ayusos_fixture("1.4.8", fixtures)
     pairs = []
     for v in ("1.0.0", "1.0.1", "1.0.2"):
         pairs.append((make_version(main, v, fixtures), make_version(host, v, fixtures)))
     publish_env = {**ENV, "KEEP_VERSIONS": "2"}
     for main_deb, host_deb in pairs:
-        subprocess.run(["bash", str(source / "scripts/publish-apt-repo.sh"),
-                        str(main_deb), str(site), str(host_deb)],
-                       env=publish_env, cwd=ROOT, check=True, capture_output=True)
+        result = subprocess.run(["bash", str(source / "scripts/publish-apt-repo.sh"),
+                                 str(main_deb), str(site), str(host_deb), str(ayusos)],
+                                env=publish_env, cwd=ROOT, capture_output=True)
+        assert result.returncode == 0, result.stderr
         for repository in (site, site / "host-repo"):
             run("gpgv", "--keyring", str(keyring), str(repository / "dists/stable/InRelease"))
             run("gpgv", "--keyring", str(keyring), str(repository / "dists/stable/Release.gpg"),
                 str(repository / "dists/stable/Release"))
     pool = site / "pool/main/a/aio-debian-gui"
+    ayusos_pool = site / "pool/main/a/ayusos-control-center"
     host_site = site / "host-repo"
     host_pool = host_site / "pool/main/a/aio-debian-gui"
     assert sorted(p.name for p in pool.glob("*.deb")) == [pair[0].name for pair in pairs[1:]]
     assert sorted(p.name for p in host_pool.glob("*.deb")) == [pair[1].name for pair in pairs[1:]]
-    for repository, package in ((site, "aio-debian-gui"), (host_site, "aio-debian-gui-host")):
+    assert [p.name for p in ayusos_pool.glob("*.deb")] == [ayusos.name]
+    for repository, packages_expected in (
+        (site, ["aio-debian-gui", "ayusos-control-center"]),
+        (host_site, ["aio-debian-gui-host"]),
+    ):
         packages = (repository / "dists/stable/main/binary-all/Packages").read_text()
         release = (repository / "dists/stable/Release").read_text()
         checksum = re.search(r"(?m)^ ([0-9a-f]{64})\s+(\d+) main/binary-all/Packages$", release)
@@ -389,11 +425,12 @@ try:
         assert lzma.decompress((binary / "Packages.xz").read_bytes()) == packages.encode()
         entries = [dict(line.split(": ", 1) for line in block.splitlines() if ": " in line)
                    for block in packages.strip().split("\n\n")]
-        assert [entry["Package"] for entry in entries] == [package]
-        entry = entries[0]
-        assert entry["Version"] == "1.0.2"
-        deb = repository / entry["Filename"]
-        assert entry["SHA256"] == hashlib.sha256(deb.read_bytes()).hexdigest()
+        assert [entry["Package"] for entry in entries] == packages_expected
+        for entry in entries:
+            expected_version = "1.4.8" if entry["Package"] == "ayusos-control-center" else "1.0.2"
+            assert entry["Version"] == expected_version
+            deb = repository / entry["Filename"]
+            assert entry["SHA256"] == hashlib.sha256(deb.read_bytes()).hexdigest()
 
     spec = importlib.util.spec_from_file_location(
         "host_repository", ROOT / "package/usr/lib/aio-debian-gui/aio_core/host_repository.py")

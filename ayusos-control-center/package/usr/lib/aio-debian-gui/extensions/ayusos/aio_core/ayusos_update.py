@@ -50,7 +50,7 @@ def check_updates() -> tuple[bool, str | None, str | None]:
     """Comprueba el candidato del repositorio firmado usando índices APT locales."""
     current = get_current_version()
     if os.environ.get("AIO_TEST_AYUSOS_UPDATE"):
-        return True, current, "1.5.1"
+        return True, current, "1.5.2"
     if not AYUSOS_REPO_SOURCES.is_file():
         return False, current, None
     try:

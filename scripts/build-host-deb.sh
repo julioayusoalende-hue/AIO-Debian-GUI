@@ -6,6 +6,7 @@ cd "$(dirname "$0")/.."
 [ "$#" -le 1 ] || { echo "Uso: $0 [directorio-de-salida]" >&2; exit 1; }
 OUTPUT_DIR=${1:-dist}
 VERSION=$(sed -n 's/^Version: //p' package/DEBIAN/control)
+FULL_VERSION=$VERSION
 VERSION=${VERSION#*:}
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
     echo "Versión del paquete principal no válida." >&2; exit 1;
@@ -37,7 +38,7 @@ mkdir -p "$STAGE/DEBIAN" "$STAGE/usr/lib/aio-debian-gui/aio_core" \
     "$STAGE/usr/share/keyrings" \
     "$STAGE/usr/share/doc/aio-debian-gui-host"
 cat host-package/DEBIAN/control > "$STAGE/DEBIAN/control"
-printf 'Version: %s\n' "$VERSION" >> "$STAGE/DEBIAN/control"
+printf 'Version: %s\n' "$FULL_VERSION" >> "$STAGE/DEBIAN/control"
 install -m 755 host-package/DEBIAN/postinst host-package/DEBIAN/postrm "$STAGE/DEBIAN/"
 install -m 755 package/usr/lib/aio-debian-gui/{aio-debian-gui-helper,aio-apt-sources-backup,aio-grub-settings} "$STAGE/usr/lib/aio-debian-gui/"
 install -m 755 host-package/usr/lib/aio-debian-gui/aio-host-scheduler "$STAGE/usr/lib/aio-debian-gui/"
@@ -64,7 +65,7 @@ install -m 644 package/usr/share/doc/aio-debian-gui/copyright \
 find "$STAGE" -type d -exec chmod 755 {} +
 export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git log -1 --format=%ct 2>/dev/null || date +%s)}"
 find "$STAGE" -exec touch -h -d "@${SOURCE_DATE_EPOCH}" {} +
-SALIDA="$OUTPUT_DIR/aio-debian-gui-host_${VERSION}_all.deb"
+SALIDA="$OUTPUT_DIR/aio-debian-gui-host_${FULL_VERSION}_all.deb"
 dpkg-deb --root-owner-group -Zxz --build "$STAGE" "$BUILD_DIR/output.deb"
 mv -f -- "$BUILD_DIR/output.deb" "$SALIDA"
 echo "Paquete creado: $SALIDA"

@@ -47,6 +47,7 @@ jobs:
           echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
           cd source
           bash scripts/build-deb.sh
+          bash ayusos-control-center/build-deb.sh
       - name: Publish signed APT metadata and DEB
         env:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
@@ -55,8 +56,11 @@ jobs:
           cd source
           VERSION="$(sed -n 's/^Version: //p' package/DEBIAN/control)"
           DEB="dist/aio-debian-gui_${VERSION#*:}_all.deb"
+          AYUSOS_VERSION="$(sed -n 's/^Version: //p' ayusos-control-center/package/DEBIAN/control)"
+          AYUSOS_DEB="ayusos-control-center/dist/ayusos-control-center_${AYUSOS_VERSION#*:}_all.deb"
           test -f "$DEB"
-          bash scripts/publish-apt-repo.sh "$DEB" ../site
+          test -f "$AYUSOS_DEB"
+          bash scripts/publish-apt-repo.sh "$DEB" ../site "" "$AYUSOS_DEB"
       - name: Deploy APT files and retire the portable repositories
         run: |
           set -euo pipefail

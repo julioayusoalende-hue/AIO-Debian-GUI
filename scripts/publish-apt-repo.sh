@@ -1,6 +1,6 @@
 #!/bin/bash
 # Añade los paquetes al repositorio APT (GitHub Pages) y firma sus metadatos.
-# Uso: publish-apt-repo.sh <paquete-principal.deb> <carpeta-del-sitio> [paquete-host.deb]
+# Uso: publish-apt-repo.sh <paquete-principal.deb> <carpeta-del-sitio> [paquete-host.deb] [ayusos-control-center.deb]
 # Variables:
 #   GPG_PASSPHRASE   contraseña de la clave privada (opcional)
 #   EXPECTED_FPR     si se indica, debe coincidir con la clave del proyecto
@@ -8,10 +8,11 @@
 #   KEEP_VERSIONS    versiones a conservar de cada paquete (por defecto 5)
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-DEB=${1:?Uso: $0 <paquete-principal.deb> <carpeta-del-sitio> [paquete-host.deb]}
-SITE=${2:?Uso: $0 <paquete-principal.deb> <carpeta-del-sitio> [paquete-host.deb]}
+DEB=${1:?Uso: $0 <paquete-principal.deb> <carpeta-del-sitio> [paquete-host.deb] [ayusos-control-center.deb]}
+SITE=${2:?Uso: $0 <paquete-principal.deb> <carpeta-del-sitio> [paquete-host.deb] [ayusos-control-center.deb]}
 HOST_DEB=${3:-}
-[ "$#" -le 3 ] || { echo "Demasiados argumentos." >&2; exit 1; }
+AYUSOS_DEB=${4:-}
+[ "$#" -le 4 ] || { echo "Demasiados argumentos." >&2; exit 1; }
 KEEP=${KEEP_VERSIONS:-5}
 CHANNEL=${APT_CHANNEL:-stable}
 VERSION_PATTERN='^([0-9]+:)?[0-9]+\.[0-9]+\.[0-9]+(-[1-9][0-9]*)?$'
@@ -55,6 +56,17 @@ if [ -n "$HOST_DEB" ]; then
         [ -z "$(dpkg-deb -f "$HOST_DEB" Replaces)" ] &&
         [ "$(basename "$HOST_DEB")" = "aio-debian-gui-host_${VERSION}_all.deb" ] || {
         echo "El paquete host no coincide con el paquete principal." >&2; exit 1;
+    }
+fi
+
+if [ -n "$AYUSOS_DEB" ]; then
+    AYUSOS_VERSION=$(dpkg-deb -f "$AYUSOS_DEB" Version)
+    AYUSOS_PUBLIC_VERSION=${AYUSOS_VERSION#*:}
+    [[ "$AYUSOS_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[1-9][0-9]*)?$ ]] &&
+        [ "$(dpkg-deb -f "$AYUSOS_DEB" Package)" = "ayusos-control-center" ] &&
+        [ "$(dpkg-deb -f "$AYUSOS_DEB" Architecture)" = "all" ] &&
+        [ "$(basename "$AYUSOS_DEB")" = "ayusos-control-center_${AYUSOS_PUBLIC_VERSION}_all.deb" ] || {
+        echo "El paquete ayusos-control-center no es válido." >&2; exit 1;
     }
 fi
 
@@ -109,7 +121,8 @@ PYMETA
 
 publish_repo() {
     local site=$1 deb=$2 package=$3 label=$4
-    local pool="$site/pool/main/a/aio-debian-gui"
+    local pool_group=${5:-$package}
+    local pool="$site/pool/main/${pool_group:0:1}/$pool_group"
     local dist="$site/dists/$CHANNEL"
     local bin="$dist/main/binary-all"
     local files=() debs=() old
@@ -134,8 +147,10 @@ publish_repo() {
     gzip -9nkf "$bin/Packages"
     xz -9ekf "$bin/Packages"
     local indices=(main/binary-all/Packages main/binary-all/Packages.gz main/binary-all/Packages.xz)
-    if [ "$CHANNEL" = stable ] && [ "$package" = aio-debian-gui ]; then
-        publish_appstream "$deb" "$dist" "$label"
+    if [ "$CHANNEL" = stable ]; then
+        if [ "$package" = aio-debian-gui ]; then
+            publish_appstream "$deb" "$dist" "$label"
+        fi
         if [ -f "$dist/main/dep11/Components-all.yml.gz" ]; then
             indices+=(main/dep11/Components-all.yml main/dep11/Components-all.yml.gz)
         fi
@@ -163,8 +178,11 @@ publish_repo() {
 }
 
 publish_repo "$SITE" "$DEB" aio-debian-gui aio-debian-gui
+if [ -n "$AYUSOS_DEB" ]; then
+    publish_repo "$SITE" "$AYUSOS_DEB" ayusos-control-center aio-debian-gui
+fi
 if [ -n "$HOST_DEB" ]; then
-    publish_repo "$SITE/host-repo" "$HOST_DEB" aio-debian-gui-host aio-debian-gui-host
+    publish_repo "$SITE/host-repo" "$HOST_DEB" aio-debian-gui-host aio-debian-gui-host aio-debian-gui
 fi
 
 # --- Clave pública y portada -----------------------------------------------------------

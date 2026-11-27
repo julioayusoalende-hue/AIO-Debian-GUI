@@ -68,12 +68,11 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.5.1
+### Lo nuevo en la 1.5.2
 
-- El onboarding automático ya no se marca como completado si el asistente no llega a abrirse: el servicio recibe un error y puede reintentar.
-- Scripts de AyusOS más robustos en X11/Wayland, con soporte del código de reinicio y limpieza de usuarios sin cuenta válida.
-- Diagnósticos AyusOS con reparación de extensiones GNOME y acceso a recuperación; restauración de identidad privilegiada y simulación sin privilegios.
-- Correcciones de actualización, UID, imports y robustez en `ayusos-control-center`, con regresión específica para `--onboarding-only`.
+- Diagnósticos AyusOS con dimensionado adaptable y barras de desplazamiento automáticas cuando el contenido no cabe.
+- El árbol de resultados crece hasta un límite razonable y los mensajes largos se ajustan sin desbordar la ventana.
+- Nueva prueba GTK específica para ventanas estrechas, barras horizontales/verticales y resultados extensos.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -81,7 +80,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.5.1**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.5.2**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -105,10 +104,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.5.1:
+Para la versión 1.5.2:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.5.1_all.deb
+sudo apt install ./aio-debian-gui_1.5.2_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.

@@ -23,9 +23,11 @@ jobs:
       - name: Install build and test dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y dpkg-dev python3 python3-gi gir1.2-gtk-3.0 gir1.2-vte-2.91 librsvg2-common shellcheck desktop-file-utils pkexec xvfb xauth gnupg
+          sudo apt-get install -y dpkg-dev python3 python3-gi gir1.2-gtk-3.0 gir1.2-vte-2.91 librsvg2-common shellcheck desktop-file-utils appstream pkexec xvfb xauth gnupg
       - name: Run checks
         run: xvfb-run -a bash scripts/check.sh
+      - name: Verify signed APT publisher
+        run: python3 scripts/test-host-package.py
       - name: Calculate testing version from latest stable release
         id: version
         env:
@@ -49,9 +51,12 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/build-deb.sh --testing-version "$VERSION"
+          AYUSOS_VERSION="$(sed -n 's/^Version: //p' ayusos-control-center/package/DEBIAN/control)"
+          bash ayusos-control-center/build-deb.sh
+          cp "ayusos-control-center/dist/ayusos-control-center_${AYUSOS_VERSION#*:}_all.deb" dist/
           cd dist
           cp "aio-debian-gui_${VERSION}_all.deb" "aio-debian-gui_${VERSION/\~/-}_all.deb"
-          sha256sum "aio-debian-gui_${VERSION/\~/-}_all.deb" > SHA256SUMS
+          sha256sum "aio-debian-gui_${VERSION/\~/-}_all.deb" "ayusos-control-center_${AYUSOS_VERSION#*:}_all.deb" > SHA256SUMS
           sha256sum --check SHA256SUMS
           dpkg-deb --fsys-tarfile "aio-debian-gui_${VERSION/\~/-}_all.deb" |
             tar -xOf - ./usr/share/aio-debian-gui/release-notes.txt |
@@ -64,7 +69,8 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
-          gh release create "$TAG" "dist/aio-debian-gui_${VERSION/\~/-}_all.deb" dist/SHA256SUMS \
+          gh release create "$TAG" "dist/aio-debian-gui_${VERSION/\~/-}_all.deb" \
+            dist/ayusos-control-center_*_all.deb dist/SHA256SUMS \
             --target "$GITHUB_SHA" --prerelease --title "AiO Debian GUI $VERSION (testing)" \
             --notes-file dist/testing-notes.md
 
@@ -86,8 +92,11 @@ jobs:
           trap 'rm -rf -- "$GNUPGHOME"' EXIT
           printf '%s\n' 'allow-loopback-pinentry' > "$GNUPGHOME/gpg-agent.conf"
           printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          AYUSOS_VERSION="$(sed -n 's/^Version: //p' ayusos-control-center/package/DEBIAN/control)"
+          AYUSOS_DEB="dist/ayusos-control-center_${AYUSOS_VERSION#*:}_all.deb"
+          test -f "$AYUSOS_DEB"
           APT_CHANNEL=testing bash scripts/publish-apt-repo.sh \
-            "dist/aio-debian-gui_${VERSION}_all.deb" apt-site
+            "dist/aio-debian-gui_${VERSION}_all.deb" apt-site "" "$AYUSOS_DEB"
           git -C apt-site config user.name 'github-actions[bot]'
           git -C apt-site config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git -C apt-site add -- apt-testing

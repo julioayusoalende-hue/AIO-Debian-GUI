@@ -1,5 +1,12 @@
 # Cambios
 
+## 1.5.2
+
+- La pestaña Diagnósticos AyusOS se adapta al tamaño de la ventana: el árbol de resultados tiene altura mínima y máxima, y tanto la página como el árbol muestran barras de desplazamiento horizontales o verticales solo cuando el contenido no cabe.
+- Los detalles largos del diagnóstico se muestran como texto legible y ajustado, sin volcados de estructuras Python que desborden la interfaz.
+- Nueva prueba GTK que comprueba el dimensionado y las barras de desplazamiento con una ventana estrecha y resultados extensos.
+- Las releases y el repositorio APT firmado incluyen también `ayusos-control-center`, para entregar la corrección de la pestaña por la misma vía de actualización.
+
 ## 1.5.1
 
 - El modo `--onboarding-only` devuelve error si no hay una extensión de onboarding o si su lanzador falla; el servicio puede reintentar y no marca el asistente como completado sin haberlo mostrado.

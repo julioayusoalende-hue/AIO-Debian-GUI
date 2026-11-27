@@ -23,16 +23,20 @@ jobs:
       - name: Install build and test dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y dpkg-dev python3 python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-vte-2.91 librsvg2-common shellcheck desktop-file-utils pkexec xvfb xauth python3-pytest
+          sudo apt-get install -y dpkg-dev python3 python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-vte-2.91 librsvg2-common shellcheck desktop-file-utils appstream gnupg pkexec xvfb xauth python3-pytest
           python3 -m venv --system-site-packages .venv-tools
           .venv-tools/bin/pip install ruff
-      - name: Check and build the Debian package
+      - name: Check and build the Debian packages
         run: |
           set -euo pipefail
           xvfb-run -a bash scripts/check.sh
           .venv-tools/bin/ruff check --no-cache package/usr/bin/aio-debian-gui package/usr/lib/aio-debian-gui
           xvfb-run -a python3 -m pytest tests -q
+          python3 scripts/test-host-package.py
           bash scripts/build-deb.sh
+          AYUSOS_VERSION="$(sed -n 's/^Version: //p' ayusos-control-center/package/DEBIAN/control)"
+          bash ayusos-control-center/build-deb.sh
+          cp "ayusos-control-center/dist/ayusos-control-center_${AYUSOS_VERSION#*:}_all.deb" dist/
           cd dist
           sha256sum *.deb > SHA256SUMS
           sha256sum --check SHA256SUMS
@@ -68,9 +72,11 @@ jobs:
           files=(aio-debian-gui_*_all.deb)
           [[ "${#files[@]}" -eq 1 && "${files[0]}" =~ ^aio-debian-gui_([0-9]+\.[0-9]+\.[0-9]+)_all\.deb$ ]]
           version="${BASH_REMATCH[1]}"
+          ayusos_files=(ayusos-control-center_*_all.deb)
+          [[ "${#ayusos_files[@]}" -eq 1 ]]
           previous=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name 2>/dev/null || true)
           python3 ../scripts/release-notes.py ../CHANGELOG.md "$previous" "$version" > release-notes.md
           grep -q '[^[:space:]]' release-notes.md
-          gh release create "v$version" "${files[0]}" SHA256SUMS \
+          gh release create "v$version" "${files[0]}" "${ayusos_files[0]}" SHA256SUMS \
             --target "$GITHUB_SHA" --title "AiO Debian GUI $version" \
             --notes-file release-notes.md --latest

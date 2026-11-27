@@ -21,23 +21,29 @@ jobs:
     timeout-minutes: 10
     outputs:
       deb-version: ${{ steps.build.outputs.deb-version }}
+      ayusos-version: ${{ steps.build.outputs.ayusos-version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build .deb package
+      - name: Build .deb packages
         id: build
         run: |
           ./scripts/build-deb.sh
+          ./ayusos-control-center/build-deb.sh
+          cp ayusos-control-center/dist/ayusos-control-center_*.deb dist/
           DEB_FILE=$(ls dist/aio-debian-gui_*.deb | head -1)
           VERSION=$(dpkg-deb -f "$DEB_FILE" Version)
+          AYUSOS_FILE=$(ls dist/ayusos-control-center_*.deb | head -1)
+          AYUSOS_VERSION=$(dpkg-deb -f "$AYUSOS_FILE" Version)
           echo "deb-version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "ayusos-version=$AYUSOS_VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Upload .deb artifact
+      - name: Upload .deb artifacts
         uses: actions/upload-artifact@v4
         with:
           name: aio-debian-gui-deb
-          path: dist/aio-debian-gui_*.deb
+          path: dist/*.deb
           retention-days: 1
 
   integration-test:
@@ -103,7 +109,9 @@ jobs:
         run: |
           CONTAINER="${{ steps.container.outputs.container-name }}"
           DEB_FILE=$(ls dist/aio-debian-gui_*.deb | head -1)
+          AYUSOS_FILE=$(ls dist/ayusos-control-center_*.deb | head -1)
           docker cp "$DEB_FILE" "$CONTAINER:/tmp/aio-debian-gui.deb"
+          docker cp "$AYUSOS_FILE" "$CONTAINER:/tmp/ayusos-control-center.deb"
           docker cp scripts/ "$CONTAINER:/tmp/scripts/"
           docker cp package/ "$CONTAINER:/tmp/package/"
           docker cp tests/ "$CONTAINER:/tmp/tests/"
@@ -120,13 +128,13 @@ jobs:
             xvfb-run -a ./scripts/check.sh 2>&1 | tee /tmp/check.log
           "
 
-      - name: Install .deb package
+      - name: Install .deb packages
         id: install
         run: |
           CONTAINER="${{ steps.container.outputs.container-name }}"
           docker exec "$CONTAINER" bash -c "
             apt-get update &&
-            apt-get install -y /tmp/aio-debian-gui.deb 2>&1 | tee /tmp/install.log
+            apt-get install -y --no-install-recommends /tmp/aio-debian-gui.deb /tmp/ayusos-control-center.deb 2>&1 | tee /tmp/install.log
           "
 
       - name: Verify clean installation
@@ -135,7 +143,9 @@ jobs:
           CONTAINER="${{ steps.container.outputs.container-name }}"
           docker exec "$CONTAINER" bash -c "
             dpkg -l aio-debian-gui | grep '^ii' &&
+            dpkg -l ayusos-control-center | grep '^ii' &&
             /usr/lib/aio-debian-gui/aio-debian-gui-helper --version &&
+            test -f /usr/lib/aio-debian-gui/extensions/ayusos/pages.py &&
             test -f /usr/lib/aio-debian-gui/aio-grub-settings &&
             test -f /usr/lib/aio-debian-gui/aio-apt-sources-backup &&
             test -f /usr/share/polkit-1/actions/es.aiodebian.gui.policy &&
@@ -168,9 +178,11 @@ jobs:
         run: |
           CONTAINER="${{ steps.container.outputs.container-name }}"
           docker exec "$CONTAINER" bash -c "
-            apt-get purge -y aio-debian-gui 2>&1 | tee /tmp/purge.log &&
+            apt-get purge -y ayusos-control-center aio-debian-gui 2>&1 | tee /tmp/purge.log &&
             ! dpkg -l aio-debian-gui 2>/dev/null | grep '^ii' &&
+            ! dpkg -l ayusos-control-center 2>/dev/null | grep '^ii' &&
             ! test -f /usr/lib/aio-debian-gui/aio-debian-gui-helper &&
+            ! test -f /usr/lib/aio-debian-gui/extensions/ayusos/pages.py &&
             ! test -f /usr/share/polkit-1/actions/es.aiodebian.gui.policy
           "
 
@@ -179,8 +191,9 @@ jobs:
         run: |
           CONTAINER="${{ steps.container.outputs.container-name }}"
           docker exec "$CONTAINER" bash -c "
-            apt-get install -y /tmp/aio-debian-gui.deb 2>&1 | tee /tmp/reinstall.log &&
+            apt-get install -y --no-install-recommends /tmp/aio-debian-gui.deb /tmp/ayusos-control-center.deb 2>&1 | tee /tmp/reinstall.log &&
             dpkg -l aio-debian-gui | grep '^ii' &&
+            dpkg -l ayusos-control-center | grep '^ii' &&
             /usr/lib/aio-debian-gui/aio-debian-gui-helper --version
           "
 
@@ -201,6 +214,7 @@ jobs:
             "os": "${{ matrix.os }}",
             "image": "${{ steps.distro.outputs.image }}",
             "deb_version": "${{ needs.build-deb.outputs.deb-version }}",
+            "ayusos_version": "${{ needs.build-deb.outputs.ayusos-version }}",
             "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "status": "${{ job.status }}",
             "steps": {
