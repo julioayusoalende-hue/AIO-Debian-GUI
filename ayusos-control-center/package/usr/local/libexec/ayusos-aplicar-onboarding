@@ -1,4 +1,5 @@
 #!/bin/bash
+# Aplica las preferencias del onboarding y gestiona reinicio si es necesario.
 set -euo pipefail
 
 uid=${1:-}
@@ -14,4 +15,40 @@ fi
 }
 
 runner=/usr/lib/aio-debian-gui/extensions/ayusos/aio-run
-exec /usr/bin/python3 -I "$runner" ayusos_onboarding_apply --user "$username"
+/usr/bin/python3 -I "$runner" ayusos_onboarding_apply --user "$username"
+exit_code=$?
+
+# Verificar si se requiere reinicio
+REBOOT_MARKER="/var/lib/ayusos/reboot-required"
+if [[ -f "$REBOOT_MARKER" ]]; then
+    echo "=== REINICIO REQUERIDO ==="
+    echo "El onboarding ha realizado cambios que requieren reiniciar el sistema:"
+    echo "  - Kernel (backports/HWE)"
+    echo "  - Drivers NVIDIA"
+    echo "  - GRUB o cargador de arranque"
+    echo ""
+    echo "Marcador: $REBOOT_MARKER"
+    echo ""
+
+    # En entorno gráfico, ofrecer reinicio vía notificación/zenity
+    if [[ -n "${DISPLAY:-}" ]] && command -v zenity >/dev/null 2>&1; then
+        # Obtener el bus de sesión del usuario
+        user_bus=$(runuser -u "$username" -- printenv DBUS_SESSION_BUS_ADDRESS 2>/dev/null || true)
+        if [[ -n "$user_bus" ]]; then
+            if runuser -u "$username" -- DBUS_SESSION_BUS_ADDRESS="$user_bus" \
+               zenity --question \
+               --title="Reinicio requerido" \
+               --text="El onboarding de AyusOS ha aplicado cambios que requieren reiniciar el sistema (kernel, drivers NVIDIA o GRUB).\n\n¿Reiniciar ahora?" \
+               --ok-label="Reiniciar ahora" --cancel-label="Más tarde"; then
+                systemctl reboot
+            fi
+        fi
+    fi
+
+    # Si no hay entorno gráfico o se canceló, informar al usuario
+    if [[ $exit_code -eq 0 ]]; then
+        exit_code=10  # Código específico: éxito pero requiere reinicio
+    fi
+fi
+
+exit $exit_code

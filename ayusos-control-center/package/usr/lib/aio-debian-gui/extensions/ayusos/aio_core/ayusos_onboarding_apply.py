@@ -3,6 +3,9 @@
 Se ejecuta como root desde ayusos-aio-inicial, después del wizard y antes del
 mantenimiento programado. Es idempotente y tolerante: un paso fallido no impide
 que el resto de opciones se apliquen.
+
+Si algún paso requiere reinicio (kernel, NVIDIA, GRUB), se crea el marcador
+/var/lib/ayusos/reboot-required y se ofrece reiniciar al usuario.
 """
 
 import argparse
@@ -19,6 +22,7 @@ from .ayusos_config import APP_PROFILES, SYSTEM_DEFAULTS
 HELPER = "/usr/lib/aio-debian-gui/aio-debian-gui-helper"
 SCHEDULER = "/usr/lib/aio-debian-gui/aio_core/scheduler.py"
 AptEnv = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL": "C", "DEBIAN_FRONTEND": "noninteractive"}
+REBOOT_MARKER = Path("/var/lib/ayusos/reboot-required")
 
 
 def _merge(base, override):
@@ -48,20 +52,23 @@ def run(cmd, *, env=None, timeout=900, capture=True):
 
 
 def helper(steps, uid):
+    """Ejecuta paso del helper y devuelve (completed_process, reboot_required)."""
     env = dict(AptEnv, PKEXEC_UID=str(uid))
-    return run([HELPER, "--lang", "es", *steps], env=env)
+    result = run([HELPER, "--lang", "es", *steps], env=env)
+    reboot_needed = "##REBOOT:1" in (result.stdout or "") or "##REBOOT:1" in (result.stderr or "")
+    return result, reboot_needed
 
 
 def apply_repos(config, uid, dry):
     if config["repos"]["contrib_nonfree"]:
         return helper(["repos"], uid)
-    return None
+    return None, False
 
 
 def apply_flatpak(config, uid, dry):
     if config["flatpak"]["enabled"]:
         return helper(["flatpak-setup"], uid)
-    return None
+    return None, False
 
 
 def apply_kernel(config, uid, dry):
@@ -70,20 +77,20 @@ def apply_kernel(config, uid, dry):
         return helper(["backports-kernel-mesa"], uid)
     if variant == "hwe":
         return helper(["ubuntu-hwe"], uid)
-    return None
+    return None, False
 
 
 def apply_nvidia(config, uid, dry):
     if config["nvidia"]["mode"] in ("auto", "manual"):
         return helper(["nvidia-driver"], uid)
-    return None
+    return None, False
 
 
 def apply_apps(config, uid, dry):
     profile = config["apps"]["profile"]
     packages = APP_PROFILES.get(profile, [])
     if not packages:
-        return None
+        return None, False
     available, skipped = [], []
     for package in packages:
         if run(["apt-cache", "show", package], timeout=30).returncode == 0:
@@ -93,8 +100,8 @@ def apply_apps(config, uid, dry):
     if skipped:
         print(f"  Aplicaciones no disponibles en APT (se omiten): {', '.join(skipped)}")
     if not available:
-        return None
-    return run(["apt-get", "install", "-y", "--no-remove", *available])
+        return None, False
+    return run(["apt-get", "install", "-y", "--no-remove", *available]), False
 
 
 def apply_extensions(config, uid, dry):
@@ -104,7 +111,7 @@ def apply_extensions(config, uid, dry):
         "gnome-ext-clipboard-indicator", "gnome-ext-places-status",
     }
     steps = [item for item in config["gnome_extensions"]["enabled_by_default"] if item in allowed]
-    return helper(steps, uid) if steps else None
+    return helper(steps, uid) if steps else (None, False)
 
 
 def apply_maintenance(config, uid, dry):
@@ -123,7 +130,7 @@ def apply_maintenance(config, uid, dry):
         "launcher": {"format": "deb", "path": ""},
     }
     payload = json.dumps(scheduler_config, separators=(",", ":"))
-    return run(["/usr/bin/python3", "-I", SCHEDULER, "--configure", str(uid), payload])
+    return run(["/usr/bin/python3", "-I", SCHEDULER, "--configure", str(uid), payload]), False
 
 
 def apply_appearance(config, username, uid, dry):
@@ -177,10 +184,14 @@ def apply(config, username, uid, dry=False):
         ("apariencia", lambda: apply_appearance(config, username, uid, dry)),
     ]
     failures = []
+    reboot_needed = False
     for name, callback in steps:
         print(f"[{name}]")
         try:
-            result = callback()
+            result, step_reboot = callback()
+            if step_reboot:
+                reboot_needed = True
+                print("  ⚠ Requiere reinicio del sistema")
             if result is not None and result.returncode != 0:
                 detail = (result.stderr or result.stdout or "").strip()[-800:]
                 print(f"  Aviso: {detail}")
@@ -190,10 +201,30 @@ def apply(config, username, uid, dry=False):
         except (OSError, subprocess.SubprocessError) as exc:
             print(f"  Aviso: {exc}")
             failures.append(name)
+
+    # Paso final: comprobación de reinicio necesaria
+    print("[comprobación de reinicio]")
+    try:
+        result, check_reboot = helper(["rebootcheck"], uid)
+        if check_reboot or result.returncode != 0:
+            reboot_needed = True
+            print("  ⚠ Se recomienda reiniciar el sistema")
+        else:
+            print("  OK")
+    except (OSError, subprocess.SubprocessError) as exc:
+        print(f"  Aviso: {exc}")
+
+    # Marcar reinicio requerido
+    if reboot_needed:
+        REBOOT_MARKER.parent.mkdir(parents=True, exist_ok=True)
+        REBOOT_MARKER.write_text(f"{username}\n")
+        print(f"\n⚠ REINICIO REQUERIDO: Se ha creado {REBOOT_MARKER}")
+        print("  Los cambios de kernel, NVIDIA o GRUB requieren reinicio para aplicarse.")
+
     if failures:
-        print(f"Onboarding aplicado con avisos: {', '.join(failures)}")
+        print(f"\nOnboarding aplicado con avisos: {', '.join(failures)}")
     else:
-        print("Onboarding aplicado correctamente")
+        print("\nOnboarding aplicado correctamente")
     return 0
 
 
