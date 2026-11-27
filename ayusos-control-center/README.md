@@ -72,7 +72,13 @@ El core descubre la extensión automáticamente. No hay parches de AyusOS en el 
 ./build-deb.sh
 ```
 
-Genera `dist/ayusos-control-center_1.4.10_all.deb`.
+Genera `dist/ayusos-control-center_<versión>_all.deb`.
+
+Las publicaciones de AiO Debian GUI incluyen el Centro de Control construido
+desde el mismo commit. Los dos paquetes publicados comparten la versión visible
+y el sufijo de Testing, cuando corresponde. El Centro de Control publicado
+requiere como mínimo la versión Debian de AiO que lo acompaña. La construcción
+local sin argumentos conserva la versión declarada en este paquete.
 
 La ISO `AyusOS-Linux-1.4-release-final-v4-amd64.iso` fue validada en chroot con
 SHA-256 `d24b3443b46ba1ad898c3a1b1f817f1491d547326ba6c20ca07c03606af68b9f`.

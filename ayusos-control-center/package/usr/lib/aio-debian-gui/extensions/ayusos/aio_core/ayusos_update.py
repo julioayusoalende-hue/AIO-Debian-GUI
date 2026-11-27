@@ -52,24 +52,27 @@ def check_updates() -> tuple[bool, str | None, str | None]:
     if os.environ.get("AIO_TEST_AYUSOS_UPDATE"):
         return True, current, "1.5.3"
     if not AYUSOS_REPO_SOURCES.is_file():
-        return False, current, None
+        raise RuntimeError("No está configurado el repositorio de AyusOS.")
+    import apt
+    import apt_pkg
+    from functools import cmp_to_key
+
     try:
-        result = subprocess.run(
-            ["apt-cache", "policy", "ayusos-release"],
-            capture_output=True, text=True, timeout=15,
-            env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL": "C"},
-        )
-    except (OSError, subprocess.SubprocessError):
-        return False, current, None
-    match = re.search(r"^\s*Candidate:\s*(\S+)", result.stdout, re.MULTILINE)
-    if result.returncode or not match or match.group(1) == "(none)":
-        return False, current, None
-    candidate = match.group(1)
-    newer = subprocess.run(
-        ["dpkg", "--compare-versions", candidate, "gt", current],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-    ).returncode == 0
-    return newer, current, candidate if newer else None
+        package = apt.Cache()["ayusos-release"]
+    except (KeyError, OSError, SystemError) as exc:
+        raise RuntimeError("No se pudieron consultar los índices APT de AyusOS.") from exc
+    if package.installed is not None:
+        current = package.installed.version
+    trusted = []
+    for version in package.versions:
+        origins = [origin for origin in version.origins if origin.archive != "now"]
+        if origins and all(origin.trusted and origin.origin == "AyusOS" for origin in origins):
+            trusted.append(version.version)
+    if not trusted:
+        raise RuntimeError("Los índices APT locales no contienen una versión del repositorio firmado de AyusOS.")
+    latest = max(trusted, key=cmp_to_key(apt_pkg.version_compare))
+    newer = apt_pkg.version_compare(latest, current) > 0
+    return newer, current, latest if newer else None
 
 
 def perform_update(channel: str = None, dry_run: bool = False) -> tuple[bool, str]:
@@ -185,7 +188,10 @@ def get_changelog(version: str) -> str:
 # CLI para helper privilegiado
 def cli_check_updates() -> str:
     """Salida JSON para el helper."""
-    hay, actual, nueva = check_updates()
+    try:
+        hay, actual, nueva = check_updates()
+    except RuntimeError as exc:
+        return json.dumps({"error": str(exc)})
     return json.dumps({
         "update_available": hay,
         "current_version": actual,

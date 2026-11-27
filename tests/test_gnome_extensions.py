@@ -100,5 +100,6 @@ def test_installed_parses_uuid_lines():
         'stdout': f'{UUID}\nother@example.com\n',
         'stderr': '',
     })()
-    with patch.object(gnome_extensions.subprocess, 'run', return_value=result):
+    with patch.object(gnome_extensions.subprocess, 'run', return_value=result) as run:
         assert gnome_extensions.installed() == {UUID, 'other@example.com'}
+        assert run.call_args.args[0] == ['gnome-extensions', 'list']

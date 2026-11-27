@@ -68,6 +68,20 @@ with tempfile.TemporaryDirectory() as directory:
     run("dpkg", "--compare-versions", "1:1.0.4~testing.1.1", "lt", "1:1.0.4~testing.2.1", cwd=work)
     run("dpkg", "--compare-versions", "1:1.0.4~testing.1.1", "lt", "1:1.0.4", cwd=work)
     run("dpkg-deb", "-x", str(deb), str(work / "extracted"), cwd=work)
+    shutil.copytree(root / "ayusos-control-center/package", work / "ayusos-control-center/package")
+    shutil.copy(root / "ayusos-control-center/build-deb.sh", work / "ayusos-control-center")
+    for aio_version in ("1:1.0.4~testing.1.1", "1:1.0.4"):
+        companion = work / "ayusos-control-center"
+        run("bash", "build-deb.sh", "--aio-release-version", aio_version, cwd=companion)
+        public_version = aio_version.split(":")[1]
+        companion_deb = companion / "dist" / f"ayusos-control-center_{public_version}_all.deb"
+        assert run("dpkg-deb", "-f", str(companion_deb), "Version", cwd=work).stdout.strip() == public_version
+        assert run("dpkg-deb", "-f", str(companion_deb), "Depends", cwd=work).stdout.startswith(
+            f"aio-debian-gui (>= {aio_version}),"
+        )
+    assert run("bash", "build-deb.sh", "--aio-release-version", "1.0.4~beta",
+               cwd=companion, check=False).returncode == 2
+
     notes = work / "extracted/usr/share/aio-debian-gui/release-notes.txt"
     assert notes.read_text(encoding="utf-8") == "1.0.4~testing.1.1\n• Novedades testing\n"
     metainfo = next((work / "extracted/usr/share/metainfo").glob("*.metainfo.xml"))

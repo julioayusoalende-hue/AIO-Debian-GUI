@@ -51,12 +51,13 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/build-deb.sh --testing-version "$VERSION"
-          AYUSOS_VERSION="$(sed -n 's/^Version: //p' ayusos-control-center/package/DEBIAN/control)"
-          bash ayusos-control-center/build-deb.sh
-          cp "ayusos-control-center/dist/ayusos-control-center_${AYUSOS_VERSION#*:}_all.deb" dist/
+          AIO_VERSION="$(dpkg-deb -f "dist/aio-debian-gui_${VERSION}_all.deb" Version)"
+          bash ayusos-control-center/build-deb.sh --aio-release-version "$AIO_VERSION"
+          cp "ayusos-control-center/dist/ayusos-control-center_${VERSION}_all.deb" dist/
           cd dist
           cp "aio-debian-gui_${VERSION}_all.deb" "aio-debian-gui_${VERSION/\~/-}_all.deb"
-          sha256sum "aio-debian-gui_${VERSION/\~/-}_all.deb" "ayusos-control-center_${AYUSOS_VERSION#*:}_all.deb" > SHA256SUMS
+          cp "ayusos-control-center_${VERSION}_all.deb" "ayusos-control-center_${VERSION/\~/-}_all.deb"
+          sha256sum "aio-debian-gui_${VERSION/\~/-}_all.deb" "ayusos-control-center_${VERSION/\~/-}_all.deb" > SHA256SUMS
           sha256sum --check SHA256SUMS
           dpkg-deb --fsys-tarfile "aio-debian-gui_${VERSION/\~/-}_all.deb" |
             tar -xOf - ./usr/share/aio-debian-gui/release-notes.txt |
@@ -70,7 +71,7 @@ jobs:
         run: |
           set -euo pipefail
           gh release create "$TAG" "dist/aio-debian-gui_${VERSION/\~/-}_all.deb" \
-            dist/ayusos-control-center_*_all.deb dist/SHA256SUMS \
+            "dist/ayusos-control-center_${VERSION/\~/-}_all.deb" dist/SHA256SUMS \
             --target "$GITHUB_SHA" --prerelease --title "AiO Debian GUI $VERSION (testing)" \
             --notes-file dist/testing-notes.md
 
@@ -92,11 +93,8 @@ jobs:
           trap 'rm -rf -- "$GNUPGHOME"' EXIT
           printf '%s\n' 'allow-loopback-pinentry' > "$GNUPGHOME/gpg-agent.conf"
           printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
-          AYUSOS_VERSION="$(sed -n 's/^Version: //p' ayusos-control-center/package/DEBIAN/control)"
-          AYUSOS_DEB="dist/ayusos-control-center_${AYUSOS_VERSION#*:}_all.deb"
-          test -f "$AYUSOS_DEB"
           APT_CHANNEL=testing bash scripts/publish-apt-repo.sh \
-            "dist/aio-debian-gui_${VERSION}_all.deb" apt-site "" "$AYUSOS_DEB"
+            "dist/aio-debian-gui_${VERSION}_all.deb" apt-site "" "dist/ayusos-control-center_${VERSION}_all.deb"
           git -C apt-site config user.name 'github-actions[bot]'
           git -C apt-site config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git -C apt-site add -- apt-testing

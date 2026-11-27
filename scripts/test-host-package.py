@@ -69,7 +69,8 @@ def make_version(deb, version, destination):
     return output
 
 
-def make_ayusos_fixture(version, destination):
+def make_ayusos_fixture(aio_version, destination):
+    version = aio_version.split(":")[-1]
     stage = WORK / ("ayusos-control-center-" + version)
     (stage / "DEBIAN").mkdir(parents=True)
     (stage / "DEBIAN/control").write_text(
@@ -78,7 +79,7 @@ def make_ayusos_fixture(version, destination):
         "Section: admin\n"
         "Priority: optional\n"
         "Architecture: all\n"
-        "Depends: aio-debian-gui (>= 1.5.1)\n"
+        f"Depends: aio-debian-gui (>= {aio_version}), python3\n"
         "Maintainer: fixture <fixture@example.invalid>\n"
         "Description: fixture\n"
     )
@@ -390,12 +391,12 @@ try:
     site.mkdir()
     fixtures = WORK / "fixtures"
     fixtures.mkdir()
-    ayusos = make_ayusos_fixture("1.4.8", fixtures)
     pairs = []
     for v in ("1.0.0", "1.0.1", "1.0.2"):
         pairs.append((make_version(main, v, fixtures), make_version(host, v, fixtures)))
     publish_env = {**ENV, "KEEP_VERSIONS": "2"}
     for main_deb, host_deb in pairs:
+        ayusos = make_ayusos_fixture(field(main_deb, "Version"), fixtures)
         result = subprocess.run(["bash", str(source / "scripts/publish-apt-repo.sh"),
                                  str(main_deb), str(site), str(host_deb), str(ayusos)],
                                 env=publish_env, cwd=ROOT, capture_output=True)
@@ -410,7 +411,9 @@ try:
     host_pool = host_site / "pool/main/a/aio-debian-gui"
     assert sorted(p.name for p in pool.glob("*.deb")) == [pair[0].name for pair in pairs[1:]]
     assert sorted(p.name for p in host_pool.glob("*.deb")) == [pair[1].name for pair in pairs[1:]]
-    assert [p.name for p in ayusos_pool.glob("*.deb")] == [ayusos.name]
+    assert sorted(p.name for p in ayusos_pool.glob("*.deb")) == [
+        "ayusos-control-center_1.0.1_all.deb", "ayusos-control-center_1.0.2_all.deb",
+    ]
     for repository, packages_expected in (
         (site, ["aio-debian-gui", "ayusos-control-center"]),
         (host_site, ["aio-debian-gui-host"]),
@@ -427,10 +430,28 @@ try:
                    for block in packages.strip().split("\n\n")]
         assert [entry["Package"] for entry in entries] == packages_expected
         for entry in entries:
-            expected_version = "1.4.8" if entry["Package"] == "ayusos-control-center" else "1.0.2"
-            assert entry["Version"] == expected_version
+            assert entry["Version"] == "1.0.2"
             deb = repository / entry["Filename"]
             assert entry["SHA256"] == hashlib.sha256(deb.read_bytes()).hexdigest()
+
+    testing_version = "1:1.0.3~testing.12.1"
+    testing_deb = make_version(main, testing_version, fixtures)
+    apt_name = fixtures / f"aio-debian-gui_{testing_version.split(':')[1]}_all.deb"
+    testing_deb.rename(apt_name)
+    testing_ayusos = make_ayusos_fixture(testing_version, fixtures)
+    testing_env = {**publish_env, "APT_CHANNEL": "testing"}
+    publisher = str(source / "scripts/publish-apt-repo.sh")
+    result = subprocess.run(["bash", publisher, str(apt_name), str(site), "", str(ayusos)],
+                            cwd=ROOT, env=testing_env, capture_output=True)
+    assert result.returncode != 0
+    subprocess.run(["bash", publisher, str(apt_name), str(site), "", str(testing_ayusos)],
+                   cwd=ROOT, env=testing_env, check=True, capture_output=True)
+    testing_dist = site / "apt-testing/dists/testing"
+    run("gpgv", "--keyring", str(keyring), str(testing_dist / "InRelease"))
+    testing_index = (testing_dist / "main/binary-all/Packages").read_text()
+    assert f"Version: {testing_version}\n" in testing_index
+    assert f"Version: {testing_version.split(':')[1]}\n" in testing_index
+    assert f"Depends: aio-debian-gui (>= {testing_version}), python3\n" in testing_index
 
     spec = importlib.util.spec_from_file_location(
         "host_repository", ROOT / "package/usr/lib/aio-debian-gui/aio_core/host_repository.py")

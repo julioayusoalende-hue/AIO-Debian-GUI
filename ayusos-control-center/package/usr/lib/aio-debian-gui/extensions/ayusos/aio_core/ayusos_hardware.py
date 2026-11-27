@@ -1,6 +1,7 @@
 """Perfiles de hardware y optimizaciones para AyusOS."""
 
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -32,11 +33,10 @@ HARDWARE_PROFILES = {
         "name": "Gaming",
         "description": "Optimizado para juegos: latencia baja, máxima GPU",
         "packages": ["gamemode", "mangohud", "libvulkan1", "vulkan-tools"],
-        "services": ["gamemoded"],
+        # GameMode lo activa D-Bus en la sesión que lo solicita.
+        "services": [],
         "tweaks": {
             "cpu_governor": "performance",
-            "gamemode_auto": True,
-            "kernel_params": "mitigations=off",
         },
     },
     "workstation": {
@@ -197,6 +197,9 @@ def apply_hardware_profile(profile_id: str) -> tuple[bool, str]:
     if profile_id not in HARDWARE_PROFILES:
         return False, f"Perfil desconocido: {profile_id}"
 
+    if os.geteuid() != 0:
+        return False, "Se requieren privilegios de administrador para aplicar el perfil."
+
     profile = HARDWARE_PROFILES[profile_id]
     errors = []
 
@@ -204,8 +207,11 @@ def apply_hardware_profile(profile_id: str) -> tuple[bool, str]:
     for pkg in profile["packages"]:
         try:
             result = subprocess.run(
-                comando_host("apt-get", "install", "-y", pkg),
-                capture_output=True, text=True, timeout=120
+                comando_host("apt-get", "-o", "DPkg::Lock::Timeout=60",
+                             "install", "-y", "--no-remove", pkg),
+                capture_output=True, text=True, timeout=120,
+                stdin=subprocess.DEVNULL,
+                env={**os.environ, "DEBIAN_FRONTEND": "noninteractive"},
             )
             if result.returncode != 0:
                 errors.append(f"Paquete {pkg}: {result.stderr[:200]}")
@@ -254,11 +260,6 @@ def apply_hardware_profile(profile_id: str) -> tuple[bool, str]:
                 tlp_conf.write_text(content)
         except OSError:
             errors.append("TLP config: error escribiendo")
-
-    # Kernel params (requiere reboot)
-    if "kernel_params" in tweaks:
-        # Se guarda para aplicar en próximo boot via GRUB
-        pass
 
     if errors:
         return False, f"Errores aplicando perfil: {'; '.join(errors[:3])}"

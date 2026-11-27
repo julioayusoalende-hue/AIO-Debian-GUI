@@ -1,15 +1,18 @@
 """Operaciones privilegiadas del modo de recuperación de AyusOS."""
 
+import base64
+import configparser
 import json
 import os
 import re
 import shutil
 import subprocess
+import zipfile
 from pathlib import Path
 
 from aio_core.constants import comando_host
 
-from . import ayusos_diagnostics, ayusos_snapshots
+from . import ayusos_branding, ayusos_diagnostics, ayusos_hardware, ayusos_identity, ayusos_snapshots
 
 RECOVERY_PARAMETER = "ayusos-recovery"
 _SNAPSHOT_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:+-]{0,127}$")
@@ -93,8 +96,14 @@ def restore_snapshot(snapshot_id: str) -> tuple[bool, str]:
     return ayusos_snapshots.restore_timeshift_snapshot(snapshot_id)
 
 
-def execute(action: str, snapshot_id: str | None = None) -> dict:
+def execute(action: str, target: str | None = None, *, tags: str | None = None) -> dict:
     """Ejecuta una acción y devuelve un resultado serializable para la GUI."""
+    if action == "branding-plymouth":
+        ok = ayusos_branding.set_plymouth_theme(target or "")
+        return {"success": ok, "message": "" if ok else "No se pudo aplicar el tema de arranque seleccionado."}
+    if action == "hardware-apply":
+        ok, message = ayusos_hardware.apply_hardware_profile(target or "")
+        return {"success": ok, "message": message}
     if action == "repair":
         ok, message = repair_system()
         return {"success": ok, "message": message}
@@ -108,12 +117,33 @@ def execute(action: str, snapshot_id: str | None = None) -> dict:
             "success": True,
             "snapshots": ayusos_snapshots.list_timeshift_snapshots(),
         }
-    if action == "restore":
-        if not snapshot_id:
+    if action == "snapshot-status":
+        return {"success": True, "status": ayusos_snapshots.get_snapshot_status()}
+    if action == "snapshot-create":
+        comment = target or ""
+        if len(comment) > 512 or comment.lstrip().startswith("-") or any(ord(c) < 32 for c in comment):
+            return {"success": False, "message": "Comentario de snapshot no válido."}
+        if tags not in {"O", "B", "H", "D", "W", "M"}:
+            return {"success": False, "message": "Tipo de snapshot no válido."}
+        ok, message = ayusos_snapshots.create_timeshift_snapshot(comment, tags)
+    elif action == "snapshot-delete":
+        if not _SNAPSHOT_ID.fullmatch(target or ""):
+            return {"success": False, "message": "Identificador de snapshot no válido."}
+        ok, message = ayusos_snapshots.delete_timeshift_snapshot(target)
+    elif action == "restore":
+        if not target:
             return {"success": False, "message": "Falta el snapshot seleccionado."}
-        ok, message = restore_snapshot(snapshot_id)
+        ok, message = restore_snapshot(target)
         return {"success": ok, "message": message}
-    return {"success": False, "message": f"Acción desconocida: {action}"}
+    else:
+        return {"success": False, "message": f"Acción desconocida: {action}"}
+    result = {"success": ok, "message": message}
+    if ok:
+        try:
+            result["status"] = ayusos_snapshots.get_snapshot_status()
+        except (OSError, RuntimeError, subprocess.SubprocessError, ValueError) as exc:
+            result["refresh_error"] = str(exc)
+    return result
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -123,19 +153,27 @@ def main(argv: list[str] | None = None) -> int:
     if os.geteuid() != 0:
         print(json.dumps({"success": False, "message": "Se requieren privilegios de administrador."}))
         return 1
-    if not args or args[0] not in {"repair", "grub", "diagnostics", "snapshots", "restore"}:
-        print(json.dumps({
-            "success": False,
-            "message": "Uso: ayusos-recovery repair|grub|diagnostics|snapshots|restore [ID]",
-        }))
+    arity = {"repair": 0, "grub": 0, "diagnostics": 0, "snapshots": 0,
+             "restore": 1, "snapshot-status": 0, "snapshot-create": 2, "snapshot-delete": 1,
+             "hardware-apply": 1, "branding-plymouth": 1, "identity-restore": 0}
+    if not args or arity.get(args[0]) != len(args) - 1:
+        print(json.dumps({"success": False, "message": "Acción o argumentos no válidos."}))
         return 2
-    if args[0] == "restore" and len(args) != 2:
-        print(json.dumps({"success": False, "message": "Falta el snapshot seleccionado."}))
-        return 2
-    if args[0] != "restore" and len(args) != 1:
-        print(json.dumps({"success": False, "message": "Argumentos no válidos."}))
-        return 2
-    result = execute(args[0], args[1] if len(args) == 2 else None)
+    try:
+        if args[0] == "identity-restore":
+            limit = 4 * ((ayusos_identity.ARCHIVE_LIMIT + 2) // 3)
+            encoded = sys.stdin.buffer.read(limit + 1)
+            if len(encoded) > limit:
+                raise ValueError("El respaldo supera el tamaño máximo.")
+            files = ayusos_identity.read_identity(base64.b64decode(encoded, validate=True))
+            ayusos_identity.restore_system_identity(files)
+            result = {"success": True}
+        else:
+            result = execute(args[0], args[1] if len(args) >= 2 else None,
+                             tags=args[2] if len(args) == 3 else None)
+    except (OSError, RuntimeError, subprocess.SubprocessError, ValueError, SyntaxError,
+            KeyError, zipfile.BadZipFile, configparser.Error) as exc:
+        result = {"success": False, "message": str(exc)}
     print(json.dumps(result, ensure_ascii=False))
     return 0 if result.get("success") else 1
 

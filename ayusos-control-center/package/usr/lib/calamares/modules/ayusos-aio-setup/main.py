@@ -62,7 +62,7 @@ def _build_config(job):
             "time": c.get("maintenanceTime", "03:00"),
             "tasks": c.get("maintenanceTasks", [
                 "upgrade", "autoclean", "flatpak-update", "snap-update",
-                "clean-journal", "rebootcheck"]),
+                "rebootcheck"]),
             "notify": bool(c.get("maintenanceNotify", True)),
         },
         "apps": {

@@ -132,39 +132,23 @@ def check_snapshots_recent() -> tuple[bool, str]:
     if not paquete_instalado("timeshift"):
         return True, "Timeshift no instalado (omitido)"
 
+    from .ayusos_snapshots import list_timeshift_snapshots
+
     try:
-        result = subprocess.run(
-            comando_host("timeshift", "--list", "--json"),
-            capture_output=True, text=True, timeout=10
-        )
-        if result.returncode != 0:
-            return False, "Error listando snapshots"
-
-        import json
-        snapshots = json.loads(result.stdout)
-        if not snapshots:
-            return False, "No hay snapshots creados"
-
-        # Verificar si hay alguno en los últimos 7 días
-        now = time.time()
-        recent = False
-        for snap in snapshots:
-            # timeshift JSON tiene "date" en formato ISO
-            snap_date = snap.get("date", "")
-            if snap_date:
-                try:
-                    snap_time = time.mktime(time.strptime(snap_date[:19], "%Y-%m-%d %H:%M:%S"))
-                    if now - snap_time < 7 * 86400:
-                        recent = True
-                        break
-                except ValueError:
-                    pass
-
-        if recent:
+        snapshots = list_timeshift_snapshots()
+    except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
+        return False, f"No se pudieron consultar los snapshots: {exc}"
+    if not snapshots:
+        return False, "No hay snapshots creados"
+    now = time.time()
+    for snapshot in snapshots:
+        try:
+            created = time.mktime(time.strptime(snapshot["id"], "%Y-%m-%d_%H-%M-%S"))
+        except (KeyError, ValueError):
+            continue
+        if 0 <= now - created < 7 * 86400:
             return True, f"Snapshots recientes encontrados ({len(snapshots)} total)"
-        return False, f"Sin snapshots en 7 días ({len(snapshots)} total)"
-    except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as e:
-        return False, f"Error: {e}"
+    return False, f"Sin snapshots en 7 días ({len(snapshots)} total)"
 
 
 def check_firmware_updates() -> tuple[bool, str]:

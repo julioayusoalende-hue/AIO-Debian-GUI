@@ -5,6 +5,11 @@
 - Al abrir un archivo .deb desde el escritorio, AiO selecciona el Gestor de software y muestra la confirmación de instalación.
 - Las páginas y tarjetas usan los colores del tema GTK para conservar el contraste al alternar entre los modos claro y oscuro.
 
+- AyusOS Control Center utiliza autorización gráfica para gestionar snapshots, actualizar GRUB y aplicar perfiles de hardware.
+- El asistente solo ofrece extensiones de GNOME que faltan, usa el acento rojo, respeta la elección de Flathub y conserva el estado pendiente si falla el guardado o la aplicación de los ajustes.
+- Se corrigen la restauración de identidad, el tema de arranque, los diagnósticos de Timeshift, la comprobación de actualizaciones y el filtro de aplicaciones AyusOS.
+- Cada publicación Stable o Testing de AiO incluye el Centro de Control de la misma compilación, con versiones verificadas antes de firmar el repositorio APT.
+
 ## 1.5.4
 
 - El Gestor de software de APT y Flatpak vuelve al paquete principal de AiO Debian GUI.

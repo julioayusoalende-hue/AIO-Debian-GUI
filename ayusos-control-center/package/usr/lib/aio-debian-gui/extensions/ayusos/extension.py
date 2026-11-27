@@ -93,7 +93,7 @@ class Extension:
 
     def _añadir_filtro_ayusos(self, window):
         """Añade un botón para filtrar apps del perfil AyusOS."""
-        if not hasattr(window, "recommended_category") or not hasattr(window, "recommended_grid"):
+        if not all(hasattr(window, name) for name in ("recommended_category", "recommended_grid", "recommended_empty")):
             return
         # Buscar el contenedor de filtros (search + category)
         filtro_box = window.recommended_category.get_parent()
@@ -111,17 +111,9 @@ class Extension:
         window.ayusos_perfil_combo = perfil_combo
 
     def _on_perfil_changed(self, combo, window):
-        perfil = combo.get_active_id()
-        if perfil != "ayusos":
-            # Restaurar filtro original (solo búsqueda y categoría)
-            window._filtrar_recomendadas(window.recommended_search, None)
-            return
-        # Filtrar para mostrar solo apps del perfil AyusOS
-        ayusos_ids = self.ayusos_apps()
-        coincidencias = [app in ayusos_ids for app in window.canales_recomendados]
-        window.recommended_grid.set_filter_func(
-            lambda t: t.get_index() < len(coincidencias) and coincidencias[t.get_index()]
-        )
+        app_ids = self.ayusos_apps()
+        window.recommended_extra_filter = app_ids.__contains__ if combo.get_active_id() == "ayusos" else None
+        window._filtrar_recomendadas(window.recommended_search, window.recommended_empty)
 
     def should_launch_onboarding(self):
         return False if is_recovery_boot() else should_launch_onboarding()

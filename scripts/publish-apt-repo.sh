@@ -62,11 +62,12 @@ fi
 if [ -n "$AYUSOS_DEB" ]; then
     AYUSOS_VERSION=$(dpkg-deb -f "$AYUSOS_DEB" Version)
     AYUSOS_PUBLIC_VERSION=${AYUSOS_VERSION#*:}
-    [[ "$AYUSOS_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[1-9][0-9]*)?$ ]] &&
+    [ "$AYUSOS_VERSION" = "$PUBLIC_VERSION" ] &&
+        [[ "$(dpkg-deb -f "$AYUSOS_DEB" Depends)" == "aio-debian-gui (>= $VERSION),"* ]] &&
         [ "$(dpkg-deb -f "$AYUSOS_DEB" Package)" = "ayusos-control-center" ] &&
         [ "$(dpkg-deb -f "$AYUSOS_DEB" Architecture)" = "all" ] &&
         [ "$(basename "$AYUSOS_DEB")" = "ayusos-control-center_${AYUSOS_PUBLIC_VERSION}_all.deb" ] || {
-        echo "El paquete ayusos-control-center no es válido." >&2; exit 1;
+        echo "El paquete ayusos-control-center no coincide con la versión de AiO." >&2; exit 1;
     }
 fi
 

@@ -5,6 +5,7 @@ Esquema TOML tipado con validación, migración y fusión de prioridades:
 """
 
 import json
+import os
 import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -50,7 +51,6 @@ SYSTEM_DEFAULTS = {
             "autoclean",
             "flatpak-update",
             "snap-update",
-            "clean-journal",
             "rebootcheck",
         ],
         "notify": True,
@@ -116,7 +116,7 @@ class MaintenanceConfig:
     time: str = "03:00"
     tasks: list[str] = field(default_factory=lambda: [
         "upgrade", "autoclean", "flatpak-update", "snap-update",
-        "clean-journal", "rebootcheck"
+        "rebootcheck"
     ])
     notify: bool = True
 
@@ -299,8 +299,8 @@ def save_system_config(config: AyusOSConfig) -> bool:
 
 def save_user_preferences(prefs: dict[str, Any]) -> bool:
     """Guarda preferencias de usuario."""
-    USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     try:
+        USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(
             mode="w", encoding="utf-8", prefix=".prefs-", dir=USER_CONFIG_DIR, delete=False
         ) as tmp:
@@ -313,19 +313,12 @@ def save_user_preferences(prefs: dict[str, Any]) -> bool:
         return False
 
 
-def mark_onboarding_done(version: str) -> bool:
-    """Marca onboarding como completado (system + user)."""
-    config = get_effective_config()
-    config.onboarding.completed = True
-    config.onboarding.version = version
-    ok_system = save_system_config(config)
-    # No sobrescribir preferencias existentes (idioma, tema, etc.).
-    prefs = load_user_preferences()
-    onboarding = prefs.setdefault("onboarding", {})
-    onboarding["completed"] = True
-    onboarding["version"] = version
-    ok_user = save_user_preferences(prefs)
-    return ok_system or ok_user
+def mark_onboarding_done(version: str, prefs: dict[str, Any] | None = None) -> bool:
+    """Guarda las preferencias del asistente y su estado en la misma escritura."""
+    if prefs is None:
+        prefs = load_user_preferences()
+    prefs["onboarding"] = {**prefs.get("onboarding", {}), "completed": True, "version": version}
+    return save_user_preferences(prefs)
 
 
 def is_onboarding_completed() -> bool:
@@ -395,6 +388,22 @@ VALID_NVIDIA_MODES = {"auto", "manual", "none"}
 VALID_MAINTENANCE_SCHEDULES = {"daily", "weekly", "monthly", "disabled"}
 VALID_APP_PROFILES = {"minimal", "development", "multimedia", "gaming", "full"}
 VALID_THEMES = {"system", "light", "dark"}
+AYUSOS_ACCENT = "red"
+
+
+def installed_gnome_tasks(user_data_dir=None):
+    from aio_core.gnome_extensions import EXTENSIONS
+
+    if user_data_dir is None:
+        user_data_dir = os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share"
+    data_dirs = os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"
+    roots = [Path(user_data_dir), Path("/usr/share"), *(Path(d) for d in data_dirs.split(":") if d)]
+    return {
+        task for task, uuid in EXTENSIONS.items()
+        if any((root / "gnome-shell/extensions" / uuid / "metadata.json").is_file() for root in roots)
+    }
+
+
 VALID_ACCENTS = {"ayusos", "blue", "green", "orange", "purple", "red", "teal"}
 
 

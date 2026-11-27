@@ -4,9 +4,13 @@ Este módulo se instala como extensión de aio-debian-gui; el core no conoce
 nada de AyusOS. Los métodos se enlazan a la ventana principal en install().
 """
 
+import base64
+import configparser
 import os
 import subprocess
 import threading
+import zipfile
+from pathlib import Path
 
 import gi
 
@@ -22,6 +26,7 @@ from aio_core.constants import (
 from gi.repository import GdkPixbuf, GLib, Gtk, Pango
 
 from .aio_core.ayusos_branding import ACENTOS
+from .recovery import RECOVERY_HELPER, _parse_payload
 
 
 class AyusOSPagesMixin:
@@ -135,13 +140,14 @@ class AyusOSPagesMixin:
         comment_box = Gtk.Box(spacing=8)
         comment_box.pack_start(etiqueta("Comentario:"), False, False, 0)
         self.snapshots_comment = Gtk.Entry(placeholder_text=traducir("Ej: Antes de actualización"))
+        self.snapshots_comment.set_max_length(512)
         comment_box.pack_start(self.snapshots_comment, True, True, 0)
         caja2.pack_start(comment_box, False, False, 0)
 
         tags_box = Gtk.Box(spacing=8)
         tags_box.pack_start(etiqueta("Tipo:"), False, False, 0)
         self.snapshots_tags = Gtk.ComboBoxText()
-        for tag_id, tag_name in [("O", "Bajo demanda"), ("B", "Arranque"), ("H", "Horario"), ("D", "Diario"), ("W", "Semanal"), ("M", "Mensual"), ("Y", "Anual")]:
+        for tag_id, tag_name in [("O", "Bajo demanda"), ("B", "Arranque"), ("H", "Horario"), ("D", "Diario"), ("W", "Semanal"), ("M", "Mensual")]:
             self.snapshots_tags.append(tag_id, traducir(tag_name))
         self.snapshots_tags.set_active_id("O")
         tags_box.pack_start(self.snapshots_tags, False, False, 0)
@@ -391,7 +397,6 @@ class AyusOSPagesMixin:
         btn_row.pack_start(self.branding_refresh_btn, False, False, 0)
         grid.attach(btn_row, 0, 2, 2, 1)
 
-        caja.pack_start(grid, False, False, 0)
         contenido.pack_start(tarjeta, False, False, 0)
 
         # Tarjeta: Fondos disponibles
@@ -409,13 +414,17 @@ class AyusOSPagesMixin:
         plymouth_box = Gtk.Box(spacing=8)
         plymouth_box.pack_start(etiqueta("Tema:"), False, False, 0)
         self.branding_plymouth = Gtk.ComboBoxText()
-        self.branding_plymouth.append("ayusos", traducir("AyusOS"))
-        self.branding_plymouth.append("bgrt", "BGRTSimple")
-        self.branding_plymouth.append("spinner", "Spinner")
-        self.branding_plymouth.set_active_id("ayusos")
+        from .aio_core.ayusos_branding import available_plymouth_themes
+
+        themes = available_plymouth_themes()
+        for theme in themes:
+            self.branding_plymouth.append(theme, "AyusOS" if theme == "ayusos" else theme)
+        if themes:
+            self.branding_plymouth.set_active_id("ayusos" if "ayusos" in themes else themes[0])
         plymouth_box.pack_start(self.branding_plymouth, False, False, 0)
 
         self.branding_plymouth_btn = Gtk.Button(label=traducir("Aplicar tema"))
+        self.branding_plymouth_btn.set_sensitive(bool(themes))
         self.branding_plymouth_btn.connect("clicked", self._branding_apply_plymouth)
         plymouth_box.pack_start(self.branding_plymouth_btn, False, False, 0)
         caja3.pack_start(plymouth_box, False, False, 0)
@@ -638,6 +647,12 @@ class AyusOSPagesMixin:
             self.ayusos_update_status.set_text(traducir("Error: %s") % data)
             return GLib.SOURCE_REMOVE
 
+        if error := data.get("error"):
+            self.ayusos_update_status.set_text(error)
+            self.ayusos_update_btn.set_sensitive(False)
+            self.ayusos_changelog_view.get_buffer().set_text("")
+            return GLib.SOURCE_REMOVE
+
         update_available = data.get("update_available", False)
         current = data.get("current_version", "?")
         new_ver = data.get("new_version")
@@ -679,22 +694,49 @@ class AyusOSPagesMixin:
             "Actualizador abierto. Sigue las instrucciones en la terminal."
         ))
 
+    def _run_authorized_action(self, action, done, *args, operation="Snapshots de AyusOS", payload_input=None):
+        token = self._iniciar_operacion(traducir(operation))
+        if token is None:
+            done(False, traducir("Hay otra operación en curso."))
+            return
+
+        def complete(ok, data):
+            self._finalizar_operacion(token)
+            return done(ok, data)
+
+        def worker():
+            try:
+                input_args = {"stdin": subprocess.DEVNULL} if payload_input is None else {"input": payload_input}
+                result = subprocess.run(
+                    comando_host("pkexec", RECOVERY_HELPER, action, *args),
+                    capture_output=True, text=True, timeout=900,
+                    **input_args,
+                )
+                payload = _parse_payload(result.stdout)
+                if not payload or result.returncode in (126, 127):
+                    if result.returncode == 126:
+                        raise RuntimeError(traducir("Autorización cancelada."))
+                    raise RuntimeError(result.stderr.strip() or traducir("No se pudo autorizar la operación."))
+                if result.returncode:
+                    payload["success"] = False
+            except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
+                GLib.idle_add(complete, False, str(exc))
+            else:
+                GLib.idle_add(complete, True, payload)
+
+        threading.Thread(target=worker, daemon=True).start()
+
     def _snapshots_refresh(self, _boton):
         self.snapshots_refresh_btn.set_sensitive(False)
-        self.snapshots_status.set_text(traducir("Cargando estado…"))
+        self.snapshots_status.set_text(traducir("Esperando autorización para consultar snapshots…"))
+        self._run_authorized_action("snapshot-status", self._snapshots_refresh_result)
 
-        def cargar():
-            try:
-                import json
-
-                from .aio_core import ayusos_snapshots
-                result = json.loads(ayusos_snapshots.cli_snapshot_status())
-            except (OSError, ValueError, RuntimeError, ImportError) as exc:
-                GLib.idle_add(self._snapshots_refresh_done, False, str(exc))
-            else:
-                GLib.idle_add(self._snapshots_refresh_done, True, result)
-
-        threading.Thread(target=cargar, daemon=True).start()
+    def _snapshots_refresh_result(self, ok, data):
+        if ok:
+            if data.get("success"):
+                return self._snapshots_refresh_done(True, data["status"])
+            data = data.get("message", "")
+        return self._snapshots_refresh_done(False, data)
 
     def _snapshots_refresh_done(self, ok, data):
         self.snapshots_refresh_btn.set_sensitive(True)
@@ -728,18 +770,7 @@ class AyusOSPagesMixin:
         self.snapshots_create_btn.set_sensitive(False)
         self.snapshots_status.set_text(traducir("Creando snapshot…"))
 
-        def crear():
-            try:
-                import json
-
-                from .aio_core import ayusos_snapshots
-                result = json.loads(ayusos_snapshots.cli_create_snapshot(comment, tags))
-            except (OSError, ValueError, RuntimeError, ImportError) as exc:
-                GLib.idle_add(self._snapshots_create_done, False, str(exc))
-            else:
-                GLib.idle_add(self._snapshots_create_done, True, result)
-
-        threading.Thread(target=crear, daemon=True).start()
+        self._run_authorized_action("snapshot-create", self._snapshots_create_done, comment, tags)
 
     def _snapshots_create_done(self, ok, data):
         self.snapshots_create_btn.set_sensitive(True)
@@ -750,11 +781,17 @@ class AyusOSPagesMixin:
         success = data.get("success", False)
         message = data.get("message", "")
         if success:
-            self.snapshots_status.set_text(traducir("Snapshot creado: %s") % message)
-            self._snapshots_refresh(None)
+            self._snapshots_changed(data, traducir("Snapshot creado: %s") % message)
         else:
             self.snapshots_status.set_text(traducir("Error creando snapshot: %s") % message)
         return GLib.SOURCE_REMOVE
+
+    def _snapshots_changed(self, data, message):
+        if "status" in data:
+            self._snapshots_refresh_done(True, data["status"])
+        elif data.get("refresh_error"):
+            message += "\n" + traducir("No se pudo actualizar la lista: %s") % data["refresh_error"]
+        self.snapshots_status.set_text(message)
 
     def _snapshots_restore(self, _boton):
         selection = self.snapshots_list.get_selection()
@@ -763,6 +800,10 @@ class AyusOSPagesMixin:
             self._mensaje(Gtk.MessageType.INFO, traducir("Sin selección"), traducir("Selecciona un snapshot de la lista."))
             return
 
+        if model.get_value(treeiter, 4) != "timeshift":
+            self._mensaje(Gtk.MessageType.INFO, traducir("Snapshot de Timeshift"),
+                          traducir("Selecciona un snapshot de Timeshift para esta operación."))
+            return
         snap_id = model.get_value(treeiter, 0)
         if not snap_id:
             return
@@ -783,18 +824,7 @@ class AyusOSPagesMixin:
         self.snapshots_restore_btn.set_sensitive(False)
         self.snapshots_status.set_text(traducir("Restaurando snapshot…"))
 
-        def restaurar():
-            try:
-                import json
-
-                from .aio_core import ayusos_snapshots
-                result = json.loads(ayusos_snapshots.cli_restore_snapshot(snap_id))
-            except (OSError, ValueError, RuntimeError, ImportError) as exc:
-                GLib.idle_add(self._snapshots_restore_done, False, str(exc))
-            else:
-                GLib.idle_add(self._snapshots_restore_done, True, result)
-
-        threading.Thread(target=restaurar, daemon=True).start()
+        self._run_authorized_action("restore", self._snapshots_restore_done, snap_id)
 
     def _snapshots_restore_done(self, ok, data):
         self.snapshots_restore_btn.set_sensitive(True)
@@ -817,6 +847,10 @@ class AyusOSPagesMixin:
             self._mensaje(Gtk.MessageType.INFO, traducir("Sin selección"), traducir("Selecciona un snapshot de la lista."))
             return
 
+        if model.get_value(treeiter, 4) != "timeshift":
+            self._mensaje(Gtk.MessageType.INFO, traducir("Snapshot de Timeshift"),
+                          traducir("Selecciona un snapshot de Timeshift para esta operación."))
+            return
         snap_id = model.get_value(treeiter, 0)
         if not snap_id:
             return
@@ -835,18 +869,7 @@ class AyusOSPagesMixin:
         self.snapshots_delete_btn.set_sensitive(False)
         self.snapshots_status.set_text(traducir("Eliminando snapshot…"))
 
-        def eliminar():
-            try:
-                import json
-
-                from .aio_core import ayusos_snapshots
-                result = json.loads(ayusos_snapshots.cli_delete_snapshot(snap_id))
-            except (OSError, ValueError, RuntimeError, ImportError) as exc:
-                GLib.idle_add(self._snapshots_delete_done, False, str(exc))
-            else:
-                GLib.idle_add(self._snapshots_delete_done, True, result)
-
-        threading.Thread(target=eliminar, daemon=True).start()
+        self._run_authorized_action("snapshot-delete", self._snapshots_delete_done, snap_id)
 
     def _snapshots_delete_done(self, ok, data):
         self.snapshots_delete_btn.set_sensitive(True)
@@ -857,8 +880,7 @@ class AyusOSPagesMixin:
         success = data.get("success", False)
         message = data.get("message", "")
         if success:
-            self.snapshots_status.set_text(traducir("Snapshot eliminado: %s") % message)
-            self._snapshots_refresh(None)
+            self._snapshots_changed(data, traducir("Snapshot eliminado: %s") % message)
         else:
             self.snapshots_status.set_text(traducir("Error eliminando: %s") % message)
         return GLib.SOURCE_REMOVE
@@ -867,18 +889,7 @@ class AyusOSPagesMixin:
         self.snapshots_grub_update_btn.set_sensitive(False)
         self.snapshots_status.set_text(traducir("Actualizando menú GRUB…"))
 
-        def actualizar():
-            try:
-                import json
-
-                from .aio_core import ayusos_snapshots
-                result = json.loads(ayusos_snapshots.cli_grub_btrfs_update())
-            except (OSError, ValueError, RuntimeError, ImportError) as exc:
-                GLib.idle_add(self._snapshots_grub_done, False, str(exc))
-            else:
-                GLib.idle_add(self._snapshots_grub_done, True, result)
-
-        threading.Thread(target=actualizar, daemon=True).start()
+        self._run_authorized_action("grub", self._snapshots_grub_done)
 
     def _snapshots_grub_done(self, ok, data):
         self.snapshots_grub_update_btn.set_sensitive(True)
@@ -891,7 +902,7 @@ class AyusOSPagesMixin:
         self.snapshots_status.set_text(traducir("GRUB actualizado: %s") % message if success else traducir("Error: %s") % message)
         return GLib.SOURCE_REMOVE
 
-    def _hardware_refresh(self, _boton):
+    def _hardware_refresh(self, _boton, success_message=None):
         self.hardware_refresh_btn.set_sensitive(False)
         self.hardware_status.set_text(traducir("Detectando hardware…"))
 
@@ -906,7 +917,7 @@ class AyusOSPagesMixin:
             except (OSError, ValueError, RuntimeError, ImportError) as exc:
                 GLib.idle_add(self._hardware_refresh_done, False, str(exc))
             else:
-                GLib.idle_add(self._hardware_refresh_done, True, info, profile, status)
+                GLib.idle_add(self._hardware_refresh_done, True, info, profile, status, success_message)
 
         threading.Thread(target=detectar, daemon=True).start()
 
@@ -931,7 +942,7 @@ class AyusOSPagesMixin:
         for svc, active in status.get("active_services", {}).items():
             store.append([svc, traducir("Activo" if active else "Inactivo"), ""])
 
-        self.hardware_status.set_text(traducir("Detección completada."))
+        self.hardware_status.set_text(args[3] or traducir("Detección completada."))
         return GLib.SOURCE_REMOVE
 
     def _hardware_show_info(self, _boton):
@@ -943,20 +954,9 @@ class AyusOSPagesMixin:
             return
 
         self.hardware_apply_btn.set_sensitive(False)
-        self.hardware_status.set_text(traducir("Aplicando perfil %s…") % profile)
-
-        def aplicar():
-            try:
-                import json
-
-                from .aio_core import ayusos_hardware
-                result = json.loads(ayusos_hardware.cli_apply_profile(profile))
-            except (OSError, ValueError, RuntimeError, ImportError) as exc:
-                GLib.idle_add(self._hardware_apply_done, False, str(exc))
-            else:
-                GLib.idle_add(self._hardware_apply_done, True, result)
-
-        threading.Thread(target=aplicar, daemon=True).start()
+        self.hardware_status.set_text(traducir("Esperando autorización o aplicando perfil %s…") % profile)
+        self._run_authorized_action("hardware-apply", self._hardware_apply_done, profile,
+                                    operation="Perfil de hardware")
 
     def _hardware_apply_done(self, ok, data):
         self.hardware_apply_btn.set_sensitive(True)
@@ -967,8 +967,7 @@ class AyusOSPagesMixin:
         success = data.get("success", False)
         message = data.get("message", "")
         if success:
-            self.hardware_status.set_text(traducir("Perfil aplicado: %s") % message)
-            self._hardware_refresh(None)
+            self._hardware_refresh(None, message)
         else:
             self.hardware_status.set_text(traducir("Error aplicando perfil: %s") % message)
         return GLib.SOURCE_REMOVE
@@ -978,18 +977,15 @@ class AyusOSPagesMixin:
         self.diagnostics_status.set_text(traducir("Ejecutando diagnóstico completo…"))
         self.diagnostics_store.clear()
 
-        def diagnosticar():
-            try:
-                import json
+        self._run_authorized_action("diagnostics", self._diagnostics_result,
+                                    operation="Diagnóstico de AyusOS")
 
-                from .aio_core import ayusos_diagnostics
-                result = json.loads(ayusos_diagnostics.cli_diagnostics())
-            except (OSError, ValueError, RuntimeError, ImportError) as exc:
-                GLib.idle_add(self._diagnostics_done, False, str(exc))
-            else:
-                GLib.idle_add(self._diagnostics_done, True, result)
-
-        threading.Thread(target=diagnosticar, daemon=True).start()
+    def _diagnostics_result(self, ok, data):
+        if not ok:
+            return self._diagnostics_done(False, data)
+        if not data.get("success"):
+            return self._diagnostics_done(False, data.get("message", ""))
+        return self._diagnostics_done(True, data["diagnostics"])
 
     @staticmethod
     def _texto_detalle_diagnostico(valor):
@@ -1098,6 +1094,8 @@ class AyusOSPagesMixin:
 
         self.branding_theme.set_active_id(data.get("theme", "system"))
         self.branding_accent.set_active_id(data.get("accent", "ayusos"))
+        if theme := data.get("plymouth_theme"):
+            self.branding_plymouth.set_active_id(theme)
 
         # Cargar wallpapers
         grid = self.branding_wallpapers_grid
@@ -1127,8 +1125,10 @@ class AyusOSPagesMixin:
     def _branding_wallpaper_done(self, ok, data):
         if not ok:
             self.branding_status.set_text(traducir("Error: %s") % data)
-        else:
+        elif data.get("success"):
             self.branding_status.set_text(traducir("Fondo aplicado correctamente."))
+        else:
+            self.branding_status.set_text(traducir("No se pudo aplicar el fondo."))
         return GLib.SOURCE_REMOVE
 
     def _branding_apply_all(self, _boton):
@@ -1143,12 +1143,7 @@ class AyusOSPagesMixin:
                 import json
 
                 from .aio_core import ayusos_branding
-                # Aplicar tema
-                json.loads(ayusos_branding.cli_set_theme(theme))
-                # Aplicar acento
-                json.loads(ayusos_branding.cli_set_accent(accent))
-                # Aplicar todo (incluye Plymouth)
-                result = json.loads(ayusos_branding.cli_apply_all())
+                result = json.loads(ayusos_branding.cli_apply_all(theme, accent))
             except (OSError, ValueError, RuntimeError, ImportError) as exc:
                 GLib.idle_add(self._branding_apply_done, False, str(exc))
             else:
@@ -1163,7 +1158,6 @@ class AyusOSPagesMixin:
         else:
             success = data.get("success", False)
             self.branding_status.set_text(traducir("Branding aplicado correctamente.") if success else traducir("Error aplicando branding."))
-            self._branding_refresh(None)
         return GLib.SOURCE_REMOVE
 
     def _branding_apply_plymouth(self, _boton):
@@ -1171,18 +1165,8 @@ class AyusOSPagesMixin:
         self.branding_plymouth_btn.set_sensitive(False)
         self.branding_status.set_text(traducir("Aplicando tema Plymouth…"))
 
-        def aplicar():
-            try:
-                import json
-
-                from .aio_core import ayusos_branding
-                result = json.loads(ayusos_branding.cli_set_plymouth(theme))
-            except (OSError, ValueError, RuntimeError, ImportError) as exc:
-                GLib.idle_add(self._branding_plymouth_done, False, str(exc))
-            else:
-                GLib.idle_add(self._branding_plymouth_done, True, result)
-
-        threading.Thread(target=aplicar, daemon=True).start()
+        self._run_authorized_action("branding-plymouth", self._branding_plymouth_done, theme,
+                                    operation="Tema de arranque")
 
     def _branding_plymouth_done(self, ok, data):
         self.branding_plymouth_btn.set_sensitive(True)
@@ -1190,7 +1174,7 @@ class AyusOSPagesMixin:
             self.branding_status.set_text(traducir("Error: %s") % data)
         else:
             success = data.get("success", False)
-            self.branding_status.set_text(traducir("Plymouth actualizado.") if success else traducir("Error: %s") % data)
+            self.branding_status.set_text(traducir("Plymouth actualizado.") if success else traducir("Error: %s") % data.get("message", ""))
         return GLib.SOURCE_REMOVE
 
     def _crear_tarjeta_wallpaper(self, wp):
@@ -1241,7 +1225,6 @@ class AyusOSPagesMixin:
         btn_row.pack_start(self.identity_refresh_btn, False, False, 0)
         grid.attach(btn_row, 0, 1, 2, 1)
 
-        caja.pack_start(grid, False, False, 0)
         contenido.pack_start(tarjeta, False, False, 0)
 
         # Tarjeta: Backup
@@ -1383,41 +1366,51 @@ class AyusOSPagesMixin:
         self.identity_restore_btn.set_sensitive(False)
         self.identity_status.set_text(traducir("Restaurando identidad%s…") % (" (simulación)" if dry_run else ""))
 
-        def restore():
+        def prepare():
+            from .aio_core import ayusos_identity
             try:
-                import json
-                import subprocess
-
-                from .aio_core import ayusos_identity
-                if dry_run:
-                    # Simulación: no toca el sistema, no necesita privilegios.
-                    result = json.loads(ayusos_identity.cli_restore(path, True))
-                else:
-                    # Escritura a /etc, keyring y dconf de sistema: privilegiado.
-                    cmd = comando_host(
-                        "pkexec", "/usr/lib/aio-debian-gui/aio-debian-gui-helper",
-                        "--lang", "es", "ayusos-identity", "restore", path
-                    )
-                    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300, stdin=subprocess.DEVNULL)
-                    out = (proc.stdout or "").strip()
-                    result = {}
-                    for line in reversed(out.splitlines()):
-                        try:
-                            value = json.loads(line)
-                        except ValueError:
-                            continue
-                        if isinstance(value, dict):
-                            result = value
-                            break
-                    if not result:
-                        result = {"success": proc.returncode == 0, "message": (proc.stderr or out).strip()}
-                    elif proc.returncode != 0 and result.get("success"):
-                        result["success"] = False
-                GLib.idle_add(self._identity_restore_done, True, result)
-            except (OSError, ValueError, RuntimeError, ImportError, subprocess.SubprocessError) as exc:
+                data = ayusos_identity.read_archive(Path(path))
+                files = ayusos_identity.read_identity(data)
+                ayusos_identity.validate_identity(files)
+            except (OSError, ValueError, SyntaxError, KeyError, zipfile.BadZipFile, configparser.Error) as exc:
                 GLib.idle_add(self._identity_restore_done, False, str(exc))
+                return
+            GLib.idle_add(self._identity_restore_prepared, data, files, dry_run)
 
-        threading.Thread(target=restore, daemon=True).start()
+        threading.Thread(target=prepare, daemon=True).start()
+
+    def _identity_restore_prepared(self, archive, files, dry_run):
+        from .aio_core import ayusos_identity
+
+        if dry_run:
+            self.identity_restore_btn.set_sensitive(True)
+            self.identity_status.set_text(traducir("Respaldo válido. La simulación no ha escrito cambios."))
+            return GLib.SOURCE_REMOVE
+
+        def restore_user(ok, result):
+            if not ok or not result.get("success"):
+                message = result if not ok else result.get("message", "")
+                return self._identity_restore_done(False, message)
+
+            def worker():
+                try:
+                    ayusos_identity.restore_user_identity(files)
+                except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
+                    GLib.idle_add(self._identity_restore_done, False, str(exc))
+                else:
+                    GLib.idle_add(self._identity_restore_done, True, {"success": True})
+
+            threading.Thread(target=worker, daemon=True).start()
+            return GLib.SOURCE_REMOVE
+
+        if ayusos_identity.TIMESHIFT_ENTRY in files:
+            self._run_authorized_action(
+                "identity-restore", restore_user, operation="Restaurar identidad de AyusOS",
+                payload_input=base64.b64encode(archive).decode("ascii"),
+            )
+        else:
+            restore_user(True, {"success": True})
+        return GLib.SOURCE_REMOVE
 
     def _identity_restore_done(self, ok, data):
         self.identity_restore_btn.set_sensitive(True)
@@ -1427,7 +1420,6 @@ class AyusOSPagesMixin:
 
         if data.get("success"):
             self.identity_status.set_text(traducir("Identidad restaurada correctamente."))
-            self._identity_refresh(None)
         else:
             self.identity_status.set_text(traducir("Error: %s") % data.get("message", ""))
         return GLib.SOURCE_REMOVE

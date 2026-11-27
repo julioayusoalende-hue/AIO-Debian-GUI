@@ -128,7 +128,4 @@ runuser -u "$USER_NAME" -- env "${entorno[@]}" \
 # Marcar como completado para no volver a mostrar (incluso si el usuario salto).
 # Solo se llega aqui si el wizard termino correctamente (set -e).
 touch "$state/onboarding-done"
-mkdir -p "$USER_HOME/.config/ayusos"
-touch "$USER_HOME/.config/ayusos/onboarding-done"
-chown "$USER_UID:$USER_UID" "$USER_HOME/.config/ayusos/onboarding-done"
 echo 'Onboarding de AyusOS completado.'

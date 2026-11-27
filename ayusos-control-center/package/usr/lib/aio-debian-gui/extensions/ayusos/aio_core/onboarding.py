@@ -31,9 +31,9 @@ from .ayusos_config import (
     VALID_NVIDIA_MODES,
     VALID_THEMES,
     get_effective_config,
+    installed_gnome_tasks,
     load_user_preferences,
     mark_onboarding_done,
-    save_user_preferences,
 )
 
 # Estilo CSS para el onboarding
@@ -591,12 +591,18 @@ class OnboardingWizard(Gtk.Window):
              traducir("Organiza ventanas en mosaico (estilo i3/sway).")),
         ]
 
+        installed = installed_gnome_tasks()
         for ext_id, ext_name, ext_desc in extensions:
+            if ext_id in installed:
+                continue
             check = Gtk.CheckButton(label=ext_name)
             check.set_active(ext_id in self.config.gnome_extensions.enabled_by_default)
             check.set_tooltip_text(ext_desc)
             box.pack_start(check, False, False, 0)
             self.ext_checks[ext_id] = check
+        if not self.ext_checks:
+            desc.set_text(traducir("Las extensiones recomendadas ya están instaladas."))
+
 
         return box
 
@@ -652,7 +658,6 @@ class OnboardingWizard(Gtk.Window):
             ("autoclean", traducir("Limpiar caché APT")),
             ("flatpak-update", traducir("Actualizar Flatpak")),
             ("snap-update", traducir("Actualizar Snap")),
-            ("clean-journal", traducir("Limpiar journal systemd (>30 días)")),
             ("rebootcheck", traducir("Comprobar si requiere reinicio")),
         ]
         for task_id, task_name in tasks:
@@ -698,7 +703,7 @@ class OnboardingWizard(Gtk.Window):
         self.appearance_accent = Gtk.ComboBoxText()
         accents = ["ayusos", "blue", "green", "orange", "purple", "red", "teal"]
         for acc in accents:
-            self.appearance_accent.append(acc, acc.capitalize())
+            self.appearance_accent.append(acc, traducir("AyusOS Rojo") if acc == "ayusos" else acc.capitalize())
         self.appearance_accent.set_active(accents.index(self.config.appearance.accent))
         accent_box.pack_start(self.appearance_accent, False, False, 0)
         box.pack_start(accent_box, False, False, 0)
@@ -809,7 +814,11 @@ class OnboardingWizard(Gtk.Window):
 
     def _validate_maintenance(self, widget) -> bool:
         sched = self.maint_freq.get_active_id()
-        if sched not in VALID_MAINTENANCE_SCHEDULES:
+        if sched == "disabled":
+            return True
+        if sched not in VALID_MAINTENANCE_SCHEDULES or not any(
+            check.get_active() for check in self.maint_task_checks.values()
+        ):
             return False
         # Validar hora HH:MM
         import re
@@ -844,10 +853,7 @@ class OnboardingWizard(Gtk.Window):
         prefs = load_user_preferences()
         prefs.update(config.to_dict())
         prefs.pop("_schema_version", None)
-        save_user_preferences(prefs)
-        # Marcar onboarding completado (conserva las preferencias existentes).
-        mark_onboarding_done(self.version)
-        return True
+        return mark_onboarding_done(self.version, prefs)
 
     # --- Navegación ---
 
@@ -924,8 +930,10 @@ class OnboardingWizard(Gtk.Window):
         response = dialog.run()
         dialog.destroy()
         if response == Gtk.ResponseType.YES:
-            mark_onboarding_done(self.version)
-            self.emit("completed")
+            if mark_onboarding_done(self.version):
+                self.emit("completed")
+            else:
+                self._show_error(traducir("No se pudo guardar la configuración."))
 
     def _show_error(self, message: str):
         dialog = Gtk.MessageDialog(

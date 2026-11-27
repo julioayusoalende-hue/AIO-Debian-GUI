@@ -4,8 +4,8 @@
 <policyconfig>
   <vendor>AyusOS Linux</vendor>
   <action id="es.aiodebian.gui.ayusos.recovery">
-    <description>Ejecutar herramientas de recuperación de AyusOS</description>
-    <message>Autentícate para reparar el sistema, regenerar GRUB o restaurar un snapshot.</message>
+    <description>Ejecutar herramientas de administración de AyusOS</description>
+    <message>Autentícate para ejecutar esta operación de administración de AyusOS.</message>
     <defaults>
       <allow_any>no</allow_any>
       <allow_inactive>no</allow_inactive>

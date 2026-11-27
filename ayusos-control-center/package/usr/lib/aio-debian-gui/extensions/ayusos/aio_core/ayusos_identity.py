@@ -3,7 +3,11 @@
 Incluye fuentes APT, llavero GPG, extensiones GNOME, branding y configuración de Timeshift.
 """
 
+import ast
+import configparser
+import io
 import json
+import re
 import os
 import subprocess
 import tempfile
@@ -13,12 +17,25 @@ from pathlib import Path
 AYUSOS_SOURCES = Path("/etc/apt/sources.list.d/ayusos.sources")
 AYUSOS_KEYRING = Path("/usr/share/keyrings/ayusos-archive.gpg")
 AYUSOS_RELEASE = Path("/etc/ayusos-release")
-TIMESHIFT_CONFIG = Path("/etc/timeshift.json")
-TIMESHIFT_DEFAULT = Path("/etc/timeshift/default.json")
+TIMESHIFT_CONFIG = Path("/etc/timeshift/timeshift.json")
 DCONF_GNOME_EXTENSIONS = "/org/gnome/shell/enabled-extensions"
 DCONF_AYUSOS_EXTENSIONS = "/org/gnome/shell/extensions/"
 
-LIMIT = 16 * 1024 * 1024  # 16 MB para identidad
+LIMIT = 16 * 1024 * 1024
+ARCHIVE_LIMIT = LIMIT + 65536
+TIMESHIFT_ENTRY = "etc/timeshift/timeshift.json"
+BRANDING_KEYS = {
+    "org.gnome.desktop.interface.gtk-theme",
+    "org.gnome.desktop.interface.color-scheme",
+    "org.gnome.desktop.interface.accent-color",
+    "org.gnome.desktop.background.picture-uri",
+    "org.gnome.desktop.background.picture-uri-dark",
+}
+TIMESHIFT_FLAGS = {
+    "btrfs_mode", "include_btrfs_home_for_backup", "include_btrfs_home_for_restore",
+    *(f"schedule_{period}" for period in ("boot", "hourly", "daily", "weekly", "monthly")),
+}
+TIMESHIFT_COUNTS = {f"count_{period}" for period in ("boot", "hourly", "daily", "weekly", "monthly")}
 
 
 def _run(cmd, capture=True, data=None):
@@ -47,14 +64,16 @@ def snapshot_identity() -> dict[str, tuple[bytes, int]]:
     if AYUSOS_RELEASE.exists():
         files["etc/ayusos-release"] = (AYUSOS_RELEASE.read_bytes(), 0)
 
-    # Configuración de Timeshift
-    for path in [TIMESHIFT_CONFIG, TIMESHIFT_DEFAULT]:
-        if path.exists():
-            files[f"etc/timeshift/{path.name}"] = (path.read_bytes(), 0)
-
-    # Extensiones GNOME habilitadas (dconf)
     try:
-        out = _run(["dconf", "dump", DCONF_GNOME_EXTENSIONS])
+        files[TIMESHIFT_ENTRY] = (TIMESHIFT_CONFIG.read_bytes(), 0)
+    except FileNotFoundError:
+        pass
+    except PermissionError:
+        # El perfil de usuario puede respaldarse aunque Timeshift sea privado.
+        pass
+
+    try:
+        out = _run(["dconf", "read", DCONF_GNOME_EXTENSIONS])
         if out.strip():
             files["dconf/enabled-extensions"] = (out.encode(), 0)
     except RuntimeError:
@@ -69,15 +88,9 @@ def snapshot_identity() -> dict[str, tuple[bytes, int]]:
         pass
 
     # Branding (tema, acento, wallpaper) - desde gsettings/dconf
-    branding_keys = [
-        ("org.gnome.desktop.interface", "gtk-theme"),
-        ("org.gnome.desktop.interface", "color-scheme"),
-        ("org.gnome.desktop.interface", "accent-color"),
-        ("org.gnome.desktop.background", "picture-uri"),
-        ("org.gnome.desktop.background", "picture-uri-dark"),
-    ]
     branding_data = {}
-    for schema, key in branding_keys:
+    for entry in sorted(BRANDING_KEYS):
+        schema, key = entry.rsplit(".", 1)
         try:
             out = _run(["gsettings", "get", schema, key])
             if out.strip() and out.strip() != "@as []":
@@ -108,15 +121,19 @@ def save_identity(path: Path, files: dict[str, tuple[bytes, int]]) -> None:
         Path(name).unlink(missing_ok=True)
 
 
-def read_identity(path: Path) -> dict[str, tuple[bytes, int]]:
+def read_identity(data: bytes) -> dict[str, tuple[bytes, int]]:
     """Lee un archivo de backup de identidad."""
-    with zipfile.ZipFile(path) as archive:
+    if len(data) > ARCHIVE_LIMIT:
+        raise ValueError("El respaldo supera el tamaño máximo.")
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
         entries = archive.infolist()
         if sum(entry.file_size for entry in entries) > LIMIT + 4096:
             raise ValueError("Identity backup oversized")
+        if len({entry.filename for entry in entries}) != len(entries):
+            raise ValueError("El respaldo contiene entradas duplicadas.")
         manifest = archive.getinfo("manifest.json")
         meta = json.loads(archive.read(manifest))
-        if meta.get("type") != "ayusos-identity":
+        if not isinstance(meta, dict) or meta.get("type") != "ayusos-identity" or meta.get("format") != 1:
             raise ValueError("Not an AyusOS identity backup")
         files = {}
         for entry in entries:
@@ -127,56 +144,111 @@ def read_identity(path: Path) -> dict[str, tuple[bytes, int]]:
         return files
 
 
-def restore_identity(files: dict[str, tuple[bytes, int]], dry_run: bool = False) -> tuple[bool, str]:
-    """Restaura la identidad de AyusOS desde un backup."""
-    errors = []
-    restored = []
+def read_archive(path: Path) -> bytes:
+    with path.open("rb") as stream:
+        data = stream.read(ARCHIVE_LIMIT + 1)
+    if len(data) > ARCHIVE_LIMIT:
+        raise ValueError("El respaldo supera el tamaño máximo.")
+    return data
 
-    for name, (data, _mode) in files.items():
+
+def validate_identity(files):
+    protected = {
+        "apt/ayusos.sources": AYUSOS_SOURCES,
+        "apt/ayusos-archive.gpg": AYUSOS_KEYRING,
+        "etc/ayusos-release": AYUSOS_RELEASE,
+    }
+    for name, (data, _) in files.items():
+        if name in protected:
+            try:
+                matches = protected[name].read_bytes() == data
+            except FileNotFoundError:
+                matches = False
+            if not matches:
+                raise ValueError("El respaldo difiere de los archivos oficiales instalados. Reinstala el paquete oficial para recuperarlos.")
+        elif name == TIMESHIFT_ENTRY:
+            settings = json.loads(data)
+            if not isinstance(settings, dict):
+                raise ValueError("Configuración de Timeshift no válida.")
+            uuid = settings.get("backup_device_uuid")
+            if uuid is not None and (not isinstance(uuid, str) or not re.fullmatch(r"[a-fA-F0-9-]{1,64}", uuid)):
+                raise ValueError("UUID de Timeshift no válido.")
+            for key, value in settings.items():
+                if key in TIMESHIFT_FLAGS and str(value).lower() not in {"true", "false"}:
+                    raise ValueError(f"Opción de Timeshift no válida: {key}")
+                if key in TIMESHIFT_COUNTS and not re.fullmatch(r"[0-9]{1,4}", str(value)):
+                    raise ValueError(f"Retención de Timeshift no válida: {key}")
+        elif name == "dconf/enabled-extensions":
+            text = data.decode().strip()
+            extensions = [] if text == "@as []" else ast.literal_eval(text)
+            if not isinstance(extensions, list) or not all(isinstance(item, str) for item in extensions):
+                raise ValueError("Lista de extensiones de GNOME no válida.")
+        elif name == "dconf/extensions":
+            configparser.RawConfigParser(interpolation=None).read_string(data.decode())
+        elif name == "dconf/branding.json":
+            branding = json.loads(data)
+            if not isinstance(branding, dict) or not all(
+                key in BRANDING_KEYS and isinstance(value, str) for key, value in branding.items()
+            ):
+                raise ValueError("Preferencias de apariencia no válidas.")
+        else:
+            raise ValueError(f"Entrada desconocida: {name}")
+
+
+def restore_system_identity(files):
+    """Comprueba las bases de confianza y actualiza la configuración atómicamente."""
+    validate_identity(files)
+    if TIMESHIFT_ENTRY not in files:
+        return
+    if os.geteuid() != 0:
+        raise PermissionError("Se necesita autorización para restaurar Timeshift.")
+    saved = json.loads(files[TIMESHIFT_ENTRY][0])
+    try:
+        current = json.loads(TIMESHIFT_CONFIG.read_bytes())
+    except FileNotFoundError:
+        current = {}
+    if not isinstance(current, dict):
+        raise ValueError("La configuración actual de Timeshift no es válida.")
+    keys = TIMESHIFT_FLAGS | TIMESHIFT_COUNTS | {"backup_device_uuid"}
+    current.update({key: saved[key] for key in keys & saved.keys()})
+    TIMESHIFT_CONFIG.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=TIMESHIFT_CONFIG.parent,
+                                     prefix=".timeshift-", delete=False) as stream:
+        temporary = Path(stream.name)
         try:
-            if name == "apt/ayusos.sources":
-                if not dry_run:
-                    AYUSOS_SOURCES.parent.mkdir(parents=True, exist_ok=True)
-                    AYUSOS_SOURCES.write_bytes(data)
-                restored.append("Fuentes APT de AyusOS")
-            elif name == "apt/ayusos-archive.gpg":
-                if not dry_run:
-                    AYUSOS_KEYRING.parent.mkdir(parents=True, exist_ok=True)
-                    AYUSOS_KEYRING.write_bytes(data)
-                restored.append("Llavero GPG de AyusOS")
-            elif name == "etc/ayusos-release":
-                if not dry_run:
-                    AYUSOS_RELEASE.write_bytes(data)
-                restored.append("Archivo de versión AyusOS")
-            elif name.startswith("etc/timeshift/"):
-                target = TIMESHIFT_CONFIG if name.endswith("timeshift.json") else TIMESHIFT_DEFAULT
-                if not dry_run:
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    target.write_bytes(data)
-                restored.append(f"Configuración Timeshift ({target.name})")
-            elif name == "dconf/enabled-extensions":
-                if not dry_run:
-                    _run(["dconf", "load", DCONF_GNOME_EXTENSIONS], capture=False, data=data.encode())
-                restored.append("Extensiones GNOME habilitadas")
-            elif name == "dconf/extensions":
-                if not dry_run:
-                    _run(["dconf", "load", DCONF_AYUSOS_EXTENSIONS], capture=False, data=data.encode())
-                restored.append("Configuración de extensiones GNOME")
-            elif name == "dconf/branding.json":
-                if not dry_run:
-                    branding = json.loads(data.decode())
-                    for key, value in branding.items():
-                        schema, gkey = key.rsplit(".", 1)
-                        _run(["gsettings", "set", schema, gkey, value], capture=False)
-                restored.append("Branding (tema, acento, wallpaper)")
-            else:
-                errors.append(f"Entrada desconocida: {name}")
-        except (RuntimeError, OSError, json.JSONDecodeError) as e:
-            errors.append(f"{name}: {e}")
+            json.dump(current, stream, indent=2)
+            stream.write("\n")
+            stream.close()
+            temporary.replace(TIMESHIFT_CONFIG)
+        finally:
+            temporary.unlink(missing_ok=True)
 
-    if errors:
-        return False, f"Errores: {'; '.join(errors)}"
-    return True, f"Restaurado: {', '.join(restored)}"
+
+def restore_user_identity(files):
+    """Aplica las preferencias GNOME en el bus de la sesión solicitante."""
+    if os.geteuid() == 0:
+        raise PermissionError("Las preferencias de GNOME requieren una sesión de usuario.")
+    if "dconf/enabled-extensions" in files:
+        value = files["dconf/enabled-extensions"][0].decode().strip()
+        _run(["dconf", "write", DCONF_GNOME_EXTENSIONS, value])
+    if "dconf/extensions" in files:
+        _run(["dconf", "load", DCONF_AYUSOS_EXTENSIONS], data=files["dconf/extensions"][0])
+    if "dconf/branding.json" in files:
+        for key, value in json.loads(files["dconf/branding.json"][0]).items():
+            schema, setting = key.rsplit(".", 1)
+            _run(["gsettings", "set", schema, setting, value])
+
+
+def restore_identity(files, dry_run=False):
+    validate_identity(files)
+    if not dry_run:
+        if os.geteuid() == 0:
+            restore_system_identity(files)
+        else:
+            if TIMESHIFT_ENTRY in files:
+                raise PermissionError("Restaura Timeshift desde el Centro de Control para solicitar autorización.")
+            restore_user_identity(files)
+    return True, "Respaldo válido." if dry_run else "Identidad restaurada correctamente."
 
 
 def cli_snapshot() -> str:
@@ -196,7 +268,7 @@ def cli_backup(output: str) -> str:
 def cli_restore(input_path: str, dry_run: bool = False) -> str:
     import json
     path = Path(input_path).expanduser()
-    files = read_identity(path)
+    files = read_identity(read_archive(path))
     ok, msg = restore_identity(files, dry_run)
     return json.dumps({"success": ok, "message": msg})
 

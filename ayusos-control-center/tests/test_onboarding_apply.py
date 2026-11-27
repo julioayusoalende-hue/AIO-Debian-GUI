@@ -1,6 +1,7 @@
 import json
 import sys
 import unittest
+from contextlib import ExitStack
 from pathlib import Path
 from unittest.mock import patch
 
@@ -8,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "package/usr/lib/aio-debian-gui/extensions"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "package/usr/lib/aio-debian-gui"))
 
+from aio_core.scheduler import validate_config
 from ayusos.aio_core import ayusos_onboarding_apply as app
 
 
@@ -38,15 +40,24 @@ class OnboardingApplyTests(unittest.TestCase):
         self.assertEqual(payload["frequency"], "monthly")
         self.assertEqual(payload["hour"], 23)
         self.assertEqual(payload["minute"], 45)
-        self.assertEqual(payload["tasks"], ["upgrade", "clean-journal"])
+        self.assertEqual(validate_config(payload)["tasks"], ["upgrade"])
 
     def test_disabled_maintenance(self):
         config = json.loads(json.dumps(app.SYSTEM_DEFAULTS))
         config["maintenance"]["schedule"] = "disabled"
+        config["maintenance"]["tasks"] = ["clean-journal"]
         with patch.object(app, "run", return_value=Result()) as run:
             app.apply_maintenance(config, 1000, False)
         payload = json.loads(run.call_args.args[0][-1])
-        self.assertFalse(payload["enabled"])
+        self.assertFalse(validate_config(payload)["enabled"])
+
+    def test_partial_failure_is_reported_to_the_service(self):
+        with ExitStack() as stack:
+            for option in ("repos", "flatpak", "kernel", "nvidia", "apps", "extensions", "appearance"):
+                stack.enter_context(patch.object(app, f"apply_{option}", return_value=(None, False)))
+            stack.enter_context(patch.object(app, "apply_maintenance", return_value=(Result(1), False)))
+            stack.enter_context(patch.object(app, "helper", return_value=(Result(), False)))
+            self.assertEqual(app.apply({}, "prueba", 1000), 1)
 
     def test_apps_filters_unavailable_packages(self):
         config = json.loads(json.dumps(app.SYSTEM_DEFAULTS))

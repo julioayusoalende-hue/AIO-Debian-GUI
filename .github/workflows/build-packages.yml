@@ -34,9 +34,9 @@ jobs:
           xvfb-run -a python3 -m pytest tests -q
           python3 scripts/test-host-package.py
           bash scripts/build-deb.sh
-          AYUSOS_VERSION="$(sed -n 's/^Version: //p' ayusos-control-center/package/DEBIAN/control)"
-          bash ayusos-control-center/build-deb.sh
-          cp "ayusos-control-center/dist/ayusos-control-center_${AYUSOS_VERSION#*:}_all.deb" dist/
+          VERSION="$(sed -n 's/^Version: //p' package/DEBIAN/control)"
+          bash ayusos-control-center/build-deb.sh --aio-release-version "$VERSION"
+          cp "ayusos-control-center/dist/ayusos-control-center_${VERSION#*:}_all.deb" dist/
           cd dist
           sha256sum *.deb > SHA256SUMS
           sha256sum --check SHA256SUMS
@@ -73,7 +73,8 @@ jobs:
           [[ "${#files[@]}" -eq 1 && "${files[0]}" =~ ^aio-debian-gui_([0-9]+\.[0-9]+\.[0-9]+)_all\.deb$ ]]
           version="${BASH_REMATCH[1]}"
           ayusos_files=(ayusos-control-center_*_all.deb)
-          [[ "${#ayusos_files[@]}" -eq 1 ]]
+          [[ "${#ayusos_files[@]}" -eq 1 && "${ayusos_files[0]}" == "ayusos-control-center_${version}_all.deb" ]]
+          [[ "$(dpkg-deb -f "${ayusos_files[0]}" Version)" == "$version" ]]
           previous=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name 2>/dev/null || true)
           python3 ../scripts/release-notes.py ../CHANGELOG.md "$previous" "$version" > release-notes.md
           grep -q '[^[:space:]]' release-notes.md

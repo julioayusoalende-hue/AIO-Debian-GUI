@@ -17,7 +17,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .ayusos_config import APP_PROFILES, SYSTEM_DEFAULTS
+from .ayusos_config import APP_PROFILES, AYUSOS_ACCENT, SYSTEM_DEFAULTS, installed_gnome_tasks
 
 HELPER = "/usr/lib/aio-debian-gui/aio-debian-gui-helper"
 SCHEDULER = "/usr/lib/aio-debian-gui/aio_core/scheduler.py"
@@ -67,7 +67,9 @@ def apply_repos(config, uid, dry):
 
 def apply_flatpak(config, uid, dry):
     if config["flatpak"]["enabled"]:
-        return helper(["flatpak-setup"], uid)
+        if config["flatpak"]["flathub"]:
+            return helper(["flatpak-setup"], uid)
+        return run(["apt-get", "install", "-y", "--no-remove", "flatpak"]), False
     return None, False
 
 
@@ -116,7 +118,9 @@ def apply_extensions(config, uid, dry):
         "gnome-ext-caffeine", "gnome-ext-tiling-shell",
         "gnome-ext-clipboard-indicator", "gnome-ext-places-status",
     }
-    steps = [item for item in config["gnome_extensions"]["enabled_by_default"] if item in allowed]
+    data_dir = Path(pwd.getpwuid(uid).pw_dir) / ".local/share"
+    pending = allowed - installed_gnome_tasks(data_dir)
+    steps = [item for item in config["gnome_extensions"]["enabled_by_default"] if item in pending]
     return helper(steps, uid) if steps else (None, False)
 
 
@@ -126,13 +130,18 @@ def apply_maintenance(config, uid, dry):
     match = re.fullmatch(r"([01]?\d|2[0-3]):([0-5]\d)", config["maintenance"]["time"])
     if match:
         hour, minute = map(int, match.groups())
+    # Las preferencias de versiones anteriores pueden incluir una tarea
+    # que el programador de AiO nunca admitió.
+    tasks = [task for task in config["maintenance"]["tasks"] if task != "clean-journal"]
+    if schedule == "disabled" and not tasks:
+        tasks = ["rebootcheck"]
     scheduler_config = {
         "enabled": schedule != "disabled",
         "frequency": schedule if schedule in ("daily", "weekly", "monthly") else "weekly",
         "weekday": 6,
         "hour": hour,
         "minute": minute,
-        "tasks": config["maintenance"]["tasks"],
+        "tasks": tasks,
         "launcher": {"format": "deb", "path": ""},
     }
     payload = json.dumps(scheduler_config, separators=(",", ":"))
@@ -159,10 +168,10 @@ def apply_appearance(config, username, uid, dry):
     def gsettings(*args):
         return run(["runuser", "-u", username, "--", "gsettings", "set", *args], env=env)
 
-    scheme = "prefer-dark" if theme == "dark" else "default"
+    scheme = {"system": "default", "dark": "prefer-dark", "light": "prefer-light"}[theme]
     result = gsettings("org.gnome.desktop.interface", "color-scheme", scheme)
 
-    accent = {"ayusos": "green"}.get(appearance["accent"], appearance["accent"])
+    accent = {"ayusos": AYUSOS_ACCENT}.get(appearance["accent"], appearance["accent"])
     if accent in ("blue", "green", "orange", "purple", "red", "teal"):
         gsettings("org.gnome.desktop.interface", "accent-color", accent)
 
@@ -229,8 +238,8 @@ def apply(config, username, uid, dry=False):
 
     if failures:
         print(f"\nOnboarding aplicado con avisos: {', '.join(failures)}")
-    else:
-        print("\nOnboarding aplicado correctamente")
+        return 1
+    print("\nOnboarding aplicado correctamente")
     return 0
 
 

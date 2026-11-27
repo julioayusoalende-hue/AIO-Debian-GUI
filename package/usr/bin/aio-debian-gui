@@ -3078,6 +3078,7 @@ class VentanaPrincipal(Gtk.Window):
         sin_resultados = etiqueta("No se encontraron aplicaciones.", dim=True)
         sin_resultados.set_no_show_all(True)
         pagina.pack_start(sin_resultados, False, False, 0)
+        self.recommended_empty = sin_resultados
         self.recommended_search.connect("changed", self._filtrar_recomendadas, sin_resultados)
         self.recommended_category.connect("changed", self._filtrar_recomendadas, sin_resultados)
         pagina.pack_start(self._scroll_tarjetas(self.recommended_grid), True, True, 0)
@@ -3096,10 +3097,12 @@ class VentanaPrincipal(Gtk.Window):
         palabras = normalizar(self.recommended_search.get_text()).split()
         categoria = self.recommended_category.get_active_id()
         coincidencias = []
+        filtro_extra = getattr(self, "recommended_extra_filter", None)
         for app in APPS_RECOMENDADAS:
             texto = normalizar(traducir(app["name"]) + " " + traducir(app["description"]))
             coincidencias.append((not categoria or categoria == app["category"])
-                                 and all(palabra in texto for palabra in palabras))
+                                 and all(palabra in texto for palabra in palabras)
+                                 and (filtro_extra is None or filtro_extra(app["id"])))
         self.recommended_grid.set_filter_func(lambda tarjeta: coincidencias[tarjeta.get_index()])
         sin_resultados.set_visible(not any(coincidencias))
 

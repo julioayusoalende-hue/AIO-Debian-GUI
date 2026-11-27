@@ -2,7 +2,6 @@
 set -euo pipefail
 umask 022
 state=/var/lib/ayusos
-scheduler=/usr/lib/aio-debian-gui/aio_core/scheduler.py
 install -d -m 0755 "$state"
 
 live=false
@@ -24,7 +23,12 @@ read -r uid < "$state/aio-usuarios"
 
 # Aplicar las elecciones del wizard una sola vez, antes del mantenimiento.
 # Código 10 = aplicado pero requiere reinicio; no abortar.
-if [[ -e "$state/onboarding-done" && ! -e "$state/onboarding-applied" ]]; then
+if [[ ! -e "$state/onboarding-done" ]]; then
+    echo 'El asistente de primer inicio todavía está pendiente.' >&2
+    exit 1
+fi
+config="/etc/aio-debian-gui/schedules/$uid.json"
+if [[ ! -e "$state/onboarding-applied" || ! -f "$config" ]]; then
     if /usr/local/libexec/ayusos-aplicar-onboarding "$uid"; then
         :
     else
@@ -33,16 +37,17 @@ if [[ -e "$state/onboarding-done" && ! -e "$state/onboarding-applied" ]]; then
             exit $rc
         fi
     fi
-    touch "$state/onboarding-applied"
 fi
 
-if [[ ! -e "/etc/aio-debian-gui/schedules/$uid.json" ]]; then
-    /usr/bin/python3 -I "$scheduler" --configure "$uid" \
-        '{"enabled":true,"frequency":"daily","weekday":0,"hour":9,"minute":0,"tasks":["upgrade","autoclean","rebootcheck"],"launcher":{"format":"deb","path":""}}'
-fi
-config="/etc/aio-debian-gui/schedules/$uid.json"
-if [[ -f "$config" ]] && /usr/bin/python3 -I -c \
-    'import json,sys; sys.exit(not json.load(open(sys.argv[1]))["enabled"])' "$config"; then
+enabled=$(/usr/bin/python3 -I -c \
+    'import json,sys; print(json.load(open(sys.argv[1]))["enabled"])' "$config")
+case "$enabled" in
+    True|False) ;;
+    *) echo 'La configuración de mantenimiento no es válida.' >&2; exit 1 ;;
+esac
+touch "$state/onboarding-applied"
+
+if [[ "$enabled" == True ]]; then
     systemctl start "aio-debian-gui-maintenance@$uid.service"
     /usr/bin/python3 -I -c \
         'import json,sys; sys.exit(json.load(open(sys.argv[1]))["status"] != "success")' \

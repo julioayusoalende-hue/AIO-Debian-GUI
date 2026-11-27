@@ -86,7 +86,7 @@ def install_remote(task):
 
 def installed():
     result = subprocess.run(
-        ["gnome-extensions", "list", "--user"], capture_output=True,
+        ["gnome-extensions", "list"], capture_output=True,
         text=True, timeout=20, check=False,
     )
     if result.returncode:

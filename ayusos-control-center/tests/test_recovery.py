@@ -6,14 +6,14 @@ from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 EXTENSION = ROOT / "package/usr/lib/aio-debian-gui/extensions/ayusos"
 sys.path.insert(0, str(EXTENSION.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "package/usr/lib/aio-debian-gui"))
 
-from ayusos import extension, recovery
+from ayusos import extension, pages, recovery
 from ayusos.aio_core import ayusos_recovery
 
 
@@ -73,6 +73,88 @@ class RecoveryTests(unittest.TestCase):
                           return_value=[{"id": "snap"}]):
             result = ayusos_recovery.execute("snapshots")
         self.assertEqual(result["snapshots"], [{"id": "snap"}])
+
+    def test_snapshot_create_validates_input_and_refreshes_in_the_same_call(self):
+        snapshots = ayusos_recovery.ayusos_snapshots
+        with patch.object(snapshots, "create_timeshift_snapshot", return_value=(True, "ok")) as create, \
+             patch.object(snapshots, "get_snapshot_status", return_value={"timeshift_snapshots": []}):
+            for args in (("--delete-all", "O"), ("prueba", "Y"), ("línea\nextra", "O")):
+                self.assertFalse(ayusos_recovery.execute("snapshot-create", args[0], tags=args[1])["success"])
+            create.assert_not_called()
+            result = ayusos_recovery.execute("snapshot-create", "Antes de actualizar", tags="O")
+            create.assert_called_once_with("Antes de actualizar", "O")
+        self.assertEqual(result, {"success": True, "message": "ok", "status": {"timeshift_snapshots": []}})
+
+    def test_timeshift_list_parses_console_table(self):
+        snapshots = ayusos_recovery.ayusos_snapshots
+        stdout = ("Num     Name                Tags   Description  \n"
+                  "-----------------------------------------------\n"
+                  "0    >  2026-11-26_21-05-13  D O    Antes de actualizar  \n"
+                  "1    >  2026-11-27_08-00-00         O  texto del comentario  \n")
+        result = SimpleNamespace(returncode=0, stdout=stdout, stderr="")
+        with patch.object(snapshots, "is_timeshift_installed", return_value=True), \
+             patch.object(snapshots.subprocess, "run", return_value=result) as run:
+            rows = snapshots.list_timeshift_snapshots()
+        self.assertEqual(run.call_args.args[0], ["timeshift", "--list", "--scripted"])
+        self.assertEqual(rows[0], {"id": "2026-11-26_21-05-13", "date": "2026-11-26 21-05-13",
+                                   "tags": "D O", "comment": "Antes de actualizar"})
+        self.assertEqual(rows[1]["tags"], "")
+        self.assertEqual(rows[1]["comment"], "O  texto del comentario")
+
+    def test_timeshift_create_omits_the_on_demand_tag(self):
+        snapshots = ayusos_recovery.ayusos_snapshots
+        result = SimpleNamespace(returncode=0, stdout="ok", stderr="")
+        with patch.object(snapshots, "is_timeshift_installed", return_value=True), \
+             patch.object(snapshots.subprocess, "run", return_value=result) as run:
+            self.assertEqual(snapshots.create_timeshift_snapshot("prueba", "O"), (True, "ok"))
+            self.assertEqual(run.call_args.args[0], ["timeshift", "--create", "--scripted", "--comments", "prueba"])
+            snapshots.create_timeshift_snapshot("diario", "D")
+            self.assertEqual(run.call_args.args[0][-2:], ["--tags", "D"])
+
+    def test_snapshot_page_uses_polkit_and_reports_cancellation(self):
+        result = SimpleNamespace(returncode=126, stdout="", stderr="")
+        with patch.object(pages.threading, "Thread", side_effect=lambda target, daemon: SimpleNamespace(start=target)), \
+             patch.object(pages.subprocess, "run", return_value=result) as run, \
+             patch.object(pages.GLib, "idle_add") as complete:
+            window = Mock()
+            window._iniciar_operacion.return_value = "snapshots"
+            done = Mock()
+            pages.AyusOSPagesMixin._run_authorized_action(window, "snapshot-create", done, "prueba", "O")
+        self.assertEqual(run.call_args.args[0], ["pkexec", recovery.RECOVERY_HELPER,
+                                                "snapshot-create", "prueba", "O"])
+        callback, ok, message = complete.call_args.args
+        callback(ok, message)
+        window._finalizar_operacion.assert_called_once_with("snapshots")
+        done.assert_called_once_with(False, message)
+        self.assertIn("cancelada", message)
+
+    def test_hardware_profile_button_requests_authorization(self):
+        window = Mock()
+        window.hardware_profile_combo.get_active_id.return_value = "gaming"
+        pages.AyusOSPagesMixin._hardware_apply_profile(window, None)
+        window._run_authorized_action.assert_called_once_with(
+            "hardware-apply", window._hardware_apply_done, "gaming", operation="Perfil de hardware"
+        )
+
+    def test_hardware_profile_without_root_or_unknown_profile_never_runs_commands(self):
+        hardware = ayusos_recovery.ayusos_hardware
+        with patch.object(hardware.os, "geteuid", return_value=1000), \
+             patch.object(hardware.subprocess, "run") as run:
+            self.assertFalse(ayusos_recovery.execute("hardware-apply", "gaming")["success"])
+            self.assertFalse(ayusos_recovery.execute("hardware-apply", "--purge")["success"])
+            run.assert_not_called()
+
+    def test_authorized_gaming_installs_packages_without_enabling_a_system_service(self):
+        hardware = ayusos_recovery.ayusos_hardware
+        result = SimpleNamespace(returncode=0, stdout="", stderr="")
+        with patch.object(ayusos_recovery.os, "geteuid", return_value=0), \
+             patch.object(hardware.subprocess, "run", return_value=result) as run, \
+             patch.object(hardware, "paquete_instalado", return_value=False), \
+             patch.object(hardware.Path, "glob", return_value=[]), redirect_stdout(StringIO()):
+            self.assertEqual(ayusos_recovery.main(["hardware-apply", "gaming"]), 0)
+        commands = [call.args[0] for call in run.call_args_list]
+        self.assertEqual([command[-1] for command in commands], ["gamemode", "mangohud", "libvulkan1", "vulkan-tools"])
+        self.assertTrue(all(command[0] == "apt-get" and "--no-remove" in command for command in commands))
 
     def test_cli_rejects_non_root_and_bad_arguments(self):
         with patch.object(ayusos_recovery.os, "geteuid", return_value=1000), \

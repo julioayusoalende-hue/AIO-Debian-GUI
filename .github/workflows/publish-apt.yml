@@ -43,16 +43,18 @@ jobs:
           mkdir -p "$RUNNER_TEMP/release-packages"
           RELEASE_TAG=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
-          VERSION="$(sed -n 's/^Version: //p' "$GITHUB_WORKSPACE/source/package/DEBIAN/control")"
-          [[ "$RELEASE_TAG" = "v${VERSION#*:}" ]]
+          VERSION="${RELEASE_TAG#v}"
           gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
             --dir "$RUNNER_TEMP/release-packages" --pattern '*.deb' --pattern SHA256SUMS
           cd "$RUNNER_TEMP/release-packages"
           sha256sum --check SHA256SUMS
-          test -f "aio-debian-gui_${VERSION#*:}_all.deb"
-          AYUSOS_VERSION="$(sed -n 's/^Version: //p' "$GITHUB_WORKSPACE/source/ayusos-control-center/package/DEBIAN/control")"
-          test -f "ayusos-control-center_${AYUSOS_VERSION}_all.deb"
+          for package in aio-debian-gui ayusos-control-center; do
+            filename="${package}_${VERSION}_all.deb"
+            test -f "$filename"
+            awk -v name="$filename" '$2 == name { found=1 } END { exit !found }' SHA256SUMS
+          done
           echo "RELEASE_PACKAGES=$RUNNER_TEMP/release-packages" >> "$GITHUB_ENV"
+          echo "RELEASE_VERSION=$VERSION" >> "$GITHUB_ENV"
       - name: Import signing key
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -69,10 +71,8 @@ jobs:
         run: |
           set -euo pipefail
           cd source
-          VERSION="$(sed -n 's/^Version: //p' package/DEBIAN/control)"
-          DEB="$RELEASE_PACKAGES/aio-debian-gui_${VERSION#*:}_all.deb"
-          AYUSOS_VERSION="$(sed -n 's/^Version: //p' ayusos-control-center/package/DEBIAN/control)"
-          AYUSOS_DEB="$RELEASE_PACKAGES/ayusos-control-center_${AYUSOS_VERSION}_all.deb"
+          DEB="$RELEASE_PACKAGES/aio-debian-gui_${RELEASE_VERSION}_all.deb"
+          AYUSOS_DEB="$RELEASE_PACKAGES/ayusos-control-center_${RELEASE_VERSION}_all.deb"
           test -f "$DEB"
           test -f "$AYUSOS_DEB"
           bash scripts/publish-apt-repo.sh "$DEB" ../site "" "$AYUSOS_DEB"

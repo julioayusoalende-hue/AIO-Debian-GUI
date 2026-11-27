@@ -1,6 +1,7 @@
 """Gestión de snapshots Btrfs + Timeshift + grub-btrfs para AyusOS."""
 
 import json
+import os
 import re
 import subprocess
 
@@ -41,19 +42,37 @@ def is_grub_btrfs_active() -> bool:
 
 
 def list_timeshift_snapshots() -> list[dict[str, str]]:
-    """Lista snapshots de Timeshift (JSON)."""
+    """Lee la tabla de la CLI de Timeshift."""
     if not is_timeshift_installed():
         return []
-    try:
-        result = subprocess.run(
-            comando_host(TIMESHIFT_CMD, "--list", "--json"),
-            capture_output=True, text=True, timeout=10
-        )
-        if result.returncode == 0:
-            return json.loads(result.stdout)
-    except (OSError, subprocess.SubprocessError, json.JSONDecodeError):
-        pass
-    return []
+    result = subprocess.run(
+        comando_host(TIMESHIFT_CMD, "--list", "--scripted"),
+        capture_output=True, text=True, timeout=30, stdin=subprocess.DEVNULL,
+        env={**os.environ, "LC_ALL": "C"},
+    )
+    if result.returncode == 1 and not result.stderr.strip() and "No snapshots found" in result.stdout.splitlines():
+        return []
+    if result.returncode:
+        raise RuntimeError((result.stderr or result.stdout).strip() or "No se pudieron listar los snapshots.")
+    snapshots = []
+    columns = None
+    for line in result.stdout.splitlines():
+        header = re.match(r"^Num +Name +(?P<tags>Tags) +(?P<comment>Description)", line)
+        if header:
+            columns = (header.start("tags"), header.start("comment"))
+        if columns is None:
+            continue
+        row = re.match(r"^\s*\d+\s+>\s+(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})\s", line)
+        if row:
+            snapshot_id = row[1]
+            tags_column, comment_column = columns
+            snapshots.append({
+                "id": snapshot_id,
+                "date": snapshot_id.replace("_", " "),
+                "tags": line[tags_column:comment_column].strip(),
+                "comment": line[comment_column:].strip(),
+            })
+    return snapshots
 
 
 def list_btrfs_snapshots(path: str = "/") -> list[dict[str, str]]:
@@ -69,7 +88,7 @@ def list_btrfs_snapshots(path: str = "/") -> list[dict[str, str]]:
         for line in result.stdout.strip().split("\n"):
             if not line.startswith("ID "):
                 continue
-            path_match = re.search(r"\bpath\s+(\S+)", line)
+            path_match = re.search(r"\bpath\s+(.+)$", line)
             if not path_match:
                 continue
             path = path_match.group(1)
@@ -87,16 +106,20 @@ def list_btrfs_snapshots(path: str = "/") -> list[dict[str, str]]:
 
 
 def create_timeshift_snapshot(comment: str = "", tags: str = "O") -> tuple[bool, str]:
-    """Crea snapshot Timeshift. tags: O=ondemand, B=boot, H=hourly, D=daily, W=weekly, M=monthly, Y=yearly"""
+    """Crea snapshot Timeshift. tags: O=ondemand, B=boot, H=hourly, D=daily, W=weekly, M=monthly"""
     if not is_timeshift_installed():
         return False, "Timeshift no instalado"
     try:
-        cmd = [TIMESHIFT_CMD, "--create", "--comments", comment, "--tags", tags]
+        cmd = [TIMESHIFT_CMD, "--create", "--scripted", "--comments", comment]
+        # Timeshift 24.06.6 asigna O por defecto y rechaza pasarlo explícitamente.
+        if tags != "O":
+            cmd.extend(("--tags", tags))
         result = subprocess.run(
             comando_host(*cmd),
-            capture_output=True, text=True, timeout=120
+            capture_output=True, text=True, timeout=600, stdin=subprocess.DEVNULL
         )
-        return result.returncode == 0, result.stdout or result.stderr
+        output = result.stdout if result.returncode == 0 else result.stderr or result.stdout
+        return result.returncode == 0, output.strip()
     except (OSError, subprocess.SubprocessError) as e:
         return False, str(e)
 
@@ -115,7 +138,8 @@ def restore_timeshift_snapshot(snapshot_id: str) -> tuple[bool, str]:
             capture_output=True, text=True, timeout=300,
             stdin=subprocess.DEVNULL,
         )
-        return result.returncode == 0, result.stdout or result.stderr
+        output = result.stdout if result.returncode == 0 else result.stderr or result.stdout
+        return result.returncode == 0, output.strip()
     except (OSError, subprocess.SubprocessError) as e:
         return False, str(e)
 
@@ -126,10 +150,11 @@ def delete_timeshift_snapshot(snapshot_id: str) -> tuple[bool, str]:
         return False, "Timeshift no instalado"
     try:
         result = subprocess.run(
-            comando_host(TIMESHIFT_CMD, "--delete", "--snapshot", snapshot_id),
-            capture_output=True, text=True, timeout=30
+            comando_host(TIMESHIFT_CMD, "--delete", "--snapshot", snapshot_id, "--scripted", "--yes"),
+            capture_output=True, text=True, timeout=120, stdin=subprocess.DEVNULL
         )
-        return result.returncode == 0, result.stdout or result.stderr
+        output = result.stdout if result.returncode == 0 else result.stderr or result.stdout
+        return result.returncode == 0, output.strip()
     except (OSError, subprocess.SubprocessError) as e:
         return False, str(e)
 
@@ -171,7 +196,8 @@ def trigger_grub_btrfs_update() -> tuple[bool, str]:
             comando_host("systemctl", "reload", "grub-btrfsd"),
             capture_output=True, text=True, timeout=10
         )
-        return result.returncode == 0, result.stdout or result.stderr
+        output = result.stdout if result.returncode == 0 else result.stderr or result.stdout
+        return result.returncode == 0, output.strip()
     except (OSError, subprocess.SubprocessError) as e:
         return False, str(e)
 

@@ -5,9 +5,30 @@ cd "$(dirname "$0")"
 
 VERSION=$(sed -n 's/^Version: //p' package/DEBIAN/control)
 [ -n "$VERSION" ] || { echo 'No se pudo leer la versión' >&2; exit 1; }
+AIO_VERSION=""
+case "$#" in
+    0) ;;
+    2)
+        if [[ "$1" != --aio-release-version || ! "$2" =~ ^([0-9]+:)?[0-9]+\.[0-9]+\.[0-9]+(~testing\.[1-9][0-9]*\.[1-9][0-9]*)?$ ]]; then
+            echo "Versión de AiO para publicación no válida." >&2
+            exit 2
+        fi
+        AIO_VERSION=$2
+        VERSION=${AIO_VERSION#*:}
+        ;;
+    *)
+        echo "Uso: $0 [--aio-release-version VERSIÓN_DEBIAN]" >&2
+        exit 2
+        ;;
+esac
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
 cp -a package/. "$STAGE/"
+if [[ -n "$AIO_VERSION" ]]; then
+    sed -i -e "s/^Version: .*/Version: $VERSION/" \
+        -e "s/^Depends: aio-debian-gui,/Depends: aio-debian-gui (>= $AIO_VERSION),/" \
+        "$STAGE/DEBIAN/control"
+fi
 find "$STAGE" -name '__pycache__' -type d -prune -exec rm -rf -- {} +
 find "$STAGE" -name '*.py[co]' -type f -delete
 find "$STAGE" -type d -exec chmod 755 {} +
