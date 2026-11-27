@@ -5,55 +5,43 @@ set -euo pipefail
 state=/var/lib/ayusos
 install -d -m 0755 "$state"
 
-# Esperar hasta 30s a que exista una sesion de usuario local.
+# Esperar una sesión local activa de un usuario autorizado.
 USER_NAME=""
 USER_UID=""
 SESSION_ID=""
 SESSION_TYPE=""
 SESSION_DISPLAY=""
-for _ in $(seq 1 30); do
+for ((intento=0; intento<30; intento++)); do
     while read -r session_id session_uid session_user _rest; do
-        [[ "$session_id" =~ ^[0-9]+$ && "$session_uid" =~ ^[1-9][0-9]*$ ]] || continue
-        (( session_uid >= 1000 && session_uid < 60000 )) || continue
-        [[ -n "$session_user" && "$session_user" != root ]] || continue
-
+        [[ "$session_id" =~ ^[A-Za-z0-9_-]+$ && "$session_uid" =~ ^[1-9][0-9]*$ ]] || continue
+        grep -Fxq -- "$session_uid" "$state/aio-usuarios" || continue
         props=$(loginctl show-session "$session_id" \
-            -p Name -p UID -p Type -p Remote -p Active -p Display 2>/dev/null || true)
+            -p Name -p User -p Type -p Remote -p Active -p Display 2>/dev/null) || continue
+        grep -Fxq 'Active=yes' <<< "$props" && grep -Fxq 'Remote=no' <<< "$props" || continue
+        grep -Fxq "User=$session_uid" <<< "$props" || continue
         name=$(sed -n 's/^Name=//p' <<< "$props")
-        uid=$(sed -n 's/^UID=//p' <<< "$props")
         type=$(sed -n 's/^Type=//p' <<< "$props")
         display=$(sed -n 's/^Display=//p' <<< "$props")
 
-        # En algunos VMs logind reporta Type=tty aunque GNOME corre en Wayland.
-        # Aceptar la sesion si el runtime y el bus de usuario ya existen.
-        if [[ "$uid" =~ ^[1-9][0-9]*$ && -S "/run/user/$uid/bus" ]]; then
-            USER_NAME=${name:-$session_user}
-            USER_UID=$uid
-            SESSION_ID=$session_id
-            SESSION_TYPE=$type
-            SESSION_DISPLAY=$display
-            echo "Sesion detectada: id=$session_id user=$USER_NAME uid=$USER_UID type=$SESSION_TYPE display=$SESSION_DISPLAY"
-            break 2
+        # Algunas sesiones se anuncian como tty antes de que GNOME termine de iniciar.
+        [[ -S "/run/user/$session_uid/bus" ]] || continue
+        if [[ "$type" != x11 && "$type" != wayland && -z "$display" && ! -S "/run/user/$session_uid/wayland-0" ]]; then
+            continue
         fi
+        USER_NAME=${name:-$session_user}
+        USER_UID=$session_uid
+        SESSION_ID=$session_id
+        SESSION_TYPE=$type
+        SESSION_DISPLAY=$display
+        break 2
     done < <(loginctl list-sessions --no-legend 2>/dev/null || true)
     sleep 1
 done
 
-# Fallback inmediato: primera cuenta local con privilegios de administrador.
 if [[ -z "$USER_NAME" ]]; then
-    while IFS=: read -r username _ uid _ _ _ _; do
-        if (( uid >= 1000 && uid < 60000 )) && id -nG "$username" | grep -qw sudo; then
-            USER_NAME=$username
-            USER_UID=$uid
-            break
-        fi
-    done < /etc/passwd
-fi
-
-[[ -n "$USER_NAME" && "$USER_UID" =~ ^[1-9][0-9]*$ ]] || {
-    echo 'No se encontro una sesion de usuario de AyusOS.' >&2
+    echo 'No hay una sesión gráfica local activa de un usuario autorizado.' >&2
     exit 1
-}
+fi
 
 USER_RUNTIME="/run/user/$USER_UID"
 USER_HOME=$(getent passwd "$USER_UID" | cut -d: -f6)
@@ -72,7 +60,13 @@ if [[ -n "$SESSION_ID" ]]; then
         LEADER_ENV=$(tr '\0' '\n' < "/proc/$leader/environ" || true)
     fi
 fi
-valor_entorno() { sed -n "s/^$1=//p" <<< "$LEADER_ENV" | head -n 1; }
+# GNOME importa las variables gráficas al gestor de usuario una vez iniciada la sesión.
+MANAGER_ENV=$(runuser -u "$USER_NAME" -- env XDG_RUNTIME_DIR="$USER_RUNTIME" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=$USER_RUNTIME/bus" \
+    timeout 2s systemctl --user show-environment 2>/dev/null || true)
+valor_entorno() {
+    sed -n "s/^$1=//p" <<< "$MANAGER_ENV"$'\n'"$LEADER_ENV" | head -n 1
+}
 
 DISPLAY_VALUE=$(valor_entorno DISPLAY)
 WAYLAND_DISPLAY_VALUE=$(valor_entorno WAYLAND_DISPLAY)
@@ -127,5 +121,6 @@ runuser -u "$USER_NAME" -- env "${entorno[@]}" \
 
 # Marcar como completado para no volver a mostrar (incluso si el usuario salto).
 # Solo se llega aqui si el wizard termino correctamente (set -e).
+printf '%s\n' "$USER_UID" > "$state/onboarding-uid"
 touch "$state/onboarding-done"
 echo 'Onboarding de AyusOS completado.'

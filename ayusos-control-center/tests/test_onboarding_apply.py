@@ -75,6 +75,23 @@ class OnboardingApplyTests(unittest.TestCase):
         self.assertIn("git", install_cmd)
         self.assertNotIn("code", install_cmd)
 
+    def test_nvidia_runs_selected_driver_without_dkms_deadline(self):
+        for mode in ("auto", "manual"):
+            config = app._merge(app.SYSTEM_DEFAULTS, {"nvidia": {"mode": mode}})
+            with self.subTest(mode=mode), \
+                 patch.object(app, "run", return_value=Result(stdout="##NVIDIA:present:1\n")) as run, \
+                 patch.object(app, "notify_nvidia"), \
+                 patch.object(app, "helper", return_value=(Result(), True)) as helper:
+                self.assertTrue(app.apply_nvidia(config, 1000, False)[1])
+            run.assert_called_once_with([app.HELPER, "--nvidia-report"], timeout=15)
+            helper.assert_called_once_with(["nvidia-driver"], 1000, timeout=None)
+
+    def test_automatic_nvidia_skips_machine_without_nvidia(self):
+        with patch.object(app, "run", return_value=Result(stdout="##NVIDIA:present:0\n")), \
+             patch.object(app, "helper") as helper:
+            self.assertEqual(app.apply_nvidia(app.SYSTEM_DEFAULTS, 1000, False), (None, False))
+        helper.assert_not_called()
+
     def test_kernel_mapping(self):
         config = json.loads(json.dumps(app.SYSTEM_DEFAULTS))
         config["kernel"]["variant"] = "backports"

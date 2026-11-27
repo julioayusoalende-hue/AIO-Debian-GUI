@@ -85,7 +85,7 @@ NOTAS_VERSION = os.path.normpath(
 )
 
 # Versión embebida en tiempo de compilación (inyectada por build-deb.sh)
-AIO_DEBIAN_GUI_VERSION = "1.5.8"
+AIO_DEBIAN_GUI_VERSION = "1.5.9"
 
 RECOMMENDED_ICON_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/recommended-icons")
@@ -6344,7 +6344,35 @@ class VentanaPrincipal(Gtk.Window):
     # Callbacks: Diagnósticos
     # =========================================================================
 
+def _ejecutar_onboarding_inicial():
+    for extension in load_extensions():
+        launcher = getattr(extension, "launch_onboarding", None)
+        if launcher is None or not getattr(extension, "is_active", lambda: True)():
+            continue
+        try:
+            wizard = launcher(None)
+        except Exception as exc:  # noqa: BLE001
+            print(f"No se pudo abrir el onboarding: {exc}", file=sys.stderr)
+            return 2
+        completado = False
+
+        def finalizar(ventana):
+            nonlocal completado
+            completado = True
+            ventana.destroy()
+
+        wizard.connect("completed", finalizar)
+        wizard.connect("cancelled", lambda ventana: ventana.destroy())
+        wizard.connect("destroy", Gtk.main_quit)
+        Gtk.main()
+        return 0 if completado else 2
+
+    print("Onboarding no disponible: ninguna extensión lo proporciona.", file=sys.stderr)
+    return 2
+
+
 def main():
+    global IDIOMA_ACTUAL
     # Argumentos especiales
     force_onboarding = "--onboarding" in sys.argv[1:]
     onboarding_only = "--onboarding-only" in sys.argv[1:]
@@ -6361,6 +6389,10 @@ def main():
     except (OSError, ValueError) as error:
         preferencias = PREFERENCIAS_DEFECTO.copy()
         error_preferencias = str(error)
+    if onboarding_only:
+        IDIOMA_ACTUAL = preferencias["idioma"]
+        aplicar_tema(preferencias["tema"])
+        sys.exit(_ejecutar_onboarding_inicial())
     win = VentanaPrincipal(preferencias)
     aplicar_tema(preferencias["tema"])
     win.handler_cierre = win.connect("destroy", Gtk.main_quit)
@@ -6382,7 +6414,7 @@ def main():
         launcher = getattr(extension, "launch_onboarding", None)
         if launcher is None:
             continue
-        should = force_onboarding or onboarding_only
+        should = force_onboarding
         if not should:
             check = getattr(extension, "should_launch_onboarding", None)
             should = bool(check and check())
@@ -6395,31 +6427,18 @@ def main():
             onboarding_win = onboarding_extension.launch_onboarding(win)
         except Exception as exc:  # noqa: BLE001
             print(f"No se pudo abrir el onboarding: {exc}", file=sys.stderr)
-            if onboarding_only:
-                # Salir con error para que el servicio reintente y no se marque
-                # el onboarding como completado sin haber mostrado el wizard.
-                sys.exit(2)
             onboarding_extension = None
 
     if onboarding_extension is not None:
         def _cerrar_onboarding():
             onboarding_win.destroy()
-            if onboarding_only:
-                # El servicio systemd debe poder terminar para que arranque
-                # el mantenimiento inicial. No dejar la ventana principal abierta.
-                win.destroy()
-            else:
-                win.show_all()
-                win._preparar_anfitrion_al_iniciar()
-                _post_init()
+            win.show_all()
+            win._preparar_anfitrion_al_iniciar()
+            _post_init()
 
         onboarding_win.connect("completed", lambda *_: _cerrar_onboarding())
         onboarding_win.connect("cancelled", lambda *_: _cerrar_onboarding())
     else:
-        if onboarding_only:
-            print("Onboarding no disponible: ninguna extensión lo proporciona.",
-                  file=sys.stderr)
-            sys.exit(2)
         win.show_all()
         win._preparar_anfitrion_al_iniciar()
         _post_init()

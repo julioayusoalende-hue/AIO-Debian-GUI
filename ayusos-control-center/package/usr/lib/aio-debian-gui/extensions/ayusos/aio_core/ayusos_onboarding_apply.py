@@ -51,10 +51,10 @@ def run(cmd, *, env=None, timeout=900, capture=True):
     )
 
 
-def helper(steps, uid):
+def helper(steps, uid, *, timeout=900):
     """Ejecuta paso del helper y devuelve (completed_process, reboot_required)."""
     env = dict(AptEnv, PKEXEC_UID=str(uid))
-    result = run([HELPER, "--lang", "es", *steps], env=env)
+    result = run([HELPER, "--lang", "es", *steps], env=env, timeout=timeout)
     reboot_needed = "##REBOOT:1" in (result.stdout or "") or "##REBOOT:1" in (result.stderr or "")
     return result, reboot_needed
 
@@ -82,10 +82,34 @@ def apply_kernel(config, uid, dry):
     return None, False
 
 
+def notify_nvidia(uid, message):
+    runtime = Path(f"/run/user/{uid}")
+    if not (runtime / "bus").is_socket():
+        return
+    try:
+        username = pwd.getpwuid(uid).pw_name
+        run(["runuser", "-u", username, "--", "env", f"XDG_RUNTIME_DIR={runtime}",
+             f"DBUS_SESSION_BUS_ADDRESS=unix:path={runtime}/bus",
+             "notify-send", "Controlador NVIDIA", message], timeout=5)
+    except (KeyError, OSError, subprocess.SubprocessError):
+        pass
+
+
 def apply_nvidia(config, uid, dry):
-    if config["nvidia"]["mode"] in ("auto", "manual"):
-        return helper(["nvidia-driver"], uid)
-    return None, False
+    mode = config["nvidia"]["mode"]
+    if dry or mode not in ("auto", "manual"):
+        return None, False
+    report = run([HELPER, "--nvidia-report"], timeout=15)
+    if report.returncode:
+        return report, False
+    flags = (report.stdout or "").splitlines()
+    if "##NVIDIA:present:0" in flags and mode == "auto":
+        print("  No se detectó una GPU NVIDIA PCI. Se omite la instalación.")
+        return None, False
+    # DKMS puede tardar varios minutos; el helper conserva su bloqueo hasta terminar.
+    print("  Iniciando la instalación del controlador NVIDIA…", flush=True)
+    notify_nvidia(uid, "AyusOS está instalando el controlador seleccionado. La compilación puede tardar varios minutos.")
+    return helper(["nvidia-driver"], uid, timeout=None)
 
 
 def apply_apps(config, uid, dry):
@@ -208,14 +232,20 @@ def apply(config, username, uid, dry=False):
                 reboot_needed = True
                 print("  ⚠ Requiere reinicio del sistema")
             if result is not None and result.returncode != 0:
-                detail = (result.stderr or result.stdout or "").strip()[-800:]
-                print(f"  Aviso: {detail}")
+                detail = "\n".join(
+                    output.strip()[-1200:] for output in (result.stdout, result.stderr) if output and output.strip()
+                )
+                print(f"  Aviso: {detail or f'código de salida {result.returncode}'}", flush=True)
                 failures.append(name)
+                if name == "nvidia":
+                    notify_nvidia(uid, "No se pudo instalar el controlador. Consulta el registro de ayusos-aio-inicial.")
             else:
                 print("  OK")
         except (OSError, subprocess.SubprocessError) as exc:
             print(f"  Aviso: {exc}")
             failures.append(name)
+            if name == "nvidia":
+                notify_nvidia(uid, "No se pudo instalar el controlador. Consulta el registro de ayusos-aio-inicial.")
 
     # Paso final: comprobación de reinicio necesaria
     print("[comprobación de reinicio]")

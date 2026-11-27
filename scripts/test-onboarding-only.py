@@ -23,28 +23,21 @@ app = importlib.util.module_from_spec(spec)
 loader.exec_module(app)
 
 
-class FakeWindow:
-    def __init__(self, extensions):
-        self.extensions = extensions
-
-    def connect(self, *_args):
-        return 1
-
-
 def broken_onboarding(_window):
     raise RuntimeError("fallo simulado del lanzador")
 
 
-def ejecutar(extensiones):
-    ventana = FakeWindow(extensiones)
+def ejecutar(extensiones, durante_bucle=None):
     errores = io.StringIO()
     with (
         patch.object(sys, "argv", ["aio-debian-gui", "--onboarding-only"]),
         patch.object(app.os, "geteuid", return_value=1000),
         patch.object(app, "cargar_preferencias", return_value=app.PREFERENCIAS_DEFECTO.copy()),
-        patch.object(app, "VentanaPrincipal", return_value=ventana),
+        patch.object(app, "load_extensions", return_value=extensiones),
+        patch.object(app, "VentanaPrincipal", side_effect=AssertionError("ventana principal innecesaria")),
         patch.object(app, "aplicar_tema"),
-        patch.object(app.Gtk, "main") as bucle,
+        patch.object(app.Gtk, "main_quit"),
+        patch.object(app.Gtk, "main", side_effect=durante_bucle) as bucle,
         contextlib.redirect_stderr(errores),
     ):
         try:
@@ -66,7 +59,18 @@ codigo, errores, bucle = ejecutar([
 assert codigo == 2 and not bucle, (codigo, errores, bucle)
 assert "No se pudo abrir el onboarding" in errores
 
-print("✔ onboarding-only: ausencia y fallo del lanzador devuelven error sin abrir la ventana")
+for evento, esperado in (("completed", 0), ("cancelled", 2), ("destroy", 2)):
+    wizard = Mock()
+    def activar_evento():
+        llamadas = dict(llamada.args for llamada in wizard.connect.call_args_list)
+        llamadas[evento](wizard)
+
+    codigo, _, bucle = ejecutar(
+        [SimpleNamespace(launch_onboarding=lambda parent: wizard if parent is None else None)],
+        activar_evento,
+    )
+    assert codigo == esperado and bucle
+print("✔ onboarding-only: carga directa, éxito confirmado y reintento al cerrar")
 
 
 # El lanzador de escritorio pasa un fichero como argumento en el arranque normal.

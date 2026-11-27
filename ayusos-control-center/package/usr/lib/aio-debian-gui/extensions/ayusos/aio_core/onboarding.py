@@ -474,7 +474,8 @@ class OnboardingWizard(Gtk.Window):
         desc = Gtk.Label(label=traducir(
             "Si tu equipo tiene GPU NVIDIA, los controladores propietarios ofrecen "
             "mejor rendimiento y compatibilidad (CUDA, juegos, renderizado).\n"
-            "La detección automática analiza tu GPU, kernel, Secure Boot y portátiles híbridos."
+            "La detección automática analiza tu GPU, kernel, Secure Boot y portátiles híbridos. "
+            "La instalación se ejecuta al finalizar el asistente."
         ))
         desc.set_line_wrap(True)
         desc.set_xalign(0)
@@ -482,14 +483,10 @@ class OnboardingWizard(Gtk.Window):
 
         self.nvidia_combo = Gtk.ComboBoxText()
         for mode in ["auto", "manual", "none"]:
-            label = {"auto": "Auto-detectar (recomendado)", "manual": "Instalar manualmente", "none": "No instalar"}[mode]
+            label = {"auto": "Auto-detectar (recomendado)", "manual": "Instalar al finalizar el asistente", "none": "No instalar"}[mode]
             self.nvidia_combo.append(mode, traducir(label))
         self.nvidia_combo.set_active(["auto", "manual", "none"].index(self.config.nvidia.mode))
         box.pack_start(self.nvidia_combo, False, False, 0)
-
-        self.nvidia_prime = Gtk.CheckButton(label=traducir("PRIME offload (portátiles híbridos Intel/NVIDIA)"))
-        self.nvidia_prime.set_active(self.config.nvidia.prime_offload)
-        box.pack_start(self.nvidia_prime, False, False, 0)
 
         return box
 
@@ -709,7 +706,6 @@ class OnboardingWizard(Gtk.Window):
 
     def _apply_nvidia(self, widget, config) -> bool:
         config.nvidia.mode = self.nvidia_combo.get_active_id() or "auto"
-        config.nvidia.prime_offload = self.nvidia_prime.get_active()
         return True
 
     def _validate_gnome_ext(self, widget) -> bool:

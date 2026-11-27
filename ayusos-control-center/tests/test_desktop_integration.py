@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+import socket
 import subprocess
 import sys
 import tempfile
@@ -82,13 +83,74 @@ class DesktopIntegrationTests(unittest.TestCase):
                 wizard.flatpak_enabled.set_active(True)
                 wizard.flathub_enabled.set_active(True)
                 wizard.btn_next.clicked()
+                wizard._show_step(steps.index("nvidia"))
+                wizard.nvidia_combo.set_active_id("manual")
+                wizard.btn_next.clicked()
                 wizard._show_step(len(steps) - 1)
                 wizard.btn_next.clicked()
                 saved = save.call_args.args[1]
                 self.assertTrue(saved["flatpak"]["flathub"])
                 self.assertFalse(saved["apps"]["auto_install"])
+                self.assertEqual(saved["nvidia"]["mode"], "manual")
             finally:
                 wizard.destroy()
+
+    def test_first_login_uses_the_active_session_and_applies_its_preferences(self):
+        package = ROOT / "package"
+        with tempfile.TemporaryDirectory() as tmp, socket.socket(socket.AF_UNIX) as bus:
+            root = Path(tmp)
+            state = root / "state"
+            runtime = root / "runtime" / "1001"
+            state.mkdir()
+            runtime.mkdir(parents=True)
+            bus.bind(str(runtime / "bus"))
+            (state / "aio-usuarios").write_text("1000\n1001\n")
+            launcher = root / "launcher"
+            launcher.write_text((package / "usr/bin/ayusos-onboarding-graphical").read_text()
+                                .replace("/var/lib/ayusos", str(state))
+                                .replace("/run/user", str(runtime.parent)))
+            started = subprocess.run(["bash", "-c", """
+                loginctl() {
+                    case "$1:$2" in
+                        list-sessions:*) printf 'c1 1000 primero seat0\nc2 1001 segundo seat0\n';;
+                        show-session:c1) printf 'User=1000\nActive=no\nRemote=no\n';;
+                        show-session:c2)
+                            if [[ "$*" == *"-p User"* ]]; then
+                                printf 'User=1001\nName=segundo\nActive=yes\nRemote=no\nType=x11\nDisplay=:2\n'
+                            fi;;
+                    esac
+                }
+                getent() { printf 'segundo:x:1001:1001:Prueba:%s:/bin/bash\n' "$HOME_TEST"; }
+                runuser() {
+                    [ "$2" = segundo ] || return 1
+                    if [[ "$*" == *show-environment* ]]; then printf 'DISPLAY=:8\n'; return; fi
+                    [[ "$*" == *"DISPLAY=:8"* && "$*" == *"--onboarding-only"* ]] || return 1
+                }
+                export HOME_TEST="$2"
+                source "$1"
+            """.replace("$HOME_TEST", "$HOME_TEST"), "_", str(launcher), tmp],
+                capture_output=True, text=True, timeout=5)
+            self.assertEqual(started.returncode, 0, started.stderr)
+            self.assertEqual((state / "onboarding-uid").read_text(), "1001\n")
+            self.assertTrue((state / "onboarding-done").exists())
+
+            schedules = root / "schedules"
+            schedules.mkdir()
+            applicator = root / "apply"
+            applicator.write_text(
+                "#!/bin/bash\n"
+                f'printf "%s\\n" "$1" > "{root / "applied-uid"}"\n'
+                f"""echo '{{"enabled": false}}' > "{schedules}/$1.json"\n"""
+            )
+            applicator.chmod(0o755)
+            initial = root / "initial"
+            initial.write_text((package / "usr/local/libexec/ayusos-aio-inicial").read_text()
+                               .replace("/var/lib/ayusos", str(state))
+                               .replace("/etc/aio-debian-gui/schedules", str(schedules))
+                               .replace("/usr/local/libexec/ayusos-aplicar-onboarding", str(applicator)))
+            applied = subprocess.run(["bash", str(initial)], capture_output=True, text=True, timeout=5)
+            self.assertEqual(applied.returncode, 0, applied.stderr)
+            self.assertEqual((root / "applied-uid").read_text(), "1001\n")
 
     def test_flatpak_without_flathub_does_not_configure_remote(self):
         with patch.object(apply, "run", return_value=Mock(returncode=0)) as run, \

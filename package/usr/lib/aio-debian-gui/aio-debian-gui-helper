@@ -148,7 +148,7 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.5.8
+HELPER_VERSION=1.5.9
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -1994,7 +1994,7 @@ nvidia_apt_seguro() {
         err "APT propone eliminar paquetes. Se cancela por seguridad."
         return 1
     fi
-    run_privileged "apt-install-nvidia-apt-seguro" 300 apt-get "${APT_OPTS[@]}" --no-remove install "$@"
+    run_privileged "apt-install-nvidia-apt-seguro" 0 apt-get "${APT_OPTS[@]}" --no-remove install "$@"
 }
 
 paso_nvidia_driver() {
@@ -2069,7 +2069,7 @@ paso_nvidia_driver() {
         info "GPU Intel/AMD y NVIDIA presentes: no se modifica la configuración de pantallas. PRIME puede estar disponible."
         info "PRIME: __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia programa"
     fi
-    if ! run_privileged "apt-install-nvidia-driver" 300 apt-get "${APT_OPTS[@]}" --no-remove install "$headers" "nvidia-driver=$candidate" "$modulo=$candidate" "${extra[@]}"; then
+    if ! run_privileged "apt-install-nvidia-driver" 0 apt-get "${APT_OPTS[@]}" --no-remove install "$headers" "nvidia-driver=$candidate" "$modulo=$candidate" "${extra[@]}"; then
         err "Fallo instalando NVIDIA. Consulta logs de DKMS y APT."
         return 1
     fi

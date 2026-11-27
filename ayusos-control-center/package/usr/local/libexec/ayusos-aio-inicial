@@ -18,13 +18,20 @@ fi
     echo 'No hay usuarios autorizados registrados; ejecuta ayusos-aio-autorizar.' >&2
     exit 1
 }
-read -r uid < "$state/aio-usuarios"
-[[ "$uid" =~ ^[1-9][0-9]*$ ]]
-
 # Aplicar las elecciones del wizard una sola vez, antes del mantenimiento.
 # Código 10 = aplicado pero requiere reinicio; no abortar.
 if [[ ! -e "$state/onboarding-done" ]]; then
     echo 'El asistente de primer inicio todavía está pendiente.' >&2
+    exit 1
+fi
+if [[ -s "$state/onboarding-uid" ]]; then
+    read -r uid < "$state/onboarding-uid"
+else
+    # Compatibilidad con asistentes que todavía no guardaban el UID.
+    read -r uid < "$state/aio-usuarios"
+fi
+if ! [[ "$uid" =~ ^[1-9][0-9]*$ ]] || ! grep -Fxq -- "$uid" "$state/aio-usuarios"; then
+    echo 'El usuario del asistente no figura como administrador autorizado.' >&2
     exit 1
 fi
 config="/etc/aio-debian-gui/schedules/$uid.json"

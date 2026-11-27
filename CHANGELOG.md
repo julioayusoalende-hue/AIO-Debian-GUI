@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.5.9
+
+- El asistente de primer arranque se abre directamente al detectar la sesión gráfica y aplica la selección de NVIDIA del usuario que lo completó. La compilación DKMS puede terminar aunque dure más de cinco minutos.
+
 ## 1.5.8
 
 - El mantenimiento estándar actualiza los índices una vez y encadena la actualización y las limpiezas seleccionadas hasta el primer fallo de APT, sin simulaciones duplicadas.
