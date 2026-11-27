@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.6.2
+
+- El actualizador de AiO incluye el Centro de Control de AyusOS en la misma operación cuando está instalado y hay una versión compatible en el canal seleccionado.
+
 ## 1.6.1
 
 - El asistente de primer arranque exige acceso al repositorio Debian antes de continuar y permite abrir los ajustes de red y reintentar.

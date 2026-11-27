@@ -85,7 +85,7 @@ NOTAS_VERSION = os.path.normpath(
 )
 
 # Versión embebida en tiempo de compilación (inyectada por build-deb.sh)
-AIO_DEBIAN_GUI_VERSION = "1.6.1"
+AIO_DEBIAN_GUI_VERSION = "1.6.2"
 
 RECOMMENDED_ICON_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/recommended-icons")
@@ -1772,7 +1772,14 @@ class VentanaPrincipal(Gtk.Window):
                         GLib.idle_add(self._terminar_actualizacion, Gtk.MessageType.INFO,
                                       "Ya tienes la última versión", f"Versión instalada: {actual}.")
                         return
-                    detalle = f"Versión instalada: {actual}.\nVersión disponible: {nueva}.\n\n¿Actualizar mediante APT?"
+                    detalle = f"Versión instalada de AiO: {actual}.\nVersión disponible de AiO: {nueva}."
+                    centro = next((line.split(":")[1:] for line in resultado.stdout.splitlines()
+                                   if line.startswith("##AYUSOS-UPDATE:")), [])
+                    if len(centro) == 2:
+                        detalle += "\n" + traducir(
+                            "Centro de Control de AyusOS: %s → %s."
+                        ) % tuple(centro)
+                    detalle += "\n\n¿Actualizar mediante APT?"
                     datos = nueva
                 elif formato == "flatpak":
                     # Sin privilegios: actualizar metadatos y consultar revisiones pendientes.
@@ -1896,13 +1903,16 @@ class VentanaPrincipal(Gtk.Window):
                                   else ("--update-self", datos))
                     resultado = subprocess.run(
                         comando_pkexec(HELPER_SISTEMA, "C.UTF-8", *argumentos),
-                        capture_output=True, text=True, timeout=300,
+                        capture_output=True, text=True,
                     )
                     if resultado.returncode:
                         raise RuntimeError((resultado.stderr or resultado.stdout).strip()[-1200:] or
                                            "No se pudo actualizar el paquete DEB.")
                     titulo = "Actualización DEB completada"
-                    detalle_final = "APT ha instalado la nueva versión de AiO Debian GUI."
+                    if "##AYUSOS-UPDATED" in resultado.stdout.splitlines():
+                        detalle_final = traducir("AiO Debian GUI y el Centro de Control de AyusOS están en la versión seleccionada.")
+                    else:
+                        detalle_final = "APT ha instalado la nueva versión de AiO Debian GUI."
                     reinicio = ("deb", None)
                 elif formato == "flatpak":
                     resultado = subprocess.run(

@@ -148,7 +148,7 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.6.1
+HELPER_VERSION=1.6.2
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -2204,43 +2204,48 @@ aiodebian_resolver_version() {
     printf '%s\n' "$completa"
 }
 
+# Las publicaciones actuales emparejan el Centro de Control con la versión de
+# AiO sin la época Debian. Solo se actualiza si ya está instalado.
+aiodebian_centro_pendiente() {
+    local objetivo=${1#*:} instalada
+    if paquete_instalado ayusos-control-center; then
+        instalada=$(dpkg-query -W -f='${Version}' ayusos-control-center) || return 1
+        if dpkg --compare-versions "$objetivo" gt "$instalada"; then
+            printf '%s\n' "$instalada"
+        fi
+    fi
+}
+
 actualizar_aiodebian_estable() (
-    local accion=$1 aprobada=${2:-} instalada disponible completa simulation
+    local accion=$1 aprobada=${2:-} instalada completa simulation centro
     [ "$accion" = comprobar ] || [ "$accion" = instalar ] || return 2
     paquete_instalado aio-debian-gui || { err "AiO Debian GUI no está instalado como DEB."; return 1; }
     instalada=$(dpkg-query -W -f='${Version}' aio-debian-gui) || return 1
     aiodebian_auditoria_dpkg || return 1
     asegurar_listas || return 1
 
-    if [ "$accion" = comprobar ]; then
-        disponible=$(aiodebian_candidata_estable) || return 1
-        if dpkg --compare-versions "$disponible" gt "$instalada"; then
-            simulation=$(LC_ALL=C run_privileged "apt-simulate-aiodebian-estable" 60 apt-get -s --only-upgrade --no-remove install "aio-debian-gui=$disponible" 2>&1) || {
-                err "No se pudo simular la actualización de AiO Debian GUI."
-                printf '%s\n' "$simulation" >&2
-                return 1
-            }
-            if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
-                err "La actualización de AiO Debian GUI propone eliminar paquetes. Se cancela por seguridad."
-                return 1
-            fi
-            printf '##UPDATE:%s:%s\n' "${instalada#*:}" "${disponible#*:}"
-        else
-            printf '##NOUPDATE:%s:%s\n' "${instalada#*:}" "${disponible#*:}"
-        fi
-        return 0
-    fi
-
-    if [ -n "$aprobada" ]; then
+    if [ "$accion" = instalar ] && [ -n "$aprobada" ]; then
         completa=$(aiodebian_resolver_version "$aprobada") || return 1
     else
         completa=$(aiodebian_candidata_estable) || return 1
     fi
-    if ! dpkg --compare-versions "$completa" gt "$instalada"; then
+    centro=$(aiodebian_centro_pendiente "$completa") || return 1
+    if dpkg --compare-versions "$completa" lt "$instalada" ||
+       { [ -z "$centro" ] && dpkg --compare-versions "$completa" eq "$instalada"; }; then
+        if [ "$accion" = comprobar ]; then
+            printf '##NOUPDATE:%s:%s\n' "${instalada#*:}" "${completa#*:}"
+            return 0
+        fi
         err "La actualización estable de AiO Debian GUI ya no es aplicable."
         return 1
     fi
-    simulation=$(LC_ALL=C run_privileged "apt-simulate-aiodebian-estable" 60 apt-get -s --only-upgrade --no-remove install "aio-debian-gui=$completa" 2>&1) || {
+
+    local -a paquetes=("aio-debian-gui=$completa")
+    if [ -n "$centro" ]; then
+        paquetes+=("ayusos-control-center=${completa#*:}")
+    fi
+    simulation=$(LC_ALL=C run_privileged "apt-simulate-aiodebian-estable" 60 apt-get -s \
+                 --only-upgrade --no-remove install "${paquetes[@]}" 2>&1) || {
         err "No se pudo simular la actualización de AiO Debian GUI."
         printf '%s\n' "$simulation" >&2
         return 1
@@ -2249,17 +2254,51 @@ actualizar_aiodebian_estable() (
         err "La actualización de AiO Debian GUI propone eliminar paquetes. Se cancela por seguridad."
         return 1
     fi
-    run_privileged "apt-install-aiodebian-estable" 300 apt-get "${APT_OPTS[@]}" --only-upgrade --no-remove install "aio-debian-gui=$completa" || {
+    if [ "$accion" = comprobar ]; then
+        printf '##UPDATE:%s:%s\n' "${instalada#*:}" "${completa#*:}"
+        if [ -n "$centro" ]; then
+            printf '##AYUSOS-UPDATE:%s:%s\n' "${centro#*:}" "${completa#*:}"
+        fi
+        return 0
+    fi
+
+    run_privileged "apt-install-aiodebian-estable" 0 apt-get "${APT_OPTS[@]}" \
+        --only-upgrade --no-remove install "${paquetes[@]}" || {
         err "No se pudo actualizar AiO Debian GUI mediante APT."
         return 1
     }
+    if [ -n "$centro" ]; then
+        printf '##AYUSOS-UPDATED\n'
+    fi
     ok "Comprobación y actualización del paquete DEB completadas."
 )
+
+aiodebian_hash_testing() {
+    local paquete=$1 version=$2 hash
+    shift 2
+    hash=$(LC_ALL=C apt-cache "$@" show "$paquete=$version" | awk '$1 == "SHA256:" { print $2 }')
+    [[ "$hash" =~ ^[0-9a-f]{64}$ ]] || {
+        err "El índice Testing no contiene un SHA-256 válido para $paquete=$version." >&2
+        return 1
+    }
+    printf '%s\n' "$hash"
+}
+
+aiodebian_verificar_testing() {
+    local paquete=$1 version=$2 hash=$3 archivo=$4
+    local archivos=(./"$paquete"_*.deb)
+    [ "${#archivos[@]}" -eq 1 ] && [ -f "${archivos[0]}" ] && [ ! -L "${archivos[0]}" ] || return 1
+    install -m 0644 -- "${archivos[0]}" "$archivo" || return 1
+    printf '%s  %s\n' "$hash" "$archivo" | sha256sum --check --status ||
+        { err "El paquete $paquete no coincide con el SHA-256 del canal Testing."; return 1; }
+    [ "$(dpkg-deb -f "$archivo" Package)" = "$paquete" ] &&
+        [ "$(dpkg-deb -f "$archivo" Version)" = "$version" ]
+}
 
 # Consulta un origen firmado solo para esta operación. El APT del equipo
 # conserva sus fuentes y la instalación resuelve allí las dependencias.
 actualizar_aiodebian_testing() (
-    local accion=$1 aprobada=${2:-} temporal instalada disponible archivo auditoria hash
+    local accion=$1 aprobada=${2:-} temporal instalada disponible auditoria hash centro hash_centro
     local patron='^[0-9]+:[0-9]+\.[0-9]+\.[0-9]+~testing\.[1-9][0-9]*\.[1-9][0-9]*$'
     paquete_instalado aio-debian-gui || { err "AiO Debian GUI no está instalado como DEB."; return 1; }
     instalada=$(dpkg-query -W -f='${Version}' aio-debian-gui) || return 1
@@ -2282,7 +2321,9 @@ actualizar_aiodebian_testing() (
     disponible=$(LC_ALL=C apt-cache "${opciones[@]}" madison aio-debian-gui |
         awk -F '|' 'NR == 1 { gsub(/[[:space:]]/, "", $2); print $2 }')
     [[ "$disponible" =~ $patron ]] || { err "No hay una versión válida en el canal Testing."; return 1; }
-    if ! dpkg --compare-versions "$disponible" gt "$instalada"; then
+    centro=$(aiodebian_centro_pendiente "$disponible") || return 1
+    if dpkg --compare-versions "$disponible" lt "$instalada" ||
+       { [ -z "$centro" ] && dpkg --compare-versions "$disponible" eq "$instalada"; }; then
         if [ "$accion" = comprobar ]; then
             printf '##NOUPDATE:%s:%s\n' "${instalada#*:}" "${disponible#*:}"
             return 0
@@ -2290,36 +2331,45 @@ actualizar_aiodebian_testing() (
         err "La actualización Testing ya no es aplicable."
         return 1
     fi
+    if [ -n "$centro" ]; then
+        hash_centro=$(aiodebian_hash_testing ayusos-control-center "${disponible#*:}" "${opciones[@]}") || return 1
+    fi
     if [ "$accion" = comprobar ]; then
         printf '##UPDATE:%s:%s\n' "${instalada#*:}" "${disponible#*:}"
+        if [ -n "$centro" ]; then
+            printf '##AYUSOS-UPDATE:%s:%s\n' "${centro#*:}" "${disponible#*:}"
+        fi
         return 0
     fi
     if [ "$aprobada" != "${disponible#*:}" ]; then
         err "La versión Testing ha cambiado. Vuelve a buscar actualizaciones."
         return 1
     fi
-    hash=$(LC_ALL=C apt-cache "${opciones[@]}" show "aio-debian-gui=$disponible" |
-        awk '$1 == "SHA256:" { print $2 }')
-    [[ "$hash" =~ ^[0-9a-f]{64}$ ]] || { err "El índice Testing no contiene un SHA-256 válido."; return 1; }
+    hash=$(aiodebian_hash_testing aio-debian-gui "$disponible" "${opciones[@]}") || return 1
     mkdir -m 0755 "$temporal/download" || return 1
     mkdir -m 0700 "$temporal/verified" || return 1
     if [ "$EUID" -eq 0 ]; then
         chown _apt "$temporal/download" || return 1
     fi
     cd "$temporal/download" || return 1
-    run_privileged "apt-download-aiodebian-testing" 60 apt-get "${opciones[@]}" download "aio-debian-gui=$disponible" || return 1
-    local paquetes=(./*.deb)
-    [ "${#paquetes[@]}" -eq 1 ] || return 1
-    [ -f "${paquetes[0]}" ] && [ ! -L "${paquetes[0]}" ] || return 1
-    archivo="$temporal/verified/aio-debian-gui_all.deb"
-    install -m 0644 -- "${paquetes[0]}" "$archivo" || return 1
-    printf '%s  %s\n' "$hash" "$archivo" | sha256sum --check --status ||
-        { err "El paquete descargado no coincide con el SHA-256 del canal Testing."; return 1; }
-    # APT necesita atravesar el directorio al abrir el paquete ya verificado.
+    local -a objetivos=("aio-debian-gui=$disponible")
+    local -a paquetes=("$temporal/verified/aio-debian-gui_all.deb")
+    if [ -n "$centro" ]; then
+        objetivos+=("ayusos-control-center=${disponible#*:}")
+        paquetes+=("$temporal/verified/ayusos-control-center_all.deb")
+    fi
+    run_privileged "apt-download-aiodebian-testing" 60 apt-get "${opciones[@]}" download "${objetivos[@]}" || return 1
+    aiodebian_verificar_testing aio-debian-gui "$disponible" "$hash" "${paquetes[0]}" || return 1
+    if [ -n "$centro" ]; then
+        aiodebian_verificar_testing ayusos-control-center "${disponible#*:}" "$hash_centro" "${paquetes[1]}" || return 1
+    fi
+    # APT necesita atravesar el directorio al abrir los paquetes ya verificados.
     chmod 0755 "$temporal/verified" || return 1
-    [ "$(dpkg-deb -f "$archivo" Package)" = aio-debian-gui ] &&
-        [ "$(dpkg-deb -f "$archivo" Version)" = "$disponible" ] || return 1
-    run_privileged "apt-install-aiodebian-testing" 300 apt-get "${APT_OPTS[@]}" --only-upgrade --no-remove install "$archivo"
+    run_privileged "apt-install-aiodebian-testing" 0 apt-get "${APT_OPTS[@]}" \
+        --only-upgrade --no-remove install "${paquetes[@]}" || return 1
+    if [ -n "$centro" ]; then
+        printf '##AYUSOS-UPDATED\n'
+    fi
 )
 
 main() {

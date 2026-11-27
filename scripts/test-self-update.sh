@@ -20,9 +20,15 @@ reset() {
     SIMULATION='Inst aio-debian-gui [1.4.4] (1.4.5 Debian:stable)'
     APT_STATUS=0
 }
-paquete_instalado() { return 0; }
+paquete_instalado() { [ "$1" = aio-debian-gui ] || [ -n "${CENTRO:-}" ]; }
 asegurar_listas() { echo update >> "$CALLS"; return 0; }
-dpkg-query() { printf '%s' "$INSTALLED"; }
+dpkg-query() {
+    if [ "${*: -1}" = ayusos-control-center ]; then
+        printf '%s' "$CENTRO"
+    else
+        printf '%s' "$INSTALLED"
+    fi
+}
 timeout() { shift 2; "$@"; }
 dpkg() {
     case "$1" in
@@ -119,3 +125,20 @@ if actualizar_aiodebian_estable instalar 1.4.4 >/dev/null 2>&1; then
 fi
 
 echo '✔ Autoactualización estable: dpkg, simulación, versión aprobada y sin eliminaciones'
+
+
+CENTRO=1.4.4
+INSTALLED=1:1.4.5
+CANDIDATE=$INSTALLED
+reset
+output=$(actualizar_aiodebian_estable comprobar)
+[[ "$output" == *"##AYUSOS-UPDATE:1.4.4:1.4.5"* ]]
+actualizar_aiodebian_estable instalar 1.4.5 >/dev/null
+grep -Fxq -- '-s --only-upgrade --no-remove install aio-debian-gui=1:1.4.5 ayusos-control-center=1.4.5' "$CALLS"
+grep -Fq -- '--only-upgrade --no-remove install aio-debian-gui=1:1.4.5 ayusos-control-center=1.4.5' "$CALLS"
+
+CENTRO=1.4.6
+reset
+[[ "$(actualizar_aiodebian_estable comprobar)" == '##NOUPDATE:1.4.5:1.4.5' ]]
+! grep -Fq 'ayusos-control-center=' "$CALLS"
+echo '✔ Estable: el Centro de Control se actualiza en la misma transacción y no se rebaja'
