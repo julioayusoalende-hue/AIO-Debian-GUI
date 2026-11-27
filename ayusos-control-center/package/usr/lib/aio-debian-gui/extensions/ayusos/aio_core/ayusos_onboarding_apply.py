@@ -87,6 +87,12 @@ def apply_nvidia(config, uid, dry):
 
 
 def apply_apps(config, uid, dry):
+    # El wizard pregunta si instalar automáticamente; si no, no tocar paquetes.
+    if not config["apps"].get("auto_install", True):
+        print("  Instalación automática de apps desactivada (auto_install=false)")
+        return None, False
+    if dry:
+        return None, False
     profile = config["apps"]["profile"]
     packages = APP_PROFILES.get(profile, [])
     if not packages:
@@ -205,8 +211,8 @@ def apply(config, username, uid, dry=False):
     # Paso final: comprobación de reinicio necesaria
     print("[comprobación de reinicio]")
     try:
-        result, check_reboot = helper(["rebootcheck"], uid)
-        if check_reboot or result.returncode != 0:
+        _result, check_reboot = helper(["rebootcheck"], uid)
+        if check_reboot:
             reboot_needed = True
             print("  ⚠ Se recomienda reiniciar el sistema")
         else:

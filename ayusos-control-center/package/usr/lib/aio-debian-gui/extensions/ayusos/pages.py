@@ -14,6 +14,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from aio_core.constants import (
     cabecera_mantenimiento,
+    comando_host,
     etiqueta,
     tarjeta_mantenimiento,
     traducir,
@@ -994,6 +995,41 @@ class AyusOSPagesMixin:
         self.diagnostics_status.set_text(traducir("Diagnóstico completado: %d/%d OK") % (passed, total))
         return GLib.SOURCE_REMOVE
 
+    def _diagnostics_repair_extensions(self, _boton):
+        """Reinstala/activa las extensiones GNOME incluidas con AyusOS."""
+        self.diagnostics_extensions_btn.set_sensitive(False)
+        self.diagnostics_status.set_text(traducir("Reparando extensiones de GNOME…"))
+        steps = [
+            "gnome-ext-appindicator", "gnome-ext-blur-shell", "gnome-ext-dash-to-dock",
+            "gnome-ext-caffeine", "gnome-ext-tiling-shell", "gnome-ext-clipboard-indicator",
+            "gnome-ext-places-status", "ext-manager",
+        ]
+
+        def reparar():
+            try:
+                import subprocess
+                cmd = comando_host(
+                    "pkexec", "/usr/lib/aio-debian-gui/aio-debian-gui-helper",
+                    "--lang", "es", *steps
+                )
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, stdin=subprocess.DEVNULL)
+                if result.returncode == 0:
+                    GLib.idle_add(self._diagnostics_repair_done, True, result.stdout)
+                else:
+                    GLib.idle_add(self._diagnostics_repair_done, False, (result.stderr or result.stdout or "").strip())
+            except (OSError, subprocess.SubprocessError) as exc:
+                GLib.idle_add(self._diagnostics_repair_done, False, str(exc))
+
+        threading.Thread(target=reparar, daemon=True).start()
+
+    def _diagnostics_repair_done(self, ok, data):
+        self.diagnostics_extensions_btn.set_sensitive(True)
+        if ok:
+            self.diagnostics_status.set_text(traducir("Extensiones reparadas correctamente."))
+        else:
+            self.diagnostics_status.set_text(traducir("Error reparando extensiones: %s") % data)
+        return GLib.SOURCE_REMOVE
+
     def _branding_refresh(self, _boton):
         self.branding_refresh_btn.set_sensitive(False)
         self.branding_status.set_text(traducir("Cargando estado…"))
@@ -1309,7 +1345,30 @@ class AyusOSPagesMixin:
                 import subprocess
 
                 from .aio_core import ayusos_identity
-                result = json.loads(ayusos_identity.cli_restore(path, dry_run))
+                if dry_run:
+                    # Simulación: no toca el sistema, no necesita privilegios.
+                    result = json.loads(ayusos_identity.cli_restore(path, True))
+                else:
+                    # Escritura a /etc, keyring y dconf de sistema: privilegiado.
+                    cmd = comando_host(
+                        "pkexec", "/usr/lib/aio-debian-gui/aio-debian-gui-helper",
+                        "--lang", "es", "ayusos-identity", "restore", path
+                    )
+                    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300, stdin=subprocess.DEVNULL)
+                    out = (proc.stdout or "").strip()
+                    result = {}
+                    for line in reversed(out.splitlines()):
+                        try:
+                            value = json.loads(line)
+                        except ValueError:
+                            continue
+                        if isinstance(value, dict):
+                            result = value
+                            break
+                    if not result:
+                        result = {"success": proc.returncode == 0, "message": (proc.stderr or out).strip()}
+                    elif proc.returncode != 0 and result.get("success"):
+                        result["success"] = False
                 GLib.idle_add(self._identity_restore_done, True, result)
             except (OSError, ValueError, RuntimeError, ImportError, subprocess.SubprocessError) as exc:
                 GLib.idle_add(self._identity_restore_done, False, str(exc))

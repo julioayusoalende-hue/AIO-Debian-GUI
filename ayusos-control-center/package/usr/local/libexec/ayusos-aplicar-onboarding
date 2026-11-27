@@ -44,7 +44,7 @@ if [[ -f "$REBOOT_MARKER" ]]; then
                --title="Reinicio requerido" \
                --text="El onboarding de AyusOS ha aplicado cambios que requieren reiniciar el sistema (kernel, drivers NVIDIA o GRUB).\n\n¿Reiniciar ahora?" \
                --ok-label="Reiniciar ahora" --cancel-label="Más tarde"; then
-                systemctl reboot
+                systemctl reboot || true
             fi
         fi
     fi

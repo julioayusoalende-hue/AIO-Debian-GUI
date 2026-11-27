@@ -72,6 +72,9 @@ class Extension:
                 continue
             setattr(window, name, value.__get__(window, type(window)))
 
+        # Botón "Abrir recuperación" del diagnóstico.
+        window._abrir_recuperacion = lambda: open_recovery(window)
+
         # El gestor de software también vive en la extensión. Se inserta en la
         # misma posición que ocupaba en el core para no cambiar la navegación.
         if not (es_flatpak() or os.environ.get("APPIMAGE") or os.environ.get("SNAP")):

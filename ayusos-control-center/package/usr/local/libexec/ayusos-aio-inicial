@@ -23,8 +23,16 @@ read -r uid < "$state/aio-usuarios"
 [[ "$uid" =~ ^[1-9][0-9]*$ ]]
 
 # Aplicar las elecciones del wizard una sola vez, antes del mantenimiento.
+# Código 10 = aplicado pero requiere reinicio; no abortar.
 if [[ -e "$state/onboarding-done" && ! -e "$state/onboarding-applied" ]]; then
-    /usr/local/libexec/ayusos-aplicar-onboarding "$uid"
+    if /usr/local/libexec/ayusos-aplicar-onboarding "$uid"; then
+        :
+    else
+        rc=$?
+        if [[ $rc -ne 10 ]]; then
+            exit $rc
+        fi
+    fi
     touch "$state/onboarding-applied"
 fi
 

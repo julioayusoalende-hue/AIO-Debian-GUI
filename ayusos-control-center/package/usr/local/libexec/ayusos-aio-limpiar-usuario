@@ -1,7 +1,6 @@
 #!/bin/bash
 # Limpia la regla Polkit de AiO cuando se elimina un usuario administrador.
-# Se invoca desde /usr/local/sbin/ayusos-aio-limpiar-usuario <username>
-# y también puede llamarse manualmente.
+# Funciona aunque la cuenta ya no exista en /etc/passwd.
 set -euo pipefail
 
 username="${1:-}"
@@ -16,28 +15,41 @@ fi
     exit 1
 }
 
-uid=$(id -u "$username" 2>/dev/null) || {
-    echo "Usuario '$username' no existe." >&2
-    exit 1
-}
-
 POLKIT_RULES_DIR=/etc/polkit-1/rules.d
-PASSWORDLESS_STATE_DIR=/var/lib/ayusos/passwordless
-
-# Eliminar regla Polkit
-rule_file="$POLKIT_RULES_DIR/50-aiodebian-gui-${uid}.rules"
-[[ -f "$rule_file" ]] && rm -f -- "$rule_file"
-
-# Eliminar marcador de estado
-marker="$PASSWORDLESS_STATE_DIR/${uid}.rules"
-[[ -f "$marker" ]] && rm -f -- "$marker"
-
-# Actualizar lista de usuarios autorizados
+PASSWORDLESS_STATE_DIR=/var/lib/aio-debian-gui/passwordless
 state=/var/lib/ayusos
-if [[ -f "$state/aio-usuarios" ]]; then
-    # Filtrar el UID eliminado
-    awk -v id="$uid" '$1 != id' "$state/aio-usuarios" > "$state/aio-usuarios.tmp" 2>/dev/null || true
+removed_uid=""
+
+shopt -s nullglob
+
+# Eliminar regla Polkit por contenido (subject.user) y capturar UID del nombre.
+for rule in "$POLKIT_RULES_DIR"/50-aiodebian-gui-*.rules; do
+    if grep -q "subject.user === \"$username\"" "$rule"; then
+        if [[ "$(basename "$rule")" =~ ^50-aiodebian-gui-([0-9]+)\.rules$ ]]; then
+            removed_uid="${BASH_REMATCH[1]}"
+        fi
+        rm -f -- "$rule"
+    fi
+done
+
+# Eliminar marcador de estado por contenido
+for marker in "$PASSWORDLESS_STATE_DIR"/*.rules; do
+    if grep -q "subject.user === \"$username\"" "$marker"; then
+        rm -f -- "$marker"
+    fi
+done
+
+# Si la cuenta sigue existiendo, eliminar también por UID.
+if uid=$(id -u "$username" 2>/dev/null); then
+    rm -f -- "$POLKIT_RULES_DIR/50-aiodebian-gui-${uid}.rules" \
+              "$PASSWORDLESS_STATE_DIR/${uid}.rules"
+    removed_uid=$uid
+fi
+
+# Actualizar lista de usuarios autorizados (solo UIDs, uno por línea).
+if [[ -n "$removed_uid" && -f "$state/aio-usuarios" ]]; then
+    awk -v id="$removed_uid" '$1 != id' "$state/aio-usuarios" > "$state/aio-usuarios.tmp" 2>/dev/null || true
     mv -f "$state/aio-usuarios.tmp" "$state/aio-usuarios"
 fi
 
-echo "Regla Polkit de AiO eliminada para $username (UID $uid)."
+echo "Regla Polkit de AiO eliminada para $username${removed_uid:+ (UID $removed_uid)}."
