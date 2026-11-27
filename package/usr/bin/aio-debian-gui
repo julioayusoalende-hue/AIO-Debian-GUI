@@ -6332,6 +6332,17 @@ def main():
     aplicar_tema(preferencias["tema"])
     win.handler_cierre = win.connect("destroy", Gtk.main_quit)
 
+    def _post_init():
+        if len(sys.argv) == 2 and not sys.argv[1].startswith("-") and win.pagina_software is not None:
+            win._mostrar_gestor_software()
+            GLib.timeout_add(100, win.pagina_software.open_local_file, os.path.abspath(sys.argv[1]))
+        if aviso_reinicio_programado:
+            GLib.idle_add(win._preguntar_reinicio)
+        if error_preferencias:
+            win.estado.set_text(
+                traducir("No se pudieron leer las preferencias") + ": " + error_preferencias
+            )
+
     # El onboarding lo proporciona una extensión; el core no conoce distros.
     onboarding_extension = None
     for extension in win.extensions:
@@ -6378,21 +6389,7 @@ def main():
             sys.exit(2)
         win.show_all()
         win._preparar_anfitrion_al_iniciar()
-
-    def _post_init():
-        if len(sys.argv) == 2 and not aviso_reinicio_programado:
-            pagina = win.pagina_software
-            if pagina is not None:
-                pagina.set_no_show_all(False)
-                pagina.show_all()
-                win.notebook.set_current_page(win.notebook.page_num(pagina))
-                GLib.timeout_add(100, pagina.open_local_file, os.path.abspath(sys.argv[1]))
-        if aviso_reinicio_programado:
-            GLib.idle_add(win._preguntar_reinicio)
-        if error_preferencias:
-            win.estado.set_text(
-                traducir("No se pudieron leer las preferencias") + ": " + error_preferencias
-            )
+        _post_init()
 
     Gtk.main()
 

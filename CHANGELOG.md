@@ -2,6 +2,7 @@
 
 ## 1.5.5
 
+- Al abrir un archivo .deb desde el escritorio, AiO selecciona el Gestor de software y muestra la confirmación de instalación.
 - Las páginas y tarjetas usan los colores del tema GTK para conservar el contraste al alternar entre los modos claro y oscuro.
 
 ## 1.5.4

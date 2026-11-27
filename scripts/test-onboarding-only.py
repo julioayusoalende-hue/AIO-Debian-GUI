@@ -8,7 +8,7 @@ import io
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import gi
 
@@ -67,3 +67,22 @@ assert codigo == 2 and not bucle, (codigo, errores, bucle)
 assert "No se pudo abrir el onboarding" in errores
 
 print("✔ onboarding-only: ausencia y fallo del lanzador devuelven error sin abrir la ventana")
+
+
+# El lanzador de escritorio pasa un fichero como argumento en el arranque normal.
+archivo = "/tmp/Paquete de prueba.deb"
+ventana = Mock(extensions=[])
+with (
+    patch.object(sys, "argv", ["aio-debian-gui", archivo]),
+    patch.object(app.os, "geteuid", return_value=1000),
+    patch.object(app, "cargar_preferencias", return_value=app.PREFERENCIAS_DEFECTO.copy()),
+    patch.object(app, "VentanaPrincipal", return_value=ventana),
+    patch.object(app, "aplicar_tema"),
+    patch.object(app.GLib, "timeout_add") as programar,
+    patch.object(app.Gtk, "main"),
+):
+    app.main()
+    ventana._mostrar_gestor_software.assert_called_once_with()
+    programar.assert_called_once_with(100, ventana.pagina_software.open_local_file, archivo)
+
+print("✔ apertura desde el escritorio: muestra el Gestor de software y programa la previsualización")
