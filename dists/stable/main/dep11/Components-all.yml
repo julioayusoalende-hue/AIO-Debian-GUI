@@ -156,22 +156,18 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/acerca-de.png
 Releases:
-- version: 1.5.0
+- version: 1.5.1
   type: stable
   unix-timestamp: 1795737600
   description:
     C: >-
-      <ul><li>API genérica de extensiones: las distribuciones pueden añadir branding, páginas, onboarding y pasos privilegiados
-      sin modificar el core.</li><li>El helper carga asistentes de extensión y hooks de estado desde /usr/lib/aio-debian-gui/extensions/.</li><li>El
-      gestor de software y el branding específico de AyusOS se trasladan al paquete independiente ayusos-control-center; aio-debian-gui
-      queda agnóstico.</li><li>Accesibilidad: roles ATK y nombres accesibles en los botones de icono, regiones en vivo para
-      los anuncios de estado, foco visible y CSS semántico con soporte de prefers-contrast.</li><li>La autoactualización en
-      Flatpak y AppImage consulta los metadatos internos (versión disponible y arquitectura detectada) antes de ofrecer la
-      actualización.</li><li>run_privileged supervisa cada operación privilegiada con lock, timeout y setsid cuando se ejecuta
-      como root, y mantiene un modo de prueba sin root para los stubs de shell.</li><li>Nuevo workflow de integración real
-      en CI: matriz Debian 12/13 y Ubuntu 24.04/26.04 con ciclo de instalación, verificación, purge y reinstalación, además
-      de check.sh, pytest y Ruff.</li><li>Empaquetado Flatpak: manifiesto, script de construcción y pruebas de metadatos;
-      documentación de contribución y de firma GPG.</li></ul>
+      <ul><li>El modo --onboarding-only devuelve error si no hay una extensión de onboarding o si su lanzador falla; el servicio
+      puede reintentar y no marca el asistente como completado sin haberlo mostrado.</li><li>Se refuerzan los scripts de onboarding
+      de AyusOS: entorno gráfico X11/Wayland, código de reinicio 10, limpieza de usuarios y aplicación de ajustes sin redundancias.</li><li>La
+      extensión AyusOS añade reparación de extensiones GNOME y acceso a recuperación desde Diagnósticos; la restauración de
+      identidad usa privilegios y el modo de simulación no los requiere.</li><li>Se corrige la actualización de la extensión
+      AyusOS (versión anterior leída antes de actualizar), el filtro de UID y diversos errores de robustez detectados por
+      Ruff y las pruebas.</li></ul>
 ContentRating:
   oars-1.1:
     violence-cartoon: none
