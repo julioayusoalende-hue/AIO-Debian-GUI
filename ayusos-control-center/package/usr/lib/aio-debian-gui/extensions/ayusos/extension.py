@@ -71,17 +71,18 @@ class Extension:
         if software_page is not None:
             software_page.scope.set_active_id("system")
 
-        # Botón "Abrir recuperación" del diagnóstico.
-        window._abrir_recuperacion = lambda: open_recovery(window)
+        actualizar = Gtk.Button(label=traducir("Actualizar AyusOS"))
+        actualizar.set_valign(Gtk.Align.CENTER)
+        actualizar.connect("clicked", window._abrir_actualizacion_ayusos)
+        window.fila_sistema_operativo.pack_end(actualizar, False, False, 0)
 
-        pages = [
-            (traducir("Actualización AyusOS"), window._pagina_ayusos_update),
-            (traducir("Snapshots"), window._pagina_ayusos_snapshots),
-            (traducir("Diagnósticos AyusOS"), window._pagina_ayusos_diagnostics),
-            (traducir("Branding AyusOS"), window._pagina_ayusos_branding),
-        ]
-        for title, factory in pages:
-            window.notebook.append_page(factory(), Gtk.Label(label=title))
+        snapshots = Gtk.Expander(label=traducir("Instantáneas de Timeshift"))
+        snapshots.add(window._contenido_ayusos_snapshots())
+        window.secciones_backup["timeshift"].pack_start(snapshots, False, False, 0)
+
+        window.notebook.append_page(
+            window._pagina_ayusos_branding(), Gtk.Label(label=traducir("Branding AyusOS"))
+        )
 
         # Añadir filtro "Perfil AyusOS" a la página de Apps recomendadas
         self._añadir_filtro_ayusos(window)

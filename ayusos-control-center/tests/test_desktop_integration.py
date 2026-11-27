@@ -74,9 +74,11 @@ class DesktopIntegrationTests(unittest.TestCase):
         settings.flatpak.flathub = False
         with patch.object(onboarding, "get_effective_config", return_value=settings), \
              patch.object(onboarding, "load_user_preferences", return_value={}), \
-             patch.object(onboarding, "mark_onboarding_done", return_value=True) as save:
+             patch.object(onboarding, "mark_onboarding_done", return_value=True) as save, \
+             patch.object(onboarding.OnboardingWizard, "_comprobar_conexion"):
             wizard = onboarding.OnboardingWizard()
             try:
+                wizard._resultado_conexion(True)
                 steps = [step.id for step in wizard.steps]
                 self.assertNotIn("apps", steps)
                 wizard._show_step(steps.index("flatpak"))
@@ -94,6 +96,46 @@ class DesktopIntegrationTests(unittest.TestCase):
                 self.assertEqual(saved["nvidia"]["mode"], "manual")
             finally:
                 wizard.destroy()
+
+    def test_wizard_blocks_navigation_until_debian_is_reachable(self):
+        from gi.repository import Gtk
+
+        if not Gtk.init_check([])[0]:
+            self.skipTest("GTK sin pantalla")
+        with patch.object(onboarding.OnboardingWizard, "_comprobar_conexion") as check, \
+             patch.object(onboarding, "mark_onboarding_done") as save:
+            wizard = onboarding.OnboardingWizard()
+            try:
+                check.assert_called_once()
+                self.assertFalse(wizard.btn_next.get_sensitive())
+                self.assertFalse(wizard.btn_skip.get_sensitive())
+                wizard.btn_next.clicked()
+                wizard.btn_skip.clicked()
+                self.assertEqual(wizard.current_index, 0)
+                save.assert_not_called()
+                wizard._resultado_conexion(False)
+                self.assertEqual(wizard.aviso_conexion.get_message_type(), Gtk.MessageType.WARNING)
+                self.assertIn("Comprueba tu conexión", wizard.estado_conexion.get_text())
+                wizard._resultado_conexion(True)
+                self.assertEqual(wizard.aviso_conexion.get_message_type(), Gtk.MessageType.INFO)
+                self.assertTrue(wizard.btn_next.get_sensitive())
+                wizard.btn_next.clicked()
+                self.assertEqual(wizard.current_index, 1)
+                wizard._resultado_conexion(False)
+                self.assertEqual(wizard.aviso_conexion.get_message_type(), Gtk.MessageType.WARNING)
+                wizard.btn_next.clicked()
+                self.assertEqual(wizard.current_index, 1)
+            finally:
+                wizard.destroy()
+
+    def test_internet_check_rejects_portal_and_transport_failure(self):
+        for header, expected in ((b"-----BEGIN PGP SIGNED MESSAGE-----\n", True),
+                                 (b"<html>Login</html>", False)):
+            with patch.object(onboarding, "urlopen", return_value=io.BytesIO(header)) as request:
+                self.assertIs(onboarding.repositorio_accesible(), expected)
+                self.assertEqual(request.call_args.kwargs["timeout"], 4)
+        with patch.object(onboarding, "urlopen", side_effect=TimeoutError()):
+            self.assertFalse(onboarding.repositorio_accesible())
 
     def test_first_login_uses_the_active_session_and_applies_its_preferences(self):
         package = ROOT / "package"

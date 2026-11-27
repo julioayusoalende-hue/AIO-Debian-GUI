@@ -2550,3 +2550,21 @@ TRADUCCIONES["zh"].update({
     "Si el equipo estaba apagado, se recupera la ejecución pendiente al encender. No se reinicia automáticamente. La limpieza de dependencias se ejecuta solo si la seleccionas junto con la actualización.": "如果电脑已关机，错过的维护将在开机后执行。系统不会自动重启。只有同时选择软件包升级，才会清理依赖项。",
     "Para programar la eliminación de dependencias huérfanas, selecciona también la actualización de paquetes.": "要计划移除不再使用的依赖项，请同时选择软件包升级。",
 })
+
+TRADUCCIONES["en"].update({
+    "Actualizar AyusOS": "Update AyusOS",
+    "Actualización AyusOS": "AyusOS update",
+    "Instantáneas de Timeshift": "Timeshift snapshots",
+})
+
+TRADUCCIONES["fr"].update({
+    "Actualizar AyusOS": "Mettre à jour AyusOS",
+    "Actualización AyusOS": "Mise à jour d’AyusOS",
+    "Instantáneas de Timeshift": "Instantanés Timeshift",
+})
+
+TRADUCCIONES["zh"].update({
+    "Actualizar AyusOS": "更新 AyusOS",
+    "Actualización AyusOS": "AyusOS 更新",
+    "Instantáneas de Timeshift": "Timeshift 快照",
+})

@@ -5,7 +5,7 @@ Integración independiente de AyusOS Linux en `aio-debian-gui`.
 ## Contenido
 
 - Onboarding de primer arranque.
-- Centro de Control con actualización, snapshots, hardware, diagnósticos y apariencia.
+- Actualización de AyusOS desde Información del sistema, instantáneas de Timeshift en Backup y pestaña de apariencia.
 - Modo Recovery con reparación APT/dpkg, GRUB, Timeshift, diagnóstico y terminal.
 - Pasos privilegiados para AyusOS.
 - Servicios de autorización, snapshot y mantenimiento inicial.

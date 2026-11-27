@@ -5,14 +5,18 @@ Se ejecuta automáticamente al primer arranque si es_ayusos() y no completado.
 """
 
 import os
+import subprocess
+import threading
+from http.client import HTTPException
 from pathlib import Path
+from urllib.request import urlopen
 
 import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from aio_core.constants import traducir
-from gi.repository import Gdk, GObject, Gtk
+from gi.repository import Gdk, GLib, GObject, Gtk
 
 from ..branding import (
     color_acento_ayusos,
@@ -114,6 +118,15 @@ ONBOARDING_CSS = b"""
 """
 
 
+def repositorio_accesible():
+    """Comprueba que HTTPS alcanza un índice Debian real y no un portal cautivo."""
+    try:
+        with urlopen("https://deb.debian.org/debian/dists/stable/InRelease", timeout=4) as respuesta:
+            return respuesta.readline(128).rstrip() == b"-----BEGIN PGP SIGNED MESSAGE-----"
+    except (OSError, HTTPException):
+        return False
+
+
 class OnboardingStep:
     """Representa un paso del onboarding."""
     def __init__(self, step_id: str, title: str, description: str,
@@ -153,6 +166,9 @@ class OnboardingWizard(Gtk.Window):
         self.config = get_effective_config()
         self.version = get_ayusos_version() or "1.0"
         self.parent_window = parent
+        self.conexion_disponible = False
+        self.comprobando_conexion = False
+        self.cerrado = False
 
         # UI
         self._build_ui()
@@ -162,6 +178,8 @@ class OnboardingWizard(Gtk.Window):
         self._show_step(0)
 
         self.connect("destroy", self._on_destroy)
+        self.timer_conexion = GLib.timeout_add_seconds(7, self._comprobar_conexion)
+        self._comprobar_conexion()
 
     def _setup_css(self):
         provider = Gtk.CssProvider()
@@ -217,6 +235,20 @@ class OnboardingWizard(Gtk.Window):
 
         self.header.pack_start(progress_box, False, False, 0)
 
+        self.aviso_conexion = Gtk.InfoBar(message_type=Gtk.MessageType.INFO)
+        red = Gtk.Box(spacing=8)
+        self.estado_conexion = Gtk.Label(
+            label=traducir("Comprobando la conexión a Internet…"), xalign=0, wrap=True)
+        red.pack_start(self.estado_conexion, True, True, 0)
+        red_ajustes = Gtk.Button(label=traducir("Ajustes de red"))
+        red_ajustes.connect("clicked", self._abrir_ajustes_red)
+        red.pack_start(red_ajustes, False, False, 0)
+        self.btn_reintentar_conexion = Gtk.Button(label=traducir("Reintentar"))
+        self.btn_reintentar_conexion.connect("clicked", self._comprobar_conexion)
+        red.pack_start(self.btn_reintentar_conexion, False, False, 0)
+        self.aviso_conexion.get_content_area().pack_start(red, True, True, 0)
+        self.header.pack_start(self.aviso_conexion, False, False, 0)
+
         # Content area (scrollable)
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
@@ -257,6 +289,40 @@ class OnboardingWizard(Gtk.Window):
         self.btn_next.get_style_context().add_class("onboarding-button-primary")
         self.btn_next.connect("clicked", self._on_next)
         self.footer.pack_start(self.btn_next, False, False, 0)
+
+    def _abrir_ajustes_red(self, _boton):
+        try:
+            subprocess.Popen(["gnome-control-center", "network"])
+        except OSError:
+            self._show_error(traducir("Abre los ajustes de red desde el menú del sistema."))
+
+    def _comprobar_conexion(self, _boton=None):
+        if self.comprobando_conexion:
+            return GLib.SOURCE_CONTINUE
+        self.comprobando_conexion = True
+        self.btn_reintentar_conexion.set_sensitive(False)
+
+        def consultar():
+            GLib.idle_add(self._resultado_conexion, repositorio_accesible())
+
+        threading.Thread(target=consultar, daemon=True).start()
+        return GLib.SOURCE_CONTINUE
+
+    def _resultado_conexion(self, disponible):
+        if self.cerrado:
+            return GLib.SOURCE_REMOVE
+        self.conexion_disponible = disponible
+        self.comprobando_conexion = False
+        self.btn_reintentar_conexion.set_sensitive(True)
+        self.aviso_conexion.set_message_type(
+            Gtk.MessageType.INFO if disponible else Gtk.MessageType.WARNING
+        )
+        mensaje = ("Conexión a Internet comprobada." if disponible else
+                   "Comprueba tu conexión a Internet. AyusOS necesita acceder al repositorio Debian para continuar.")
+        self.estado_conexion.set_text(traducir(mensaje))
+        self.btn_next.set_sensitive(disponible)
+        self.btn_skip.set_sensitive(disponible)
+        return GLib.SOURCE_REMOVE
 
     def _define_steps(self):
         """Define la secuencia de pasos del onboarding."""
@@ -789,6 +855,8 @@ class OnboardingWizard(Gtk.Window):
 
         # Botones
         self.btn_back.set_sensitive(index > 0)
+        self.btn_next.set_sensitive(self.conexion_disponible)
+        self.btn_skip.set_sensitive(self.conexion_disponible)
         is_last = (index == len(self.steps) - 1)
         self.btn_next.set_label(traducir("Finalizar") if is_last else traducir("Siguiente"))
         if is_last:
@@ -796,6 +864,8 @@ class OnboardingWizard(Gtk.Window):
             self.btn_next.get_style_context().add_class("onboarding-button-accent")
 
     def _on_next(self, _):
+        if not self.conexion_disponible:
+            return
         step = self.steps[self.current_index]
 
         # Validar
@@ -822,6 +892,8 @@ class OnboardingWizard(Gtk.Window):
             self._show_step(self.current_index - 1)
 
     def _on_skip(self, _):
+        if not self.conexion_disponible:
+            return
         dialog = Gtk.MessageDialog(
             transient_for=self,
             message_type=Gtk.MessageType.QUESTION,
@@ -834,7 +906,7 @@ class OnboardingWizard(Gtk.Window):
         ))
         response = dialog.run()
         dialog.destroy()
-        if response == Gtk.ResponseType.YES:
+        if response == Gtk.ResponseType.YES and self.conexion_disponible:
             if mark_onboarding_done(self.version):
                 self.emit("completed")
             else:
@@ -851,6 +923,8 @@ class OnboardingWizard(Gtk.Window):
         dialog.destroy()
 
     def _on_destroy(self, _):
+        self.cerrado = True
+        GLib.source_remove(self.timer_conexion)
         if self.parent_window:
             self.parent_window.present()
 

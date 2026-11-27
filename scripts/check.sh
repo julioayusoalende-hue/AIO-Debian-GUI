@@ -79,9 +79,9 @@ if python3 -c 'import gi; gi.require_version("Gtk", "3.0")' >/dev/null 2>&1; the
     python3 scripts/test-software-queue-ui.py &&
         bien "selección múltiple y cola de instalación" ||
         fallo "pruebas GTK de la cola del gestor de software"
-    python3 scripts/test-ayusos-diagnostics-ui.py &&
-        bien "diagnósticos AyusOS adaptables con desplazamiento" ||
-        fallo "pruebas GTK de diagnósticos AyusOS"
+    python3 scripts/test-ayusos-navigation-ui.py &&
+        bien "navegación de AyusOS en Mantenimiento y Backup" ||
+        fallo "pruebas GTK de navegación AyusOS"
     python3 scripts/test-scheduler-ui.py && bien "interfaz de programación" || fallo "pruebas GTK de programación"
 else
     echo "- PyGObject no instalado: se omiten las pruebas de preferencias"

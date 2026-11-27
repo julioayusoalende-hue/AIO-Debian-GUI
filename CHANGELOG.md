@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.6.1
+
+- El asistente de primer arranque exige acceso al repositorio Debian antes de continuar y permite abrir los ajustes de red y reintentar.
+
 ## 1.6.0
 
 - La sincronización del reloj deja de ser una tarea de mantenimiento. Se solicita en segundo plano al abrir AiO, sin esperas ni bloqueos de las tareas.

@@ -19,15 +19,29 @@ from aio_core.constants import (
     tarjeta_mantenimiento,
     traducir,
 )
-from gi.repository import GdkPixbuf, GLib, Gtk, Pango
+from gi.repository import GdkPixbuf, GLib, Gtk
 
 from .aio_core.ayusos_branding import ACENTOS
 from .recovery import RECOVERY_HELPER, _parse_payload
 
 
 class AyusOSPagesMixin:
+    def _abrir_actualizacion_ayusos(self, _boton):
+        dialogo = getattr(self, "ventana_actualizacion_ayusos", None)
+        if dialogo is None:
+            dialogo = Gtk.Dialog(title=traducir("Actualización AyusOS"), transient_for=self,
+                                 modal=True, destroy_with_parent=True)
+            dialogo.set_default_size(560, 480)
+            dialogo.add_button(traducir("Cerrar"), Gtk.ResponseType.CLOSE)
+            dialogo.connect("response", lambda ventana, _: ventana.hide())
+            dialogo.connect("delete-event", lambda ventana, _: ventana.hide_on_delete())
+            dialogo.get_content_area().pack_start(self._pagina_ayusos_update(), True, True, 0)
+            self.ventana_actualizacion_ayusos = dialogo
+        dialogo.show_all()
+        dialogo.present()
+
     def _pagina_ayusos_update(self):
-        """Pestaña: Actualización de AyusOS (canal stable/testing)."""
+        """Contenido de la ventana de actualización de AyusOS."""
         pagina = self._pagina_tarjetas()
         contenido = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
 
@@ -94,9 +108,8 @@ class AyusOSPagesMixin:
         pagina.pack_start(self._scroll_tarjetas(contenido), True, True, 0)
         return pagina
 
-    def _pagina_ayusos_snapshots(self):
-        """Pestaña: Snapshots del sistema (Timeshift / Btrfs)."""
-        pagina = self._pagina_tarjetas()
+    def _contenido_ayusos_snapshots(self):
+        """Acciones de instantáneas dentro de la sección de Timeshift."""
         contenido = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
 
         # Tarjeta: Estado
@@ -188,79 +201,7 @@ class AyusOSPagesMixin:
 
         contenido.pack_start(tarjeta3, True, True, 0)
 
-        pagina.pack_start(self._scroll_tarjetas(contenido), True, True, 0)
-        return pagina
-
-    def _pagina_ayusos_diagnostics(self):
-        """Pestaña: Diagnósticos completos del sistema."""
-        pagina = self._pagina_tarjetas()
-        contenido = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-
-        # Tarjeta: Ejecutar diagnóstico
-        tarjeta, caja = tarjeta_mantenimiento(10)
-        caja.pack_start(cabecera_mantenimiento("Diagnóstico completo", "dialog-information-symbolic"), False, False, 0)
-
-        self.diagnostics_status = self._etiqueta_estado()
-        self.diagnostics_status.set_max_width_chars(90)
-        self.diagnostics_status.set_selectable(True)
-        caja.pack_start(self.diagnostics_status, False, False, 0)
-
-        self.diagnostics_run_btn = Gtk.Button(label=traducir("Ejecutar diagnóstico completo"))
-        self.diagnostics_run_btn.get_style_context().add_class("suggested-action")
-        self.diagnostics_run_btn.connect("clicked", self._diagnostics_run)
-        caja.pack_start(self.diagnostics_run_btn, False, False, 0)
-
-        self.diagnostics_extensions_btn = Gtk.Button(label=traducir("Reparar extensiones de GNOME"))
-        self.diagnostics_extensions_btn.connect("clicked", self._diagnostics_repair_extensions)
-        caja.pack_start(self.diagnostics_extensions_btn, False, False, 0)
-
-        self.diagnostics_recovery_btn = Gtk.Button(label=traducir("Abrir recuperación"))
-        self.diagnostics_recovery_btn.connect("clicked", lambda _boton: self._abrir_recuperacion())
-        caja.pack_start(self.diagnostics_recovery_btn, False, False, 0)
-
-        contenido.pack_start(tarjeta, False, False, 0)
-
-        # Tarjeta: Resultados
-        tarjeta2, caja2 = tarjeta_mantenimiento(10)
-        caja2.pack_start(cabecera_mantenimiento("Resultados", "view-list-symbolic"), False, False, 0)
-
-        self.diagnostics_store = Gtk.ListStore(str, str, str)  # check, estado, mensaje
-        self.diagnostics_view = Gtk.TreeView(model=self.diagnostics_store)
-        self.diagnostics_view.set_headers_visible(True)
-        self.diagnostics_view.set_hexpand(True)
-        self.diagnostics_view.set_vexpand(True)
-        for i, title in enumerate([traducir("Comprobación"), traducir("Estado"), traducir("Detalle")]):
-            renderer = Gtk.CellRendererText()
-            if i == 2:
-                renderer.set_property("wrap-width", 560)
-                renderer.set_property("wrap-mode", Pango.WrapMode.WORD_CHAR)
-            col = Gtk.TreeViewColumn(title, renderer, text=i)
-            col.set_resizable(True)
-            col.set_expand(i == 2)
-            self.diagnostics_view.append_column(col)
-
-        scrolled = Gtk.ScrolledWindow()
-        scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        scrolled.set_overlay_scrolling(False)
-        scrolled.set_min_content_height(180)
-        scrolled.set_max_content_height(420)
-        scrolled.set_propagate_natural_height(True)
-        scrolled.add(self.diagnostics_view)
-        self.diagnostics_results_scroll = scrolled
-        caja2.pack_start(scrolled, True, True, 0)
-
-        # La tarjeta de resultados crece hasta su límite; si la ventana es
-        # pequeña, el desplazamiento corresponde a la página completa.
-        contenido.pack_start(tarjeta2, False, False, 0)
-        contenido.set_valign(Gtk.Align.START)
-
-        scroll_pagina = Gtk.ScrolledWindow()
-        scroll_pagina.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        scroll_pagina.set_overlay_scrolling(False)
-        scroll_pagina.add(contenido)
-        self.diagnostics_page_scroll = scroll_pagina
-        pagina.pack_start(scroll_pagina, True, True, 0)
-        return pagina
+        return contenido
 
     def _pagina_ayusos_branding(self):
         """Pestaña: Apariencia (tema, acento, fondos, Plymouth)."""
@@ -551,6 +492,8 @@ class AyusOSPagesMixin:
         threading.Thread(target=comprobar, daemon=True).start()
 
     def _ayusos_check_done(self, ok, data):
+        if self.destruida:
+            return GLib.SOURCE_REMOVE
         self.ayusos_check_btn.set_sensitive(True)
         if not ok:
             self.ayusos_update_status.set_text(traducir("Error: %s") % data)
@@ -808,103 +751,6 @@ class AyusOSPagesMixin:
         success = data.get("success", False)
         message = data.get("message", "")
         self.snapshots_status.set_text(traducir("GRUB actualizado: %s") % message if success else traducir("Error: %s") % message)
-        return GLib.SOURCE_REMOVE
-
-    def _diagnostics_run(self, _boton):
-        self.diagnostics_run_btn.set_sensitive(False)
-        self.diagnostics_status.set_text(traducir("Ejecutando diagnóstico completo…"))
-        self.diagnostics_store.clear()
-
-        self._run_authorized_action("diagnostics", self._diagnostics_result,
-                                    operation="Diagnóstico de AyusOS")
-
-    def _diagnostics_result(self, ok, data):
-        if not ok:
-            return self._diagnostics_done(False, data)
-        if not data.get("success"):
-            return self._diagnostics_done(False, data.get("message", ""))
-        return self._diagnostics_done(True, data["diagnostics"])
-
-    @staticmethod
-    def _texto_detalle_diagnostico(valor):
-        """Convierte estructuras del diagnóstico en texto legible, sin repr()."""
-        if isinstance(valor, list):
-            partes = []
-            for item in valor:
-                if isinstance(item, dict):
-                    nombre = item.get("name") or item.get("check") or traducir("Comprobación")
-                    detalle = item.get("detail") or item.get("message") or ""
-                    consejo = item.get("advice") or ""
-                    texto = str(nombre)
-                    if detalle:
-                        texto += ": %s" % detalle
-                    if consejo:
-                        texto += " — %s" % consejo
-                    partes.append(texto)
-                else:
-                    partes.append(str(item))
-            return "\n".join(partes)
-        if isinstance(valor, dict):
-            return "\n".join("%s: %s" % (clave, valor) for clave, valor in valor.items())
-        return str(valor or "")
-
-    def _diagnostics_done(self, ok, data):
-        self.diagnostics_run_btn.set_sensitive(True)
-        if not ok:
-            self.diagnostics_status.set_text(traducir("Error: %s") % data)
-            return GLib.SOURCE_REMOVE
-
-        # Llenar árbol de resultados
-        for check_name, check_data in data.items():
-            if check_name.startswith("_"):
-                continue
-            ok_check = check_data.get("ok", False)
-            msg = check_data.get("message") or check_data.get("details", "")
-            self.diagnostics_store.append([
-                check_name.replace("_", " ").title(),
-                traducir("✓ OK") if ok_check else traducir("✗ FALLO"),
-                self._texto_detalle_diagnostico(msg)
-            ])
-
-        summary = data.get("_summary", {})
-        passed = summary.get("passed", 0)
-        total = summary.get("total", 0)
-        self.diagnostics_status.set_text(traducir("Diagnóstico completado: %d/%d OK") % (passed, total))
-        return GLib.SOURCE_REMOVE
-
-    def _diagnostics_repair_extensions(self, _boton):
-        """Reinstala/activa las extensiones GNOME incluidas con AyusOS."""
-        self.diagnostics_extensions_btn.set_sensitive(False)
-        self.diagnostics_status.set_text(traducir("Reparando extensiones de GNOME…"))
-        steps = [
-            "gnome-ext-appindicator", "gnome-ext-blur-shell", "gnome-ext-dash-to-dock",
-            "gnome-ext-caffeine", "gnome-ext-tiling-shell", "gnome-ext-clipboard-indicator",
-            "gnome-ext-places-status", "ext-manager",
-        ]
-
-        def reparar():
-            try:
-                import subprocess
-                cmd = comando_host(
-                    "pkexec", "/usr/lib/aio-debian-gui/aio-debian-gui-helper",
-                    "--lang", "es", *steps
-                )
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, stdin=subprocess.DEVNULL)
-                if result.returncode == 0:
-                    GLib.idle_add(self._diagnostics_repair_done, True, result.stdout)
-                else:
-                    GLib.idle_add(self._diagnostics_repair_done, False, (result.stderr or result.stdout or "").strip())
-            except (OSError, subprocess.SubprocessError) as exc:
-                GLib.idle_add(self._diagnostics_repair_done, False, str(exc))
-
-        threading.Thread(target=reparar, daemon=True).start()
-
-    def _diagnostics_repair_done(self, ok, data):
-        self.diagnostics_extensions_btn.set_sensitive(True)
-        if ok:
-            self.diagnostics_status.set_text(traducir("Extensiones reparadas correctamente."))
-        else:
-            self.diagnostics_status.set_text(traducir("Error reparando extensiones: %s") % data)
         return GLib.SOURCE_REMOVE
 
     def _branding_refresh(self, _widget):

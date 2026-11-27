@@ -85,7 +85,7 @@ NOTAS_VERSION = os.path.normpath(
 )
 
 # Versión embebida en tiempo de compilación (inyectada por build-deb.sh)
-AIO_DEBIAN_GUI_VERSION = "1.6.0"
+AIO_DEBIAN_GUI_VERSION = "1.6.1"
 
 RECOMMENDED_ICON_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/recommended-icons")
@@ -2408,14 +2408,6 @@ class VentanaPrincipal(Gtk.Window):
         notebook.append_page(pagina_backup, Gtk.Label(label=traducir("Backup")))
         notebook.append_page(pagina_inicio, Gtk.Label(label=traducir("Inicio")))
 
-        # Punto de extensión genérico: cada paquete de distro decide qué añade.
-        for extension in self.extensions:
-            installer = getattr(extension, "install", None)
-            if installer is not None:
-                try:
-                    installer(self)
-                except Exception as exc:  # noqa: BLE001
-                    print(f"Error instalando extensión {getattr(extension, 'name', '?')}: {exc}", file=sys.stderr)
         self.pagina_terminal = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.boton_mostrar_terminal = Gtk.Button(label=traducir("Mostrar ventana de la terminal"))
         self.boton_mostrar_terminal.set_halign(Gtk.Align.CENTER)
@@ -2626,6 +2618,15 @@ class VentanaPrincipal(Gtk.Window):
         contenido_consola.pack_start(marco, False, True, 0)
         contenido_consola.show_all()
         self.expansor_consola.connect("notify::expanded", self._ajustar_consola)
+
+        # Punto de extensión genérico: cada paquete de distro decide qué añade.
+        for extension in self.extensions:
+            installer = getattr(extension, "install", None)
+            if installer is not None:
+                try:
+                    installer(self)
+                except Exception as exc:  # noqa: BLE001
+                    print(f"Error instalando extensión {getattr(extension, 'name', '?')}: {exc}", file=sys.stderr)
         if self.preferencias["modo_simple"]:
             self._aplicar_modo_simple()
 
@@ -2946,6 +2947,7 @@ class VentanaPrincipal(Gtk.Window):
         herramientas, caja = tarjeta_mantenimiento(10)
         caja.pack_start(cabecera_mantenimiento("Copias de seguridad", "drive-harddisk-symbolic"),
                         False, False, 0)
+        self.secciones_backup = {}
         for indice, (app_id, app) in enumerate(APLICACIONES_BACKUP.items()):
             if indice:
                 caja.pack_start(Gtk.Separator(), False, False, 0)
@@ -2963,7 +2965,10 @@ class VentanaPrincipal(Gtk.Window):
                                        "document-open-symbolic", self._accion_backup)
             boton.set_valign(Gtk.Align.CENTER)
             fila.pack_end(boton, False, False, 0)
-            caja.pack_start(fila, False, False, 0)
+            seccion = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+            seccion.pack_start(fila, False, False, 0)
+            self.secciones_backup[app_id] = seccion
+            caja.pack_start(seccion, False, False, 0)
         contenido.pack_start(herramientas, False, False, 0)
         pagina.pack_start(self._scroll_tarjetas(contenido), True, True, 0)
         self.backup_status = self._etiqueta_estado()
@@ -4456,7 +4461,9 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_detalles_sistema.connect("clicked", self._abrir_detalles_sistema)
         self.salud_sistema = etiqueta("No comprobado")
         self.salud_sistema.get_style_context().add_class("dim-label")
-        caja.pack_start(etiqueta(sistema_operativo()), False, False, 0)
+        self.fila_sistema_operativo = Gtk.Box(spacing=8)
+        self.fila_sistema_operativo.pack_start(etiqueta(sistema_operativo()), True, True, 0)
+        caja.pack_start(self.fila_sistema_operativo, False, False, 0)
         hardware = Gtk.Grid(column_spacing=10, row_spacing=4)
         for fila, (nombre, dato) in enumerate(informacion_hardware_basica()):
             nombre_label = etiqueta(nombre, dim=True)
