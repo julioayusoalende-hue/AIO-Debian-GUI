@@ -85,7 +85,7 @@ NOTAS_VERSION = os.path.normpath(
 )
 
 # Versión embebida en tiempo de compilación (inyectada por build-deb.sh)
-AIO_DEBIAN_GUI_VERSION = "1.5.4"
+AIO_DEBIAN_GUI_VERSION = "1.5.5"
 
 RECOMMENDED_ICON_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/recommended-icons")
@@ -1210,12 +1210,12 @@ button.aio-header-version-button {
     font-size: 0.90em;
 }
 .aio-page {
-    background-color: #f6f5f4;
+    background-color: shade(@theme_bg_color, 0.985);
 }
 .aio-page frame.aio-card > border {
     border: 1px solid rgba(53, 132, 228, 0.16);
     border-radius: 12px;
-    background-color: white;
+    background-color: @theme_base_color;
 }
 .aio-page .aio-heading {
     font-size: 1.26em;

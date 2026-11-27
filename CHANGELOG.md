@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.5.5
+
+- Las páginas y tarjetas usan los colores del tema GTK para conservar el contraste al alternar entre los modos claro y oscuro.
+
 ## 1.5.4
 
 - El Gestor de software de APT y Flatpak vuelve al paquete principal de AiO Debian GUI.
