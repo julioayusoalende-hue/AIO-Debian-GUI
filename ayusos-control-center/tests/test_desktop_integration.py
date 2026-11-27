@@ -63,12 +63,48 @@ class DesktopIntegrationTests(unittest.TestCase):
         self.assertEqual(list(wizard.ext_checks), ["gnome-ext-tiling-shell"])
         page.destroy()
 
+    def test_wizard_saves_flathub_without_offering_app_profiles(self):
+        from gi.repository import Gtk
+
+        if not Gtk.init_check([])[0]:
+            self.skipTest("GTK sin pantalla")
+        settings = config.AyusOSConfig()
+        settings.apps.auto_install = True
+        settings.flatpak.flathub = False
+        with patch.object(onboarding, "get_effective_config", return_value=settings), \
+             patch.object(onboarding, "load_user_preferences", return_value={}), \
+             patch.object(onboarding, "mark_onboarding_done", return_value=True) as save:
+            wizard = onboarding.OnboardingWizard()
+            try:
+                steps = [step.id for step in wizard.steps]
+                self.assertNotIn("apps", steps)
+                wizard._show_step(steps.index("flatpak"))
+                wizard.flatpak_enabled.set_active(True)
+                wizard.flathub_enabled.set_active(True)
+                wizard.btn_next.clicked()
+                wizard._show_step(len(steps) - 1)
+                wizard.btn_next.clicked()
+                saved = save.call_args.args[1]
+                self.assertTrue(saved["flatpak"]["flathub"])
+                self.assertFalse(saved["apps"]["auto_install"])
+            finally:
+                wizard.destroy()
+
     def test_flatpak_without_flathub_does_not_configure_remote(self):
         with patch.object(apply, "run", return_value=Mock(returncode=0)) as run, \
              patch.object(apply, "helper") as helper:
             apply.apply_flatpak({"flatpak": {"enabled": True, "flathub": False}}, 1000, False)
         helper.assert_not_called()
         self.assertEqual(run.call_args.args[0], ["apt-get", "install", "-y", "--no-remove", "flatpak"])
+
+    def test_flathub_diagnostic_checks_exact_remote_name(self):
+        with patch.object(diagnostics, "paquete_instalado", return_value=True), \
+             patch.object(diagnostics.subprocess, "run") as run:
+            run.return_value = Mock(returncode=0, stdout="flathub-beta\n")
+            self.assertFalse(diagnostics.check_flatpak_flathub()[0])
+            run.return_value.stdout += "flathub\n"
+            self.assertTrue(diagnostics.check_flatpak_flathub()[0])
+        self.assertEqual(run.call_args.args[0], ["flatpak", "remotes", "--columns=name"])
 
     def test_snapshot_diagnostic_uses_the_same_list_as_the_tab(self):
         with patch.object(diagnostics, "paquete_instalado", return_value=True), \

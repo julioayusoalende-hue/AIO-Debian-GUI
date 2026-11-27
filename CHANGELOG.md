@@ -1,5 +1,11 @@
 # Cambios
 
+## 1.5.6
+
+- El asistente guarda la elección de Flathub al finalizar. La tarea para añadir el repositorio está disponible cuando falta y el diagnóstico comprueba su configuración.
+- El Centro de Control retira las preselecciones de aplicaciones del asistente y las pestañas Perfil Hardware e Identidad.
+- La receta de la ISO comprueba que la imagen contiene las versiones de AiO Debian GUI y AyusOS Control Centre compiladas para ella.
+
 ## 1.5.5
 
 - Al abrir un archivo .deb desde el escritorio, AiO selecciona el Gestor de software y muestra la confirmación de instalación.

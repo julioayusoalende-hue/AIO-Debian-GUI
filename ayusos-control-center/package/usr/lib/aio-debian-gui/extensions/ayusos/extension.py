@@ -66,16 +66,19 @@ class Extension:
                 continue
             setattr(window, name, value.__get__(window, type(window)))
 
+        # Flathub se configura para todos los usuarios en AyusOS.
+        software_page = getattr(window, "pagina_software", None)
+        if software_page is not None:
+            software_page.scope.set_active_id("system")
+
         # Botón "Abrir recuperación" del diagnóstico.
         window._abrir_recuperacion = lambda: open_recovery(window)
 
         pages = [
             (traducir("Actualización AyusOS"), window._pagina_ayusos_update),
             (traducir("Snapshots"), window._pagina_ayusos_snapshots),
-            (traducir("Perfil Hardware"), window._pagina_ayusos_hardware),
             (traducir("Diagnósticos AyusOS"), window._pagina_ayusos_diagnostics),
             (traducir("Branding AyusOS"), window._pagina_ayusos_branding),
-            (traducir("Identidad"), window._pagina_ayusos_identity),
         ]
         for title, factory in pages:
             window.notebook.append_page(factory(), Gtk.Label(label=title))

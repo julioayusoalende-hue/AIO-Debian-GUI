@@ -4,13 +4,9 @@ Este módulo se instala como extensión de aio-debian-gui; el core no conoce
 nada de AyusOS. Los métodos se enlazan a la ventana principal en install().
 """
 
-import base64
-import configparser
 import os
 import subprocess
 import threading
-import zipfile
-from pathlib import Path
 
 import gi
 
@@ -195,94 +191,6 @@ class AyusOSPagesMixin:
         pagina.pack_start(self._scroll_tarjetas(contenido), True, True, 0)
         return pagina
 
-    def _pagina_ayusos_hardware(self):
-        """Pestaña: Perfil de hardware (laptop/desktop/gaming/workstation/server)."""
-        pagina = self._pagina_tarjetas()
-        contenido = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-
-        # Tarjeta: Detección
-        tarjeta, caja = tarjeta_mantenimiento(10)
-        caja.pack_start(cabecera_mantenimiento("Perfil de hardware", "computer-symbolic"), False, False, 0)
-
-        self.hardware_status = self._etiqueta_estado()
-        caja.pack_start(self.hardware_status, False, False, 0)
-
-        grid = Gtk.Grid(column_spacing=14, row_spacing=8)
-        grid.set_border_width(4)
-        caja.pack_start(grid, False, False, 0)
-
-        self.hardware_detected_label = etiqueta("Detectado: —")
-        self.hardware_cpu_label = etiqueta("CPU: —")
-        self.hardware_ram_label = etiqueta("RAM: —")
-        self.hardware_gpu_label = etiqueta("GPU: —")
-        grid.attach(self.hardware_detected_label, 0, 0, 2, 1)
-        grid.attach(self.hardware_cpu_label, 0, 1, 1, 1)
-        grid.attach(self.hardware_ram_label, 1, 1, 1, 1)
-        grid.attach(self.hardware_gpu_label, 0, 2, 2, 1)
-
-        btn_row = Gtk.Box(spacing=8)
-        self.hardware_refresh_btn = Gtk.Button(label=traducir("Detectar hardware"))
-        self.hardware_refresh_btn.connect("clicked", self._hardware_refresh)
-        btn_row.pack_start(self.hardware_refresh_btn, False, False, 0)
-
-        self.hardware_info_btn = Gtk.Button(label=traducir("Información completa"))
-        self.hardware_info_btn.connect("clicked", self._hardware_show_info)
-        btn_row.pack_start(self.hardware_info_btn, False, False, 0)
-        caja.pack_start(btn_row, False, False, 0)
-
-        contenido.pack_start(tarjeta, False, False, 0)
-
-        # Tarjeta: Aplicar perfil
-        tarjeta2, caja2 = tarjeta_mantenimiento(10)
-        caja2.pack_start(cabecera_mantenimiento("Aplicar perfil optimizado", "preferences-system-symbolic"), False, False, 0)
-
-        profile_box = Gtk.Box(spacing=8)
-        profile_box.pack_start(etiqueta("Perfil:"), False, False, 0)
-        self.hardware_profile_combo = Gtk.ComboBoxText()
-        profiles = [
-            ("laptop", "Portátil (ahorro batería, térmicas)"),
-            ("desktop", "Escritorio (rendimiento equilibrado)"),
-            ("gaming", "Gaming (latencia baja, GPU máxima)"),
-            ("workstation", "Workstation (cargas profesionales)"),
-            ("server", "Servidor (throughput, estabilidad)"),
-        ]
-        for pid, pname in profiles:
-            self.hardware_profile_combo.append(pid, traducir(pname))
-        self.hardware_profile_combo.set_active_id("laptop")
-        profile_box.pack_start(self.hardware_profile_combo, True, True, 0)
-        caja2.pack_start(profile_box, False, False, 0)
-
-        self.hardware_apply_btn = Gtk.Button(label=traducir("Aplicar perfil"))
-        self.hardware_apply_btn.get_style_context().add_class("suggested-action")
-        self.hardware_apply_btn.connect("clicked", self._hardware_apply_profile)
-        caja2.pack_start(self.hardware_apply_btn, False, False, 0)
-
-        contenido.pack_start(tarjeta2, False, False, 0)
-
-        # Tarjeta: Servicios activos
-        tarjeta3, caja3 = tarjeta_mantenimiento(10)
-        caja3.pack_start(cabecera_mantenimiento("Servicios de hardware", "system-run-symbolic"), False, False, 0)
-
-        self.hardware_services_store = Gtk.ListStore(str, str, str)  # servicio, estado, perfil
-        self.hardware_services_view = Gtk.TreeView(model=self.hardware_services_store)
-        self.hardware_services_view.set_headers_visible(True)
-        for i, title in enumerate([traducir("Servicio"), traducir("Estado"), traducir("Perfil")]):
-            renderer = Gtk.CellRendererText()
-            col = Gtk.TreeViewColumn(title, renderer, text=i)
-            col.set_resizable(True)
-            self.hardware_services_view.append_column(col)
-
-        scrolled = Gtk.ScrolledWindow()
-        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scrolled.set_size_request(-1, 200)
-        scrolled.add(self.hardware_services_view)
-        caja3.pack_start(scrolled, True, True, 0)
-
-        contenido.pack_start(tarjeta3, True, True, 0)
-
-        pagina.pack_start(self._scroll_tarjetas(contenido), True, True, 0)
-        return pagina
-
     def _pagina_ayusos_diagnostics(self):
         """Pestaña: Diagnósticos completos del sistema."""
         pagina = self._pagina_tarjetas()
@@ -432,6 +340,7 @@ class AyusOSPagesMixin:
         contenido.pack_start(tarjeta3, False, False, 0)
 
         pagina.pack_start(self._scroll_tarjetas(contenido), True, True, 0)
+        pagina.connect("map", self._branding_refresh)
         return pagina
 
     def _pagina_ayusos_autorizacion(self):
@@ -694,7 +603,7 @@ class AyusOSPagesMixin:
             "Actualizador abierto. Sigue las instrucciones en la terminal."
         ))
 
-    def _run_authorized_action(self, action, done, *args, operation="Snapshots de AyusOS", payload_input=None):
+    def _run_authorized_action(self, action, done, *args, operation="Snapshots de AyusOS"):
         token = self._iniciar_operacion(traducir(operation))
         if token is None:
             done(False, traducir("Hay otra operación en curso."))
@@ -706,11 +615,10 @@ class AyusOSPagesMixin:
 
         def worker():
             try:
-                input_args = {"stdin": subprocess.DEVNULL} if payload_input is None else {"input": payload_input}
                 result = subprocess.run(
                     comando_host("pkexec", RECOVERY_HELPER, action, *args),
                     capture_output=True, text=True, timeout=900,
-                    **input_args,
+                    stdin=subprocess.DEVNULL,
                 )
                 payload = _parse_payload(result.stdout)
                 if not payload or result.returncode in (126, 127):
@@ -902,76 +810,6 @@ class AyusOSPagesMixin:
         self.snapshots_status.set_text(traducir("GRUB actualizado: %s") % message if success else traducir("Error: %s") % message)
         return GLib.SOURCE_REMOVE
 
-    def _hardware_refresh(self, _boton, success_message=None):
-        self.hardware_refresh_btn.set_sensitive(False)
-        self.hardware_status.set_text(traducir("Detectando hardware…"))
-
-        def detectar():
-            try:
-                import json
-
-                from .aio_core import ayusos_hardware
-                info = json.loads(ayusos_hardware.cli_hardware_info())
-                profile = json.loads(ayusos_hardware.cli_detect_profile())
-                status = json.loads(ayusos_hardware.cli_profile_status())
-            except (OSError, ValueError, RuntimeError, ImportError) as exc:
-                GLib.idle_add(self._hardware_refresh_done, False, str(exc))
-            else:
-                GLib.idle_add(self._hardware_refresh_done, True, info, profile, status, success_message)
-
-        threading.Thread(target=detectar, daemon=True).start()
-
-    def _hardware_refresh_done(self, ok, *args):
-        self.hardware_refresh_btn.set_sensitive(True)
-        if not ok:
-            self.hardware_status.set_text(traducir("Error: %s") % args[0])
-            return GLib.SOURCE_REMOVE
-
-        info, profile, status = args[0], args[1], args[2]
-
-        detected = profile.get("profile", "unknown")
-        self.hardware_detected_label.set_text(traducir("Detectado: %s") % status.get("profiles", {}).get(detected, detected))
-        self.hardware_cpu_label.set_text(traducir("CPU: %s (%d núcleos)") % (info.get("cpu_model", "?"), info.get("cpu_cores", 0)))
-        self.hardware_ram_label.set_text(traducir("RAM: %s GB") % info.get("ram_total_gb", "?"))
-        gpus = info.get("gpus", [])
-        self.hardware_gpu_label.set_text(traducir("GPU: %s") % (", ".join(gpus) if gpus else "No detectada"))
-
-        # Servicios
-        store = self.hardware_services_store
-        store.clear()
-        for svc, active in status.get("active_services", {}).items():
-            store.append([svc, traducir("Activo" if active else "Inactivo"), ""])
-
-        self.hardware_status.set_text(args[3] or traducir("Detección completada."))
-        return GLib.SOURCE_REMOVE
-
-    def _hardware_show_info(self, _boton):
-        self._hardware_refresh(None)
-
-    def _hardware_apply_profile(self, _boton):
-        profile = self.hardware_profile_combo.get_active_id()
-        if not profile:
-            return
-
-        self.hardware_apply_btn.set_sensitive(False)
-        self.hardware_status.set_text(traducir("Esperando autorización o aplicando perfil %s…") % profile)
-        self._run_authorized_action("hardware-apply", self._hardware_apply_done, profile,
-                                    operation="Perfil de hardware")
-
-    def _hardware_apply_done(self, ok, data):
-        self.hardware_apply_btn.set_sensitive(True)
-        if not ok:
-            self.hardware_status.set_text(traducir("Error: %s") % data)
-            return GLib.SOURCE_REMOVE
-
-        success = data.get("success", False)
-        message = data.get("message", "")
-        if success:
-            self._hardware_refresh(None, message)
-        else:
-            self.hardware_status.set_text(traducir("Error aplicando perfil: %s") % message)
-        return GLib.SOURCE_REMOVE
-
     def _diagnostics_run(self, _boton):
         self.diagnostics_run_btn.set_sensitive(False)
         self.diagnostics_status.set_text(traducir("Ejecutando diagnóstico completo…"))
@@ -1069,7 +907,9 @@ class AyusOSPagesMixin:
             self.diagnostics_status.set_text(traducir("Error reparando extensiones: %s") % data)
         return GLib.SOURCE_REMOVE
 
-    def _branding_refresh(self, _boton):
+    def _branding_refresh(self, _widget):
+        if not self.branding_refresh_btn.get_sensitive():
+            return
         self.branding_refresh_btn.set_sensitive(False)
         self.branding_status.set_text(traducir("Cargando estado…"))
 
@@ -1197,229 +1037,3 @@ class AyusOSPagesMixin:
         contenido.pack_start(btn, False, False, 0)
 
         return tarjeta
-
-    def _pagina_ayusos_identity(self):
-        """Pestaña: Backup y restauración de la identidad de AyusOS."""
-        pagina = self._pagina_tarjetas()
-        contenido = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-
-        # Tarjeta: Estado
-        tarjeta, caja = tarjeta_mantenimiento(10)
-        caja.pack_start(cabecera_mantenimiento("Identidad de AyusOS", "preferences-desktop-symbolic"), False, False, 0)
-
-        self.identity_status = self._etiqueta_estado()
-        caja.pack_start(self.identity_status, False, False, 0)
-
-        grid = Gtk.Grid(column_spacing=14, row_spacing=8)
-        grid.set_border_width(4)
-        caja.pack_start(grid, False, False, 0)
-
-        self.identity_sources_label = etiqueta("Fuentes APT: —")
-        self.identity_keyring_label = etiqueta("Llavero GPG: —")
-        grid.attach(self.identity_sources_label, 0, 0, 1, 1)
-        grid.attach(self.identity_keyring_label, 1, 0, 1, 1)
-
-        btn_row = Gtk.Box(spacing=8)
-        self.identity_refresh_btn = Gtk.Button(label=traducir("Actualizar estado"))
-        self.identity_refresh_btn.connect("clicked", self._identity_refresh)
-        btn_row.pack_start(self.identity_refresh_btn, False, False, 0)
-        grid.attach(btn_row, 0, 1, 2, 1)
-
-        contenido.pack_start(tarjeta, False, False, 0)
-
-        # Tarjeta: Backup
-        tarjeta2, caja2 = tarjeta_mantenimiento(10)
-        caja2.pack_start(cabecera_mantenimiento("Backup de identidad", "document-save-symbolic"), False, False, 0)
-
-        backup_box = Gtk.Box(spacing=8)
-        backup_box.pack_start(etiqueta("Archivo:"), False, False, 0)
-        self.identity_backup_entry = Gtk.Entry(placeholder_text=traducir("~/ayusos-identity.zip"))
-        backup_box.pack_start(self.identity_backup_entry, True, True, 0)
-        caja2.pack_start(backup_box, False, False, 0)
-
-        self.identity_backup_btn = Gtk.Button(label=traducir("Crear backup"))
-        self.identity_backup_btn.get_style_context().add_class("suggested-action")
-        self.identity_backup_btn.connect("clicked", self._identity_backup)
-        caja2.pack_start(self.identity_backup_btn, False, False, 0)
-
-        contenido.pack_start(tarjeta2, False, False, 0)
-
-        # Tarjeta: Restaurar
-        tarjeta3, caja3 = tarjeta_mantenimiento(10)
-        caja3.pack_start(cabecera_mantenimiento("Restaurar identidad", "document-revert-symbolic"), False, False, 0)
-
-        restore_box = Gtk.Box(spacing=8)
-        restore_box.pack_start(etiqueta("Archivo:"), False, False, 0)
-        self.identity_restore_entry = Gtk.Entry(placeholder_text=traducir("~/ayusos-identity.zip"))
-        restore_box.pack_start(self.identity_restore_entry, True, True, 0)
-        caja3.pack_start(restore_box, False, False, 0)
-
-        restore_btns = Gtk.Box(spacing=8)
-        self.identity_dryrun_check = Gtk.CheckButton(label=traducir("Solo simular (dry-run)"))
-        restore_btns.pack_start(self.identity_dryrun_check, False, False, 0)
-
-        self.identity_restore_btn = Gtk.Button(label=traducir("Restaurar ahora"))
-        self.identity_restore_btn.get_style_context().add_class("suggested-action")
-        self.identity_restore_btn.connect("clicked", self._identity_restore)
-        restore_btns.pack_end(self.identity_restore_btn, False, False, 0)
-        caja3.pack_start(restore_btns, False, False, 0)
-
-        contenido.pack_start(tarjeta3, False, False, 0)
-
-        # Tarjeta: Qué incluye
-        tarjeta4, caja4 = tarjeta_mantenimiento(10)
-        caja4.pack_start(cabecera_mantenimiento("Contenido del backup", "help-browser-symbolic"), False, False, 0)
-        caja4.pack_start(etiqueta(
-            "El backup de identidad incluye:\n"
-            "• Fuentes APT de AyusOS (/etc/apt/sources.list.d/ayusos.sources)\n"
-            "• Llavero GPG del repositorio (/usr/share/keyrings/ayusos-archive.gpg)\n"
-            "• Archivo de versión (/etc/ayusos-release)\n"
-            "• Configuración de Timeshift\n"
-            "• Extensiones GNOME habilitadas y su configuración\n"
-            "• Branding (tema GTK, color de acento, fondos de pantalla)"
-        ), False, False, 0)
-        contenido.pack_start(tarjeta4, False, False, 0)
-
-        pagina.pack_start(self._scroll_tarjetas(contenido), True, True, 0)
-        return pagina
-
-    def _identity_refresh(self, _boton):
-        self.identity_refresh_btn.set_sensitive(False)
-        self.identity_status.set_text(traducir("Cargando estado…"))
-
-        def cargar():
-            try:
-                import os
-                sources = os.path.exists("/etc/apt/sources.list.d/ayusos.sources")
-                keyring = os.path.exists("/usr/share/keyrings/ayusos-archive.gpg")
-                release = os.path.exists("/etc/ayusos-release")
-                timeshift = os.path.exists("/etc/timeshift.json") or os.path.exists("/etc/timeshift/default.json")
-                GLib.idle_add(self._identity_refresh_done, True, {
-                    "sources": sources, "keyring": keyring, "release": release, "timeshift": timeshift
-                })
-            except (OSError, subprocess.SubprocessError) as exc:
-                GLib.idle_add(self._identity_refresh_done, False, str(exc))
-
-        threading.Thread(target=cargar, daemon=True).start()
-
-    def _identity_refresh_done(self, ok, data):
-        self.identity_refresh_btn.set_sensitive(True)
-        if not ok:
-            self.identity_status.set_text(traducir("Error: %s") % data)
-            return GLib.SOURCE_REMOVE
-
-        self.identity_sources_label.set_text(traducir("Fuentes APT: %s") % (traducir("Sí") if data["sources"] else traducir("No")))
-        self.identity_keyring_label.set_text(traducir("Llavero GPG: %s") % (traducir("Sí") if data["keyring"] else traducir("No")))
-
-        items = []
-        if data["release"]:
-            items.append(traducir("versión"))
-        if data["timeshift"]:
-            items.append(traducir("Timeshift"))
-        if items:
-            self.identity_status.set_text(traducir("Identidad detectada: %s") % ", ".join(items))
-        else:
-            self.identity_status.set_text(traducir("Identidad de AyusOS no detectada."))
-        return GLib.SOURCE_REMOVE
-
-    def _identity_backup(self, _boton):
-        path = self.identity_backup_entry.get_text().strip()
-        if not path:
-            path = "~/ayusos-identity.zip"
-        path = os.path.expanduser(path)
-
-        self.identity_backup_btn.set_sensitive(False)
-        self.identity_status.set_text(traducir("Creando backup…"))
-
-        def backup():
-            try:
-                import json
-
-                from .aio_core import ayusos_identity
-                result = json.loads(ayusos_identity.cli_backup(path))
-                GLib.idle_add(self._identity_backup_done, True, result)
-            except (OSError, ValueError, RuntimeError, ImportError) as exc:
-                GLib.idle_add(self._identity_backup_done, False, str(exc))
-
-        threading.Thread(target=backup, daemon=True).start()
-
-    def _identity_backup_done(self, ok, data):
-        self.identity_backup_btn.set_sensitive(True)
-        if not ok:
-            self.identity_status.set_text(traducir("Error: %s") % data)
-            return GLib.SOURCE_REMOVE
-
-        if data.get("success"):
-            self.identity_status.set_text(traducir("Backup guardado en %s") % data.get("path", ""))
-        else:
-            self.identity_status.set_text(traducir("Error creando backup."))
-        return GLib.SOURCE_REMOVE
-
-    def _identity_restore(self, _boton):
-        path = self.identity_restore_entry.get_text().strip()
-        if not path:
-            self.identity_status.set_text(traducir("Falta archivo de backup."))
-            return
-        path = os.path.expanduser(path)
-        dry_run = self.identity_dryrun_check.get_active()
-
-        self.identity_restore_btn.set_sensitive(False)
-        self.identity_status.set_text(traducir("Restaurando identidad%s…") % (" (simulación)" if dry_run else ""))
-
-        def prepare():
-            from .aio_core import ayusos_identity
-            try:
-                data = ayusos_identity.read_archive(Path(path))
-                files = ayusos_identity.read_identity(data)
-                ayusos_identity.validate_identity(files)
-            except (OSError, ValueError, SyntaxError, KeyError, zipfile.BadZipFile, configparser.Error) as exc:
-                GLib.idle_add(self._identity_restore_done, False, str(exc))
-                return
-            GLib.idle_add(self._identity_restore_prepared, data, files, dry_run)
-
-        threading.Thread(target=prepare, daemon=True).start()
-
-    def _identity_restore_prepared(self, archive, files, dry_run):
-        from .aio_core import ayusos_identity
-
-        if dry_run:
-            self.identity_restore_btn.set_sensitive(True)
-            self.identity_status.set_text(traducir("Respaldo válido. La simulación no ha escrito cambios."))
-            return GLib.SOURCE_REMOVE
-
-        def restore_user(ok, result):
-            if not ok or not result.get("success"):
-                message = result if not ok else result.get("message", "")
-                return self._identity_restore_done(False, message)
-
-            def worker():
-                try:
-                    ayusos_identity.restore_user_identity(files)
-                except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
-                    GLib.idle_add(self._identity_restore_done, False, str(exc))
-                else:
-                    GLib.idle_add(self._identity_restore_done, True, {"success": True})
-
-            threading.Thread(target=worker, daemon=True).start()
-            return GLib.SOURCE_REMOVE
-
-        if ayusos_identity.TIMESHIFT_ENTRY in files:
-            self._run_authorized_action(
-                "identity-restore", restore_user, operation="Restaurar identidad de AyusOS",
-                payload_input=base64.b64encode(archive).decode("ascii"),
-            )
-        else:
-            restore_user(True, {"success": True})
-        return GLib.SOURCE_REMOVE
-
-    def _identity_restore_done(self, ok, data):
-        self.identity_restore_btn.set_sensitive(True)
-        if not ok:
-            self.identity_status.set_text(traducir("Error: %s") % data)
-            return GLib.SOURCE_REMOVE
-
-        if data.get("success"):
-            self.identity_status.set_text(traducir("Identidad restaurada correctamente."))
-        else:
-            self.identity_status.set_text(traducir("Error: %s") % data.get("message", ""))
-        return GLib.SOURCE_REMOVE

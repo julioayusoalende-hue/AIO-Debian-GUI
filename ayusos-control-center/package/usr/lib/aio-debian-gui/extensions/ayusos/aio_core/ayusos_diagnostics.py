@@ -178,10 +178,10 @@ def check_flatpak_flathub() -> tuple[bool, str]:
         return False, "Flatpak no instalado"
     try:
         result = subprocess.run(
-            ["flatpak", "remotes", "--show-details", "flathub"],
+            ["flatpak", "remotes", "--columns=name"],
             capture_output=True, text=True, timeout=10
         )
-        if result.returncode == 0 and "flathub" in result.stdout:
+        if result.returncode == 0 and "flathub" in result.stdout.splitlines():
             return True, "Flathub configurado"
         return False, "Flathub no configurado"
     except (OSError, subprocess.SubprocessError):

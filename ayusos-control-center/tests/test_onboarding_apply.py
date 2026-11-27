@@ -61,7 +61,7 @@ class OnboardingApplyTests(unittest.TestCase):
 
     def test_apps_filters_unavailable_packages(self):
         config = json.loads(json.dumps(app.SYSTEM_DEFAULTS))
-        config["apps"]["profile"] = "development"
+        config["apps"] = {"profile": "development", "auto_install": True}
 
         def fake_run(cmd, **kwargs):
             if cmd[0] == "apt-cache":

@@ -25,7 +25,6 @@ from ..branding import (
 )
 from .ayusos_config import (
     VALID_ACCENTS,
-    VALID_APP_PROFILES,
     VALID_KERNEL_VARIANTS,
     VALID_MAINTENANCE_SCHEDULES,
     VALID_NVIDIA_MODES,
@@ -306,15 +305,6 @@ class OnboardingWizard(Gtk.Window):
                 apply_fn=self._apply_nvidia,
             ),
             OnboardingStep(
-                "apps",
-                traducir("Perfil de aplicaciones"),
-                traducir("Selecciona un conjunto de aplicaciones preinstaladas según tu uso. "
-                         "Se instalarán automáticamente."),
-                self._create_apps_step,
-                validate_fn=self._validate_apps,
-                apply_fn=self._apply_apps,
-            ),
-            OnboardingStep(
                 "gnome_ext",
                 traducir("Extensiones de GNOME"),
                 traducir("Mejora tu escritorio con extensiones populares: "
@@ -379,7 +369,6 @@ class OnboardingWizard(Gtk.Window):
             "• Flatpak + Flathub para apps modernas\n"
             "• Kernel optimizado para tu hardware\n"
             "• Controladores gráficos (NVIDIA si aplica)\n"
-            "• Aplicaciones según tu perfil de uso\n"
             "• Extensiones de GNOME para productividad\n"
             "• Mantenimiento automático programado\n"
             "• Tema y personalización visual"
@@ -416,10 +405,6 @@ class OnboardingWizard(Gtk.Window):
         self.repo_backports.set_active(self.config.repos.backports)
         box.pack_start(self.repo_backports, False, False, 0)
 
-        self.repo_backports_mesa = Gtk.CheckButton(label=traducir("Mesa desde Backports (gráficos más nuevos)"))
-        self.repo_backports_mesa.set_active(self.config.repos.backports_mesa)
-        box.pack_start(self.repo_backports_mesa, False, False, 0)
-
         return box
 
     def _create_flatpak_step(self) -> Gtk.Widget:
@@ -442,8 +427,11 @@ class OnboardingWizard(Gtk.Window):
         self.flatpak_enabled.set_active(self.config.flatpak.enabled)
         box.pack_start(self.flatpak_enabled, False, False, 0)
 
-        self.flathub_enabled = Gtk.CheckButton(label=traducir("Añadir repositorio Flathub"))
+        self.flathub_enabled = Gtk.CheckButton(label=traducir("Añadir Flathub para todos los usuarios"))
         self.flathub_enabled.set_active(self.config.flatpak.flathub)
+        self.flatpak_enabled.bind_property(
+            "active", self.flathub_enabled, "sensitive", GObject.BindingFlags.SYNC_CREATE,
+        )
         box.pack_start(self.flathub_enabled, False, False, 0)
 
         return box
@@ -458,7 +446,7 @@ class OnboardingWizard(Gtk.Window):
 
         desc = Gtk.Label(label=traducir(
             "• <b>Stable</b>: Kernel probado, máxima estabilidad (recomendado para servidores).\n"
-            "• <b>Backports</b>: Kernel más nuevo desde Debian Backports (mejor hardware reciente).\n"
+            "• <b>Backports</b>: Instala un kernel más reciente y los controladores gráficos Mesa desde Debian Backports.\n"
             "• <b>HWE</b>: Hardware Enablement de Ubuntu (solo si base es Ubuntu LTS)."
         ))
         desc.set_line_wrap(True)
@@ -502,63 +490,6 @@ class OnboardingWizard(Gtk.Window):
         self.nvidia_prime = Gtk.CheckButton(label=traducir("PRIME offload (portátiles híbridos Intel/NVIDIA)"))
         self.nvidia_prime.set_active(self.config.nvidia.prime_offload)
         box.pack_start(self.nvidia_prime, False, False, 0)
-
-        return box
-
-    def _create_apps_step(self) -> Gtk.Widget:
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
-        box.get_style_context().add_class("onboarding-card")
-
-        title = Gtk.Label(label=traducir("Perfil de aplicaciones"))
-        title.get_style_context().add_class("onboarding-card-title")
-        box.pack_start(title, False, False, 0)
-
-        desc = Gtk.Label(label=traducir(
-            "Selecciona un perfil. Las aplicaciones se instalarán automáticamente "
-            "desde repositorios APT y Flathub tras completar el asistente."
-        ))
-        desc.set_line_wrap(True)
-        desc.set_xalign(0)
-        box.pack_start(desc, False, False, 0)
-
-        # Radio buttons para perfiles
-        self.profile_radios = {}
-        profile_group = None
-        profiles_info = [
-            ("minimal", traducir("Mínimo"), traducir("Solo sistema base + herramientas esenciales")),
-            ("development", traducir("Desarrollo"), traducir("VS Code, Git, Docker, terminales, herramientas CLI")),
-            ("multimedia", traducir("Multimedia"), traducir("VLC, GIMP, HandBrake, Kdenlive, OBS, Audacity")),
-            ("gaming", traducir("Gaming"), traducir("Steam, Heroic, Lutris, RetroArch, MangoHud, GameMode")),
-            ("full", traducir("Completo"), traducir("Todo lo anterior + ofimática, Thunderbird, OnlyOffice")),
-        ]
-
-        for pid, pname, pdesc in profiles_info:
-            radio = Gtk.RadioButton.new_with_label_from_widget(profile_group, "")
-            if profile_group is None:
-                profile_group = radio
-            radio.set_active(pid == self.config.apps.profile)
-
-            row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-            lbl_name = Gtk.Label(label=pname)
-            lbl_name.get_style_context().add_class("onboarding-card-title")
-            lbl_name.set_xalign(0)
-            row.pack_start(lbl_name, False, False, 0)
-
-            lbl_desc = Gtk.Label(label=pdesc)
-            lbl_desc.set_xalign(0)
-            lbl_desc.get_style_context().add_class("onboarding-card-desc")
-            row.pack_start(lbl_desc, False, False, 0)
-
-            hbox = Gtk.Box(spacing=12)
-            hbox.pack_start(radio, False, False, 0)
-            hbox.pack_start(row, True, True, 0)
-            box.pack_start(hbox, False, False, 0)
-
-            self.profile_radios[pid] = radio
-
-        self.auto_install_check = Gtk.CheckButton(label=traducir("Instalar automáticamente al terminar"))
-        self.auto_install_check.set_active(self.config.apps.auto_install)
-        box.pack_start(self.auto_install_check, False, False, 0)
 
         return box
 
@@ -738,7 +669,6 @@ class OnboardingWizard(Gtk.Window):
 
         desc = Gtk.Label(label=traducir(
             "Tu sistema AyusOS está listo.\n\n"
-            "• Las aplicaciones seleccionadas se instalarán en segundo plano.\n"
             "• El mantenimiento automático se ejecutará según lo programado.\n"
             "• Puedes abrir el Centro de Control en cualquier momento para ajustar opciones.\n\n"
             "¡Disfruta de tu nuevo sistema!"
@@ -746,13 +676,6 @@ class OnboardingWizard(Gtk.Window):
         desc.set_line_wrap(True)
         desc.set_justify(Gtk.Justification.CENTER)
         box.pack_start(desc, False, False, 0)
-
-        # Botón finalizar (en modo --onboarding-only la app cierra al terminar)
-        btn_open = Gtk.Button(label=traducir("Finalizar configuración"))
-        btn_open.get_style_context().add_class("onboarding-button")
-        btn_open.get_style_context().add_class("onboarding-button-accent")
-        btn_open.connect("clicked", lambda *_: self.emit("completed"))
-        box.pack_start(btn_open, False, False, 0)
 
         return box
 
@@ -764,7 +687,6 @@ class OnboardingWizard(Gtk.Window):
     def _apply_repos(self, widget, config) -> bool:
         config.repos.contrib_nonfree = self.repo_contrib.get_active()
         config.repos.backports = self.repo_backports.get_active()
-        config.repos.backports_mesa = self.repo_backports_mesa.get_active()
         return True
 
     def _validate_flatpak(self, widget) -> bool:
@@ -772,7 +694,7 @@ class OnboardingWizard(Gtk.Window):
 
     def _apply_flatpak(self, widget, config) -> bool:
         config.flatpak.enabled = self.flatpak_enabled.get_active()
-        config.flatpak.flathub = self.flathub_enabled.get_active()
+        config.flatpak.flathub = config.flatpak.enabled and self.flathub_enabled.get_active()
         return True
 
     def _validate_kernel(self, widget) -> bool:
@@ -788,20 +710,6 @@ class OnboardingWizard(Gtk.Window):
     def _apply_nvidia(self, widget, config) -> bool:
         config.nvidia.mode = self.nvidia_combo.get_active_id() or "auto"
         config.nvidia.prime_offload = self.nvidia_prime.get_active()
-        return True
-
-    def _validate_apps(self, widget) -> bool:
-        for pid, radio in self.profile_radios.items():
-            if radio.get_active():
-                return pid in VALID_APP_PROFILES
-        return False
-
-    def _apply_apps(self, widget, config) -> bool:
-        for pid, radio in self.profile_radios.items():
-            if radio.get_active():
-                config.apps.profile = pid
-                break
-        config.apps.auto_install = self.auto_install_check.get_active()
         return True
 
     def _validate_gnome_ext(self, widget) -> bool:
@@ -851,6 +759,7 @@ class OnboardingWizard(Gtk.Window):
     def _apply_finish(self, widget, config) -> bool:
         # Guardar todas las elecciones en preferencias de usuario (sin root).
         prefs = load_user_preferences()
+        config.apps.auto_install = False
         prefs.update(config.to_dict())
         prefs.pop("_schema_version", None)
         return mark_onboarding_done(self.version, prefs)

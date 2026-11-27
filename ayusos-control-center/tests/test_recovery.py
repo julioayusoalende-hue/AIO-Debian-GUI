@@ -128,14 +128,6 @@ class RecoveryTests(unittest.TestCase):
         done.assert_called_once_with(False, message)
         self.assertIn("cancelada", message)
 
-    def test_hardware_profile_button_requests_authorization(self):
-        window = Mock()
-        window.hardware_profile_combo.get_active_id.return_value = "gaming"
-        pages.AyusOSPagesMixin._hardware_apply_profile(window, None)
-        window._run_authorized_action.assert_called_once_with(
-            "hardware-apply", window._hardware_apply_done, "gaming", operation="Perfil de hardware"
-        )
-
     def test_hardware_profile_without_root_or_unknown_profile_never_runs_commands(self):
         hardware = ayusos_recovery.ayusos_hardware
         with patch.object(hardware.os, "geteuid", return_value=1000), \

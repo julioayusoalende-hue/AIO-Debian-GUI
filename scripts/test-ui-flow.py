@@ -315,8 +315,18 @@ for sincronizado in (True, False):
 
 preferencias = {'idioma': 'es', 'tema': 'claro', 'modo_simple': False}
 paquete_instalado = app.paquete_instalado
-for flatpak, snap in ((False, False), (True, False), (False, True), (True, True)):
-    with patch.object(app, 'es_flatpak', return_value=False), \
+for flatpak, snap, flathub in (
+    (False, False, False), (True, False, False), (False, True, False), (True, True, True),
+):
+    original_run = app.subprocess.run
+
+    def run_with_remotes(command, *args, **kwargs):
+        if command == ["flatpak", "remotes", "--system", "--columns=name"]:
+            return app.subprocess.CompletedProcess(command, 0, stdout="flathub\n" if flathub else "")
+        return original_run(command, *args, **kwargs)
+
+    with patch.object(app.subprocess, 'run', side_effect=run_with_remotes), \
+         patch.object(app, 'es_flatpak', return_value=False), \
          patch.object(app.shutil, 'which', return_value='/usr/bin/flatpak' if flatpak else None), \
          patch.object(app, 'paquete_instalado',
                       side_effect=lambda nombre: snap if nombre == 'snapd' else paquete_instalado(nombre)):
@@ -327,7 +337,7 @@ for flatpak, snap in ((False, False), (True, False), (False, True), (True, True)
             if instalada:
                 assert ventana.filas[tarea].get_parent() is ventana.grupos_tareas[0].get_child()
         assert ventana.botones_preset["flatpak"].get_visible() is flatpak
-        assert ('flatpak-setup' in ventana.switches) is not flatpak
+        assert ('flatpak-setup' in ventana.switches) is not flathub
         estandar = ventana.botones_preset["estandar"]
         assert estandar.get_style_context().has_class("suggested-action")
         seleccion_inicial = ventana._pasos_seleccionados()

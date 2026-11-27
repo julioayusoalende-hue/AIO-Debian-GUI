@@ -85,7 +85,7 @@ NOTAS_VERSION = os.path.normpath(
 )
 
 # Versión embebida en tiempo de compilación (inyectada por build-deb.sh)
-AIO_DEBIAN_GUI_VERSION = "1.5.5"
+AIO_DEBIAN_GUI_VERSION = "1.5.6"
 
 RECOMMENDED_ICON_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/recommended-icons")
@@ -5150,7 +5150,16 @@ class VentanaPrincipal(Gtk.Window):
         if pid in ("flatpak-update", "clean-flatpak"):
             return self.flatpak_presente
         if pid == "flatpak-setup":
-            return not self.flatpak_presente
+            if not self.flatpak_presente:
+                return True
+            try:
+                result = subprocess.run(
+                    comando_host("flatpak", "remotes", "--system", "--columns=name"),
+                    capture_output=True, text=True, timeout=3,
+                )
+            except (OSError, subprocess.SubprocessError):
+                return True
+            return result.returncode != 0 or "flathub" not in result.stdout.splitlines()
         if pid in ("gnome-plugin", "ext-manager") or pid in TAREAS_EXTENSIONES_GNOME:
             return self.gnome_presente
         return True

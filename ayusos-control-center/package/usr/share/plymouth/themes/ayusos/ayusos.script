@@ -1,0 +1,55 @@
+Window.SetBackgroundTopColor(0.13, 0.025, 0.05);
+Window.SetBackgroundBottomColor(0.035, 0.012, 0.02);
+
+logo_image = Image("ayusos.png");
+logo = Sprite(logo_image);
+logo.SetPosition(Window.GetX() + (Window.GetWidth() - logo_image.GetWidth()) / 2,
+                 Window.GetY() + Window.GetHeight() * 0.42 - logo_image.GetHeight() / 2, 1);
+prompt_sprite = Sprite();
+entry_sprite = Sprite();
+message_sprite = Sprite();
+
+fun display_text(sprite, text, offset) {
+    if (!text) {
+        sprite.SetOpacity(0);
+        return;
+    }
+    image = Image.Text(text, 1, 1, 1);
+    sprite.SetImage(image);
+    sprite.SetPosition(Window.GetX() + (Window.GetWidth() - image.GetWidth()) / 2,
+                       Window.GetY() + Window.GetHeight() * 0.65 + offset, 2);
+    sprite.SetOpacity(1);
+}
+
+fun display_normal() {
+    prompt_sprite.SetOpacity(0);
+    entry_sprite.SetOpacity(0);
+}
+
+fun display_password(prompt, bullets) {
+    entry = "";
+    for (i = 0; i < bullets; i++) {
+        entry += "*";
+    }
+    display_text(prompt_sprite, prompt, 0);
+    display_text(entry_sprite, entry, 32);
+}
+
+fun display_question(prompt, entry) {
+    display_text(prompt_sprite, prompt, 0);
+    display_text(entry_sprite, entry, 32);
+}
+
+fun display_message(message) {
+    display_text(message_sprite, message, 68);
+}
+
+fun hide_message(message) {
+    message_sprite.SetOpacity(0);
+}
+
+Plymouth.SetDisplayNormalFunction(display_normal);
+Plymouth.SetDisplayPasswordFunction(display_password);
+Plymouth.SetDisplayQuestionFunction(display_question);
+Plymouth.SetMessageFunction(display_message);
+Plymouth.SetHideMessageFunction(hide_message);

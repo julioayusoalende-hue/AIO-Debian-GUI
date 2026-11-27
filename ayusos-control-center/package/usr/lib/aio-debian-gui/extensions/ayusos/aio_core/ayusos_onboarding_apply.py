@@ -89,8 +89,8 @@ def apply_nvidia(config, uid, dry):
 
 
 def apply_apps(config, uid, dry):
-    # El wizard pregunta si instalar automáticamente; si no, no tocar paquetes.
-    if not config["apps"].get("auto_install", True):
+    # Compatibilidad con elecciones explícitas de asistentes anteriores.
+    if not config["apps"].get("auto_install", False):
         print("  Instalación automática de apps desactivada (auto_install=false)")
         return None, False
     if dry:

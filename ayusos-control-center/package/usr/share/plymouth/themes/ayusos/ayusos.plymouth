@@ -1,4 +1,8 @@
-[PlymouthTheme]
-imageDir=/usr/share/plymouth/themes/ayusos
-monospaceFont=DejaVu Sans Mono 12
-title=AyusOS Linux
+[Plymouth Theme]
+Name=AyusOS Linux
+Description=Pantalla de arranque de AyusOS Linux
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/ayusos
+ScriptFile=/usr/share/plymouth/themes/ayusos/ayusos.script

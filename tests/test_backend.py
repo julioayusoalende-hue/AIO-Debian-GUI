@@ -134,6 +134,10 @@ class TestColumns:
         result = list(backend.columns(output, 3))
         assert result == [['col1', 'col2', 'col3'], ['val1', 'val2', 'val3']]
 
+    @patch('software_manager.backend.run', return_value='\n')
+    def test_empty_scope_has_no_flatpak_remotes(self, mock_run):
+        assert backend.remotes('user') == []
+
     def test_columns_missing_values(self):
         output = 'col1\tcol2\nval1\t'
         result = list(backend.columns(output, 3))

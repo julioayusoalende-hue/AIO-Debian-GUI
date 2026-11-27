@@ -1,5 +1,5 @@
 Package: ayusos-control-center
-Version: 1.4.13
+Version: 1.5.6
 Section: admin
 Priority: optional
 Architecture: all
@@ -9,7 +9,7 @@ Maintainer: Julio Ayuso <epdc@msn.com>
 Homepage: https://github.com/julioayusoalende-hue/AyusOS-Linux
 Description: Integración de AyusOS en aio-debian-gui
  Añade el Centro de Control de AyusOS, onboarding de primer arranque,
- pestañas de actualización, snapshots, hardware, diagnósticos y apariencia,
+ pestañas de actualización, snapshots, diagnósticos y apariencia,
  modo de recuperación, servicios de mantenimiento,
  aplicador de preferencias y el módulo Calamares de configuración inicial.
  El núcleo aio-debian-gui permanece independiente de la distribución.

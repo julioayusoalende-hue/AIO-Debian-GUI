@@ -57,7 +57,7 @@ SYSTEM_DEFAULTS = {
     },
     "apps": {
         "profile": "minimal",  # minimal, development, multimedia, gaming, full
-        "auto_install": True,
+        "auto_install": False,
     },
     "gnome_extensions": {
         "enabled_by_default": [
@@ -124,7 +124,7 @@ class MaintenanceConfig:
 @dataclass
 class AppsConfig:
     profile: str = "minimal"  # minimal, development, multimedia, gaming, full
-    auto_install: bool = True
+    auto_install: bool = False
 
 
 @dataclass

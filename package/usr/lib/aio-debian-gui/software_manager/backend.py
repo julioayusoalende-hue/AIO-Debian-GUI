@@ -195,7 +195,7 @@ def flatpak(scope, *args):
 def columns(output, size):
     for line in output.splitlines():
         values = line.split('\t')
-        if len(values) <= size:
+        if line.strip() and len(values) <= size:
             yield values + [""] * (size - len(values))
 
 
