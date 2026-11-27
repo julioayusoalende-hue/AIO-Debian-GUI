@@ -15,7 +15,7 @@ Integración independiente de AyusOS Linux en `aio-debian-gui`.
 - Política Polkit y hook APT para Timeshift.
 - Fondos de escritorio y tema Plymouth AyusOS.
 
-## Ajustes de 1.4.8
+## Ajustes de 1.4.9
 
 - Runner `aio-run` para submódulos con contexto de paquete, usado por el helper y
   el aplicador de onboarding.
@@ -32,6 +32,8 @@ Integración independiente de AyusOS Linux en `aio-debian-gui`.
   `ayusos-recovery` y política Polkit específica para las acciones privilegiadas.
 - Diagnósticos con dimensionado adaptable, barras de desplazamiento automáticas
   y resultados largos en texto legible.
+- Construcción reproducible mediante `SOURCE_DATE_EPOCH`, con prueba que compara
+  el SHA-256 de dos build consecutivos.
 
 ## Modo Recovery
 
@@ -67,7 +69,7 @@ El core descubre la extensión automáticamente. No hay parches de AyusOS en el 
 ./build-deb.sh
 ```
 
-Genera `dist/ayusos-control-center_1.4.8_all.deb`.
+Genera `dist/ayusos-control-center_1.4.9_all.deb`.
 
 La ISO `AyusOS-Linux-1.4-release-final-v4-amd64.iso` fue validada en chroot con
 SHA-256 `d24b3443b46ba1ad898c3a1b1f817f1491d547326ba6c20ca07c03606af68b9f`.

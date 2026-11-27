@@ -12,6 +12,8 @@ find "$STAGE" -name '__pycache__' -type d -prune -exec rm -rf -- {} +
 find "$STAGE" -name '*.py[co]' -type f -delete
 find "$STAGE" -type d -exec chmod 755 {} +
 find "$STAGE" -type f -exec chmod 644 {} +
+export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git log -1 --format=%ct 2>/dev/null || date +%s)}"
+find "$STAGE" -exec touch -h -d "@${SOURCE_DATE_EPOCH}" {} +
 chmod 755 "$STAGE/DEBIAN/postinst" "$STAGE/DEBIAN/prerm" \
     "$STAGE/usr/bin/ayusos-onboarding-graphical" \
     "$STAGE/usr/local/libexec/ayusos-aio-inicial" \

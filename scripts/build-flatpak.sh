@@ -44,7 +44,7 @@ VERSION=${VERSION#*:}
 if [[ -z "$VERSION" ]]; then
     VERSION=$(sed -n 's/^## \([0-9][0-9.]*\)$/\1/p' CHANGELOG.md | head -1)
 fi
-VERSION=${VERSION:-"1.5.2"}
+VERSION=${VERSION:-"1.5.3"}
 
 echo "Building Flatpak version $VERSION..."
 

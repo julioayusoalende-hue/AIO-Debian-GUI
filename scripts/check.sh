@@ -42,6 +42,8 @@ python3 scripts/test-scheduler.py && bien "programación automática de mantenim
 python3 scripts/test-preflight.py && bien "modo de mantenimiento seguro" || fallo "pruebas de mantenimiento seguro"
 python3 scripts/test-grub-settings.py && bien "ajustes de arranque de GRUB y restauración" || fallo "pruebas de GRUB"
 bash scripts/test-upgrade-safety.sh && bien "actualización APT protegida" || fallo "pruebas de actualización APT segura"
+bash scripts/test-privileged-lock.sh && bien "lock privilegiado compartido" || fallo "pruebas de lock privilegiado"
+bash scripts/test-ayusos-reproducible.sh && bien "DEB AyusOS reproducible" || fallo "pruebas de reproducibilidad AyusOS"
 bash scripts/test-apt-sources-transactional.sh && bien "fuentes APT transaccionales" || fallo "pruebas de fuentes APT transaccionales"
 python3 scripts/test-diagnostics.py && bien "diagnóstico preventivo de solo lectura" || fallo "pruebas del diagnóstico"
 (umask 022 && python3 scripts/test-host-integration.py) && bien "guía de integración del anfitrión" || fallo "pruebas de integración del anfitrión"

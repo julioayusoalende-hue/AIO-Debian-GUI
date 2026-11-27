@@ -1,7 +1,12 @@
 # Cambios
 
-## 1.5.2
+## 1.5.3
 
+- Se corrige el falso error «ya hay otra operación AiO/APT en curso» durante el mantenimiento: `run_privileged` reutiliza el lock ya tomado por el helper, por lo que `dpkg --audit` y las tareas APT pueden ejecutarse dentro de la misma operación autorizada.
+- El APT estable consume ahora exactamente los DEB publicados en GitHub y verifica `SHA256SUMS`; `ayusos-control-center` se construye de forma reproducible con `SOURCE_DATE_EPOCH`.
+- Pruebas de regresión para el lock privilegiado compartido y para la reproducibilidad del DEB de AyusOS.
+
+## 1.5.2
 - La pestaña Diagnósticos AyusOS se adapta al tamaño de la ventana: el árbol de resultados tiene altura mínima y máxima, y tanto la página como el árbol muestran barras de desplazamiento horizontales o verticales solo cuando el contenido no cabe.
 - Los detalles largos del diagnóstico se muestran como texto legible y ajustado, sin volcados de estructuras Python que desborden la interfaz.
 - Nueva prueba GTK que comprueba el dimensionado y las barras de desplazamiento con una ventana estrecha y resultados extensos.

@@ -34,8 +34,23 @@ jobs:
       - name: Install APT build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y appstream dpkg-dev fakeroot gnupg
-      - name: Build Debian package and import signing key
+          sudo apt-get install -y appstream dpkg-dev gnupg
+      - name: Download and verify release packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/release-packages"
+          gh release download --dir "$RUNNER_TEMP/release-packages" \
+            --pattern '*.deb' --pattern SHA256SUMS
+          cd "$RUNNER_TEMP/release-packages"
+          sha256sum --check SHA256SUMS
+          VERSION="$(sed -n 's/^Version: //p' "$GITHUB_WORKSPACE/source/package/DEBIAN/control")"
+          test -f "aio-debian-gui_${VERSION#*:}_all.deb"
+          AYUSOS_VERSION="$(sed -n 's/^Version: //p' "$GITHUB_WORKSPACE/source/ayusos-control-center/package/DEBIAN/control")"
+          test -f "ayusos-control-center_${AYUSOS_VERSION}_all.deb"
+          echo "RELEASE_PACKAGES=$RUNNER_TEMP/release-packages" >> "$GITHUB_ENV"
+      - name: Import signing key
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         run: |
@@ -45,9 +60,6 @@ jobs:
           printf '%s\n' 'allow-loopback-pinentry' > "$GNUPGHOME/gpg-agent.conf"
           printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
           echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
-          cd source
-          bash scripts/build-deb.sh
-          bash ayusos-control-center/build-deb.sh
       - name: Publish signed APT metadata and DEB
         env:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
@@ -55,9 +67,9 @@ jobs:
           set -euo pipefail
           cd source
           VERSION="$(sed -n 's/^Version: //p' package/DEBIAN/control)"
-          DEB="dist/aio-debian-gui_${VERSION#*:}_all.deb"
+          DEB="$RELEASE_PACKAGES/aio-debian-gui_${VERSION#*:}_all.deb"
           AYUSOS_VERSION="$(sed -n 's/^Version: //p' ayusos-control-center/package/DEBIAN/control)"
-          AYUSOS_DEB="ayusos-control-center/dist/ayusos-control-center_${AYUSOS_VERSION#*:}_all.deb"
+          AYUSOS_DEB="$RELEASE_PACKAGES/ayusos-control-center_${AYUSOS_VERSION}_all.deb"
           test -f "$DEB"
           test -f "$AYUSOS_DEB"
           bash scripts/publish-apt-repo.sh "$DEB" ../site "" "$AYUSOS_DEB"

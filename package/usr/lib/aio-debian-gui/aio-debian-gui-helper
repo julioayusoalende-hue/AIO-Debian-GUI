@@ -54,18 +54,23 @@ run_privileged() {
         "${cmd[@]}"
         resultado=$?
     else
-        # Lock global AiO + APT/dpkg combinado.
-        local lock_file="/run/aio-debian-gui/maintenance.lock"
+        # Lock global AiO + APT/dpkg combinado. flock() considera independiente
+        # cada descriptor abierto: si main() ya tomó el lock (o lo heredó del
+        # programador), abrir el archivo de nuevo aquí provocaría un falso
+        # "ya hay otra operación AiO/APT en curso" dentro del propio helper.
         local lock_fd=""
-        mkdir -p -- "${lock_file%/*}" 2>/dev/null || true
-        exec {lock_fd}>"$lock_file" || {
-            err "run_privileged: no se pudo abrir lock $lock_file"
-            return 1
-        }
-        if ! flock -n "$lock_fd"; then
-            eval "exec ${lock_fd}>&-"
-            err "run_privileged [$operacion]: ya hay otra operación AiO/APT en curso"
-            return 1
+        if [ -z "${AIO_PRIV_LOCK_FD:-}" ]; then
+            local lock_file="${MAINTENANCE_LOCK:-/run/aio-debian-gui/maintenance.lock}"
+            mkdir -p -- "${lock_file%/*}" 2>/dev/null || true
+            exec {lock_fd}>"$lock_file" || {
+                err "run_privileged: no se pudo abrir lock $lock_file"
+                return 1
+            }
+            if ! flock -n "$lock_fd"; then
+                eval "exec ${lock_fd}>&-"
+                err "run_privileged [$operacion]: ya hay otra operación AiO/APT en curso"
+                return 1
+            fi
         fi
 
         if [ "$timeout_segundos" -gt 0 ]; then
@@ -85,7 +90,10 @@ run_privileged() {
             [ "$resultado" -eq 0 ] || err "run_privileged [$operacion]: falló con código $resultado"
         fi
 
-        eval "exec ${lock_fd}>&-"
+        # El descriptor compartido pertenece a main(): solo cerramos el nuestro.
+        if [ -n "$lock_fd" ]; then
+            eval "exec ${lock_fd}>&-"
+        fi
     fi
 
     if [ "${AIO_PRIV_LOG:-0}" = 1 ]; then
@@ -144,11 +152,14 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.5.2
+HELPER_VERSION=1.5.3
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
 MAINTENANCE_LOCK=/run/aio-debian-gui/maintenance.lock
+# Descriptor ya bloqueado por main() o heredado del programador; run_privileged
+# lo reutiliza en lugar de intentar bloquear dos veces el mismo archivo.
+AIO_PRIV_LOCK_FD=""
 POLKIT_RULES_DIR=/etc/polkit-1/rules.d
 PASSWORDLESS_STATE_DIR=/var/lib/aio-debian-gui/passwordless
 GNOME_EXTENSIONS_MODULE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/aio_core/gnome_extensions.py"
@@ -2461,6 +2472,7 @@ main() {
             umask 022
             chmod 0600 "$MAINTENANCE_LOCK" || exit 1
             flock -n 9 || { err "Ya hay otro mantenimiento de AiO en curso."; exit 1; }
+            AIO_PRIV_LOCK_FD=9
             refrescar_indices_diagnostico
             exit $?
             ;;
@@ -2560,6 +2572,7 @@ main() {
         err "Ya hay otro mantenimiento de AiO en curso."
         exit 1
     fi
+    AIO_PRIV_LOCK_FD="$inherited_lock"
 
     local total=${#pasos[@]} i=0 fallos=0 resultado
     for s in "${pasos[@]}"; do

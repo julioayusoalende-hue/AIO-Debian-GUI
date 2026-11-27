@@ -68,11 +68,11 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.5.2
+### Lo nuevo en la 1.5.3
 
-- Diagnósticos AyusOS con dimensionado adaptable y barras de desplazamiento automáticas cuando el contenido no cabe.
-- El árbol de resultados crece hasta un límite razonable y los mensajes largos se ajustan sin desbordar la ventana.
-- Nueva prueba GTK específica para ventanas estrechas, barras horizontales/verticales y resultados extensos.
+- Corregido el falso bloqueo «ya hay otra operación AiO/APT en curso» que impedía ejecutar `dpkg --audit` y las tareas de mantenimiento dentro de la misma operación autorizada.
+- El APT estable consume exactamente los DEB de GitHub y verifica sus checksums; `ayusos-control-center` se construye de forma reproducible.
+- Nuevas pruebas de regresión para el lock privilegiado compartido y la reproducibilidad del paquete AyusOS.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -80,7 +80,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.5.2**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.5.3**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -104,10 +104,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.5.2:
+Para la versión 1.5.3:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.5.2_all.deb
+sudo apt install ./aio-debian-gui_1.5.3_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.
