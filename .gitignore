@@ -7,3 +7,6 @@ dist/
 .mypy_cache/
 
 .venv-tools/
+
+# Submódulo/local AyusOS: no se versiona en este repositorio
+AyusOS-Linux/
