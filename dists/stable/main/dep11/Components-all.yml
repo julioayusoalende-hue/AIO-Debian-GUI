@@ -156,16 +156,15 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/acerca-de.png
 Releases:
-- version: 1.5.3
+- version: 1.5.4
   type: stable
   unix-timestamp: 1795737600
   description:
     C: >-
-      <ul><li>Se corrige el falso error «ya hay otra operación AiO/APT en curso» durante el mantenimiento: run_privileged
-      reutiliza el lock ya tomado por el helper, por lo que dpkg --audit y las tareas APT pueden ejecutarse dentro de la misma
-      operación autorizada.</li><li>El APT estable consume ahora exactamente los DEB publicados en GitHub y verifica SHA256SUMS;
-      ayusos-control-center se construye de forma reproducible con SOURCE_DATE_EPOCH.</li><li>Pruebas de regresión para el
-      lock privilegiado compartido y para la reproducibilidad del DEB de AyusOS.</li></ul>
+      <ul><li>El Gestor de software de APT y Flatpak vuelve al paquete principal de AiO Debian GUI.</li><li>«Ver servicios
+      fallidos» muestra la salida de systemd en una ventana desplazable.</li><li>Las consultas de Detalles técnicos, NVIDIA
+      y reversión de Backports se ejecutan en segundo plano para mantener la interfaz operativa.</li><li>El asistente termina
+      los procesos hijos cuando se agota el tiempo de una operación privilegiada, evitando que retengan el bloqueo de mantenimiento.</li></ul>
 ContentRating:
   oars-1.1:
     violence-cartoon: none
