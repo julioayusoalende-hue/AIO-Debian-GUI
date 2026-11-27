@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Round-trip tests without an active desktop session."""
 import os
-from pathlib import Path
 import stat
 import sys
 import tempfile
-from unittest.mock import patch
 import zipfile
+from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.abspath("package/usr/lib/aio-debian-gui"))
 from aio_core import desktop_backup as backup

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Pruebas de traducción de interfaz y diagnóstico sin abrir GTK."""
 import ast
-from pathlib import Path
 import re
 import sys
+from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(root / "package/usr/lib/aio-debian-gui"))

@@ -17,6 +17,86 @@
 set -u
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 umask 022
+
+# ------------------------------------------------------------------------------
+# Supervisor único: run_privileged()
+# Envuelve todas las operaciones root con timeout, lock global, entorno no-interactivo
+# y logs estructurados.
+# Uso: run_privileged <operación> <timeout_segundos> <comando> [args...]
+#   operación: etiqueta para logs y lock (ej. "apt-upgrade", "dpkg-audit")
+#   timeout_segundos: timeout por operación (default 300s, 0 = sin timeout)
+#   comando + args: comando a ejecutar (sin sudo/pkexec; ya somos root)
+# ------------------------------------------------------------------------------
+run_privileged() {
+    local operacion="${1:-}" timeout_segundos="${2:-300}"
+    shift 2 || { err "run_privileged: uso: run_privileged <operación> <timeout> <comando> [args...]"; return 2; }
+    local -a cmd=("$@")
+    [ "${#cmd[@]}" -gt 0 ] || { err "run_privileged: comando vacío"; return 2; }
+
+    # Entorno no-interactivo obligatorio
+    export DEBIAN_FRONTEND=noninteractive
+    export APT_LISTCHANGES_FRONTEND=none
+    export NEEDRESTART_MODE=l
+    export LANG=C
+    export LC_ALL=C
+
+    # Los trazas estructuradas solo se emiten si se piden expresamente y por
+    # stderr, para no contaminar la salida que capturan las funciones internas.
+    local inicio_epoch resultado=0
+    inicio_epoch=$(date +%s)
+    if [ "${AIO_PRIV_LOG:-0}" = 1 ]; then
+        printf '##PRIV-START:%s:%s:%s\n' "$operacion" "$inicio_epoch" "${cmd[*]}" >&2
+    fi
+
+    if [ "${EUID:-$(id -u)}" -ne 0 ]; then
+        # Sin privilegios (pruebas/desarrollo): ejecutar directamente para que
+        # los dobles de shell de la batería de pruebas sigan siendo válidos.
+        "${cmd[@]}"
+        resultado=$?
+    else
+        # Lock global AiO + APT/dpkg combinado.
+        local lock_file="/run/aio-debian-gui/maintenance.lock"
+        local lock_fd=""
+        mkdir -p -- "${lock_file%/*}" 2>/dev/null || true
+        exec {lock_fd}>"$lock_file" || {
+            err "run_privileged: no se pudo abrir lock $lock_file"
+            return 1
+        }
+        if ! flock -n "$lock_fd"; then
+            eval "exec ${lock_fd}>&-"
+            err "run_privileged [$operacion]: ya hay otra operación AiO/APT en curso"
+            return 1
+        fi
+
+        if [ "$timeout_segundos" -gt 0 ]; then
+            # Timeout que mata el grupo de procesos completo.
+            timeout --kill-after=5s --signal=SIGTERM "${timeout_segundos}s" \
+                setsid --wait "${cmd[@]}"
+            resultado=$?
+            case $resultado in
+                0) ;;
+                124) err "run_privileged [$operacion]: timeout (${timeout_segundos}s), proceso terminado con SIGTERM+SIGKILL" ;;
+                137) err "run_privileged [$operacion]: timeout (${timeout_segundos}s), proceso forzado con SIGKILL" ;;
+                *)   err "run_privileged [$operacion]: falló con código $resultado" ;;
+            esac
+        else
+            setsid --wait "${cmd[@]}"
+            resultado=$?
+            [ "$resultado" -eq 0 ] || err "run_privileged [$operacion]: falló con código $resultado"
+        fi
+
+        eval "exec ${lock_fd}>&-"
+    fi
+
+    if [ "${AIO_PRIV_LOG:-0}" = 1 ]; then
+        local fin_epoch duracion
+        fin_epoch=$(date +%s)
+        duracion=$((fin_epoch - inicio_epoch))
+        printf '##PRIV-END:%s:%s:%s:%s\n' "$operacion" "$fin_epoch" "$duracion" "$resultado" >&2
+    fi
+    return $resultado
+}
+
 # Estas operaciones comparten la autorización de AiO. Los asistentes instalados
 # validan sus propios argumentos y dos de ellos reciben datos por stdin.
 if [[ "${BASH_SOURCE[0]}" == "$0" && "$EUID" == 0 ]]; then
@@ -64,7 +144,7 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.4.9
+HELPER_VERSION=1.5.0
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -138,15 +218,25 @@ estado_ubuntu_hwe() {
 }
 
 paso_ubuntu_hwe() {
-    local paquete
+    local paquete simulation
     paquete=$(ubuntu_hwe_paquete) || return 1
     asegurar_listas || return 1
     if ! apt-cache show "$paquete" >/dev/null 2>&1; then
         err "No hay paquete HWE disponible para esta versión de Ubuntu. No se realizarán cambios."
         return 1
     fi
+    info "Simulando instalación del metapaquete HWE $paquete..."
+    if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-install-$paquete" 60 apt-get -s --no-remove install "$paquete" 2>&1); then
+        err "No se pudo simular la instalación de $paquete."
+        printf '%s\n' "$simulation" >&2
+        return 1
+    fi
+    if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
+        err "La instalación de $paquete propone eliminar paquetes. Se cancela por seguridad."
+        return 1
+    fi
     info "Instalando el metapaquete oficial $paquete desde los repositorios configurados..."
-    if ! apt-get "${APT_OPTS[@]}" install "$paquete"; then
+    if ! run_privileged "apt-install-$paquete" 300 apt-get "${APT_OPTS[@]}" --no-remove install "$paquete"; then
         err "No se pudo instalar el kernel HWE."
         return 1
     fi
@@ -178,11 +268,23 @@ estado_ubuntu_repos() {
 }
 
 paso_ubuntu_repos() {
-    local componente
+    local componente simulation
     asegurar_listas || return 1
     if ! command -v add-apt-repository >/dev/null 2>&1; then
+        info "Simulando instalación de software-properties-common..."
+        if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-install-software-properties-common" 60 apt-get -s --no-remove install software-properties-common 2>&1); then
+            err "No se pudo simular la instalación de software-properties-common."
+            printf '%s\n' "$simulation" >&2
+            return 1
+        fi
+        if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
+            err "La instalación de software-properties-common propone eliminar paquetes. Se cancela por seguridad."
+            return 1
+        fi
         info "Instalando software-properties-common para gestionar repositorios oficiales Ubuntu..."
-        apt-get "${APT_OPTS[@]}" install software-properties-common || return 1
+        if ! run_privileged "apt-install-software-properties-common" 300 apt-get "${APT_OPTS[@]}" --no-remove install software-properties-common; then
+            return 1
+        fi
     fi
     for componente in universe restricted multiverse; do
         info "Habilitando el componente oficial $componente..."
@@ -389,7 +491,7 @@ paquete_instalado() {
 }
 
 instalar_aplicacion_backup() {
-    local identificador paquete
+    local identificador paquete simulation
     identificador="$1"
     case "$identificador" in
         timeshift) paquete=timeshift ;;
@@ -401,8 +503,18 @@ instalar_aplicacion_backup() {
         return 0
     fi
     asegurar_listas || return 1
+    info "Simulando instalación de $paquete..."
+    if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-install-$paquete" 60 apt-get -s --no-remove install "$paquete" 2>&1); then
+        err "No se pudo simular la instalación de $paquete."
+        printf '%s\n' "$simulation" >&2
+        return 1
+    fi
+    if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
+        err "La instalación de $paquete propone eliminar paquetes. Se cancela por seguridad."
+        return 1
+    fi
     info "Instalando $paquete desde los repositorios APT configurados..."
-    if ! apt-get "${APT_OPTS[@]}" --no-remove install "$paquete"; then
+    if ! run_privileged "apt-install-$paquete" 300 apt-get "${APT_OPTS[@]}" --no-remove install "$paquete"; then
         err "No se pudo instalar $paquete."
         return 1
     fi
@@ -426,7 +538,7 @@ ubuntu_compatible_con_ghostty() (
 )
 
 instalar_ghostty_ubuntu() (
-    local preferencias
+    local preferencias simulation
     preferencias=$(mktemp) || return 1
     trap 'rm -f -- "$preferencias"' EXIT
     {
@@ -436,11 +548,21 @@ instalar_ghostty_ubuntu() (
             cat /etc/apt/preferences
         fi
     } > "$preferencias" || return 1
-    apt-get "${APT_OPTS[@]}" -o "Dir::Etc::Preferences=$preferencias" --no-remove install ghostty
+    info "Simulando instalación de ghostty..."
+    if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-install-ghostty" 60 apt-get -s -o "Dir::Etc::Preferences=$preferencias" --no-remove install ghostty 2>&1); then
+        err "No se pudo simular la instalación de ghostty."
+        printf '%s\n' "$simulation" >&2
+        return 1
+    fi
+    if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
+        err "La instalación de ghostty propone eliminar paquetes. Se cancela por seguridad."
+        return 1
+    fi
+    run_privileged "apt-install-ghostty" 300 apt-get "${APT_OPTS[@]}" -o "Dir::Etc::Preferences=$preferencias" --no-remove install ghostty
 )
 
 instalar_aplicacion_recomendada() {
-    local identificador paquete
+    local identificador paquete simulation resultado=0
     identificador="$1"
     case "$identificador" in
         audacity) paquete=audacity ;;
@@ -472,28 +594,47 @@ instalar_aplicacion_recomendada() {
         return 0
     fi
     asegurar_listas || return 1
-    info "Instalando $paquete desde los repositorios APT configurados..."
-    local resultado=0
     if [ "$paquete" = ghostty ]; then
-        instalar_ghostty_ubuntu || resultado=$?
+        instalar_ghostty_ubuntu || return 1
     else
-        apt-get "${APT_OPTS[@]}" --no-remove install "$paquete" || resultado=$?
-    fi
-    if [ "$resultado" -ne 0 ]; then
-        err "No se pudo instalar $paquete."
-        return 1
-    fi
-    if ! paquete_instalado "$paquete"; then
-        err "APT terminó, pero no se pudo confirmar la instalación de $paquete."
-        return 1
+        info "Simulando instalación de $paquete..."
+        if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-install-$paquete" 60 apt-get -s --no-remove install "$paquete" 2>&1); then
+            err "No se pudo simular la instalación de $paquete."
+            printf '%s\n' "$simulation" >&2
+            return 1
+        fi
+        if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
+            err "La instalación de $paquete propone eliminar paquetes. Se cancela por seguridad."
+            return 1
+        fi
+        info "Instalando $paquete desde los repositorios APT configurados..."
+        if ! run_privileged "apt-install-$paquete" 300 apt-get "${APT_OPTS[@]}" --no-remove install "$paquete"; then
+            err "No se pudo instalar $paquete."
+            return 1
+        fi
+        if ! paquete_instalado "$paquete"; then
+            err "APT terminó, pero no se pudo confirmar la instalación de $paquete."
+            return 1
+        fi
     fi
     echo "##RECOMMENDED:installed:$identificador"
 }
 
+# Auditoría dpkg obligatoria antes de cualquier operación APT
+_aio_dpkg_audit() {
+    local auditoria
+    if ! auditoria=$(LC_ALL=C run_privileged "dpkg-audit" 30 dpkg --audit 2>&1) || [ -n "$auditoria" ]; then
+        err "Hay una incidencia de dpkg pendiente. Revisa el diagnóstico antes de continuar."
+        [ -z "$auditoria" ] || printf '%s\n' "$auditoria" >&2
+        return 1
+    fi
+}
+
 asegurar_listas() {
     [ "$LISTAS_ACTUALIZADAS" -eq 1 ] && return 0
+    _aio_dpkg_audit || return 1
     info "Sincronizando listas de paquetes (apt-get update)..."
-    if apt-get --error-on=any update; then
+    if run_privileged "apt-update" 120 apt-get --error-on=any update; then
         LISTAS_ACTUALIZADAS=1
         return 0
     fi
@@ -503,11 +644,11 @@ asegurar_listas() {
 
 refrescar_indices_diagnostico() {
     local auditoria codigo=0
-    auditoria=$(LC_ALL=C timeout --kill-after=2s 12s /usr/bin/dpkg --audit 2>&1) || codigo=$?
+    auditoria=$(LC_ALL=C run_privileged "dpkg-audit" 30 dpkg --audit 2>&1) || codigo=$?
     printf '##DIAGNOSTIC_DPKG:%s:' "$codigo"
     printf '%s' "${auditoria:0:500}" | base64 -w0
     printf '\n'
-    if ! timeout --kill-after=10s 180s apt-get -o APT::Update::Error-Mode=any update; then
+    if ! run_privileged "apt-update" 180 apt-get -o APT::Update::Error-Mode=any update; then
         err "No se pudieron actualizar todos los índices APT."
         return 1
     fi
@@ -515,14 +656,28 @@ refrescar_indices_diagnostico() {
 }
 
 # Instala un paquete (nombre Debian) si falta. $1 = paquete, $2 = aviso si falla
+# Simulación obligatoria con --only-upgrade --no-remove antes de instalar
 instalar_paquete_si_falta() {
-    local pkg="$1" aviso="$2"
+    local pkg="$1" aviso="$2" simulation
     if paquete_instalado "$pkg"; then
         ok "'${pkg}' ya está instalado."
         return 0
     fi
-    info "'${pkg}' no detectado. Instalando..."
-    apt-get "${APT_OPTS[@]}" install "$pkg"
+    info "'${pkg}' no detectado. Simulando instalación..."
+    if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-install-$pkg" 60 apt-get -s --no-remove install "$pkg" 2>&1); then
+        err "No se pudo simular la instalación de $pkg."
+        printf '%s\n' "$simulation" >&2
+        return 1
+    fi
+    if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
+        err "La instalación de $pkg propone eliminar paquetes. Se cancela por seguridad."
+        return 1
+    fi
+    info "Instalando $pkg..."
+    if ! run_privileged "apt-install-$pkg" 300 apt-get "${APT_OPTS[@]}" --no-remove install "$pkg"; then
+        warn "$aviso"
+        return 1
+    fi
     if paquete_instalado "$pkg"; then
         ok "'${pkg}' se instaló correctamente."
     else
@@ -775,7 +930,18 @@ paso_clock() {
     if ! timedatectl set-ntp true &> /dev/null; then
         info "Servicio de hora no disponible. Instalando systemd-timesyncd..."
         asegurar_listas || return 1
-        if ! apt-get "${APT_OPTS[@]}" --no-remove install systemd-timesyncd ||
+        local simulation
+        info "Simulando instalación de systemd-timesyncd..."
+        if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-install-systemd-timesyncd" 60 apt-get -s --no-remove install systemd-timesyncd 2>&1); then
+            err "No se pudo simular la instalación de systemd-timesyncd."
+            printf '%s\n' "$simulation" >&2
+            return 1
+        fi
+        if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
+            err "La instalación de systemd-timesyncd propone eliminar paquetes. Se cancela por seguridad."
+            return 1
+        fi
+        if ! run_privileged "apt-install-systemd-timesyncd" 300 apt-get "${APT_OPTS[@]}" --no-remove install systemd-timesyncd ||
            ! timedatectl set-ntp true; then
             err "No se pudo activar el servicio de sincronización horaria."
             return 1
@@ -906,7 +1072,7 @@ estado_tools() {
 }
 
 paso_backports_kernel_mesa() {
-    local codename suite kernel paquete apt_status antes despues
+    local codename suite kernel paquete apt_status antes despues simulation
     local -a paquetes especificaciones
 
     codename=$(debian_backports_codename) || return 1
@@ -943,8 +1109,19 @@ paso_backports_kernel_mesa() {
     done
     antes=$(versiones_paquetes "${paquetes[@]}")
 
+    info "Simulando instalación del kernel y controladores Mesa desde $suite..."
+    if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-backports-kernel-mesa" 60 apt-get -s -t "$suite" install "${especificaciones[@]}" 2>&1); then
+        err "No se pudo simular la instalación desde $suite."
+        printf '%s\n' "$simulation" >&2
+        return 1
+    fi
+    if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
+        err "La instalación desde $suite propone eliminar paquetes. Se cancela por seguridad."
+        return 1
+    fi
+
     info "Instalando el kernel y los controladores Mesa desde $suite..."
-    if apt-get "${APT_OPTS[@]}" -t "$suite" install "${especificaciones[@]}"; then
+    if run_privileged "apt-install-backports-kernel-mesa" 300 apt-get "${APT_OPTS[@]}" -t "$suite" install "${especificaciones[@]}"; then
         apt_status=0
     else
         apt_status=$?
@@ -1017,7 +1194,7 @@ plan_revertir_backports() {
         installed=$(dpkg-query -W -f='${Version}' "$paquete" 2>/dev/null || true)
         info "$paquete: ${installed:-no instalado} -> $stable"
     done
-    if ! simulation=$(LC_ALL=C apt-get -s -o Debug::NoLocking=1 --allow-downgrades install "${especificaciones[@]}" 2>&1); then
+    if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-revertir-backports" 60 apt-get -s -o Debug::NoLocking=1 --allow-downgrades install "${especificaciones[@]}" 2>&1); then
         err "Falló la simulación APT; no se realizará ningún cambio."
         printf '%s\n' "$simulation"
         return 1
@@ -1053,7 +1230,7 @@ paso_revertir_backports() {
         specs+=("$paquete=$stable")
     done
     info "Instalando kernel y Mesa de Debian Stable..."
-    if ! LC_ALL=C apt-get "${APT_OPTS[@]}" --allow-downgrades install "${specs[@]}"; then
+    if ! run_privileged "apt-install-revertir-backports" 300 apt-get "${APT_OPTS[@]}" --allow-downgrades install "${specs[@]}"; then
         err "APT no completó la transición a Stable."
         return 1
     fi
@@ -1102,8 +1279,22 @@ paso_flatpak_setup() {
         ok "Flatpak ya está instalado."
     else
         asegurar_listas || return 1
+        local simulation
+        info "Simulando instalación de flatpak y ca-certificates..."
+        if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-install-flatpak" 60 apt-get -s --no-remove install flatpak ca-certificates 2>&1); then
+            err "No se pudo simular la instalación de flatpak."
+            printf '%s\n' "$simulation" >&2
+            return 1
+        fi
+        if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
+            err "La instalación de flatpak propone eliminar paquetes. Se cancela por seguridad."
+            return 1
+        fi
         info "Instalando flatpak..."
-        apt-get "${APT_OPTS[@]}" install flatpak ca-certificates
+        if ! run_privileged "apt-install-flatpak" 300 apt-get "${APT_OPTS[@]}" --no-remove install flatpak ca-certificates; then
+            err "No se pudo instalar Flatpak. Comprueba tus repositorios."
+            return 1
+        fi
         if ! command -v flatpak &> /dev/null; then
             err "No se pudo instalar Flatpak. Comprueba tus repositorios."
             return 1
@@ -1139,8 +1330,22 @@ paso_gnome_plugin() {
     fi
     asegurar_listas || return 1
 
+    local simulation
+    info "Simulando instalación de gnome-software-plugin-flatpak..."
+    if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-install-gnome-software-plugin-flatpak" 60 apt-get -s --no-remove install gnome-software-plugin-flatpak 2>&1); then
+        err "No se pudo simular la instalación de gnome-software-plugin-flatpak."
+        printf '%s\n' "$simulation" >&2
+        return 1
+    fi
+    if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
+        err "La instalación de gnome-software-plugin-flatpak propone eliminar paquetes. Se cancela por seguridad."
+        return 1
+    fi
     info "Instalando gnome-software-plugin-flatpak..."
-    apt-get "${APT_OPTS[@]}" install gnome-software-plugin-flatpak
+    if ! run_privileged "apt-install-gnome-software-plugin-flatpak" 300 apt-get "${APT_OPTS[@]}" --no-remove install gnome-software-plugin-flatpak; then
+        err "No se pudo instalar el plugin. Comprueba tus repositorios."
+        return 1
+    fi
     if paquete_instalado gnome-software-plugin-flatpak; then
         ok "Plugin instalado correctamente."
         info "Cierra y vuelve a abrir GNOME Software (o reinicia la sesión) para verlo."
@@ -1164,8 +1369,22 @@ paso_ext_manager() {
         return 1
     fi
 
+    local simulation
+    info "Simulando instalación de gnome-shell-extension-manager..."
+    if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-install-gnome-shell-extension-manager" 60 apt-get -s --no-remove install gnome-shell-extension-manager 2>&1); then
+        err "No se pudo simular la instalación de gnome-shell-extension-manager."
+        printf '%s\n' "$simulation" >&2
+        return 1
+    fi
+    if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
+        err "La instalación de gnome-shell-extension-manager propone eliminar paquetes. Se cancela por seguridad."
+        return 1
+    fi
     info "Instalando gnome-shell-extension-manager..."
-    apt-get "${APT_OPTS[@]}" install gnome-shell-extension-manager
+    if ! run_privileged "apt-install-gnome-shell-extension-manager" 300 apt-get "${APT_OPTS[@]}" --no-remove install gnome-shell-extension-manager; then
+        err "No se pudo instalar Extension Manager. Comprueba tus repositorios."
+        return 1
+    fi
     if paquete_instalado gnome-shell-extension-manager; then
         ok "Extension Manager instalado correctamente."
     else
@@ -1213,7 +1432,7 @@ huella_plan_apt() {
 paso_upgrade() {
     asegurar_listas || return 1
     local simulation plan
-    if ! simulation=$(LC_ALL=C apt-get -s -o Debug::NoLocking=1 upgrade --with-new-pkgs --no-remove 2>&1); then
+    if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-upgrade" 60 apt-get -s -o Debug::NoLocking=1 upgrade --with-new-pkgs --no-remove 2>&1); then
         err "No se pudo simular la actualización con los índices actuales."
         printf '%s\n' "$simulation"
         return 1
@@ -1228,7 +1447,7 @@ paso_upgrade() {
         return 1
     fi
     info "Actualizando los paquetes del sistema (apt-get upgrade --with-new-pkgs --no-remove)..."
-    if ! apt-get "${APT_OPTS[@]}" upgrade --with-new-pkgs --no-remove; then
+    if ! run_privileged "apt-upgrade" 300 apt-get "${APT_OPTS[@]}" upgrade --with-new-pkgs --no-remove; then
         err "Error durante la actualización de paquetes."
         return 1
     fi
@@ -1254,7 +1473,7 @@ limpiar_dependencias() {
     done
     local simulation plan cambios respuesta aprobado="$AUTOREMOVE_PLAN"
     while :; do
-        if ! simulation=$(LC_ALL=C apt-get -s -o Debug::NoLocking=1 autoremove "$modo" "${conservar[@]}" </dev/null 2>&1); then
+        if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-autoremove-$modo" 60 apt-get -s -o Debug::NoLocking=1 autoremove "$modo" "${conservar[@]}" </dev/null 2>&1); then
             err "No se pudo simular la limpieza de dependencias."
             printf '%s\n' "$simulation"
             return 1
@@ -1287,7 +1506,7 @@ limpiar_dependencias() {
         fi
         aprobado="$plan"
     done
-    if ! apt-get "${APT_OPTS[@]}" autoremove "$modo" "${conservar[@]}" </dev/null; then
+    if ! run_privileged "apt-autoremove-$modo" 300 apt-get "${APT_OPTS[@]}" autoremove "$modo" "${conservar[@]}" </dev/null; then
         err "No se pudieron eliminar las dependencias huérfanas."
         return 1
     fi
@@ -1296,7 +1515,7 @@ limpiar_dependencias() {
 
 paso_autoclean() {
     info "Limpiando paquetes .deb obsoletos del caché (apt-get autoclean)..."
-    if ! apt-get autoclean; then
+    if ! run_privileged "apt-autoclean" 60 apt-get autoclean; then
         err "No se pudo limpiar la caché de paquetes."
         return 1
     fi
@@ -1305,7 +1524,7 @@ paso_autoclean() {
 
 paso_clean_apt() {
     info "Limpiando archivos .deb descargados del caché APT..."
-    if ! apt-get clean; then
+    if ! run_privileged "apt-clean" 60 apt-get clean; then
         err "No se pudo limpiar la caché APT."
         return 1
     fi
@@ -1561,7 +1780,18 @@ nvidia_asegurar_mokutil() {
     command -v mokutil >/dev/null && return 0
     info "Falta mokutil, necesario para comprobar Secure Boot: se instalará."
     asegurar_listas || return 1
-    if ! apt-get "${APT_OPTS[@]}" --no-remove install mokutil; then
+    local simulation
+    info "Simulando instalación de mokutil..."
+    if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-install-mokutil" 60 apt-get -s --no-remove install mokutil 2>&1); then
+        err "No se pudo simular la instalación de mokutil."
+        printf '%s\n' "$simulation" >&2
+        return 1
+    fi
+    if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
+        err "La instalación de mokutil propone eliminar paquetes. Se cancela por seguridad."
+        return 1
+    fi
+    if ! run_privileged "apt-install-mokutil" 300 apt-get "${APT_OPTS[@]}" --no-remove install mokutil; then
         err "No se pudo instalar mokutil, necesario para comprobar Secure Boot."
         return 1
     fi
@@ -1618,7 +1848,7 @@ nvidia_diagnostico_dkms() {
 nvidia_elegir_modulo() {
     local version="$1" temporal resultado estado
     temporal=$(mktemp -d) || return 1
-    if ! (cd "$temporal" && apt-get download "nvidia-driver=$version" >&2); then
+    if ! (cd "$temporal" && run_privileged "apt-download-nvidia-driver" 60 apt-get download "nvidia-driver=$version" >&2); then
         rm -rf -- "$temporal"; return 1
     fi
     resultado=$(python3 "$(dirname "${BASH_SOURCE[0]}")/aio_core/nvidia.py"         "$temporal" "$version" "$(nvidia_pci_root)")
@@ -1767,14 +1997,14 @@ nvidia_configurar_wiki() {
 # Instala con APT sin permitir eliminaciones.
 nvidia_apt_seguro() {
     local simulation
-    simulation=$(LC_ALL=C apt-get -s --no-remove install "$@" 2>&1) || {
+    simulation=$(LC_ALL=C run_privileged "apt-simulate-nvidia-apt-seguro" 60 apt-get -s --no-remove install "$@" 2>&1) || {
         err "No se pueden resolver las dependencias sin eliminaciones: $simulation"; return 1;
     }
     if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
         err "APT propone eliminar paquetes. Se cancela por seguridad."
         return 1
     fi
-    apt-get "${APT_OPTS[@]}" --no-remove install "$@"
+    run_privileged "apt-install-nvidia-apt-seguro" 300 apt-get "${APT_OPTS[@]}" --no-remove install "$@"
 }
 
 paso_nvidia_driver() {
@@ -1837,7 +2067,7 @@ paso_nvidia_driver() {
     fi
     local extra=()
     mapfile -t extra < <(nvidia_paquetes_extra)
-    simulation=$(LC_ALL=C apt-get -s --no-remove install "$headers" "nvidia-driver=$candidate" "$modulo=$candidate" "${extra[@]}" 2>&1) || {
+    simulation=$(LC_ALL=C run_privileged "apt-simulate-nvidia-driver" 60 apt-get -s --no-remove install "$headers" "nvidia-driver=$candidate" "$modulo=$candidate" "${extra[@]}" 2>&1) || {
         err "No se pueden resolver las dependencias sin eliminaciones: $simulation"; return 1;
     }
     if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
@@ -1849,7 +2079,7 @@ paso_nvidia_driver() {
         info "GPU Intel/AMD y NVIDIA presentes: no se modifica la configuración de pantallas. PRIME puede estar disponible."
         info "PRIME: __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia programa"
     fi
-    if ! apt-get "${APT_OPTS[@]}" --no-remove install "$headers" "nvidia-driver=$candidate" "$modulo=$candidate" "${extra[@]}"; then
+    if ! run_privileged "apt-install-nvidia-driver" 300 apt-get "${APT_OPTS[@]}" --no-remove install "$headers" "nvidia-driver=$candidate" "$modulo=$candidate" "${extra[@]}"; then
         err "Fallo instalando NVIDIA. Consulta logs de DKMS y APT."
         return 1
     fi
@@ -2022,7 +2252,7 @@ actualizar_aiodebian_estable() (
     if [ "$accion" = comprobar ]; then
         disponible=$(aiodebian_candidata_estable) || return 1
         if dpkg --compare-versions "$disponible" gt "$instalada"; then
-            simulation=$(LC_ALL=C apt-get -s --only-upgrade --no-remove install "aio-debian-gui=$disponible" 2>&1) || {
+            simulation=$(LC_ALL=C run_privileged "apt-simulate-aiodebian-estable" 60 apt-get -s --only-upgrade --no-remove install "aio-debian-gui=$disponible" 2>&1) || {
                 err "No se pudo simular la actualización de AiO Debian GUI."
                 printf '%s\n' "$simulation" >&2
                 return 1
@@ -2047,7 +2277,7 @@ actualizar_aiodebian_estable() (
         err "La actualización estable de AiO Debian GUI ya no es aplicable."
         return 1
     fi
-    simulation=$(LC_ALL=C apt-get -s --only-upgrade --no-remove install "aio-debian-gui=$completa" 2>&1) || {
+    simulation=$(LC_ALL=C run_privileged "apt-simulate-aiodebian-estable" 60 apt-get -s --only-upgrade --no-remove install "aio-debian-gui=$completa" 2>&1) || {
         err "No se pudo simular la actualización de AiO Debian GUI."
         printf '%s\n' "$simulation" >&2
         return 1
@@ -2056,7 +2286,7 @@ actualizar_aiodebian_estable() (
         err "La actualización de AiO Debian GUI propone eliminar paquetes. Se cancela por seguridad."
         return 1
     fi
-    apt-get "${APT_OPTS[@]}" --only-upgrade --no-remove install "aio-debian-gui=$completa" || {
+    run_privileged "apt-install-aiodebian-estable" 300 apt-get "${APT_OPTS[@]}" --only-upgrade --no-remove install "aio-debian-gui=$completa" || {
         err "No se pudo actualizar AiO Debian GUI mediante APT."
         return 1
     }
@@ -2071,7 +2301,7 @@ actualizar_aiodebian_testing() (
     paquete_instalado aio-debian-gui || { err "AiO Debian GUI no está instalado como DEB."; return 1; }
     instalada=$(dpkg-query -W -f='${Version}' aio-debian-gui) || return 1
     if [ "$accion" = instalar ]; then
-        if ! auditoria=$(LC_ALL=C timeout --kill-after=2s 12s dpkg --audit 2>&1) || [ -n "$auditoria" ]; then
+        if ! auditoria=$(LC_ALL=C run_privileged "dpkg-audit" 30 dpkg --audit 2>&1) || [ -n "$auditoria" ]; then
             err "Hay una incidencia de dpkg pendiente. Revisa el diagnóstico antes de actualizar AiO."
             [ -z "$auditoria" ] || printf '%s\n' "$auditoria" >&2
             return 1
@@ -2085,7 +2315,7 @@ actualizar_aiodebian_testing() (
     local opciones=(-o "Dir::Etc::sourcelist=$temporal/testing.list"
                     -o 'Dir::Etc::sourceparts=-' -o "Dir::State::lists=$temporal/lists"
                     -o 'Dir::Cache::pkgcache=' -o 'Dir::Cache::srcpkgcache=')
-    apt-get "${opciones[@]}" -o APT::Update::Error-Mode=any update || return 1
+    run_privileged "apt-update-testing" 180 apt-get "${opciones[@]}" -o APT::Update::Error-Mode=any update || return 1
     disponible=$(LC_ALL=C apt-cache "${opciones[@]}" madison aio-debian-gui |
         awk -F '|' 'NR == 1 { gsub(/[[:space:]]/, "", $2); print $2 }')
     [[ "$disponible" =~ $patron ]] || { err "No hay una versión válida en el canal Testing."; return 1; }
@@ -2114,7 +2344,7 @@ actualizar_aiodebian_testing() (
         chown _apt "$temporal/download" || return 1
     fi
     cd "$temporal/download" || return 1
-    apt-get "${opciones[@]}" download "aio-debian-gui=$disponible" || return 1
+    run_privileged "apt-download-aiodebian-testing" 60 apt-get "${opciones[@]}" download "aio-debian-gui=$disponible" || return 1
     local paquetes=(./*.deb)
     [ "${#paquetes[@]}" -eq 1 ] || return 1
     [ -f "${paquetes[0]}" ] && [ ! -L "${paquetes[0]}" ] || return 1
@@ -2126,7 +2356,7 @@ actualizar_aiodebian_testing() (
     chmod 0755 "$temporal/verified" || return 1
     [ "$(dpkg-deb -f "$archivo" Package)" = aio-debian-gui ] &&
         [ "$(dpkg-deb -f "$archivo" Version)" = "$disponible" ] || return 1
-    apt-get "${APT_OPTS[@]}" --only-upgrade --no-remove install "$archivo"
+    run_privileged "apt-install-aiodebian-testing" 300 apt-get "${APT_OPTS[@]}" --only-upgrade --no-remove install "$archivo"
 )
 
 main() {

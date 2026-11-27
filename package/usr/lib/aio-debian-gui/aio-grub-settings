@@ -27,6 +27,18 @@ SCRIPT_CHECK_TIMEOUT = 30
 BACKUP_SUFFIX = ".aio-backup"
 
 
+def es_flatpak():
+    """Detecta si se ejecuta dentro de un sandbox Flatpak."""
+    return bool(os.environ.get("FLATPAK_ID"))
+
+
+def comando_host(*argumentos):
+    """Devuelve el comando para ejecutar en el host (flatpak-spawn --host en Flatpak)."""
+    if es_flatpak():
+        return ["flatpak-spawn", "--host", *argumentos]
+    return list(argumentos)
+
+
 def menu_entries(config):
     entries = []
     submenus = []
@@ -112,7 +124,7 @@ def os_prober_disabled(defaults):
               'printf %s "${GRUB_DISABLE_OS_PROBER:-true}"')
     try:
         result = subprocess.run(
-            ["/bin/sh", "-c", script, "sh", str(defaults), str(defaults.with_name("grub.d"))],
+            comando_host("/bin/sh", "-c", script, "sh", str(defaults), str(defaults.with_name("grub.d"))),
             stdin=subprocess.DEVNULL, capture_output=True, text=True,
             errors="replace", timeout=5, check=True,
         )
@@ -124,7 +136,7 @@ def os_prober_disabled(defaults):
 def grub_environment(config):
     try:
         result = subprocess.run(
-            ["/usr/bin/grub-editenv", str(config.with_name("grubenv")), "list"],
+            comando_host("/usr/bin/grub-editenv", str(config.with_name("grubenv")), "list"),
             stdin=subprocess.DEVNULL, capture_output=True, text=True,
             errors="replace", timeout=5, check=True,
         )
@@ -263,7 +275,7 @@ def regenerate(config, required_entry):
         candidate = Path(tmp) / "grub.cfg"
         try:
             subprocess.run(
-                ["/usr/sbin/grub-mkconfig", "-o", str(candidate)], stdin=subprocess.DEVNULL,
+                comando_host("/usr/sbin/grub-mkconfig", "-o", str(candidate)), stdin=subprocess.DEVNULL,
                 capture_output=True, text=True, errors="replace", check=True,
                 timeout=REGENERATE_TIMEOUT,
             )
@@ -279,7 +291,7 @@ def regenerate(config, required_entry):
             raise ValueError("The selected entry is missing from the new GRUB menu.")
         try:
             subprocess.run(
-                ["/usr/bin/grub-script-check", str(candidate)], stdin=subprocess.DEVNULL,
+                comando_host("/usr/bin/grub-script-check", str(candidate)), stdin=subprocess.DEVNULL,
                 capture_output=True, text=True, errors="replace", check=True,
                 timeout=SCRIPT_CHECK_TIMEOUT,
             )
@@ -310,10 +322,23 @@ def main():
     if os.geteuid() != 0:
         raise ValueError("Administrator authorization is required.")
     os.environ["PATH"] = "/usr/sbin:/usr/bin:/sbin:/bin"
-    if not os.access("/usr/sbin/grub-mkconfig", os.X_OK):
-        raise ValueError("grub-mkconfig is not installed.")
-    if not os.access("/usr/bin/grub-script-check", os.X_OK):
-        raise ValueError("grub-script-check is not installed.")
+    # Verificar grub-mkconfig y grub-script-check en el host (o en flatpak extension)
+    try:
+        subprocess.run(
+            comando_host("/usr/sbin/grub-mkconfig", "--version"),
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            timeout=5, check=True,
+        )
+    except (OSError, subprocess.SubprocessError):
+        raise ValueError("grub-mkconfig is not installed on host.")
+    try:
+        subprocess.run(
+            comando_host("/usr/bin/grub-script-check", "--version"),
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            timeout=5, check=True,
+        )
+    except (OSError, subprocess.SubprocessError):
+        raise ValueError("grub-script-check is not installed on host.")
     args = sys.argv[1:]
     if args == ["status"]:
         action, request = "status", None

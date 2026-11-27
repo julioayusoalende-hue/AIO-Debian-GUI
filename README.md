@@ -68,15 +68,14 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.4.9
+### Lo nuevo en la 1.5.0
 
-- Coordinador global de operaciones: las páginas se bloquean durante cualquier operación administrativa y no se permiten dos tareas privilegiadas simultáneas.
-- Autoactualización estable segura: audita `dpkg`, simula sin eliminaciones e instala exactamente la versión aprobada.
-- Fuentes APT transaccionales, con respaldo previo y sustitución atómica.
-- `autoremove` usa un canal independiente de stdin.
-- NVIDIA registra la regeneración correcta de dracut y reintenta la tarea si falla.
-- GRUB se valida con `grub-script-check`, exige entradas arrancables y conserva una copia de recuperación.
-- Salud es de solo lectura por defecto, pide consentimiento antes de actualizar APT y usa índices frescos sin volver a pedir privilegios.
+- API genérica de extensiones: las distribuciones añaden branding, páginas, onboarding y pasos privilegiados sin modificar el core; AyusOS pasa a ser un paquete independiente.
+- Accesibilidad: roles ATK, nombres accesibles en botones de icono, regiones en vivo, foco visible y soporte de `prefers-contrast`.
+- La autoactualización en Flatpak y AppImage consulta los metadatos internos (versión y arquitectura) antes de ofrecer la actualización.
+- Cada operación privilegiada se supervisa con lock, timeout y `setsid` cuando se ejecuta como root.
+- Nuevo workflow de integración real en CI (Debian 12/13 y Ubuntu 24.04/26.04) con ciclo de instalación, purge y reinstalación.
+- Empaquetado Flatpak con manifiesto, script de construcción y pruebas de metadatos.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -84,7 +83,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.4.9**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.5.0**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -108,10 +107,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.4.9:
+Para la versión 1.5.0:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.4.9_all.deb
+sudo apt install ./aio-debian-gui_1.5.0_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.
@@ -178,6 +177,8 @@ cd AIO-Debian-GUI
 
 Las comprobaciones gráficas requieren PyGObject, GTK 3, VTE y una pantalla disponible o virtual. El entorno de CI está definido en los [workflows](.github/workflows).
 
+- [Guía de contribución](CONTRIBUTING.md): entorno, tests, estilo, flujo de trabajo, i18n, accesibilidad, empaquetado, GPG.
+- [Claves GPG y verificación](docs/gpg.md): firmar y comprobar paquetes DEB, repositorio APT e integración host.
 - [Comunicar un problema](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/issues): incluye versión de AiO, distribución, escritorio y pasos para reproducirlo. Retira credenciales de los registros antes de compartirlos.
 - [Consultar el código de testing](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/tree/testing).
 - [Historial de cambios](CHANGELOG.md).

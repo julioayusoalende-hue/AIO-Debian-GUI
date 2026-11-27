@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """Comprueba el DEB host y el repositorio firmado sin instalar paquetes."""
-import hashlib
-import gzip
 import fcntl
+import gzip
+import hashlib
 import importlib.util
 import io
 import lzma
 import os
-from pathlib import Path
 import re
 import select
 import shutil
@@ -16,6 +15,7 @@ import subprocess
 import sys
 import tarfile
 import time
+from pathlib import Path
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]

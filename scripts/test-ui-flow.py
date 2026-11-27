@@ -3,16 +3,17 @@
 import importlib.machinery
 import importlib.util
 import os
-from pathlib import Path
 import sys
 import tempfile
 import time
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import gi
+
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GLib
+from gi.repository import GLib, Gtk
 
 if not Gtk.init_check([])[0]:
     print('Sin pantalla: pruebas GTK de flujo omitidas (usar xvfb-run).')
@@ -23,6 +24,7 @@ app = importlib.util.module_from_spec(spec)
 loader.exec_module(app)
 
 from aio_core import health_dashboard as _hd
+
 _ofrecer_real = _hd.HealthDashboard._ofrecer_solucion
 _hd.HealthDashboard._ofrecer_solucion = lambda self, results: False
 
@@ -243,6 +245,42 @@ for formato in ('appimage', 'flatpak', 'deb'):
                 status.assert_called_once_with(inicial=True)
         window.destroy()
 
+
+# version_app(): en Flatpak y AppImage usa metadato interno; en DEB usa dpkg-query
+with patch.object(app, 'formato_actualizacion', return_value='flatpak'), \
+     patch.object(app, 'es_flatpak', return_value=True):
+    assert app.version_app() == app.AIO_DEBIAN_GUI_VERSION
+
+with patch.object(app, 'formato_actualizacion', return_value='appimage'), \
+     patch.dict(os.environ, {'APPDIR': '/tmp/appdir'}):
+    assert app.version_app() == app.AIO_DEBIAN_GUI_VERSION
+
+# formato_actualizacion(): detecta por variable de entorno AIO_DEBIAN_GUI_FORMAT
+with patch.dict(os.environ, {'AIO_DEBIAN_GUI_FORMAT': 'flatpak'}, clear=True):
+    assert app.formato_actualizacion() == 'flatpak'
+with patch.dict(os.environ, {'AIO_DEBIAN_GUI_FORMAT': 'appimage'}, clear=True):
+    assert app.formato_actualizacion() == 'appimage'
+with patch.dict(os.environ, {'AIO_DEBIAN_GUI_FORMAT': 'deb'}, clear=True):
+    assert app.formato_actualizacion() == 'deb'
+with patch.dict(os.environ, {'AIO_DEBIAN_GUI_FORMAT': 'snap'}, clear=True):
+    assert app.formato_actualizacion() == 'snap'
+
+# Arquitectura AppImage: mapea platform.machine() a x86_64, aarch64 y rechaza no soportadas
+import platform
+
+from aio_core import updates as core_updates
+
+for maquina, esperada in (('x86_64', 'x86_64'), ('amd64', 'x86_64'), ('aarch64', 'aarch64'), ('arm64', 'aarch64')):
+    with patch.object(platform, 'machine', return_value=maquina):
+        assert core_updates.arquitectura_appimage() == esperada
+
+for maquina in ('riscv64', 'ppc64le', 's390x', 'i386', 'i686'):
+    with patch.object(platform, 'machine', return_value=maquina):
+        try:
+            core_updates.arquitectura_appimage()
+            raise AssertionError("Debería haber fallado para " + maquina)
+        except RuntimeError as exc:
+            assert 'no soportada' in str(exc) or 'unsupported' in str(exc).lower()
 for sincronizado in (True, False):
     window = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
     if window.pagina_software is None:

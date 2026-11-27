@@ -25,8 +25,17 @@ if [[ "$testing_version" =~ ^([0-9]+):([0-9]+)\.([0-9]+)\.([0-9]+)~testing\.[1-9
     else
         printf '%s.%s.%s~testing.%s.%s\n' "$stable_major" "$stable_minor" "$((10#$stable_patch + 1))" "$3" "$4"
     fi
-elif [[ "$testing_version" =~ ^[0-9]+:[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    printf '%s.%s.%s~testing.%s.%s\n' "$stable_major" "$stable_minor" "$((10#$stable_patch + 1))" "$3" "$4"
+elif [[ "$testing_version" =~ ^([0-9]+):([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+    c_major=${BASH_REMATCH[2]} c_minor=${BASH_REMATCH[3]} c_patch=${BASH_REMATCH[4]}
+    # Si el control ya anuncia una versión superior a la estable (salto de
+    # minor/major), las pruebas se basan en ella; si no, en el siguiente patch.
+    if [ "$c_major" -gt "$stable_major" ] ||
+       { [ "$c_major" = "$stable_major" ] && [ "$c_minor" -gt "$stable_minor" ]; } ||
+       { [ "$c_major" = "$stable_major" ] && [ "$c_minor" = "$stable_minor" ] && [ "$c_patch" -gt "$stable_patch" ]; }; then
+        printf '%s.%s.%s~testing.%s.%s\n' "$c_major" "$c_minor" "$c_patch" "$3" "$4"
+    else
+        printf '%s.%s.%s~testing.%s.%s\n' "$stable_major" "$stable_minor" "$((10#$stable_patch + 1))" "$3" "$4"
+    fi
 else
     echo "Versión testing no válida." >&2
     exit 2

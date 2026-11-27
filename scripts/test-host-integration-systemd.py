@@ -4,9 +4,9 @@ import base64
 import hashlib
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 if os.environ.get("AIO_HOST_INTEGRATION_TEST") != "1":
     print("Integración real omitida; requiere una VM de CI efímera.")

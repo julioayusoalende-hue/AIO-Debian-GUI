@@ -1,10 +1,15 @@
 # Cambios
 
-## Sin publicar
+## 1.5.0
 
 - API genérica de extensiones: las distribuciones pueden añadir branding, páginas, onboarding y pasos privilegiados sin modificar el core.
 - El helper carga asistentes de extensión y hooks de estado desde `/usr/lib/aio-debian-gui/extensions/`.
 - El gestor de software y el branding específico de AyusOS se trasladan al paquete independiente `ayusos-control-center`; aio-debian-gui queda agnóstico.
+- Accesibilidad: roles ATK y nombres accesibles en los botones de icono, regiones en vivo para los anuncios de estado, foco visible y CSS semántico con soporte de `prefers-contrast`.
+- La autoactualización en Flatpak y AppImage consulta los metadatos internos (versión disponible y arquitectura detectada) antes de ofrecer la actualización.
+- `run_privileged` supervisa cada operación privilegiada con lock, timeout y `setsid` cuando se ejecuta como root, y mantiene un modo de prueba sin root para los stubs de shell.
+- Nuevo workflow de integración real en CI: matriz Debian 12/13 y Ubuntu 24.04/26.04 con ciclo de instalación, verificación, purge y reinstalación, además de `check.sh`, pytest y Ruff.
+- Empaquetado Flatpak: manifiesto, script de construcción y pruebas de metadatos; documentación de contribución y de firma GPG.
 
 ## 1.4.9
 

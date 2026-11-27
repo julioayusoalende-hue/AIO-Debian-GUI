@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """Pruebas sin tocar APT ni el sistema anfitrión."""
-import importlib.util
 import hashlib
+import importlib.util
 import json
 import subprocess
 from pathlib import Path
-from unittest.mock import patch
 from types import SimpleNamespace
+from unittest.mock import patch
 
 path = Path(__file__).resolve().parents[1] / "package/usr/lib/aio-debian-gui/aio_core/preflight.py"
 spec = importlib.util.spec_from_file_location("preflight", path)
 import sys
+
 mod = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = mod
 spec.loader.exec_module(mod)

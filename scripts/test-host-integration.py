@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """Prueba la guía sin ejecutar operaciones privilegiadas reales."""
-import importlib.util
 import base64
-from contextlib import nullcontext
 import fcntl
 import hashlib
+import importlib.util
 import io
 import json
 import os
-from pathlib import Path
 import stat
 import subprocess
 import sys
 import tempfile
+from contextlib import nullcontext
+from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
@@ -515,7 +515,8 @@ esac
 
         def fake_run(args, timeout=900):
             commands.append(args)
-            ok = lambda out="": SimpleNamespace(returncode=0, stdout=out, stderr="")
+            def ok(out=""):
+                return SimpleNamespace(returncode=0, stdout=out, stderr="")
             if args[0].endswith("dpkg-query") and args[1] == "-W":
                 name = args[-1]
                 value = "installed" if mode == "deb" and name == "aio-debian-gui" else \

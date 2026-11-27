@@ -1,0 +1,77 @@
+{
+  "app-id": "io.github.julioayusoalende_hue.aio_debian_gui",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "47",
+  "sdk": "org.gnome.Sdk",
+  "command": "aio-debian-gui",
+  "finish-args": [
+    "--share=network",
+    "--share=ipc",
+    "--socket=wayland",
+    "--socket=x11",
+    "--socket=system-bus",
+    "--socket=session-bus",
+    "--talk-name=org.freedesktop.Flatpak",
+    "--talk-name=org.freedesktop.portal.Desktop",
+    "--talk-name=org.freedesktop.portal.FileChooser",
+    "--talk-name=org.freedesktop.portal.Background",
+    "--talk-name=org.freedesktop.Notifications",
+    "--filesystem=host:ro",
+    "--filesystem=host/etc:ro",
+    "--filesystem=host/boot:ro",
+    "--filesystem=host/usr:ro",
+    "--filesystem=host/var/lib/flatpak:ro",
+    "--filesystem=host/var/lib/snapd:ro",
+    "--device=all",
+    "--persist=.config/aio-debian-gui",
+    "--persist=.local/share/aio-debian-gui"
+  ],
+  "build-options": {
+    "build-args": [
+      "--share=network",
+      "--filesystem=host"
+    ],
+    "env": {
+      "PYTHONDONTWRITEBYTECODE": "1"
+    }
+  },
+  "cleanup": [
+    "/include",
+    "/lib/pkgconfig",
+    "/man",
+    "/share/doc",
+    "/share/gtk-doc",
+    "/share/man",
+    "*.a",
+    "*.la",
+    "/bin/python*-config",
+    "/lib/python*/dist-packages/*/__pycache__",
+    "/lib/python*/dist-packages/*.pyc",
+    "/lib/python*/dist-packages/*.pyo"
+  ],
+  "modules": [
+    {
+      "name": "aio-debian-gui",
+      "buildsystem": "simple",
+      "build-commands": [
+        "install -Dm755 usr/bin/aio-debian-gui /app/bin/aio-debian-gui",
+        "install -Dm644 usr/share/applications/aio-debian-gui.desktop /app/share/applications/aio-debian-gui.desktop",
+        "install -Dm644 usr/share/metainfo/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml /app/share/metainfo/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml",
+        "for size in 48 64 128 256 512; do install -Dm644 usr/share/icons/hicolor/${size}x${size}/apps/aio-debian-gui.png /app/share/icons/hicolor/${size}x${size}/apps/aio-debian-gui.png; done",
+        "cp -r usr/lib/aio-debian-gui/aio_core /app/lib/aio-debian-gui/",
+        "install -Dm755 usr/lib/aio-debian-gui/aio-grub-settings /app/lib/aio-debian-gui/aio-grub-settings",
+        "install -Dm755 usr/lib/aio-debian-gui/aio-apt-sources-backup /app/lib/aio-debian-gui/aio-apt-sources-backup",
+        "install -Dm755 usr/lib/aio-debian-gui/aio-clock-enable /app/lib/aio-debian-gui/aio-clock-enable",
+        "install -Dm755 usr/lib/aio-debian-gui/aio-debian-gui-helper /app/lib/aio-debian-gui/aio-debian-gui-helper",
+        "install -Dm644 usr/share/aio-debian-gui/release-notes.txt /app/share/aio-debian-gui/release-notes.txt",
+        "install -Dm644 usr/share/polkit-1/actions/es.aiodebian.gui.policy /app/share/polkit-1/actions/es.aiodebian.gui.policy"
+      ],
+      "sources": [
+        {
+          "type": "dir",
+          "path": "package"
+        }
+      ]
+    }
+  ]
+}

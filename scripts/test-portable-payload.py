@@ -5,10 +5,10 @@ import importlib.machinery
 import json
 import os
 import shutil
-import sys
-from pathlib import Path
 import subprocess
+import sys
 import tempfile
+from pathlib import Path
 from unittest import mock
 
 root = Path(__file__).resolve().parents[1]

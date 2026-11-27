@@ -2,6 +2,7 @@
 """Evita mezclar GDK 4 con GTK 3 al importar la GUI."""
 import ast
 from pathlib import Path
+
 path = Path("package/usr/bin/aio-debian-gui")
 tree = ast.parse(path.read_text(encoding="utf-8"))
 required = {}

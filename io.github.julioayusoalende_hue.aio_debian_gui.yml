@@ -1,0 +1,131 @@
+app-id: io.github.julioayusoalende_hue.aio_debian_gui
+runtime: org.gnome.Platform
+runtime-version: '47'
+sdk: org.gnome.Sdk
+command: aio-debian-gui
+base: org.gnome.Platform
+base-version: '47'
+finish-args:
+  # D-Bus access for system services
+  - --system-talk-name=org.freedesktop.systemd1
+  - --system-talk-name=org.freedesktop.UDisks2
+  - --system-talk-name=org.freedesktop.PolicyKit1
+  # Filesystem access for system configuration (read-only for safety)
+  - --filesystem=host:ro
+  - --filesystem=host/etc:ro
+  - --filesystem=host/boot:ro
+  - --filesystem=host/usr:ro
+  - --filesystem=host/var/lib/flatpak:ro
+  - --filesystem=host/var/cache/apt:ro
+  - --filesystem=host/var/log:ro
+  - --filesystem=host/run/udev:ro
+  - --filesystem=host/sys:ro
+  - --filesystem=host/proc:ro
+  - --filesystem=host/dev/disk:ro
+  # GRUB configuration access (requires root via helper - write access)
+  - --filesystem=host/etc/default:rw
+  - --filesystem=host/boot/grub:rw
+  - --filesystem=host/usr/sbin/grub-mkconfig:x
+  - --filesystem=host/usr/bin/grub-script-check:x
+  - --filesystem=host/usr/sbin/update-grub:x
+  # Package management
+  - --filesystem=host/var/lib/dpkg:ro
+  - --filesystem=host/var/lib/apt:ro
+  # Systemd and services
+  - --talk-name=org.freedesktop.systemd1
+  # Polkit for privileged operations
+  - --talk-name=org.freedesktop.PolicyKit1
+  # Network access for updates
+  - --share=network
+  # Device access for hardware detection
+  - --device=dri
+  # X11 and Wayland
+  - --socket=x11
+  - --socket=wayland
+  # PulseAudio/PipeWire for audio
+  - --socket=pulseaudio
+  # CUPS for printing
+  - --talk-name=org.cups.cupsd
+  # D-Bus for desktop integration
+  - --talk-name=org.gnome.Shell
+  - --talk-name=org.freedesktop.Notifications
+  # Flatpak spawn for host integration
+  - --allow=devel
+  - --env=FLATPAK_ID=io.github.julioayusoalende_hue.aio_debian_gui
+cleanup:
+  - /include
+  - /lib/pkgconfig
+  - /man
+  - /share/doc
+  - /share/man
+  - /share/gtk-doc
+  - '*.la'
+  - '*.a'
+modules:
+  - name: aio-debian-gui
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/bin /app/lib/aio-debian-gui/aio_core /app/share/applications /app/share/metainfo /app/share/icons/hicolor/48x48/apps /app/share/icons/hicolor/64x64/apps /app/share/icons/hicolor/128x128/apps /app/share/icons/hicolor/256x256/apps /app/share/icons/hicolor/512x512/apps /app/share/aio-debian-gui/recommended-icons /app/share/aio-debian-gui/backup-icons /app/share/polkit-1/actions
+      - install -m 755 package/usr/bin/aio-debian-gui /app/bin/aio-debian-gui
+      - cp -r package/usr/lib/aio-debian-gui/aio_core/* /app/lib/aio-debian-gui/aio_core/
+      - install -m 755 package/usr/lib/aio-debian-gui/aio-debian-gui-helper /app/lib/aio-debian-gui/aio-debian-gui-helper
+      - install -m 755 package/usr/lib/aio-debian-gui/aio-grub-settings /app/lib/aio-debian-gui/aio-grub-settings
+      - install -m 755 package/usr/lib/aio-debian-gui/aio-apt-sources-backup /app/lib/aio-debian-gui/aio-apt-sources-backup
+      - install -m 755 package/usr/lib/aio-debian-gui/aio-clock-enable /app/lib/aio-debian-gui/aio-clock-enable
+      - install -m 644 package/usr/share/applications/aio-debian-gui.desktop /app/share/applications/
+      - install -m 644 package/usr/share/metainfo/io.github.julioayusoalende_hue.aio_debian_gui.metainfo.xml /app/share/metainfo/
+      - install -m 644 package/usr/share/icons/hicolor/48x48/apps/aio-debian-gui.png /app/share/icons/hicolor/48x48/apps/
+      - install -m 644 package/usr/share/icons/hicolor/64x64/apps/aio-debian-gui.png /app/share/icons/hicolor/64x64/apps/
+      - install -m 644 package/usr/share/icons/hicolor/128x128/apps/aio-debian-gui.png /app/share/icons/hicolor/128x128/apps/
+      - install -m 644 package/usr/share/icons/hicolor/256x256/apps/aio-debian-gui.png /app/share/icons/hicolor/256x256/apps/
+      - install -m 644 package/usr/share/icons/hicolor/512x512/apps/aio-debian-gui.png /app/share/icons/hicolor/512x512/apps/
+      - cp -r package/usr/share/aio-debian-gui/recommended-icons/* /app/share/aio-debian-gui/recommended-icons/
+      - cp -r package/usr/share/aio-debian-gui/backup-icons/* /app/share/aio-debian-gui/backup-icons/
+      - install -m 644 package/usr/share/polkit-1/actions/es.aiodebian.gui.policy /app/share/polkit-1/actions/
+      # Create wrapper script for flatpak-spawn host integration
+      - |
+        cat > /app/bin/aio-debian-gui-wrapper <<'EOF'
+        #!/bin/sh
+        export FLATPAK_ID=io.github.julioayusoalende_hue.aio_debian_gui
+        exec /app/bin/aio-debian-gui "$@"
+        EOF
+      - chmod 755 /app/bin/aio-debian-gui-wrapper
+    sources:
+      - type: dir
+        path: package
+        dest-filename: package
+    # Ensure we build for both x86_64 and aarch64
+    only-arches:
+      - x86_64
+      - aarch64
+
+  - name: host-tools
+    buildsystem: simple
+    build-commands:
+      # Create symlinks to host tools needed for GRUB management
+      # These tools are accessed via flatpak-spawn --host
+      - mkdir -p /app/usr/sbin /app/usr/bin
+      # grub-mkconfig: regenerates GRUB configuration
+      - ln -sf /usr/sbin/grub-mkconfig /app/usr/sbin/grub-mkconfig
+      # grub-script-check: validates GRUB configuration syntax
+      - ln -sf /usr/bin/grub-script-check /app/usr/bin/grub-script-check
+      # update-grub: Debian/Ubuntu wrapper for grub-mkconfig
+      - ln -sf /usr/sbin/update-grub /app/usr/sbin/update-grub
+      # os-prober: detects other operating systems
+      - ln -sf /usr/bin/os-prober /app/usr/bin/os-prober
+      # dpkg-query: checks package installation status
+      - ln -sf /usr/bin/dpkg-query /app/usr/bin/dpkg-query
+      # apt: package management
+      - ln -sf /usr/bin/apt /app/usr/bin/apt
+      # apt-get: package management
+      - ln -sf /usr/bin/apt-get /app/usr/bin/apt-get
+      # systemctl: service management
+      - ln -sf /usr/bin/systemctl /app/usr/bin/systemctl
+      # pkexec: privilege escalation
+      - ln -sf /usr/bin/pkexec /app/usr/bin/pkexec
+      # flatpak-spawn: host integration
+      - ln -sf /usr/bin/flatpak-spawn /app/usr/bin/flatpak-spawn
+    sources: []
+    only-arches:
+      - x86_64
+      - aarch64

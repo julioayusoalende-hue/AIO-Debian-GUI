@@ -13,7 +13,6 @@ sys.dont_write_bytecode = True
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
 
-
 loader = importlib.machinery.SourceFileLoader("aio_debian_gui_test", sys.argv[1])
 spec = importlib.util.spec_from_loader(loader.name, loader)
 app = importlib.util.module_from_spec(spec)
@@ -71,7 +70,7 @@ def solo_primera_pagina_visible(ventana):
 
 
 if Gtk.init_check([])[0]:
-    for idioma, subtitulo in (
+    for idioma, _subtitulo in (
         ("en", "System maintenance and configuration"),
         ("fr", "Maintenance et configuration du système"),
         ("zh", "系统维护与配置"),

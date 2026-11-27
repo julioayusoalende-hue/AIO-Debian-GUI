@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Round trip and failure recovery against a temporary APT directory."""
-from importlib.machinery import SourceFileLoader
 import importlib.util
 import json
-from pathlib import Path
 import tempfile
+from importlib.machinery import SourceFileLoader
+from pathlib import Path
 from unittest.mock import patch
 
 path = Path("package/usr/lib/aio-debian-gui/aio-apt-sources-backup")

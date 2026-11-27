@@ -7,7 +7,6 @@ from unittest.mock import Mock
 sys.path.insert(0, os.path.abspath("package/usr/lib/aio-debian-gui"))
 from aio_core.gtk_appearance import GLib, MonitorTemaSistema
 
-
 monitor = MonitorTemaSistema.__new__(MonitorTemaSistema)
 monitor.modo = "sistema"
 monitor._creando = False

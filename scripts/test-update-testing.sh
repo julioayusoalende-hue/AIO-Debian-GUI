@@ -8,6 +8,12 @@ paquete_instalado() { [ "$1" = aio-debian-gui ]; }
 dpkg-query() { printf '%s\n' "$version_instalada_mock"; }
 auditoria_mock=
 timeout() { printf '%s' "$auditoria_mock"; }
+dpkg() {
+    case "$1" in
+        --audit) [ -z "$auditoria_mock" ] || printf '%s\n' "$auditoria_mock"; return 0 ;;
+        *) command dpkg "$@" ;;
+    esac
+}
 hash_mock=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 apt-cache() {
     if [[ " $* " == *' show '* ]]; then

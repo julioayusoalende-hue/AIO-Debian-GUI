@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """A compatible scheduler must never enter the privileged installer."""
 import json
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'package/usr/lib/aio-debian-gui'))
-from aio_core import host_integration as integration, scheduler
+from aio_core import host_integration as integration
+from aio_core import scheduler
 
 report = {'available': True, 'version': scheduler.VERSION, 'config': dict(scheduler.DEFAULT)}
 def result(data, code=0):

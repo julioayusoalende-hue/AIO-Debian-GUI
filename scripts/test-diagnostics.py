@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Pruebas de clasificación del diagnóstico preventivo, sin alterar APT."""
 import importlib.util
-from pathlib import Path
-from unittest import mock
 import subprocess
+from pathlib import Path
 from types import SimpleNamespace
+from unittest import mock
 
 module = Path(__file__).resolve().parents[1] / "package/usr/lib/aio-debian-gui/aio_core/diagnostics.py"
 spec = importlib.util.spec_from_file_location("diagnostics", module)

@@ -2,6 +2,7 @@
 """Exercise GRUB settings against an isolated boot/configuration fixture."""
 import importlib.machinery
 import importlib.util
+import os
 import subprocess
 import tempfile
 import unittest
@@ -233,6 +234,91 @@ class BootSettingsTests(unittest.TestCase):
         self.config.write_text("set timeout_style=menu\nset timeout=5\n"
                                "### END /etc/grub.d/00_header ###\n" + self.config.read_text())
         self.assertEqual(self.manage("status")["overridden"], ["GRUB_TIMEOUT"])
+
+
+
+    def test_flatpak_detection_and_host_commands(self):
+        # es_flatpak() detecta FLATPAK_ID
+        with patch.dict(os.environ, {'FLATPAK_ID': 'test.app'}, clear=True):
+            self.assertTrue(grub.es_flatpak())
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertFalse(grub.es_flatpak())
+
+        # comando_host() usa flatpak-spawn --host en Flatpak
+        with patch.dict(os.environ, {'FLATPAK_ID': 'test.app'}, clear=True):
+            self.assertEqual(grub.comando_host("cmd", "arg"), ["flatpak-spawn", "--host", "cmd", "arg"])
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(grub.comando_host("cmd", "arg"), ["cmd", "arg"])
+
+    def test_grub_environment_uses_host_in_flatpak(self):
+        with patch.dict(os.environ, {'FLATPAK_ID': 'test.app'}, clear=True):
+            with patch.object(grub.subprocess, "run") as mock_run:
+                mock_run.return_value = subprocess.CompletedProcess([], 0, "saved_entry=test\n", "")
+                grub.grub_environment(self.config)
+                mock_run.assert_called_once()
+                args = mock_run.call_args.args[0]
+                self.assertEqual(args[:2], ["flatpak-spawn", "--host"])
+                self.assertEqual(args[2], "/usr/bin/grub-editenv")
+
+    def test_os_prober_disabled_uses_host_in_flatpak(self):
+        with patch.dict(os.environ, {'FLATPAK_ID': 'test.app'}, clear=True):
+            with patch.object(grub.subprocess, "run") as mock_run:
+                mock_run.return_value = subprocess.CompletedProcess([], 0, "true", "")
+                grub.os_prober_disabled(self.defaults)
+                mock_run.assert_called_once()
+                args = mock_run.call_args.args[0]
+                self.assertEqual(args[:2], ["flatpak-spawn", "--host"])
+
+    def test_regenerate_uses_host_commands_in_flatpak(self):
+        with patch.dict(os.environ, {'FLATPAK_ID': 'test.app'}, clear=True):
+            with patch.object(grub.subprocess, "run") as mock_run:
+                def side_effect(argv, **kwargs):
+                    if argv[0] == "flatpak-spawn" and argv[1] == "--host" and argv[2] == "/usr/sbin/grub-mkconfig":
+                        Path(argv[-1]).write_text("menuentry 'Test' --id=test {\n}\n")
+                        return subprocess.CompletedProcess(argv, 0, "", "")
+                    if argv[0] == "flatpak-spawn" and argv[1] == "--host" and argv[2] == "/usr/bin/grub-script-check":
+                        return subprocess.CompletedProcess(argv, 0, "", "")
+                    raise AssertionError(f"Unexpected argv: {argv}")
+                mock_run.side_effect = side_effect
+                self.config.read_text()
+                grub.regenerate(self.config, "test")
+                # Verificar que se llamaron los comandos correctos
+                calls = [call.args[0] for call in mock_run.call_args_list]
+                self.assertTrue(any(c[0] == "flatpak-spawn" and c[1] == "--host" and c[2] == "/usr/sbin/grub-mkconfig" for c in calls))
+                self.assertTrue(any(c[0] == "flatpak-spawn" and c[1] == "--host" and c[2] == "/usr/bin/grub-script-check" for c in calls))
+
+    def test_main_checks_host_tools_in_flatpak(self):
+        with patch.dict(os.environ, {'FLATPAK_ID': 'test.app'}, clear=True):
+            with patch.object(grub.subprocess, "run") as mock_run:
+                with patch.object(grub.os, "geteuid", return_value=0):
+                    with patch.object(grub.sys, "argv", ["grub", "status"]):
+                        # Simular que grub-mkconfig y grub-script-check existen en el host
+                        mock_run.return_value = subprocess.CompletedProcess([], 0, "", "")
+                        real_open = os.open
+                        with patch.object(grub.os, "open", side_effect=lambda *a, **k: real_open(os.devnull, os.O_RDWR)):
+                            with patch.object(grub, "manage", return_value={}):
+                                grub.main()
+                calls = [call.args[0] for call in mock_run.call_args_list]
+                # Debe verificar grub-mkconfig --version y grub-script-check --version en el host
+                self.assertTrue(any(c == ["flatpak-spawn", "--host", "/usr/sbin/grub-mkconfig", "--version"] for c in calls))
+                self.assertTrue(any(c == ["flatpak-spawn", "--host", "/usr/bin/grub-script-check", "--version"] for c in calls))
+
+    def test_main_rejects_missing_host_tools_in_flatpak(self):
+        with patch.dict(os.environ, {'FLATPAK_ID': 'test.app'}, clear=True):
+            with patch.object(grub.subprocess, "run") as mock_run:
+                with patch.object(grub.os, "geteuid", return_value=0):
+                    with patch.object(grub.sys, "argv", ["grub", "status"]):
+                        # Simular que grub-script-check NO existe en el host
+                        def side_effect(argv, **kwargs):
+                            if argv[2] == "/usr/sbin/grub-mkconfig":
+                                return subprocess.CompletedProcess(argv, 0, "", "")
+                            if argv[2] == "/usr/bin/grub-script-check":
+                                raise subprocess.CalledProcessError(1, argv, stderr="not found")
+                            raise AssertionError(f"Unexpected argv: {argv}")
+                        mock_run.side_effect = side_effect
+                        with self.assertRaises(ValueError) as cm:
+                            grub.main()
+                        self.assertIn("grub-script-check is not installed on host", str(cm.exception))
 
 
 if __name__ == "__main__":

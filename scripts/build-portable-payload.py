@@ -4,9 +4,9 @@ import base64
 import importlib.machinery
 import json
 import os
-from pathlib import Path
 import subprocess
 import tempfile
+from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 module = importlib.machinery.SourceFileLoader('portable_updater', str(root / 'portable/aio-portable-update')).load_module()

@@ -2,6 +2,7 @@
 """Detección de formato del lanzador, sin importar GTK ni modificar el sistema."""
 import ast
 import os
+
 source = "package/usr/bin/aio-debian-gui"
 with open(source, encoding="utf-8") as handle:
     tree = ast.parse(handle.read(), filename=source)

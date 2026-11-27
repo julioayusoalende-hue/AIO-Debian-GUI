@@ -5,17 +5,18 @@ import fcntl
 import io
 import json
 import os
-from pathlib import Path
 import shutil
 import socket
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path('package/usr/lib/aio-debian-gui').resolve()))
-from aio_core import scheduler as s, preflight
+from aio_core import preflight
+from aio_core import scheduler as s
 
 base = copy.deepcopy(s.DEFAULT)
 assert s.calendar(base) == 'Sun *-*-* 10:00:00'

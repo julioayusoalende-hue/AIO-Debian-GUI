@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """Configura la interfaz con un backend simulado, sin permisos ni timers reales."""
-import copy
 import importlib.machinery
 import importlib.util
 import json
 import os
-from pathlib import Path
 import sys
 import threading
 import time
 from types import SimpleNamespace
 from unittest.mock import patch
+
 import gi
+
 gi.require_version('Gtk', '3.0')
 from gi.repository import GLib, Gtk
 

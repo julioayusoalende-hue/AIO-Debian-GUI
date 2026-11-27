@@ -33,7 +33,8 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("Vte", "2.91")
-from gi.repository import Gdk, GdkPixbuf, Gio, GLib, GObject, Gtk, Pango, Vte  # noqa: E402
+gi.require_version("Atk", "1.0")
+from gi.repository import Atk, Gdk, GdkPixbuf, Gio, GLib, GObject, Gtk, Pango, Vte  # noqa: E402
 
 # Ruta equivalente en DEB (/usr), AppImage (AppDir/usr) y Flatpak (/app).
 CORE_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -51,12 +52,12 @@ from aio_core import recommended_list as core_recommended_list
 from aio_core import scheduler as core_scheduler
 from aio_core import updates as core_updates
 from aio_core.constants import autorizacion_sin_contrasena_activa
+from aio_core.extensions import load_extensions  # noqa: E402
 from aio_core.fastfetch import instalar_layout, restaurar_layout  # noqa: E402
 from aio_core.gtk_appearance import aplicar_tema  # noqa: E402
 from aio_core.gtk_scheduler import ControladorProgramacion  # noqa: E402
 from aio_core.operations import coordinator as operation_coordinator  # noqa: E402
 from aio_core.translations import TRADUCCIONES  # noqa: E402
-from aio_core.extensions import load_extensions  # noqa: E402
 
 PRGNAME = "aio-debian-gui"
 APP_ICON_NAME = "aio-debian-gui"
@@ -82,6 +83,10 @@ FASTFETCH_LAYOUT = os.path.normpath(
 NOTAS_VERSION = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/release-notes.txt")
 )
+
+# Versión embebida en tiempo de compilación (inyectada por build-deb.sh)
+AIO_DEBIAN_GUI_VERSION = "1.5.0"
+
 RECOMMENDED_ICON_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/recommended-icons")
 )
@@ -248,9 +253,11 @@ def novedades_version(version):
 def version_app(para_apt=False):
     if os.environ.get("SNAP_VERSION"):
         return os.environ["SNAP_VERSION"]
-    version = os.environ.get("AIO_DEBIAN_GUI_VERSION")
-    if version:
-        return version
+    # En Flatpak y AppImage, la versión viene del metadato interno embebido
+    fmt = formato_actualizacion()
+    if fmt in ("flatpak", "appimage"):
+        return AIO_DEBIAN_GUI_VERSION
+    # En DEB, consultar dpkg-query
     try:
         out = subprocess.run(
             comando_host("dpkg-query", "-W", "-f=${Status}|${Version}", "aio-debian-gui"),
@@ -261,6 +268,7 @@ def version_app(para_apt=False):
             return version if para_apt else version.split(":", 1)[-1]
     except (OSError, subprocess.SubprocessError):
         pass
+    # Desarrollo (ejecutado desde el árbol de fuentes)
     return "desarrollo (no instalado desde paquete)"
 
 
@@ -647,13 +655,19 @@ MAX_APPIMAGE_SIZE = 256 * 1024 * 1024
 
 
 def formato_actualizacion():
+    # 1) Variable de entorno explícita (prioridad más alta)
+    if os.environ.get("AIO_DEBIAN_GUI_FORMAT"):
+        return os.environ["AIO_DEBIAN_GUI_FORMAT"]
+    # 2) Snap
     if os.environ.get("SNAP"):
         return "snap"
+    # 3) Flatpak (variable de entorno estándar)
     if es_flatpak():
         return "flatpak"
+    # 4) AppImage (variable de entorno estándar)
     if os.environ.get("APPDIR"):
         return "appimage"
-    # El paquete DEB instala el ejecutable exactamente en /usr/bin.
+    # 5) DEB: el paquete instala el ejecutable exactamente en /usr/bin
     # No etiquetar como DEB una ejecución desde el código fuente.
     if os.path.realpath(__file__) == "/usr/bin/aio-debian-gui":
         return "deb"
@@ -1072,13 +1086,118 @@ def etiqueta(texto, markup=False, dim=False, xalign=0.0):
     return lbl
 
 
-ESTILO_APLICACION = b"""
+def live_region(polite=True, atomic=False):
+    """Crea una región en vivo (ARIA live region) para anuncios de estado.
+
+    Args:
+        polite: Si True, usa aria-live="polite" (por defecto). Si False, "assertive".
+        atomic: Si True, el lector de pantalla leerá toda la región. Si False, solo cambios.
+    """
+    lbl = Gtk.Label()
+    lbl.set_no_show_all(True)
+    lbl.set_visible(False)
+    # Configurar como región en vivo ATK - usar STATUS para anuncios de estado
+    accessible = lbl.get_accessible()
+    accessible.set_role(Atk.Role.STATIC)
+    # Intentar establecer atributos de región en vivo (puede no estar disponible en todas las versiones de ATK)
+    try:
+        if polite:
+            accessible.set_attribute("live", "polite")
+        else:
+            accessible.set_attribute("live", "assertive")
+        if atomic:
+            accessible.set_attribute("atomic", "true")
+        else:
+            accessible.set_attribute("atomic", "false")
+    except AttributeError:
+        # ATK sin set_attribute: la región en vivo no se anunciará, pero no fallamos
+        pass
+    # Ocultar visualmente pero mantener accesible
+    lbl.get_style_context().add_class("aio-live-region")
+    return lbl
+
+
+def announce(live_region_widget, message):
+    """Anuncia un mensaje a través de una región en vivo (para lectores de pantalla).
+
+    Args:
+        live_region_widget: Widget Gtk.Label creado con live_region()
+        message: Texto a anunciar (se traducirá automáticamente)
+    """
+    if live_region_widget is None or not message:
+        return
+    texto = traducir(message)
+    # Forzar actualización: vaciar y volver a establecer para disparar el evento
+    live_region_widget.set_text("")
+    live_region_widget.set_text(texto)
+    # Asegurar que está visible para ATK (aunque visualmente oculto)
+    live_region_widget.set_visible(True)
+    live_region_widget.show()
+    # Notificar cambio de estado a ATK
+    try:
+        accessible = live_region_widget.get_accessible()
+        accessible.notify_state_change(Atk.State.SHOWING, True)
+    except Exception:
+        pass
+
+
+def anunciar_live_region(live_region_label, mensaje):
+    """Anuncia un mensaje en una live region para lectores de pantalla (alias de announce).
+
+    Args:
+        live_region_label: Gtk.Label creado con live_region()
+        mensaje: Texto a anunciar (se traducirá automáticamente)
+    """
+    announce(live_region_label, mensaje)
+
+
+def set_accessible_name(widget, name, description=None):
+    """Establece nombre y descripción accesibles en un widget.
+
+    Args:
+        widget: Widget GTK
+        name: Nombre accesible (requerido)
+        description: Descripción extendida (opcional)
+    """
+    if widget is None:
+        return
+    accessible = widget.get_accessible()
+    accessible.set_name(traducir(name))
+    if description:
+        accessible.set_description(traducir(description))
+
+
+def set_accessible_role(widget, role):
+    """Establece el rol ATK en un widget.
+
+    Args:
+        widget: Widget GTK
+        role: Rol Atk.Role (ej: Atk.Role.BUTTON, Atk.Role.CHECK_BOX, Atk.Role.GROUPING)
+    """
+    if widget is None:
+        return
+    accessible = widget.get_accessible()
+    accessible.set_role(role)
+
+
+ESTILO_APLICACION = """
+/* Alto contraste: bordes mas visibles para accesibilidad */
+.aio-page frame.aio-card > border {
+    border: 2px solid #3584e4;
+}
+.aio-maintenance checkbutton.aio-task.aio-selected {
+    border: 2px solid #3584e4;
+}
+.aio-maintenance checkbutton.aio-task:hover {
+    border: 1px solid #3584e4;
+}
+
 .aio-header-title {
     font-size: 1.05em;
     font-weight: 700;
 }
 .aio-header-version {
-    color: mix(@theme_fg_color, #279457, 0.66);
+    color: #279457;
     font-weight: 700;
 }
 button.aio-header-version-button {
@@ -1091,20 +1210,20 @@ button.aio-header-version-button {
     font-size: 0.90em;
 }
 .aio-page {
-    background-color: shade(@theme_bg_color, 0.985);
+    background-color: #f6f5f4;
 }
 .aio-page frame.aio-card > border {
-    border: 1px solid alpha(@theme_fg_color, 0.16);
+    border: 1px solid rgba(53, 132, 228, 0.16);
     border-radius: 12px;
-    background-color: @theme_base_color;
+    background-color: white;
 }
 .aio-page .aio-heading {
     font-size: 1.26em;
     font-weight: 700;
 }
 .aio-page .aio-icon {
-    color: @theme_fg_color;
-    background-color: alpha(@theme_selected_bg_color, 0.14);
+    color: #3584e4;
+    background-color: rgba(53, 132, 228, 0.14);
     border-radius: 8px;
     padding: 6px;
 }
@@ -1133,11 +1252,11 @@ button.aio-header-version-button {
     padding: 7px 9px;
 }
 .aio-maintenance checkbutton.aio-task.aio-selected {
-    background-color: alpha(@theme_selected_bg_color, 0.10);
-    border-color: alpha(@theme_selected_bg_color, 0.13);
+    background-color: rgba(53, 132, 228, 0.10);
+    border-color: rgba(53, 132, 228, 0.13);
 }
 .aio-maintenance checkbutton.aio-task:hover {
-    background-color: alpha(@theme_selected_bg_color, 0.17);
+    background-color: rgba(53, 132, 228, 0.17);
 }
 .aio-maintenance checkbutton.aio-task label.aio-task-name {
     font-weight: 600;
@@ -1147,6 +1266,35 @@ button.aio-header-version-button {
 }
 .aio-maintenance button.aio-run {
     font-weight: 700;
+}
+
+/* Live region para anuncios de estado (accesibilidad) - visualmente oculto */
+.aio-live-region {
+    opacity: 0;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+}
+
+/* Colores semanticos para estados */
+.aio-status-success {
+    color: #26a269;
+    font-weight: 600;
+}
+.aio-status-warning {
+    color: #e6a700;
+    font-weight: 600;
+}
+.aio-status-error {
+    color: #e01b24;
+    font-weight: 600;
+}
+
+/* Focus visible para navegacion teclado */
+.aio-page *:focus {
+    outline: 2px solid #3584e4;
+    outline-offset: 2px;
 }
 """
 
@@ -1264,6 +1412,7 @@ class VentanaPrincipal(Gtk.Window):
         self.connect("key-press-event", self._al_pulsar_tecla)
         self.connect("delete-event", self._al_cerrar)
         self.connect("focus-in-event", self._refrescar_recomendadas_al_volver)
+
     def _preparar_anfitrion_al_iniciar(self):
         if self.sincronizando_reloj:
             return
@@ -1272,7 +1421,9 @@ class VentanaPrincipal(Gtk.Window):
             self._preparar_integracion_inicial()
             return
         self.sincronizando_reloj = True
-        self.estado.set_text(traducir("Sincronizando el reloj del sistema…"))
+        msg = traducir("Sincronizando el reloj del sistema…")
+        self.estado.set_text(msg)
+        self._anunciar_estado(msg)
         self._actualizar_sensibilidad()
 
         def sincronizar():
@@ -1312,7 +1463,9 @@ class VentanaPrincipal(Gtk.Window):
             self._consultar_estados_tareas(inicial=True)
             return
         self.programando = True
-        self.estado.set_text(traducir("Preparando el mantenimiento del sistema…"))
+        msg = traducir("Preparando el mantenimiento del sistema…")
+        self.estado.set_text(msg)
+        self._anunciar_estado(msg)
         self._actualizar_sensibilidad()
         version = version_app()
 
@@ -1361,6 +1514,7 @@ class VentanaPrincipal(Gtk.Window):
         self.btn_menu.add(Gtk.Image.new_from_icon_name(
             "open-menu-symbolic", Gtk.IconSize.BUTTON))
         self.btn_menu.set_tooltip_text(traducir("Menú de preferencias"))
+        self.btn_menu.get_accessible().set_name(traducir("Menú de preferencias"))
         popover, menu = self._crear_menu_acciones(self.btn_menu)
 
         self.btn_preferencias_menu = Gtk.Button(label=traducir("Preferencias"))
@@ -1398,6 +1552,7 @@ class VentanaPrincipal(Gtk.Window):
             "utilities-terminal-symbolic", Gtk.IconSize.BUTTON))
         self.btn_terminal_cabecera.set_always_show_image(True)
         self.btn_terminal_cabecera.set_tooltip_text(traducir("Terminal"))
+        self.btn_terminal_cabecera.get_accessible().set_name(traducir("Terminal"))
         self.btn_terminal_cabecera.connect("clicked", self._abrir_terminal)
         hb.pack_start(self.btn_terminal_cabecera)
         self.set_titlebar(hb)
@@ -1450,7 +1605,6 @@ class VentanaPrincipal(Gtk.Window):
         titulo.pack_start(principal, False, False, 0)
 
         sistema = Gtk.Box(spacing=5, halign=Gtk.Align.CENTER)
-        distribucion = identidad_distribucion(self.datos_anfitrion)
         nombre_base = {"debian": "Debian", "ubuntu": "Ubuntu"}.get(
             self.datos_anfitrion.get("ID"),
             self.datos_anfitrion.get("NAME") or traducir("Sistema no compatible"),
@@ -1575,7 +1729,11 @@ class VentanaPrincipal(Gtk.Window):
             for nombre in ('formulario', 'guardar', 'pausar', 'eliminar', 'actualizar', 'integracion'):
                 w[nombre].set_sensitive(False)
             parent.set_response_sensitive(Gtk.ResponseType.CLOSE, False)
-            w['estado'].set_text(traducir('Esperando autorización de administrador…'))
+            msg = traducir('Esperando autorización de administrador…')
+            w['estado'].set_text(msg)
+            # Anunciar en live region principal si existe
+            if hasattr(self, 'live_mantenimiento') and self.live_mantenimiento:
+                anunciar_live_region(self.live_mantenimiento, msg)
 
         def instalar():
             try:
@@ -1680,9 +1838,45 @@ class VentanaPrincipal(Gtk.Window):
                         GLib.idle_add(self._terminar_actualizacion, Gtk.MessageType.INFO,
                                       "Ya tienes la última versión", f"Versión instalada: {version_app()}.")
                         return
-                    detalle = ("Hay una actualización Flatpak disponible en el repositorio firmado.\n"
-                               "¿Quieres instalarla ahora?")
-                    datos = None
+                    # Obtener metadatos internos: versión disponible y arquitectura detectada.
+                    info = subprocess.run(
+                        ["flatpak-spawn", "--host", "flatpak", "remote-info", "--user",
+                         "--show-ref", "flathub", APP_ID_FLATPAK],
+                        capture_output=True, text=True, timeout=30,
+                    )
+                    ref = info.stdout.strip() if info.returncode == 0 else ""
+                    # Extraer arquitectura de la referencia (app/id/arch/branch)
+                    arquitectura = ""
+                    if ref:
+                        partes = ref.split("/")
+                        if len(partes) >= 3:
+                            arquitectura = partes[2]
+                    # Obtener versión disponible
+                    info_version = subprocess.run(
+                        ["flatpak-spawn", "--host", "flatpak", "remote-info", "--user",
+                         "flathub", APP_ID_FLATPAK],
+                        capture_output=True, text=True, timeout=30,
+                    )
+                    version_disponible = ""
+                    if info_version.returncode == 0:
+                        for linea in info_version.stdout.splitlines():
+                            linea = linea.strip()
+                            if linea.startswith("Versión:") or linea.startswith("Version:"):
+                                version_disponible = linea.split(":", 1)[1].strip()
+                                break
+                    version_instalada = version_app()
+                    if arquitectura:
+                        detalle = ("Hay una actualización Flatpak disponible en el repositorio firmado.\n"
+                                   f"Versión instalada: {version_instalada}\n"
+                                   f"Versión disponible: {version_disponible or 'desconocida'}\n"
+                                   f"Arquitectura: {arquitectura}\n\n"
+                                   "¿Quieres instalarla ahora?")
+                    else:
+                        detalle = ("Hay una actualización Flatpak disponible en el repositorio firmado.\n"
+                                   f"Versión instalada: {version_instalada}\n"
+                                   f"Versión disponible: {version_disponible or 'desconocida'}\n\n"
+                                   "¿Quieres instalarla ahora?")
+                    datos = {"version": version_disponible, "arch": arquitectura}
                 elif formato == "appimage":
                     version, nombre, url, url_hash = obtener_release_actualizacion()
                     instalada = version_numerica(version_app())
@@ -1762,7 +1956,15 @@ class VentanaPrincipal(Gtk.Window):
                         raise RuntimeError((resultado.stderr or resultado.stdout).strip()[-1200:] or
                                            "No se pudo actualizar el Flatpak.")
                     titulo = "Actualización Flatpak completada"
-                    detalle_final = "La nueva versión Flatpak está instalada."
+                    version_nueva = datos.get("version") if isinstance(datos, dict) else None
+                    arch_nueva = datos.get("arch") if isinstance(datos, dict) else None
+                    if version_nueva and arch_nueva:
+                        detalle_final = (f"Versión {version_nueva} ({arch_nueva}) instalada correctamente.\n"
+                                         "La nueva versión Flatpak está disponible.")
+                    elif version_nueva:
+                        detalle_final = f"Versión {version_nueva} instalada correctamente.\nLa nueva versión Flatpak está disponible."
+                    else:
+                        detalle_final = "La nueva versión Flatpak está instalada."
                     reinicio = ("flatpak", None)
                 else:
                     version, nombre, url, url_hash = datos
@@ -2378,6 +2580,9 @@ class VentanaPrincipal(Gtk.Window):
         texto_progreso.pack_start(fila, False, False, 0)
         self.barra = Gtk.ProgressBar()
         texto_progreso.pack_start(self.barra, False, False, 0)
+        # Live region para anuncios de progreso de mantenimiento
+        self.live_mantenimiento = live_region(polite=True)
+        texto_progreso.pack_start(self.live_mantenimiento, False, False, 0)
         acciones_caja.pack_start(texto_progreso, True, True, 0)
 
         self.btn_iniciar = Gtk.Button(label=traducir("Iniciar tareas"))
@@ -2427,6 +2632,10 @@ class VentanaPrincipal(Gtk.Window):
         cabecera_log.pack_end(btn_borrar, False, False, 0)
         self.cabecera_consola = cabecera_log
         contenido_consola.pack_start(cabecera_log, False, False, 0)
+
+        # Live region para anuncios de salida de consola
+        self.live_consola = live_region(polite=True)
+        contenido_consola.pack_start(self.live_consola, False, False, 0)
 
         marco = Gtk.ScrolledWindow()
         marco.set_shadow_type(Gtk.ShadowType.IN)
@@ -2791,6 +3000,9 @@ class VentanaPrincipal(Gtk.Window):
         contenido.pack_start(herramientas, False, False, 0)
         pagina.pack_start(self._scroll_tarjetas(contenido), True, True, 0)
         self.backup_status = self._etiqueta_estado()
+        # Live region para anuncios de backup
+        self.backup_live = live_region(polite=True)
+        pagina.pack_start(self.backup_live, False, False, 0)
         pagina.pack_start(self.backup_status, False, False, 0)
         return pagina
 
@@ -2819,6 +3031,7 @@ class VentanaPrincipal(Gtk.Window):
         self.recommended_selection = {}
         self.recommended_failed = {}
         self.recommended_multi = Gtk.ToggleButton(label=traducir("Seleccionar varias"))
+        self.recommended_multi.get_accessible().set_name(traducir("Seleccionar varias aplicaciones"))
         self.recommended_multi.connect("toggled", self._alternar_seleccion_recomendada)
         self.recommended_install = Gtk.Button(label=traducir("Instalar selección"))
         self.recommended_install.get_style_context().add_class("suggested-action")
@@ -2845,6 +3058,9 @@ class VentanaPrincipal(Gtk.Window):
         self.recommended_retry.connect("clicked", self._instalar_seleccion_recomendada, True)
         caja.pack_start(self.recommended_retry, False, False, 0)
         self.recommended_status = self._etiqueta_estado()
+        # Live region para anuncios de aplicaciones recomendadas
+        self.recommended_live = live_region(polite=True)
+        caja.pack_start(self.recommended_live, False, False, 0)
         caja.pack_start(self.recommended_status, False, False, 0)
         pagina.pack_start(introduccion, False, False, 0)
 
@@ -3039,12 +3255,21 @@ class VentanaPrincipal(Gtk.Window):
         self._actualizar_sensibilidad()
         if error:
             titulo = "No se pudo completar la operación de repositorios."
-            self.backup_status.set_text(traducir(titulo))
+            msg = traducir(titulo)
+            self.backup_status.set_text(msg)
+            if hasattr(self, "backup_live"):
+                anunciar_live_region(self.backup_live, msg)
             self._mensaje(Gtk.MessageType.ERROR, titulo, error)
         elif accion == "restore":
-            self.backup_status.set_text(traducir("Repositorios restaurados. Actualiza los índices APT desde Mantenimiento."))
+            msg = traducir("Repositorios restaurados. Actualiza los índices APT desde Mantenimiento.")
+            self.backup_status.set_text(msg)
+            if hasattr(self, "backup_live"):
+                anunciar_live_region(self.backup_live, msg)
         else:
-            self.backup_status.set_text(traducir("Copia de repositorios guardada en %s") % ruta)
+            msg = traducir("Copia de repositorios guardada en %s") % ruta
+            self.backup_status.set_text(msg)
+            if hasattr(self, "backup_live"):
+                anunciar_live_region(self.backup_live, msg)
         return GLib.SOURCE_REMOVE
 
     def _accion_escritorio(self, _boton, accion):
@@ -3130,10 +3355,15 @@ class VentanaPrincipal(Gtk.Window):
         self._actualizar_sensibilidad()
         if error:
             titulo = "No se pudo completar la copia o restauración del escritorio."
-            self.backup_status.set_text(traducir(titulo))
+            msg = traducir(titulo)
+            self.backup_status.set_text(msg)
+            if hasattr(self, "backup_live"):
+                anunciar_live_region(self.backup_live, msg)
             self._mensaje(Gtk.MessageType.ERROR, titulo, error)
         else:
             self.backup_status.set_text(mensaje)
+            if hasattr(self, "backup_live"):
+                anunciar_live_region(self.backup_live, mensaje)
             if avisar_cierre_sesion:
                 self._ofrecer_cerrar_sesion_gnome()
         return GLib.SOURCE_REMOVE
@@ -3206,7 +3436,10 @@ class VentanaPrincipal(Gtk.Window):
         self._actualizar_sensibilidad()
         app = APLICACIONES_BACKUP[app_id]
         if error:
-            self.backup_status.set_text(traducir("No se pudo abrir %s: %s") % (app["name"], error))
+            msg = traducir("No se pudo abrir %s: %s") % (app["name"], error)
+            self.backup_status.set_text(msg)
+            if hasattr(self, "backup_live"):
+                anunciar_live_region(self.backup_live, msg)
             self._mensaje(Gtk.MessageType.ERROR, "No se pudo comprobar %s" % app["name"], error)
         elif accion == "open":
             self._abrir_aplicacion_backup(app_id)
@@ -3223,9 +3456,15 @@ class VentanaPrincipal(Gtk.Window):
             if instalar:
                 self._instalar_aplicacion_backup(app_id)
             else:
-                self.backup_status.set_text(traducir("La aplicación todavía no está instalada."))
+                msg = traducir("La aplicación todavía no está instalada.")
+                self.backup_status.set_text(msg)
+                if hasattr(self, "backup_live"):
+                    anunciar_live_region(self.backup_live, msg)
         else:
-            self.backup_status.set_text(traducir("No se pudo abrir %s: %s") % (app["name"], "resultado inesperado"))
+            msg = traducir("No se pudo abrir %s: %s") % (app["name"], "resultado inesperado")
+            self.backup_status.set_text(msg)
+            if hasattr(self, "backup_live"):
+                anunciar_live_region(self.backup_live, msg)
         return GLib.SOURCE_REMOVE
 
     def _instalar_aplicacion_backup(self, app_id):
@@ -3661,7 +3900,10 @@ class VentanaPrincipal(Gtk.Window):
             for clave, indicador in self.recommended_indicators.items():
                 indicador.set_visible(estados.get(clave) is True)
             if errores:
-                self.recommended_status.set_text(traducir("No se pudo comprobar el estado de algunas aplicaciones."))
+                msg = traducir("No se pudo comprobar el estado de algunas aplicaciones.")
+                self.recommended_status.set_text(msg)
+                if hasattr(self, "recommended_live"):
+                    anunciar_live_region(self.recommended_live, msg)
                 self.recommended_status.set_tooltip_text("\n".join(errores))
             else:
                 self.recommended_status.set_text("")
@@ -4197,6 +4439,9 @@ class VentanaPrincipal(Gtk.Window):
         simbolos = {"Pendiente": "○", "En curso": "▶", "Completada": "✓", "Error": "!", "No ejecutada": "–"}
         linea.set_text(simbolos[estado] + " " + nombres[tarea] + " · " + traducir(estado))
         self.resultados_tareas[tarea] = (linea, estado)
+        # Anunciar a la región en vivo de mantenimiento
+        if hasattr(self, "live_mantenimiento"):
+            self.live_mantenimiento.set_text(traducir("Tarea %s: %s") % (nombres[tarea], traducir(estado)))
         if estado == "Error" and not self.preferencias["modo_simple"]:
             self.expansor_consola.show()
             self.expansor_consola.set_expanded(True)
@@ -4610,7 +4855,9 @@ class VentanaPrincipal(Gtk.Window):
         self.consulta_inicial = inicial
         self.salida_estados = []
         if inicial:
-            self.estado.set_text(traducir("Comprobando tareas ya instaladas…"))
+            msg = traducir("Comprobando tareas ya instaladas…")
+            self.estado.set_text(msg)
+            self._anunciar_estado(msg)
         self._actualizar_sensibilidad()
         portable = usa_integracion_portable()
         sin_integracion = 42
@@ -4758,7 +5005,9 @@ class VentanaPrincipal(Gtk.Window):
             if inicial:
                 mensaje = ("El reloj aún no está sincronizado. Se volverá a intentar al abrir AiO."
                            if self.aviso_reloj_inicial else "Selecciona las tareas que quieres ejecutar.")
-                self.estado.set_text(traducir(mensaje))
+                msg = traducir(mensaje)
+                self.estado.set_text(msg)
+                self._anunciar_estado(msg)
             return
         if mensaje is None:
             mensaje = traducir(
@@ -4767,7 +5016,9 @@ class VentanaPrincipal(Gtk.Window):
         if detalle:
             mensaje += " " + detalle
         if inicial:
-            self.estado.set_text(mensaje)
+            msg = traducir(mensaje)
+            self.estado.set_text(msg)
+            self._anunciar_estado(msg, "assertive")
         self._escribir("[!] %s\n" % mensaje, "aviso")
 
     def _actualizar_sensibilidad(self):
@@ -5017,7 +5268,9 @@ class VentanaPrincipal(Gtk.Window):
         if self.en_curso or self.programando:
             return
         self._poner_ocupado(True)
-        self.estado.set_text(traducir("Comprobando seguridad del mantenimiento…"))
+        msg = traducir("Comprobando seguridad del mantenimiento…")
+        self.estado.set_text(msg)
+        self._anunciar_estado(msg)
         def verificar():
             try:
                 informe = core_preflight.check(pasos)
@@ -5090,7 +5343,9 @@ class VentanaPrincipal(Gtk.Window):
     def _continuar_mantenimiento(self, pasos, upgrade_plan=None, autoremove_plan=None,
                                  reintento_de=None, flatpak_sistema=False):
         if reintento_de is None and not self._confirmar_tareas(pasos):
-            self.estado.set_text(traducir("Mantenimiento cancelado antes de comenzar."))
+            msg = traducir("Mantenimiento cancelado antes de comenzar.")
+            self.estado.set_text(msg)
+            self._anunciar_estado(msg, "assertive")
             return
         if pasos == ["flatpak-update"] and not flatpak_sistema:
             self._iniciar_flatpak_usuario(reintento_de)
@@ -5241,7 +5496,9 @@ class VentanaPrincipal(Gtk.Window):
             d.destroy()
             if not confirmar:
                 self.switches["backports-kernel-mesa"][0].set_active(False)
-                self.estado.set_text(traducir("Instalación desde Backports cancelada."))
+                msg = traducir("Instalación desde Backports cancelada.")
+                self.estado.set_text(msg)
+                self._anunciar_estado(msg, "assertive")
                 return
 
         lang = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or "C"
@@ -5265,7 +5522,9 @@ class VentanaPrincipal(Gtk.Window):
         self._preparar_resultados(pasos)
         self.total_pasos = len(pasos)
         self._poner_ocupado(True)
-        self.estado.set_text(traducir("Esperando autenticación de administrador…"))
+        msg = traducir("Esperando autenticación de administrador…")
+        self.estado.set_text(msg)
+        self._anunciar_estado(msg)
         self._escribir("[*] Solicitando autorización de administrador…\n", "info")
         self._escribir(
             "[*] Si no aparece el diálogo, cancela la espera y comprueba el agente de Polkit.\n",
@@ -5312,8 +5571,10 @@ class VentanaPrincipal(Gtk.Window):
         self._preparar_resultados(self.tareas_en_ejecucion)
         self.total_pasos = 1
         self._poner_ocupado(True)
-        self.estado.set_text("Actualizando Flatpak del usuario sin contraseña…")
-        self._escribir("[*] Operación Flatpak de usuario; sin pkexec.\\n", "info")
+        msg = "Actualizando Flatpak del usuario sin contraseña…"
+        self.estado.set_text(msg)
+        self._anunciar_estado(msg)
+        self._escribir("[*] Operación Flatpak de usuario; sin pkexec.\n", "info")
         self.barra.set_fraction(0)
         self.barra.set_text("")
         self.barra.set_show_text(False)
@@ -5403,7 +5664,9 @@ class VentanaPrincipal(Gtk.Window):
         self.cancelacion_autorizacion = None
         self._poner_ocupado(True)
         self.buf.set_text("")
-        self.estado.set_text(traducir("Esperando autorización de administrador…"))
+        msg = traducir("Esperando autorización de administrador…")
+        self.estado.set_text(msg)
+        self._anunciar_estado(msg)
         self._escribir("[*] Solicitando autorización de administrador…\n", "info")
         self.barra.set_fraction(0)
         self.barra.set_show_text(False)
@@ -5451,6 +5714,22 @@ class VentanaPrincipal(Gtk.Window):
         if not self.destruida:
             self._actualizar_sensibilidad()
 
+    def _anunciar_estado(self, mensaje, prioridad="polite"):
+        """Anuncia un mensaje de estado a las live regions para lectores de pantalla.
+
+        Args:
+            mensaje: Texto a anunciar (ya traducido o clave de traducción)
+            prioridad: "polite" para actualizaciones normales, "assertive" para errores/alertas
+        """
+        if self.destruida:
+            return
+        # Anunciar en live region de mantenimiento (progreso general)
+        if hasattr(self, "live_mantenimiento") and self.live_mantenimiento:
+            anunciar_live_region(self.live_mantenimiento, mensaje)
+        # Anunciar en live region de consola (salida detallada)
+        if hasattr(self, "live_consola") and self.live_consola:
+            anunciar_live_region(self.live_consola, mensaje)
+
     def _poner_ocupado(self, ocupado):
         if self.destruida:
             return
@@ -5485,7 +5764,9 @@ class VentanaPrincipal(Gtk.Window):
             return
         self.cancelacion_autorizacion = "agotada" if agotada else "cancelada"
         self._finalizar_espera_autorizacion()
-        self.estado.set_text(traducir("Cancelando la espera de autorización…"))
+        msg = traducir("Cancelando la espera de autorización…")
+        self.estado.set_text(msg)
+        self._anunciar_estado(msg, "assertive")
         self._escribir(
             "[-] Se canceló la espera de autorización de administrador.\n", "error"
         )
@@ -5568,7 +5849,9 @@ class VentanaPrincipal(Gtk.Window):
             self.barra.set_show_text(True)
             self.barra.set_fraction((n - 1) / total)
             self.barra.set_text(traducir("Paso %d de %d") % (n, total))
-            self.estado.set_text(traducir(titulo) + "…")
+            msg = traducir(titulo) + "…"
+            self.estado.set_text(msg)
+            self._anunciar_estado(msg)
             if 0 < n <= len(self.tareas_en_ejecucion):
                 self._resultado_tarea(self.tareas_en_ejecucion[n - 1], "En curso")
             self._escribir("\n▶ %s\n" % titulo, "paso")
@@ -5578,7 +5861,11 @@ class VentanaPrincipal(Gtk.Window):
             if codigo not in ("0", "2") and self.salida_error_tarea:
                 self.errores_tareas[tarea] = core_scheduler.mensaje_error("\n".join(self.salida_error_tarea))
             self.salida_error_tarea.clear()
-            self._resultado_tarea(tarea, {"0": "Completada", "2": "No ejecutada"}.get(codigo, "Error"))
+            estado = {"0": "Completada", "2": "No ejecutada"}.get(codigo, "Error")
+            self._resultado_tarea(tarea, estado)
+            # Anunciar resultado de tarea
+            msg = traducir("Tarea %s: %s") % (tarea, traducir(estado))
+            self._anunciar_estado(msg)
             return
         if linea.startswith("##RESTART-SERVICE:"):
             servicio = linea.partition(":")[2]
@@ -5615,6 +5902,11 @@ class VentanaPrincipal(Gtk.Window):
         else:
             self.buf.insert(fin, texto)
         self._desplazar_consola(self.log)
+        # Anunciar a la región en vivo (screen readers)
+        if hasattr(self, "live_consola") and self.live_consola.get_visible():
+            # Solo anunciar líneas completas para no saturar
+            if texto.endswith("\n") or tag in ("ok", "error", "aviso", "paso"):
+                self.live_consola.set_text(texto.strip())
         # La salida externa no debe poder enviar secuencias de control a VTE.
         salida = "".join(
             c for c in texto if c in "\n\t" or 32 <= ord(c) < 127 or ord(c) >= 160
@@ -5651,21 +5943,25 @@ class VentanaPrincipal(Gtk.Window):
                     "[-] No se cambió la preferencia de autorización.\n", "error"
                 )
             elif codigo == 0 and activa == deseada:
-                self.estado.set_text(
-                    traducir("Autorización sin contraseña activada.")
-                    if activa else traducir("Autorización sin contraseña desactivada.")
-                )
+                msg = (traducir("Autorización sin contraseña activada.")
+                       if activa else traducir("Autorización sin contraseña desactivada."))
+                self.estado.set_text(msg)
+                self._anunciar_estado(msg)
                 self._escribir(
                     "[✔] Preferencia de autorización actualizada.\n", "ok"
                 )
             elif codigo in (126, 127):
-                self.estado.set_text(traducir("No se cambió la autorización."))
+                msg = traducir("No se cambió la autorización.")
+                self.estado.set_text(msg)
+                self._anunciar_estado(msg, "assertive")
                 self._escribir(
                     "[-] Autorización cancelada o denegada; no se cambió la preferencia.\n",
                     "error",
                 )
             else:
-                self.estado.set_text(traducir("No se pudo cambiar la autorización."))
+                msg = traducir("No se pudo cambiar la autorización.")
+                self.estado.set_text(msg)
+                self._anunciar_estado(msg, "assertive")
                 self._escribir(
                     "[-] No se pudo actualizar la preferencia de autorización (código %s).\n"
                     % codigo,
@@ -5692,11 +5988,13 @@ class VentanaPrincipal(Gtk.Window):
                 guardar_registro_mantenimiento(self.tareas_en_ejecucion, "cancelado", **metadatos)
             except OSError:
                 pass
-            self.estado.set_text(
+            msg = (
                 traducir("Espera de autorización agotada.")
                 if cancelacion == "agotada"
                 else traducir("Espera de autorización cancelada.")
             )
+            self.estado.set_text(msg)
+            self._anunciar_estado(msg, "assertive")
             self._escribir(
                 "[-] No se ejecutó ninguna tarea. Comprueba el agente de autenticación de Polkit.\n",
                 "error",
@@ -5711,6 +6009,7 @@ class VentanaPrincipal(Gtk.Window):
             mensaje = ("Mantenimiento completado. Limpieza omitida." if limpieza_omitida
                        else "✔ ¡Mantenimiento completado con éxito!")
             self.estado.set_text(traducir(mensaje))
+            self._anunciar_estado(mensaje)
             self._escribir("\n==================================================\n"
                            "  [✔] ¡Mantenimiento completado con éxito!\n"
                            "==================================================\n"
@@ -5720,11 +6019,15 @@ class VentanaPrincipal(Gtk.Window):
                 guardar_registro_mantenimiento(self.tareas_en_ejecucion, "autorización denegada", **metadatos)
             except OSError:
                 pass
-            self.estado.set_text(traducir("No se obtuvo autorización de administrador."))
+            msg = traducir("No se obtuvo autorización de administrador.")
+            self.estado.set_text(msg)
+            self._anunciar_estado(msg, "assertive")
             self._escribir("[-] Autenticación cancelada o denegada. No se ha hecho ningún cambio.\n", "error")
             return
         else:
-            self.estado.set_text(traducir("Terminó con errores. Revisa el registro."))
+            msg = traducir("Terminó con errores. Revisa el registro.")
+            self.estado.set_text(msg)
+            self._anunciar_estado(msg, "assertive")
             self._escribir("\n[-] El proceso terminó con errores (código %s).\n" % codigo, "error")
 
         # Registrar el resultado incluso si el mantenimiento terminó con errores.
@@ -5765,7 +6068,9 @@ class VentanaPrincipal(Gtk.Window):
 
         self.backup_action_in_progress = True
         self._actualizar_sensibilidad()
-        self.estado.set_text(traducir("Reiniciando servicios…"))
+        msg = traducir("Reiniciando servicios…")
+        self.estado.set_text(msg)
+        self._anunciar_estado(msg)
 
         def reiniciar():
             try:

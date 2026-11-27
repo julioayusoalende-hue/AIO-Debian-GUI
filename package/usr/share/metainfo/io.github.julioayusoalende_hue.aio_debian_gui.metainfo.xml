@@ -13,7 +13,7 @@
     <p>Back up APT repositories and desktop settings, install recommended apps in DEB or Flatpak format, or work in the detachable terminal. The startup tab lets you configure GRUB on supported systems.</p>
     <p xml:lang="es">AiO Debian GUI reúne el mantenimiento, el diagnóstico y la configuración de Debian y Ubuntu LTS en una interfaz gráfica. Revisa los cambios de paquetes antes de aplicarlos y programa el mantenimiento para que se ejecute con la aplicación cerrada.</p>
     <p xml:lang="es">Haz copias de repositorios APT y ajustes del escritorio, instala aplicaciones recomendadas en formato DEB o Flatpak y trabaja con una terminal separable. En los sistemas compatibles también puedes configurar GRUB desde la pestaña Inicio.</p>
-    <p xml:lang="fr">AiO Debian GUI réunit la maintenance, le diagnostic et la configuration de Debian et Ubuntu LTS dans une interface graphique. Examinez les changements de paquets et planifiez la maintenance même lorsque l’application est fermée.</p>
+    <p xml:lang="fr">AiO Debian GUI réunit la maintenance, le diagnostic et la configuration de Debian et Ubuntu LTS dans une interface graphique. Examinez les changements de paquets et planifiez la maintenance même lorsque l'application est fermée.</p>
     <p xml:lang="fr">Sauvegardez les dépôts APT et les réglages du bureau, installez des applications au format DEB ou Flatpak et utilisez le terminal détachable. Configurez GRUB sur les systèmes compatibles.</p>
     <p xml:lang="zh">AiO Debian GUI 为 Debian 与 Ubuntu LTS 提供图形化的系统维护、诊断和配置功能。应用软件包更改前可先预览，也可安排关闭应用后自动执行维护。</p>
     <p xml:lang="zh">备份 APT 软件源和桌面设置，安装 DEB 或 Flatpak 应用，并使用可分离的终端。在支持的系统上还可配置 GRUB 启动设置。</p>
@@ -22,12 +22,56 @@
     <name>Julio Ayuso</name>
   </developer>
   <launchable type="desktop-id">aio-debian-gui.desktop</launchable>
-  <provides><binary>aio-debian-gui</binary></provides>
+  <provides>
+    <binary>aio-debian-gui</binary>
+  </provides>
   <url type="homepage">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</url>
   <url type="bugtracker">https://github.com/julioayusoalende-hue/AIO-Debian-GUI/issues</url>
   <url type="help">https://github.com/julioayusoalende-hue/AIO-Debian-GUI/blob/main/docs/guia-de-uso.md</url>
   <url type="vcs-browser">https://github.com/julioayusoalende-hue/AIO-Debian-GUI</url>
-  <content_rating type="oars-1.1"/>
+  <url type="donation">https://github.com/sponsors/julioayusoalende-hue</url>
+  <content_rating type="oars-1.1">
+    <content_attribute id="violence-cartoon">none</content_attribute>
+    <content_attribute id="violence-fantasy">none</content_attribute>
+    <content_attribute id="violence-realistic">none</content_attribute>
+    <content_attribute id="violence-bloodshed">none</content_attribute>
+    <content_attribute id="violence-sexual">none</content_attribute>
+    <content_attribute id="sex-nudity">none</content_attribute>
+    <content_attribute id="sex-themes">none</content_attribute>
+    <content_attribute id="sex-homosexuality">none</content_attribute>
+    <content_attribute id="profanity">none</content_attribute>
+    <content_attribute id="drugs-alcohol">none</content_attribute>
+    <content_attribute id="drugs-tobacco">none</content_attribute>
+    <content_attribute id="drugs-other">none</content_attribute>
+    <content_attribute id="gambling">none</content_attribute>
+    <content_attribute id="online-interaction">none</content_attribute>
+    <content_attribute id="in-app-purchases">none</content_attribute>
+    <content_attribute id="social-info-sharing">none</content_attribute>
+    <content_attribute id="location-sharing">none</content_attribute>
+    <content_attribute id="uncontrolled-content">none</content_attribute>
+    <content_attribute id="fear">none</content_attribute>
+    <content_attribute id="user-to-user">none</content_attribute>
+  </content_rating>
+  <categories>
+    <category>System</category>
+    <category>Settings</category>
+    <category>PackageManager</category>
+  </categories>
+  <keywords>
+    <keyword>apt</keyword>
+    <keyword>flatpak</keyword>
+    <keyword>update</keyword>
+    <keyword>actualizar</keyword>
+    <keyword>mantenimiento</keyword>
+    <keyword>grub</keyword>
+    <keyword>backup</keyword>
+    <keyword>diagnostics</keyword>
+  </keywords>
+  <mimetypes>
+    <mimetype>application/vnd.debian.binary-package</mimetype>
+    <mimetype>application/x-deb</mimetype>
+    <mimetype>application/vnd.flatpak.ref</mimetype>
+  </mimetypes>
   <screenshots>
     <screenshot type="default">
       <image>https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/mantenimiento.png</image>
@@ -53,6 +97,41 @@
       <image>https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png</image>
       <caption>Schedule automatic maintenance</caption>
       <caption xml:lang="es">Programa el mantenimiento automático</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/terminal.png</image>
+      <caption>Integrated terminal with commands menu</caption>
+      <caption xml:lang="es">Terminal integrada con menú Comandos</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/preferencias.png</image>
+      <caption>Preferences dialog</caption>
+      <caption xml:lang="es">Diálogo de preferencias</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/detalles-tecnicos.png</image>
+      <caption>Technical details</caption>
+      <caption xml:lang="es">Detalles técnicos</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/grub-ajustes-cargados.png</image>
+      <caption>GRUB settings loaded</caption>
+      <caption xml:lang="es">Ajustes de GRUB cargados</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/grub-antes-de-cargar.png</image>
+      <caption>GRUB before loading settings</caption>
+      <caption xml:lang="es">GRUB antes de cargar ajustes</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/novedades.png</image>
+      <caption>Release notes</caption>
+      <caption xml:lang="es">Novedades de la versión</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/acerca-de.png</image>
+      <caption>About dialog</caption>
+      <caption xml:lang="es">Acerca de</caption>
     </screenshot>
   </screenshots>
 </component>

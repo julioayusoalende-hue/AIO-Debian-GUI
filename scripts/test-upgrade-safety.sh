@@ -44,14 +44,14 @@ assert_no_install() {
 
 # El diagnóstico solo refresca índices y considera error los fallos parciales.
 (
-    timeout() {
-        [ "$*" = '--kill-after=10s 180s apt-get -o APT::Update::Error-Mode=any update' ]
-    }
+    dpkg() { return 0; }
+    apt-get() { [ "$*" = '-o APT::Update::Error-Mode=any update' ]; }
     output=$(refrescar_indices_diagnostico)
     [[ "$output" == *'##DIAGNOSTIC_APT:updated'* ]]
 )
 (
-    timeout() { return 100; }
+    dpkg() { return 0; }
+    apt-get() { return 100; }
     if output=$(refrescar_indices_diagnostico); then echo 'ERROR: índices fallidos aceptados'; exit 1; fi
     [[ "$output" != *'##DIAGNOSTIC_APT:updated'* ]]
 )

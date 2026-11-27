@@ -127,6 +127,52 @@ fields.insert(description_index, f"Installed-Size: {size}")
 control.write_text("\n".join(fields) + "\n", encoding="utf-8")
 PYMETA
 
+# Inyectar versión interna en el ejecutable principal y en el helper
+python3 - "$STAGE" "$PUBLIC_VERSION" <<'PYVERSION'
+from pathlib import Path
+import sys
+
+stage, version = Path(sys.argv[1]), sys.argv[2]
+
+# Inyectar en usr/bin/aio-debian-gui
+main_path = stage / "usr/bin/aio-debian-gui"
+text = main_path.read_text(encoding="utf-8")
+marker = 'AIO_DEBIAN_GUI_VERSION = "'
+if marker in text:
+    # Reemplazar versión existente
+    start = text.index(marker) + len(marker)
+    end = text.index('"', start)
+    text = text[:start] + version + text[end:]
+else:
+    # Insertar después de las constantes de módulo (después de NOTAS_VERSION)
+    insert_after = 'NOTAS_VERSION = os.path.normpath(\n    os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/release-notes.txt")\n)'
+    idx = text.index(insert_after) + len(insert_after)
+    text = text[:idx] + f'\n\nAIO_DEBIAN_GUI_VERSION = "{version}"\n' + text[idx:]
+main_path.write_text(text, encoding="utf-8")
+
+# Inyectar en usr/lib/aio-debian-gui/aio-debian-gui-helper
+helper_path = stage / "usr/lib/aio-debian-gui/aio-debian-gui-helper"
+if helper_path.exists():
+    helper_text = helper_path.read_text(encoding="utf-8")
+    helper_marker = 'HELPER_VERSION='
+    if helper_marker in helper_text:
+        start = helper_text.index(helper_marker) + len(helper_marker)
+        end = helper_text.index('\n', start)
+        helper_text = helper_text[:start] + version + helper_text[end:]
+    else:
+        # Insertar después del shebang y comentarios iniciales
+        lines = helper_text.splitlines(keepends=True)
+        insert_idx = 0
+        for i, line in enumerate(lines):
+            if line.startswith('#!/') or line.startswith('#'):
+                insert_idx = i + 1
+            else:
+                break
+        lines.insert(insert_idx, f'HELPER_VERSION="{version}"\n')
+        helper_text = ''.join(lines)
+    helper_path.write_text(helper_text, encoding="utf-8")
+PYVERSION
+
 # Permisos normalizados (git/zip no los conservan siempre)
 find "$STAGE" -type d -exec chmod 755 {} +
 find "$STAGE" -type f -exec chmod 644 {} +

@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import platform
 import re
 import tempfile
 import urllib.request
@@ -9,6 +10,25 @@ import urllib.request
 HOMEPAGE = "https://github.com/julioayusoalende-hue/AIO-Debian-GUI"
 RELEASE_API = "https://api.github.com/repos/julioayusoalende-hue/AIO-Debian-GUI/releases/latest"
 MAX_APPIMAGE_SIZE = 256 * 1024 * 1024
+
+# Arquitecturas soportadas para AppImage
+APOYADAS = {
+    "x86_64": "x86_64",
+    "amd64": "x86_64",
+    "aarch64": "aarch64",
+    "arm64": "aarch64",
+}
+
+
+def arquitectura_appimage():
+    """Devuelve la arquitectura normalizada para AppImage (x86_64, aarch64) o lanza RuntimeError."""
+    maquina = platform.machine().lower()
+    if maquina in APOYADAS:
+        return APOYADAS[maquina]
+    raise RuntimeError(
+        f"Arquitectura no soportada: {platform.machine()}. "
+        f"Arquitecturas soportadas: x86_64, aarch64."
+    )
 
 def version_numerica(version):
     """Convierte versión a tupla comparable. Acepta formatos: 1.2.3, v1.2.3, 1.2.3~testing.4"""
@@ -20,6 +40,7 @@ def version_numerica(version):
 
 
 def obtener_release_actualizacion():
+    arch = arquitectura_appimage()
     request = urllib.request.Request(
         RELEASE_API, headers={"User-Agent": "aio-debian-gui-updater", "Accept": "application/vnd.github+json"}
     )
@@ -31,12 +52,15 @@ def obtener_release_actualizacion():
     if not version_numerica(version):
         raise RuntimeError("La versión de GitHub no tiene un formato válido.")
     archivos = {a.get("name"): a.get("browser_download_url") for a in datos.get("assets", [])}
-    nombre = f"aio-debian-gui_{version}_x86_64.AppImage"
+    nombre = f"aio-debian-gui_{version}_{arch}.AppImage"
     url = archivos.get(nombre)
     url_hash = archivos.get("SHA256SUMS")
     if not (url and url_hash and url.startswith(HOMEPAGE + "/releases/download/") and
             url_hash.startswith(HOMEPAGE + "/releases/download/")):
-        raise RuntimeError("La Release no contiene un AppImage y SHA256SUMS válidos.")
+        raise RuntimeError(
+            f"La Release no contiene un AppImage válido para {arch} y SHA256SUMS. "
+            f"Buscado: {nombre}"
+        )
     return version, nombre, url, url_hash
 
 

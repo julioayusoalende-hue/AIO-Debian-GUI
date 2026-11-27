@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Selección sin hardware real, sin red y sin instalar controladores."""
 import importlib.util
-from pathlib import Path
 import unittest
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('nvidia', ROOT / 'package/usr/lib/aio-debian-gui/aio_core/nvidia.py')

@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Host detection visibility and scheduled Snap task selection without real snapd."""
 import ast
+import sys
 from pathlib import Path
 from types import SimpleNamespace
-import sys
 from unittest import mock
+
 sys.path.insert(0, str(Path('package/usr/lib/aio-debian-gui').resolve()))
-from aio_core import scheduler, preflight
+from aio_core import preflight, scheduler
+
 source = ast.parse(Path('package/usr/bin/aio-debian-gui').read_text())
 window = next(n for n in source.body if isinstance(n, ast.ClassDef) and n.name == 'VentanaPrincipal')
 visible = next(n for n in window.body if isinstance(n, ast.FunctionDef) and n.name == '_visible')

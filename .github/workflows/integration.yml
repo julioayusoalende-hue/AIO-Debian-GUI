@@ -1,0 +1,271 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+  PYTHONDONTWRITEBYTECODE: 1
+
+jobs:
+  build-deb:
+    name: Build .deb package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      deb-version: ${{ steps.build.outputs.deb-version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build .deb package
+        id: build
+        run: |
+          ./scripts/build-deb.sh
+          DEB_FILE=$(ls dist/aio-debian-gui_*.deb | head -1)
+          VERSION=$(dpkg-deb -f "$DEB_FILE" Version)
+          echo "deb-version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aio-debian-gui-deb
+          path: dist/aio-debian-gui_*.deb
+          retention-days: 1
+
+  integration-test:
+    name: Integration test (${{ matrix.os }})
+    needs: build-deb
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-24.04
+          - ubuntu-26.04
+          - debian-12
+          - debian-13
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download .deb artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: aio-debian-gui-deb
+          path: dist
+
+      - name: Determine container image
+        id: distro
+        run: |
+          case "${{ matrix.os }}" in
+            ubuntu-24.04) IMAGE="ubuntu:24.04" ;;
+            ubuntu-26.04) IMAGE="ubuntu:26.04" ;;
+            debian-12)    IMAGE="debian:12" ;;
+            debian-13)    IMAGE="debian:13" ;;
+          esac
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Start test container
+        id: container
+        run: |
+          IMAGE="${{ steps.distro.outputs.image }}"
+          CONTAINER_NAME="aio-test-${{ matrix.os }}-${{ github.run_id }}-${{ github.run_number }}"
+          echo "container-name=$CONTAINER_NAME" >> "$GITHUB_OUTPUT"
+          # dpkg/apt y los maintainer scripts no necesitan systemd como PID1:
+          # postinst/prerm comprueban /run/systemd/system antes de usar systemctl.
+          docker run -d --name "$CONTAINER_NAME" \
+            --tmpfs=/run --tmpfs=/run/lock \
+            "$IMAGE" sleep infinity
+
+      - name: Install dependencies in container
+        run: |
+          CONTAINER="${{ steps.container.outputs.container-name }}"
+          docker exec "$CONTAINER" bash -c "
+            apt-get update &&
+            apt-get install -y --no-install-recommends \
+              python3 python3-gi python3-apt python3-pip \
+              gir1.2-gtk-3.0 gir1.2-vte-2.91 gir1.2-atk-1.0 \
+              xvfb dbus polkitd needrestart flatpak \
+              dpkg-dev fakeroot curl ca-certificates lsb-release procps kmod \
+              2>&1 | tail -5
+          " 2>&1 | tee /tmp/install-deps.log
+
+      - name: Copy package and tests to container
+        run: |
+          CONTAINER="${{ steps.container.outputs.container-name }}"
+          DEB_FILE=$(ls dist/aio-debian-gui_*.deb | head -1)
+          docker cp "$DEB_FILE" "$CONTAINER:/tmp/aio-debian-gui.deb"
+          docker cp scripts/ "$CONTAINER:/tmp/scripts/"
+          docker cp package/ "$CONTAINER:/tmp/package/"
+          docker cp tests/ "$CONTAINER:/tmp/tests/"
+          docker cp ayusos-control-center/ "$CONTAINER:/tmp/ayusos-control-center/"
+          docker cp pyproject.toml "$CONTAINER:/tmp/pyproject.toml"
+          docker cp CHANGELOG.md "$CONTAINER:/tmp/CHANGELOG.md"
+
+      - name: Run check.sh
+        id: check
+        run: |
+          CONTAINER="${{ steps.container.outputs.container-name }}"
+          docker exec "$CONTAINER" bash -c "
+            cd /tmp && chmod +x scripts/check.sh &&
+            xvfb-run -a ./scripts/check.sh 2>&1 | tee /tmp/check.log
+          "
+
+      - name: Install .deb package
+        id: install
+        run: |
+          CONTAINER="${{ steps.container.outputs.container-name }}"
+          docker exec "$CONTAINER" bash -c "
+            apt-get update &&
+            apt-get install -y /tmp/aio-debian-gui.deb 2>&1 | tee /tmp/install.log
+          "
+
+      - name: Verify clean installation
+        id: verify-clean
+        run: |
+          CONTAINER="${{ steps.container.outputs.container-name }}"
+          docker exec "$CONTAINER" bash -c "
+            dpkg -l aio-debian-gui | grep '^ii' &&
+            /usr/lib/aio-debian-gui/aio-debian-gui-helper --version &&
+            test -f /usr/lib/aio-debian-gui/aio-grub-settings &&
+            test -f /usr/lib/aio-debian-gui/aio-apt-sources-backup &&
+            test -f /usr/share/polkit-1/actions/es.aiodebian.gui.policy &&
+            test -f /usr/lib/systemd/system/aio-debian-gui-maintenance@.service &&
+            test -f /usr/lib/systemd/system/aio-debian-gui-maintenance@.timer &&
+            test -f /usr/share/applications/aio-debian-gui.desktop
+          " 2>&1 | tee /tmp/verify-clean.log
+
+      - name: Run pytest suite
+        id: pytest
+        run: |
+          CONTAINER="${{ steps.container.outputs.container-name }}"
+          docker exec "$CONTAINER" bash -c "
+            cd /tmp &&
+            pip3 install --break-system-packages pytest pytest-mock ruff 2>&1 | tail -3 &&
+            xvfb-run -a python3 -m pytest tests/ -q --tb=short 2>&1 | tee /tmp/pytest.log
+          "
+
+      - name: Run Ruff linting
+        id: ruff
+        run: |
+          CONTAINER="${{ steps.container.outputs.container-name }}"
+          docker exec "$CONTAINER" bash -c "
+            cd /tmp &&
+            python3 -m ruff check package/usr/bin/aio-debian-gui package/usr/lib/aio-debian-gui --output-format=github 2>&1 | tee /tmp/ruff.log
+          "
+
+      - name: Test purge (complete removal)
+        id: purge
+        run: |
+          CONTAINER="${{ steps.container.outputs.container-name }}"
+          docker exec "$CONTAINER" bash -c "
+            apt-get purge -y aio-debian-gui 2>&1 | tee /tmp/purge.log &&
+            ! dpkg -l aio-debian-gui 2>/dev/null | grep '^ii' &&
+            ! test -f /usr/lib/aio-debian-gui/aio-debian-gui-helper &&
+            ! test -f /usr/share/polkit-1/actions/es.aiodebian.gui.policy
+          "
+
+      - name: Reinstall after purge
+        id: reinstall
+        run: |
+          CONTAINER="${{ steps.container.outputs.container-name }}"
+          docker exec "$CONTAINER" bash -c "
+            apt-get install -y /tmp/aio-debian-gui.deb 2>&1 | tee /tmp/reinstall.log &&
+            dpkg -l aio-debian-gui | grep '^ii' &&
+            /usr/lib/aio-debian-gui/aio-debian-gui-helper --version
+          "
+
+      - name: Collect logs
+        if: always()
+        run: |
+          CONTAINER="${{ steps.container.outputs.container-name }}"
+          mkdir -p "logs/${{ matrix.os }}"
+          for f in check install pytest ruff verify-clean purge reinstall install-deps; do
+            docker cp "$CONTAINER:/tmp/$f.log" "logs/${{ matrix.os }}/" 2>/dev/null || true
+          done
+
+      - name: Generate matrix report
+        if: always()
+        run: |
+          cat > "logs/${{ matrix.os }}/matrix-report.json" <<EOF
+          {
+            "os": "${{ matrix.os }}",
+            "image": "${{ steps.distro.outputs.image }}",
+            "deb_version": "${{ needs.build-deb.outputs.deb-version }}",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "status": "${{ job.status }}",
+            "steps": {
+              "check_sh": "${{ steps.check.outcome }}",
+              "install": "${{ steps.install.outcome }}",
+              "verify_clean": "${{ steps.verify-clean.outcome }}",
+              "pytest": "${{ steps.pytest.outcome }}",
+              "ruff": "${{ steps.ruff.outcome }}",
+              "purge": "${{ steps.purge.outcome }}",
+              "reinstall": "${{ steps.reinstall.outcome }}"
+            }
+          }
+          EOF
+
+      - name: Cleanup container
+        if: always()
+        run: |
+          docker rm -f "${{ steps.container.outputs.container-name }}" 2>/dev/null || true
+
+      - name: Upload logs and report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-logs-${{ matrix.os }}
+          path: logs/${{ matrix.os }}/
+          retention-days: 7
+
+  summary:
+    name: Integration Test Summary
+    needs: [build-deb, integration-test]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Download all logs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: integration-logs-*
+          path: all-logs
+          merge-multiple: false
+
+      - name: Generate summary report
+        run: |
+          {
+            echo "# Integration Test Summary"
+            echo ""
+            echo "**Debian Package Version:** ${{ needs.build-deb.outputs.deb-version }}"
+            echo ""
+            echo "| OS | check.sh | Install | Verify | Pytest | Ruff | Purge | Reinstall |"
+            echo "|----|----------|---------|--------|--------|------|-------|-----------|"
+            for dir in all-logs/integration-logs-*/; do
+              report="$dir/matrix-report.json"
+              [ -f "$report" ] || continue
+              OS=$(jq -r '.os' "$report")
+              row="| $OS"
+              for step in check_sh install verify_clean pytest ruff purge reinstall; do
+                row="$row | $(jq -r ".steps.$step" "$report")"
+              done
+              echo "$row |"
+            done
+          } | tee summary.md
+
+      - name: Upload summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-summary
+          path: summary.md
+          retention-days: 7

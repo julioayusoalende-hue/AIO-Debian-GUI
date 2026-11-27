@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Comprobar el versionado de pruebas y su aislamiento del paquete estable."""
-from pathlib import Path
 import re
 import shutil
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
 
@@ -48,6 +48,12 @@ with tempfile.TemporaryDirectory() as directory:
 
     assert version("v1.0.3", "1:1.0.3", "1", "1").stdout.strip() == "1.0.4~testing.1.1"
     assert version("v1.0.4", "1:1.0.4", "12", "2").stdout.strip() == "1.0.5~testing.12.2"
+    # Salto de minor/major en el control: las pruebas se basan en la nueva versión.
+    control.write_text(re.sub(r"^Version: .+$", "Version: 1:1.1.0", original, count=1, flags=re.M))
+    assert version("v1.0.3", "1:1.0.3", "7", "1").stdout.strip() == "1.1.0~testing.7.1"
+    control.write_text(re.sub(r"^Version: .+$", "Version: 1:2.0.0", original, count=1, flags=re.M))
+    assert version("v1.0.3", "1:1.0.3", "7", "1").stdout.strip() == "2.0.0~testing.7.1"
+    control.write_text(re.sub(r"^Version: .+$", "Version: 1:1.0.3", original, count=1, flags=re.M))
     for args in [("v1.0.3-rc1", "1:1.0.3", "1", "1"),
                  ("v1.0.3", "2:1.0.3", "1", "1"),
                  ("v1.0.3", "1:1.0.2", "1", "1"),

@@ -11,9 +11,32 @@ import threading
 import gi
 
 gi.require_version('Gtk', '3.0')
-from gi.repository import GLib, Gtk
+gi.require_version('Atk', '1.0')
+from gi.repository import Atk, GLib, Gtk
 
 from . import diagnostics as core_diagnostics
+
+
+def live_region(polite=True, atomic=False):
+    """Crea una región en vivo (ARIA live region) para anuncios de estado."""
+    lbl = Gtk.Label()
+    lbl.set_no_show_all(True)
+    lbl.set_visible(False)
+    accessible = lbl.get_accessible()
+    accessible.set_role(Atk.Role.STATIC)
+    try:
+        if polite:
+            accessible.set_attribute("live", "polite")
+        else:
+            accessible.set_attribute("live", "assertive")
+        if atomic:
+            accessible.set_attribute("atomic", "true")
+        else:
+            accessible.set_attribute("atomic", "false")
+    except AttributeError:
+        # ATK sin set_attribute: la región en vivo no se anunciará, pero no fallamos.
+        pass
+    return lbl
 
 APP_ID_FLATPAK = "io.github.julioayusoalende_hue.aio_debian_gui"
 
@@ -119,6 +142,10 @@ class HealthDashboard(Gtk.Box):
             "El diagnóstico se ejecuta automáticamente al abrir esta ventana."))
         self.pack_start(self.status_label, False, False, 0)
 
+        # Live region para anuncios de diagnóstico (accesibilidad)
+        self.live_region = live_region(polite=True)
+        self.pack_start(self.live_region, False, False, 0)
+
         self._build_initial_cards()
         self.show_all()
 
@@ -211,6 +238,16 @@ class HealthDashboard(Gtk.Box):
             "advice_label": advice_label,
             "actions": actions,
         }
+
+    def _announce(self, message):
+        """Anuncia un mensaje a través de la región en vivo para lectores de pantalla."""
+        if not message or not hasattr(self, "live_region"):
+            return
+        # Forzar actualización para disparar el evento ATK
+        self.live_region.set_text("")
+        self.live_region.set_text(message)
+        self.live_region.set_visible(True)
+        self.live_region.show()
 
     def _draw_status_circle(self, area, cr, estado):
         """Dibuja un círculo coloreado según el estado de su tarjeta."""
@@ -308,6 +345,8 @@ class HealthDashboard(Gtk.Box):
         self.progress.set_fraction(min(max(fraccion, 0.0), 1.0))
         if texto:
             self.progress.set_text(texto)
+            # Anunciar a la región en vivo
+            self.live_region.set_text(texto)
         return False
 
     def _on_destroy(self, _widget):
@@ -336,6 +375,7 @@ class HealthDashboard(Gtk.Box):
         self.loading = True
         self.status_label.set_text(self.translate("Diagnóstico en curso…"))
         self._progreso(0.02, self.translate("Iniciando diagnóstico…"))
+        self._announce(self.translate("Iniciando diagnóstico del sistema"))
         for card in self.cards.values():
             self._limpiar_acciones(card)
             card["detail_label"].set_text(self.translate("Comprobando…"))
@@ -485,6 +525,7 @@ class HealthDashboard(Gtk.Box):
             self.progress.set_fraction(0.0)
             self.progress.set_text(self.translate("Diagnóstico interrumpido"))
             self.status_label.set_text(self.translate("Error: ") + error)
+            self._announce(self.translate("Error en el diagnóstico: ") + error)
             return GLib.SOURCE_REMOVE
 
         self.resultados = results
@@ -506,13 +547,16 @@ class HealthDashboard(Gtk.Box):
             estado = "Requiere atención"
         elif recuento["unknown"]:
             estado = "No comprobado"
-        self.status_label.set_text(
+        resumen = (
             "%s · %s: %s · %s: %s · %s: %s · %s: %s" % (
                 self.translate(estado),
                 self.translate("No superados"), recuento["critical"],
                 self.translate("A revisar"), recuento["warning"],
                 self.translate("Sin comprobar"), recuento["unknown"],
                 self.translate("Correctos"), recuento["ok"]))
+        self.status_label.set_text(resumen)
+        # Anunciar resultado para accesibilidad
+        self._announce(resumen)
         return GLib.SOURCE_REMOVE
 
     # ------------------------------------------------------------------
