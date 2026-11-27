@@ -1,19 +1,19 @@
 Package: aio-debian-gui
-Version: 1:1.5.7
+Version: 1:1.5.8
 Architecture: all
 Maintainer: Julio Ayuso <epdc@msn.com>
-Installed-Size: 1766
+Installed-Size: 1771
 Depends: bash, apt, ca-certificates, libglib2.0-bin, dconf-cli, coreutils, diffutils, grep, sed, util-linux, pciutils, libnotify-bin, needrestart, python3, python3-apt, python3-gi, gir1.2-gtk-3.0, gir1.2-vte-2.91, librsvg2-common, pkexec | policykit-1, flatpak
 Recommends: systemd-timesyncd | time-daemon, fwupd
 Conflicts: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
 Breaks: ayusos-control-center (<< 1.4.10)
 Replaces: ayusos-control-center (<< 1.4.10), aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
 Provides: aio-debian-gui-software-manager
-Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.5.7_all.deb
-Size: 892024
-MD5sum: 1e59ae455069f7e2ea554e0398ae036e
-SHA1: 1b06adad07fcce2566a1af45d58e86251a1287dc
-SHA256: be9fdce62842a6afdc2414652d3061ca3bcc5835dcdfab78df9b5f27692f073b
+Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.5.8_all.deb
+Size: 893044
+MD5sum: cfd82a8c1815667be1b61297b19bc31b
+SHA1: b6a2267beb0b27fec8a2ceda6bb4d0ec3cc72156
+SHA256: 45ddd4595e2f938e9232dd854cb040b51614ff6e51f183835f239ba666bd8c94
 Section: admin
 Priority: optional
 Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
@@ -27,16 +27,16 @@ Description: Interfaz gráfica de mantenimiento y configuración para Debian y U
  Este paquete configura el repositorio APT de AiO Debian GUI.
 
 Package: ayusos-control-center
-Version: 1.5.7
+Version: 1.5.8
 Architecture: all
 Maintainer: Julio Ayuso <epdc@msn.com>
-Depends: aio-debian-gui (>= 1:1.5.7), aio-debian-gui-software-manager, python3, python3-gi, gir1.2-gtk-3.0, bash, coreutils, systemd
+Depends: aio-debian-gui (>= 1:1.5.8), aio-debian-gui-software-manager, python3, python3-gi, gir1.2-gtk-3.0, bash, coreutils, systemd
 Recommends: calamares, timeshift
-Filename: pool/main/a/ayusos-control-center/ayusos-control-center_1.5.7_all.deb
-Size: 10445452
-MD5sum: 65f5ff5dcb1ec5978ceafe57a0dc1542
-SHA1: 5310bbc8b2d122ac47fa4b3bb4e1756f149f25a8
-SHA256: 5d6388f827f9c3b86a5be842960a78c472fd73e1c8b9cef36a370a4ddc6435c6
+Filename: pool/main/a/ayusos-control-center/ayusos-control-center_1.5.8_all.deb
+Size: 10445444
+MD5sum: c40b4d52f960c5f2abbec0da41f370fd
+SHA1: 201a7d70418257db8e31b19f1091ec21dc90cd26
+SHA256: 52e131112f1857dc0090a9737bb5684e10bcb8bd73ea6ad1f495ec31c8105cae
 Section: admin
 Priority: optional
 Homepage: https://github.com/julioayusoalende-hue/AyusOS-Linux
