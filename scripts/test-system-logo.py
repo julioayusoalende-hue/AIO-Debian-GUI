@@ -21,8 +21,8 @@ assert env["logo_distribucion"]("ubuntu") == (str(ubuntu), "Logotipo de Ubuntu")
 assert env["logo_distribucion"]("ayusos") == (None, None)
 assert env["logo_distribucion"]("no-soportada") == (None, None)
 gui = source.read_text(encoding="utf-8")
-assert "imagen_logo_distribucion(self.datos_anfitrion, 16)" in gui
-assert "imagen_logo_distribucion(self.datos_anfitrion, 100)" in gui
+assert "self._logo_sistema(16)" in gui
+assert "self._logo_sistema(100)" in gui
 assert "GdkPixbuf.Pixbuf.new_from_file_at_scale(" in gui
 for icon in ("brave", "gearlever", "celluloid", "feishin", "gimp", "google-chrome", "handbrake",
              "plex", "spotify", "switcheroo", "video-downloader", "vlc"):

@@ -1,8 +1,12 @@
 # Cambios
 
-## 1.6.2
+## 1.6.3
 
 - El actualizador de AiO incluye el Centro de Control de AyusOS en la misma operación cuando está instalado y hay una versión compatible en el canal seleccionado.
+
+## 1.6.2
+
+- El encabezado y la ventana de detalles técnicos muestran el nombre, versión y logotipo proporcionados por la extensión del sistema.
 
 ## 1.6.1
 

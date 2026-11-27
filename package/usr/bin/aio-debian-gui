@@ -85,7 +85,7 @@ NOTAS_VERSION = os.path.normpath(
 )
 
 # Versión embebida en tiempo de compilación (inyectada por build-deb.sh)
-AIO_DEBIAN_GUI_VERSION = "1.6.2"
+AIO_DEBIAN_GUI_VERSION = "1.6.3"
 
 RECOMMENDED_ICON_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/recommended-icons")
@@ -935,8 +935,8 @@ def informacion_hardware_basica():
     ]
 
 
-def informacion_sistema():
-    filas = [("Sistema operativo", sistema_operativo())]
+def informacion_sistema(nombre_sistema=None):
+    filas = [("Sistema operativo", nombre_sistema or sistema_operativo())]
     filas.extend((nombre, valor) for nombre, valor in informacion_hardware_basica() if valor)
     hilos = os.cpu_count()
     if hilos is not None:
@@ -1539,6 +1539,17 @@ class VentanaPrincipal(Gtk.Window):
                 return value
         return default
 
+    def _nombre_sistema(self, nombre_base, version_base=None):
+        nombre = self._extension_value("system_name", nombre_base, self.datos_anfitrion)
+        version = self._extension_value("system_version", version_base, self.datos_anfitrion)
+        return f"{nombre} {version}" if version else nombre
+
+    def _logo_sistema(self, tamano):
+        logo = self._extension_value("header_logo", None, tamano)
+        if logo is None:
+            return imagen_logo_distribucion(self.datos_anfitrion, tamano)
+        return logo
+
     def _titulo_cabecera(self):
         titulo = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2,
                          valign=Gtk.Align.CENTER, margin_top=3, margin_bottom=3)
@@ -1567,19 +1578,10 @@ class VentanaPrincipal(Gtk.Window):
             self.datos_anfitrion.get("ID"),
             self.datos_anfitrion.get("NAME") or traducir("Sistema no compatible"),
         )
-        nombre_sistema = self._extension_value(
-            "system_name", nombre_base, self.datos_anfitrion,
-        )
-        logo = self._extension_value("header_logo", None, 16)
-        if logo is None:
-            logo = imagen_logo_distribucion(self.datos_anfitrion, 16)
+        nombre_sistema = self._nombre_sistema(nombre_base, self.datos_anfitrion.get("VERSION_ID"))
+        logo = self._logo_sistema(16)
         if logo is not None:
             sistema.pack_start(logo, False, False, 0)
-        version_sistema = self._extension_value(
-            "system_version", self.datos_anfitrion.get("VERSION_ID"), self.datos_anfitrion,
-        )
-        if version_sistema:
-            nombre_sistema = f"{nombre_sistema} {version_sistema}"
         etiqueta_sistema = Gtk.Label(label=nombre_sistema)
         etiqueta_sistema.get_style_context().add_class("aio-header-system")
         sistema.pack_start(etiqueta_sistema, False, False, 0)
@@ -4525,7 +4527,7 @@ class VentanaPrincipal(Gtk.Window):
         detalles.set_border_width(20)
         scroll.add(detalles)
 
-        logo = imagen_logo_distribucion(self.datos_anfitrion, 100)
+        logo = self._logo_sistema(100)
         if logo is not None:
             logo.set_halign(Gtk.Align.CENTER)
             detalles.pack_start(logo, False, False, 6)
@@ -4547,9 +4549,12 @@ class VentanaPrincipal(Gtk.Window):
         grid.attach(etiqueta("Comprobando…"), 0, 0, 2, 1)
         grid.show_all()
 
+        nombre_base = self.datos_anfitrion.get("PRETTY_NAME") or "Debian GNU/Linux"
+        nombre_sistema = self._nombre_sistema(nombre_base)
+
         def consultar():
             try:
-                filas, _ = informacion_sistema()
+                filas, _ = informacion_sistema(nombre_sistema)
                 error = None
             except Exception as exc:
                 filas, error = [], str(exc)
