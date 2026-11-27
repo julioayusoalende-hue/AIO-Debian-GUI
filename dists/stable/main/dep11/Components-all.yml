@@ -156,19 +156,15 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/acerca-de.png
 Releases:
-- version: 1.5.5
+- version: 1.5.6
   type: stable
   unix-timestamp: 1795737600
   description:
     C: >-
-      <ul><li>Al abrir un archivo .deb desde el escritorio, AiO selecciona el Gestor de software y muestra la confirmación
-      de instalación.</li><li>Las páginas y tarjetas usan los colores del tema GTK para conservar el contraste al alternar
-      entre los modos claro y oscuro.</li><li>AyusOS Control Center utiliza autorización gráfica para gestionar snapshots,
-      actualizar GRUB y aplicar perfiles de hardware.</li><li>El asistente solo ofrece extensiones de GNOME que faltan, usa
-      el acento rojo, respeta la elección de Flathub y conserva el estado pendiente si falla el guardado o la aplicación de
-      los ajustes.</li><li>Se corrigen la restauración de identidad, el tema de arranque, los diagnósticos de Timeshift, la
-      comprobación de actualizaciones y el filtro de aplicaciones AyusOS.</li><li>Cada publicación Stable o Testing de AiO
-      incluye el Centro de Control de la misma compilación, con versiones verificadas antes de firmar el repositorio APT.</li></ul>
+      <ul><li>El asistente guarda la elección de Flathub al finalizar. La tarea para añadir el repositorio está disponible
+      cuando falta y el diagnóstico comprueba su configuración.</li><li>El Centro de Control retira las preselecciones de
+      aplicaciones del asistente y las pestañas Perfil Hardware e Identidad.</li><li>La receta de la ISO comprueba que la
+      imagen contiene las versiones de AiO Debian GUI y AyusOS Control Centre compiladas para ella.</li></ul>
 ContentRating:
   oars-1.1:
     violence-cartoon: none
