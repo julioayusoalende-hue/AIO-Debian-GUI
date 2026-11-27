@@ -169,3 +169,45 @@ class TestAsyncOperations:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+def test_health_shows_failed_systemd_units(monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+
+    from aio_core.health_dashboard import HealthDashboard
+
+    command = ('systemctl', '--failed', '--no-pager')
+    output = 'aio-debian-gui-maintenance@1000.service loaded failed failed'
+    window = Gtk.Window()
+    window._iniciar_operacion = Mock(return_value=1)
+    window._finalizar_operacion = Mock()
+    dashboard = HealthDashboard(window, lambda text: text, lambda: False)
+    window.add(dashboard)
+    refreshed = Mock()
+    monkeypatch.setattr(dashboard, '_on_run_diagnostics', refreshed)
+    run = Mock(return_value=SimpleNamespace(returncode=0, stdout=output, stderr=''))
+    monkeypatch.setattr('subprocess.run', run)
+    shown = []
+
+    def read_dialog(dialog):
+        view = dialog.get_content_area().get_children()[0].get_child()
+        buffer = view.get_buffer()
+        shown.append(buffer.get_text(*buffer.get_bounds(), True))
+        return Gtk.ResponseType.CLOSE
+
+    monkeypatch.setattr(Gtk.Dialog, 'run', read_dialog)
+    try:
+        dashboard._ejecutar_comando(command)
+        deadline = time.monotonic() + 2
+        context = GLib.MainContext.default()
+        while not refreshed.called and time.monotonic() < deadline:
+            context.iteration(False)
+            time.sleep(0.005)
+        assert shown == [output]
+        run.assert_called_once()
+        assert run.call_args.args[0] == list(command)
+        window._finalizar_operacion.assert_called_once_with(1)
+        refreshed.assert_called_once_with()
+    finally:
+        window.destroy()

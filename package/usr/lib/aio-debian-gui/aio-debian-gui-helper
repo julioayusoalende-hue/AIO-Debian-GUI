@@ -74,9 +74,9 @@ run_privileged() {
         fi
 
         if [ "$timeout_segundos" -gt 0 ]; then
-            # Timeout que mata el grupo de procesos completo.
-            timeout --kill-after=5s --signal=SIGTERM "${timeout_segundos}s" \
-                setsid --wait "${cmd[@]}"
+            # timeout crea su propio grupo y le envía las señales. Si el
+            # comando abre otra sesión con setsid, sus hijos quedan fuera.
+            timeout --kill-after=5s --signal=SIGTERM "${timeout_segundos}s" "${cmd[@]}"
             resultado=$?
             case $resultado in
                 0) ;;

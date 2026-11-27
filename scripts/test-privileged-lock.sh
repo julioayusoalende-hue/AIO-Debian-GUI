@@ -53,6 +53,17 @@ unshare --user --map-root-user bash -c '
     # Al cerrar el descriptor de main() el lock queda libre.
     exec 9>&-
     flock -n "$otro" || { echo "ERROR: el lock no se liberó" >&2; exit 1; }
+    exec {otro}>&-
+
+    # Un hijo que sobreviva al timeout puede seguir trabajando con el lock.
+    marker="${MAINTENANCE_LOCK}.timeout-marker"
+    codigo=0
+    run_privileged "timeout-test" 1 bash -c "sleep 2 && touch -- \"\$1\" & wait" _ "$marker" || codigo=$?
+    [[ "$codigo" = 124 ]] || { echo "ERROR: código inesperado tras el timeout: $codigo" >&2; exit 1; }
+    sleep 2
+    [[ ! -e "$marker" ]] || { echo "ERROR: el hijo sobrevivió al timeout" >&2; exit 1; }
+    exec {otro}>"$MAINTENANCE_LOCK"
+    flock -n "$otro" || { echo "ERROR: el timeout dejó el lock ocupado" >&2; exit 1; }
 ' _ "$HELPER"
 
 echo "✔ lock privilegiado compartido sin falsos bloqueos"

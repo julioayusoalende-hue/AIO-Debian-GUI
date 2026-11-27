@@ -4480,6 +4480,7 @@ class VentanaPrincipal(Gtk.Window):
         caja.pack_start(titulo, False, False, 0)
 
         self.ventana_detalles_sistema = None
+        self.cargando_detalles_sistema = False
         self.btn_detalles_sistema = Gtk.Button(label=traducir("Detalles técnicos"))
         self.btn_detalles_sistema.set_halign(Gtk.Align.START)
         self.btn_detalles_sistema.connect("clicked", self._abrir_detalles_sistema)
@@ -4550,10 +4551,34 @@ class VentanaPrincipal(Gtk.Window):
         return dialogo
 
     def _actualizar_detalles_sistema(self):
-        filas, _ = informacion_sistema()
+        if self.cargando_detalles_sistema:
+            return
+        self.cargando_detalles_sistema = True
         grid = self.grid_detalles_sistema
         for widget in grid.get_children():
             widget.destroy()
+        grid.attach(etiqueta("Comprobando…"), 0, 0, 2, 1)
+        grid.show_all()
+
+        def consultar():
+            try:
+                filas, _ = informacion_sistema()
+                error = None
+            except Exception as exc:
+                filas, error = [], str(exc)
+            GLib.idle_add(self._mostrar_detalles_sistema, filas, error)
+
+        threading.Thread(target=consultar, daemon=True).start()
+
+    def _mostrar_detalles_sistema(self, filas, error):
+        self.cargando_detalles_sistema = False
+        if self.destruida:
+            return GLib.SOURCE_REMOVE
+        grid = self.grid_detalles_sistema
+        for widget in grid.get_children():
+            widget.destroy()
+        if error is not None:
+            grid.attach(etiqueta(error), 0, 0, 2, 1)
         for i, (clave, valor) in enumerate(filas):
             nombre = etiqueta(clave, dim=True)
             nombre.set_max_width_chars(20)
@@ -4563,6 +4588,8 @@ class VentanaPrincipal(Gtk.Window):
             dato.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
             dato.set_selectable(True)
             grid.attach(dato, 1, i, 1, 1)
+        grid.show_all()
+        return GLib.SOURCE_REMOVE
 
     def _aplicar_diseno_fastfetch(self, _boton):
         titulo = traducir("Diseño de Fastfetch")
@@ -5274,14 +5301,27 @@ class VentanaPrincipal(Gtk.Window):
         def verificar():
             try:
                 informe = core_preflight.check(pasos)
-                GLib.idle_add(self._terminar_preflight, pasos, informe, None, opciones)
+                preparacion = dict(opciones)
+                if not informe.blocked:
+                    if pasos == ["revertir-backports"]:
+                        preparacion["informe_especial"] = self._consultar_informe_mantenimiento(
+                            "--backports-rollback-plan", 45)
+                    elif "nvidia-driver" in pasos and "backports-kernel-mesa" not in pasos:
+                        preparacion["informe_especial"] = self._consultar_informe_mantenimiento(
+                            "--nvidia-report", 12)
+                GLib.idle_add(self._terminar_preflight, pasos, informe, None, preparacion)
             except Exception as error:
                 GLib.idle_add(self._terminar_preflight, pasos, None, str(error), opciones)
         threading.Thread(target=verificar, daemon=True).start()
         return
 
+    @staticmethod
+    def _consultar_informe_mantenimiento(accion, timeout):
+        cmd = comando_host(HELPER_SISTEMA, accion) if es_flatpak() else ["bash", HELPER, accion]
+        return subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=timeout)
+
     def _terminar_preflight(self, pasos, informe, error, opciones=None):
-        if not self.en_curso:
+        if self.destruida or not self.en_curso:
             return False
         if error:
             self._poner_ocupado(False)
@@ -5341,7 +5381,7 @@ class VentanaPrincipal(Gtk.Window):
         return False
 
     def _continuar_mantenimiento(self, pasos, upgrade_plan=None, autoremove_plan=None,
-                                 reintento_de=None, flatpak_sistema=False):
+                                 reintento_de=None, flatpak_sistema=False, informe_especial=None):
         if reintento_de is None and not self._confirmar_tareas(pasos):
             msg = traducir("Mantenimiento cancelado antes de comenzar.")
             self.estado.set_text(msg)
@@ -5393,20 +5433,13 @@ class VentanaPrincipal(Gtk.Window):
                 self._mensaje(Gtk.MessageType.ERROR, traducir("Asistente desactualizado"),
                               traducir("Actualiza el asistente de AiO para revertir Backports."))
                 return
-            cmd = (comando_host(HELPER_SISTEMA, "--backports-rollback-plan")
-                   if es_flatpak() else ["bash", HELPER, "--backports-rollback-plan"])
-            try:
-                resultado = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=45, check=False,
-                )
-            except (OSError, subprocess.SubprocessError) as exc:
-                self._mensaje(Gtk.MessageType.ERROR, traducir("Reversión de Backports"), str(exc))
-                return
-            if resultado.returncode != 0 or "##STABLE:" not in resultado.stdout:
+            resultado = informe_especial
+            if resultado is None or resultado.returncode != 0 or "##STABLE:" not in resultado.stdout:
+                detalle = (resultado.stdout + resultado.stderr)[-1600:] if resultado else ""
                 self._mensaje(
                     Gtk.MessageType.ERROR, traducir("Reversión no segura"),
                     traducir("No se puede preparar el regreso a Stable. Revisa el diagnóstico y los módulos DKMS.")
-                    + "\n" + (resultado.stdout + resultado.stderr)[-1600:],
+                    + ("\n" + detalle if detalle else ""),
                 )
                 return
             planes = [
@@ -5439,13 +5472,8 @@ class VentanaPrincipal(Gtk.Window):
                 self._mensaje(Gtk.MessageType.WARNING, "NVIDIA y Backports",
                               "Instala primero el kernel de Backports, reinicia y vuelve a comprobar el controlador NVIDIA. No se combinan ambas tareas.")
                 return
-            cmd_report = comando_host(HELPER_SISTEMA, "--nvidia-report") if es_flatpak() else ["bash", HELPER, "--nvidia-report"]
-            try:
-                report = subprocess.run(cmd_report, capture_output=True, text=True, timeout=12)
-            except (OSError, subprocess.SubprocessError) as e:
-                self._mensaje(Gtk.MessageType.ERROR, "Detección NVIDIA", str(e))
-                return
-            if report.returncode or "##NVIDIA:present:1" not in report.stdout:
+            report = informe_especial
+            if report is None or report.returncode or "##NVIDIA:present:1" not in report.stdout:
                 self._mensaje(Gtk.MessageType.WARNING, "Detección NVIDIA",
                               "El asistente no ha podido verificar una GPU NVIDIA. No se instalará nada.")
                 return

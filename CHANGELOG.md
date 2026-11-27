@@ -2,6 +2,9 @@
 
 ## 1.5.3
 
+- «Ver servicios fallidos» muestra la salida de systemd en una ventana desplazable.
+- Las consultas de Detalles técnicos, NVIDIA y reversión de Backports se ejecutan en segundo plano para mantener la interfaz operativa.
+- El asistente termina los procesos hijos cuando se agota el tiempo de una operación privilegiada, evitando que retengan el bloqueo de mantenimiento.
 - Se corrige el falso error «ya hay otra operación AiO/APT en curso» durante el mantenimiento: `run_privileged` reutiliza el lock ya tomado por el helper, por lo que `dpkg --audit` y las tareas APT pueden ejecutarse dentro de la misma operación autorizada.
 - El APT estable consume ahora exactamente los DEB publicados en GitHub y verifica `SHA256SUMS`; `ayusos-control-center` se construye de forma reproducible con `SOURCE_DATE_EPOCH`.
 - Pruebas de regresión para el lock privilegiado compartido y para la reproducibilidad del DEB de AyusOS.

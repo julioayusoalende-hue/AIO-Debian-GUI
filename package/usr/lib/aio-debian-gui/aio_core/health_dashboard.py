@@ -727,28 +727,34 @@ class HealthDashboard(Gtk.Box):
 
         from .constants import comando_host
 
+        consulta_servicios = tuple(comando) == ("systemctl", "--failed", "--no-pager")
         self.command_token = self._iniciar_operacion('Solución de Salud del sistema')
         if self.command_token is None:
             self.status_label.set_text(self.translate('Espera a que termine la operación actual.'))
             return
         self.status_label.set_text(self.translate("Ejecutando: ") + " ".join(comando))
-        self._progreso(0.5, self.translate("Aplicando la solución…"))
+        self._progreso(0.5, self.translate(
+            "Comprobando…" if consulta_servicios else "Aplicando la solución…"))
 
         def worker():
+            salida = None
             try:
                 resultado = subprocess.run(comando_host(*comando), capture_output=True,
-                                           text=True, timeout=600, check=False)
+                                           text=True, errors="replace",
+                                           timeout=12 if consulta_servicios else 600, check=False)
                 if resultado.returncode:
                     detalle = (resultado.stderr or resultado.stdout or "").strip()
                     raise RuntimeError(detalle or f"código de salida {resultado.returncode}")
                 error = None
+                if consulta_servicios:
+                    salida = resultado.stdout.strip()
             except Exception as exc:
                 error = str(exc)
-            GLib.idle_add(self._comando_terminado, error)
+            GLib.idle_add(self._comando_terminado, error, salida)
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _comando_terminado(self, error):
+    def _comando_terminado(self, error, salida=None):
         self._liberar_operacion(self.command_token)
         self.command_token = None
         if self.destroyed:
@@ -765,6 +771,21 @@ class HealthDashboard(Gtk.Box):
             dialogo.run()
             dialogo.destroy()
             return GLib.SOURCE_REMOVE
+        if salida is not None:
+            dialogo = Gtk.Dialog(title=self.translate("Servicios systemd"),
+                                 transient_for=self.get_toplevel(), modal=True,
+                                 destroy_with_parent=True)
+            dialogo.set_default_size(600, 320)
+            dialogo.add_button(self.translate("Cerrar"), Gtk.ResponseType.CLOSE)
+            scroll = Gtk.ScrolledWindow()
+            vista = Gtk.TextView(editable=False, monospace=True, cursor_visible=False,
+                                 wrap_mode=Gtk.WrapMode.WORD_CHAR)
+            vista.get_buffer().set_text(salida or self.translate("Sin unidades fallidas."))
+            scroll.add(vista)
+            dialogo.get_content_area().pack_start(scroll, True, True, 0)
+            dialogo.show_all()
+            dialogo.run()
+            dialogo.destroy()
         self._on_run_diagnostics()
         return GLib.SOURCE_REMOVE
 
