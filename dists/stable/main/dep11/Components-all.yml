@@ -156,15 +156,12 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/acerca-de.png
 Releases:
-- version: 1.5.6
+- version: 1.5.7
   type: stable
   unix-timestamp: 1795737600
   description:
     C: >-
-      <ul><li>El asistente guarda la elección de Flathub al finalizar. La tarea para añadir el repositorio está disponible
-      cuando falta y el diagnóstico comprueba su configuración.</li><li>El Centro de Control retira las preselecciones de
-      aplicaciones del asistente y las pestañas Perfil Hardware e Identidad.</li><li>La receta de la ISO comprueba que la
-      imagen contiene las versiones de AiO Debian GUI y AyusOS Control Centre compiladas para ella.</li></ul>
+      <ul><li>El mantenimiento manual y programado espera a la sincronización del reloj y continúa automáticamente al confirmarla.</li></ul>
 ContentRating:
   oars-1.1:
     violence-cartoon: none
