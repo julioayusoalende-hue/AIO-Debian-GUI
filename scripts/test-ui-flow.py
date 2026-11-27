@@ -107,9 +107,11 @@ with patch.object(app.urllib.request, 'urlopen', side_effect=app.urllib.error.HT
     assert app.url_appimage_ghostty('x86_64') == f'{app.GHOSTTY_APPIMAGE_RELEASES}/latest'
 
 for distro, version, texto in (('debian', '13', 'Debian 13'), ('ubuntu', '26.04', 'Ubuntu 26.04')):
+    filas = [('Sistema', texto), ('Arquitectura', 'amd64')]
     with patch.object(app, 'datos_distribucion_anfitrion', return_value={'ID': distro, 'VERSION_ID': version}), \
          patch.object(app, 'version_app', return_value='1.0.2~preview3'), \
-         patch.object(app, 'novedades_version', return_value='• Mejora <GTK>'):
+         patch.object(app, 'novedades_version', return_value='• Mejora <GTK>'), \
+         patch.object(app, 'informacion_sistema', return_value=(filas, "")):
         ventana = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
         titulo, sistema = ventana.get_titlebar().get_custom_title().get_children()
         nombre, boton_version, canal = titulo.get_children()
@@ -145,7 +147,10 @@ for distro, version, texto in (('debian', '13', 'Debian 13'), ('ubuntu', '26.04'
         settle()
         assert not novedades.get_visible()
         ventana.btn_detalles_sistema.clicked()
-        settle()
+        limite = time.monotonic() + 5
+        while ventana.cargando_detalles_sistema and time.monotonic() < limite:
+            settle()
+        assert not ventana.cargando_detalles_sistema
         dialogo = ventana.ventana_detalles_sistema
         assert dialogo.get_visible() and dialogo.get_transient_for() == ventana
         assert dialogo.get_size()[0] == ventana.get_size()[0]
@@ -155,7 +160,6 @@ for distro, version, texto in (('debian', '13', 'Debian 13'), ('ubuntu', '26.04'
         logo_detalles, grid, *extras = detalles.get_children()
         assert logo_detalles.get_storage_type() == Gtk.ImageType.PIXBUF
         assert logo_detalles.get_accessible().get_name() == app.logo_distribucion(distro)[1]
-        filas, _ = app.informacion_sistema()
         assert len(grid.get_children()) == 2 * len(filas)
         assert all(grid.get_child_at(1, i).get_selectable() for i in range(len(filas)))
         assert extras == ([ventana.nvidia_info_label] if distro == 'debian' else [])
