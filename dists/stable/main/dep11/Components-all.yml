@@ -31,7 +31,7 @@ Description:
     pestaña Inicio.</p>
 
     <p xml:lang="fr">AiO Debian GUI réunit la maintenance, le diagnostic et la configuration de Debian et Ubuntu LTS dans
-    une interface graphique. Examinez les changements de paquets et planifiez la maintenance même lorsque l’application est
+    une interface graphique. Examinez les changements de paquets et planifiez la maintenance même lorsque l'application est
     fermée.</p>
 
     <p xml:lang="fr">Sauvegardez les dépôts APT et les réglages du bureau, installez des applications au format DEB ou Flatpak
@@ -46,12 +46,26 @@ Developer:
     C: Julio Ayuso
 Categories:
 - System
+- Settings
 - PackageManager
+- System
+- PackageManager
+Keywords:
+  C:
+  - apt
+  - flatpak
+  - update
+  - actualizar
+  - mantenimiento
+  - grub
+  - backup
+  - diagnostics
 Url:
   homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
   bugtracker: https://github.com/julioayusoalende-hue/AIO-Debian-GUI/issues
   help: https://github.com/julioayusoalende-hue/AIO-Debian-GUI/blob/main/docs/guia-de-uso.md
   vcs-browser: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
+  donation: https://github.com/sponsors/julioayusoalende-hue
 Icon:
   remote:
   - url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/package/usr/share/icons/hicolor/128x128/apps/aio-debian-gui.png
@@ -63,6 +77,10 @@ Launchable:
 Provides:
   binaries:
   - aio-debian-gui
+  mediatypes:
+  - application/vnd.debian.binary-package
+  - application/x-deb
+  - application/vnd.flatpak.ref
 Screenshots:
 - default: true
   caption:
@@ -95,13 +113,84 @@ Screenshots:
   thumbnails: []
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/programacion.png
+- caption:
+    C: Integrated terminal with commands menu
+    es: Terminal integrada con menú Comandos
+  thumbnails: []
+  source-image:
+    url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/terminal.png
+- caption:
+    C: Preferences dialog
+    es: Diálogo de preferencias
+  thumbnails: []
+  source-image:
+    url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/preferencias.png
+- caption:
+    C: Technical details
+    es: Detalles técnicos
+  thumbnails: []
+  source-image:
+    url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/detalles-tecnicos.png
+- caption:
+    C: GRUB settings loaded
+    es: Ajustes de GRUB cargados
+  thumbnails: []
+  source-image:
+    url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/grub-ajustes-cargados.png
+- caption:
+    C: GRUB before loading settings
+    es: GRUB antes de cargar ajustes
+  thumbnails: []
+  source-image:
+    url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/grub-antes-de-cargar.png
+- caption:
+    C: Release notes
+    es: Novedades de la versión
+  thumbnails: []
+  source-image:
+    url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/novedades.png
+- caption:
+    C: About dialog
+    es: Acerca de
+  thumbnails: []
+  source-image:
+    url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/acerca-de.png
 Releases:
-- version: 1.4.9
+- version: 1.5.0
   type: stable
-  unix-timestamp: 1795651200
+  unix-timestamp: 1795737600
   description:
     C: >-
-      <ul><li>Salud del sistema aprovecha los índices APT frescos después del mantenimiento y solo marca la versión de AiO
-      como «Sin comprobar» cuando los índices están realmente desactualizados.</li></ul>
+      <ul><li>API genérica de extensiones: las distribuciones pueden añadir branding, páginas, onboarding y pasos privilegiados
+      sin modificar el core.</li><li>El helper carga asistentes de extensión y hooks de estado desde /usr/lib/aio-debian-gui/extensions/.</li><li>El
+      gestor de software y el branding específico de AyusOS se trasladan al paquete independiente ayusos-control-center; aio-debian-gui
+      queda agnóstico.</li><li>Accesibilidad: roles ATK y nombres accesibles en los botones de icono, regiones en vivo para
+      los anuncios de estado, foco visible y CSS semántico con soporte de prefers-contrast.</li><li>La autoactualización en
+      Flatpak y AppImage consulta los metadatos internos (versión disponible y arquitectura detectada) antes de ofrecer la
+      actualización.</li><li>run_privileged supervisa cada operación privilegiada con lock, timeout y setsid cuando se ejecuta
+      como root, y mantiene un modo de prueba sin root para los stubs de shell.</li><li>Nuevo workflow de integración real
+      en CI: matriz Debian 12/13 y Ubuntu 24.04/26.04 con ciclo de instalación, verificación, purge y reinstalación, además
+      de check.sh, pytest y Ruff.</li><li>Empaquetado Flatpak: manifiesto, script de construcción y pruebas de metadatos;
+      documentación de contribución y de firma GPG.</li></ul>
 ContentRating:
-  oars-1.1: {}
+  oars-1.1:
+    violence-cartoon: none
+    violence-fantasy: none
+    violence-realistic: none
+    violence-bloodshed: none
+    violence-sexual: none
+    sex-nudity: none
+    sex-themes: none
+    sex-homosexuality: none
+    profanity: none
+    drugs-alcohol: none
+    drugs-tobacco: none
+    drugs-other: none
+    gambling: none
+    online-interaction: none
+    in-app-purchases: none
+    social-info-sharing: none
+    location-sharing: none
+    uncontrolled-content: none
+    fear: none
+    user-to-user: none
