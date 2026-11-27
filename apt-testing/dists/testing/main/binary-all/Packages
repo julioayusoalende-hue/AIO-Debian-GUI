@@ -1,17 +1,17 @@
 Package: aio-debian-gui
-Version: 1:1.5.2~testing.108.1
+Version: 1:1.5.3~testing.109.1
 Architecture: all
 Maintainer: Julio Ayuso <epdc@msn.com>
-Installed-Size: 1700
+Installed-Size: 1701
 Depends: bash, apt, ca-certificates, libglib2.0-bin, dconf-cli, coreutils, diffutils, grep, sed, util-linux, pciutils, libnotify-bin, needrestart, python3, python3-apt, python3-gi, gir1.2-gtk-3.0, gir1.2-vte-2.91, librsvg2-common, pkexec | policykit-1, flatpak
 Recommends: systemd-timesyncd | time-daemon, fwupd
 Conflicts: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
 Replaces: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
-Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.5.2~testing.108.1_all.deb
-Size: 882736
-MD5sum: 7b5b1e5a388db2de15bf0a165fd8cf5d
-SHA1: fcbdf9d8301f6d0c872abb73561b1498a6cedb9b
-SHA256: 44528c815a224682fa532132481397a3b5610668e97c3902f40f275dcfd2b019
+Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.5.3~testing.109.1_all.deb
+Size: 882880
+MD5sum: 9e5e3c7e6a0eaad2eb64b384c66bb9f8
+SHA1: d9f14f1c5957a730447d32ca18e80fcf7da2fcea
+SHA256: 1d3dddb372b28c5f1039e51709d1b8ec28ba017a196f7ccc936a5b3c74d17eff
 Section: admin
 Priority: optional
 Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
@@ -25,16 +25,16 @@ Description: Interfaz gráfica de mantenimiento y configuración para Debian y U
  Este paquete configura el repositorio APT de AiO Debian GUI.
 
 Package: ayusos-control-center
-Version: 1.4.8
+Version: 1.4.9
 Architecture: all
 Maintainer: Julio Ayuso <epdc@msn.com>
 Depends: aio-debian-gui (>= 1.5.1), python3, python3-gi, gir1.2-gtk-3.0, bash, coreutils, systemd
 Recommends: calamares, timeshift
-Filename: pool/main/a/ayusos-control-center/ayusos-control-center_1.4.8_all.deb
-Size: 10457200
-MD5sum: a989e4998491a4146d727367ccf1a309
-SHA1: 22017e727d5cf105125e8261eb68c74011a7245d
-SHA256: d9a85d7490d78d66aade26d1e7287b337cbd99e80ec6f83fc0820f859eeb8bc3
+Filename: pool/main/a/ayusos-control-center/ayusos-control-center_1.4.9_all.deb
+Size: 10457184
+MD5sum: bc8253ada3bf96c3a044a313e15b3d19
+SHA1: c87d8b58ad2696617bce4bdf41dc00a73ca488c0
+SHA256: 8a1f85cbddcf0cdec582431b6f295f961457bfbc87b37b5a786a12b195a014a8
 Section: admin
 Priority: optional
 Homepage: https://github.com/julioayusoalende-hue/AyusOS-Linux
