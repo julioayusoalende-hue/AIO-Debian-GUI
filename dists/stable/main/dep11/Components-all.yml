@@ -156,18 +156,17 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/acerca-de.png
 Releases:
-- version: 1.5.1
+- version: 1.5.2
   type: stable
   unix-timestamp: 1795737600
   description:
     C: >-
-      <ul><li>El modo --onboarding-only devuelve error si no hay una extensión de onboarding o si su lanzador falla; el servicio
-      puede reintentar y no marca el asistente como completado sin haberlo mostrado.</li><li>Se refuerzan los scripts de onboarding
-      de AyusOS: entorno gráfico X11/Wayland, código de reinicio 10, limpieza de usuarios y aplicación de ajustes sin redundancias.</li><li>La
-      extensión AyusOS añade reparación de extensiones GNOME y acceso a recuperación desde Diagnósticos; la restauración de
-      identidad usa privilegios y el modo de simulación no los requiere.</li><li>Se corrige la actualización de la extensión
-      AyusOS (versión anterior leída antes de actualizar), el filtro de UID y diversos errores de robustez detectados por
-      Ruff y las pruebas.</li></ul>
+      <ul><li>La pestaña Diagnósticos AyusOS se adapta al tamaño de la ventana: el árbol de resultados tiene altura mínima
+      y máxima, y tanto la página como el árbol muestran barras de desplazamiento horizontales o verticales solo cuando el
+      contenido no cabe.</li><li>Los detalles largos del diagnóstico se muestran como texto legible y ajustado, sin volcados
+      de estructuras Python que desborden la interfaz.</li><li>Nueva prueba GTK que comprueba el dimensionado y las barras
+      de desplazamiento con una ventana estrecha y resultados extensos.</li><li>Las releases y el repositorio APT firmado
+      incluyen también ayusos-control-center, para entregar la corrección de la pestaña por la misma vía de actualización.</li></ul>
 ContentRating:
   oars-1.1:
     violence-cartoon: none

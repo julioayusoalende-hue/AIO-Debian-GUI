@@ -1,5 +1,5 @@
 Package: aio-debian-gui
-Version: 1:1.5.1
+Version: 1:1.5.2
 Architecture: all
 Maintainer: Julio Ayuso <epdc@msn.com>
 Installed-Size: 1697
@@ -7,11 +7,11 @@ Depends: bash, apt, ca-certificates, libglib2.0-bin, dconf-cli, coreutils, diffu
 Recommends: systemd-timesyncd | time-daemon, fwupd
 Conflicts: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
 Replaces: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
-Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.5.1_all.deb
-Size: 879060
-MD5sum: 7294bb538ca4fddf0d98ea76c346efbe
-SHA1: 0b3f1d21c70a3f1649a21149371d85cc1195a62b
-SHA256: 17b1ae5329063f3b792520a2484fb6d15b1f1738955fc0594a4eee401e03e073
+Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.5.2_all.deb
+Size: 879088
+MD5sum: 07d1a2a7f5afb266611f4261e2a6f831
+SHA1: 83359d406697c1513ea93b40f60c86536c4a061b
+SHA256: 5eec71efe52a68fe03d7d94b2f8184f296d118d4841530d768e86c4718847e3b
 Section: admin
 Priority: optional
 Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
@@ -23,4 +23,25 @@ Description: Interfaz gráfica de mantenimiento y configuración para Debian y U
  También permite instalar aplicaciones recomendadas por APT o Flatpak,
  configurar GRUB en sistemas compatibles y usar una terminal separable.
  Este paquete configura el repositorio APT de AiO Debian GUI.
+
+Package: ayusos-control-center
+Version: 1.4.8
+Architecture: all
+Maintainer: Julio Ayuso <epdc@msn.com>
+Depends: aio-debian-gui (>= 1.5.1), python3, python3-gi, gir1.2-gtk-3.0, bash, coreutils, systemd
+Recommends: calamares, timeshift
+Filename: pool/main/a/ayusos-control-center/ayusos-control-center_1.4.8_all.deb
+Size: 10457224
+MD5sum: 0787f9329aa59cbc35d3e72e8f51cb1f
+SHA1: 4860da38c60ab256c5f95554efe342daad0fe382
+SHA256: 53a803b19ade9265cd09a350971981fb0e59cf62b1fb911aac467b38539dba81
+Section: admin
+Priority: optional
+Homepage: https://github.com/julioayusoalende-hue/AyusOS-Linux
+Description: Integración de AyusOS en aio-debian-gui
+ Añade el Centro de Control de AyusOS, onboarding de primer arranque,
+ pestañas de actualización, snapshots, hardware, diagnósticos y apariencia,
+ gestor de software, modo de recuperación, servicios de mantenimiento,
+ aplicador de preferencias y el módulo Calamares de configuración inicial.
+ El núcleo aio-debian-gui permanece independiente de la distribución.
 
