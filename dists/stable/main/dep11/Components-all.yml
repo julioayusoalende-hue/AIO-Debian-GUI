@@ -156,7 +156,7 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/acerca-de.png
 Releases:
-- version: 1.6.2
+- version: 1.6.3
   type: stable
   unix-timestamp: 1795737600
   description:
