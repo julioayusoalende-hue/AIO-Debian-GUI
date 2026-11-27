@@ -768,7 +768,7 @@ class SoftwareManagerPage(Gtk.Box):
     def open_local_flatpakref(self, filename):
         if self.destroyed:
             return GLib.SOURCE_REMOVE
-        if self.busy or getattr(self.window, 'sincronizando_reloj', False):
+        if self.busy:
             return GLib.SOURCE_CONTINUE
         scope = self.scope.get_active_id() or 'user'
 
@@ -803,7 +803,7 @@ class SoftwareManagerPage(Gtk.Box):
     def open_local_deb(self, filename):
         if self.destroyed:
             return GLib.SOURCE_REMOVE
-        if self.busy or self.window.sincronizando_reloj:
+        if self.busy:
             return GLib.SOURCE_CONTINUE
 
         def confirm(result):

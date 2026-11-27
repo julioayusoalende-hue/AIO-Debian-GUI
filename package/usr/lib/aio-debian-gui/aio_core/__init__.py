@@ -1,6 +1,6 @@
 """Componentes independientes de la interfaz gráfica de AiO Debian GUI."""
 
-from .clock import sincronizar
+from .clock import solicitar_sincronizacion
 from .constants import (
     APLICACIONES_BACKUP,
     APP_ICON_NAME,
@@ -78,7 +78,7 @@ from .translations import TRADUCCIONES
 from .updates import obtener_release_actualizacion, version_numerica
 
 __all__ = [
-    "sincronizar", "MAX_HISTORIAL", "ruta_historial", "leer_historial",
+    "solicitar_sincronizacion", "MAX_HISTORIAL", "ruta_historial", "leer_historial",
     "guardar_registro_mantenimiento", "cargar_preferencias", "guardar_preferencias",
     "PREFERENCIAS_DEFECTO", "version_numerica", "obtener_release_actualizacion",
     "run_diagnostics", "run_preflight", "load_extensions",

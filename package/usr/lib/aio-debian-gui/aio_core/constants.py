@@ -237,8 +237,6 @@ def imagen_logo_distribucion(datos, tamano):
 
 # Pasos de mantenimiento
 PASOS = [
-    ("clock", "Sincronizar el reloj",
-     "Un reloj desfasado rompe la validación de certificados (apt, Flathub…).", True, "apt"),
     ("repos", "Configurar repositorios oficiales",
      "En Debian habilita contrib/non-free; en Ubuntu LTS habilita universe/restricted/multiverse.", True, "apt"),
     ("tools", "Instalar herramientas auxiliares",

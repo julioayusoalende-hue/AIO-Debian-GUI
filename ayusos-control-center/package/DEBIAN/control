@@ -1,9 +1,9 @@
 Package: ayusos-control-center
-Version: 1.5.9
+Version: 1.6.0
 Section: admin
 Priority: optional
 Architecture: all
-Depends: aio-debian-gui, aio-debian-gui-software-manager, python3, python3-gi, gir1.2-gtk-3.0, bash, coreutils, systemd
+Depends: aio-debian-gui, aio-debian-gui-software-manager, python3, python3-gi, gir1.2-gtk-3.0, bash, coreutils, systemd, systemd-timesyncd | time-daemon
 Recommends: calamares, timeshift
 Maintainer: Julio Ayuso <epdc@msn.com>
 Homepage: https://github.com/julioayusoalende-hue/AyusOS-Linux

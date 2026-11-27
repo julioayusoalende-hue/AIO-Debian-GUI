@@ -68,10 +68,10 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.5.9
+### Lo nuevo en la 1.6.0
 
-- El asistente AyusOS se abre en la sesión gráfica autorizada y aplica la configuración al usuario que lo completó.
-- La instalación del controlador NVIDIA puede esperar a que termine la compilación DKMS, aunque dure más de cinco minutos.
+- La sincronización del reloj deja de ser una tarea de mantenimiento y se solicita en segundo plano al abrir AiO, sin bloquear ni retrasar las tareas.
+- AyusOS Control Centre incluye el proveedor de hora del sistema para mantener NTP disponible.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -79,7 +79,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.5.9**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.6.0**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -103,10 +103,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.5.9:
+Para la versión 1.6.0:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.5.9_all.deb
+sudo apt install ./aio-debian-gui_1.6.0_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.
