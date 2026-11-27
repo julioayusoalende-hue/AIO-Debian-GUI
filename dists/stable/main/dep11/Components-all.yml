@@ -156,15 +156,19 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/acerca-de.png
 Releases:
-- version: 1.5.4
+- version: 1.5.5
   type: stable
   unix-timestamp: 1795737600
   description:
     C: >-
-      <ul><li>El Gestor de software de APT y Flatpak vuelve al paquete principal de AiO Debian GUI.</li><li>«Ver servicios
-      fallidos» muestra la salida de systemd en una ventana desplazable.</li><li>Las consultas de Detalles técnicos, NVIDIA
-      y reversión de Backports se ejecutan en segundo plano para mantener la interfaz operativa.</li><li>El asistente termina
-      los procesos hijos cuando se agota el tiempo de una operación privilegiada, evitando que retengan el bloqueo de mantenimiento.</li></ul>
+      <ul><li>Al abrir un archivo .deb desde el escritorio, AiO selecciona el Gestor de software y muestra la confirmación
+      de instalación.</li><li>Las páginas y tarjetas usan los colores del tema GTK para conservar el contraste al alternar
+      entre los modos claro y oscuro.</li><li>AyusOS Control Center utiliza autorización gráfica para gestionar snapshots,
+      actualizar GRUB y aplicar perfiles de hardware.</li><li>El asistente solo ofrece extensiones de GNOME que faltan, usa
+      el acento rojo, respeta la elección de Flathub y conserva el estado pendiente si falla el guardado o la aplicación de
+      los ajustes.</li><li>Se corrigen la restauración de identidad, el tema de arranque, los diagnósticos de Timeshift, la
+      comprobación de actualizaciones y el filtro de aplicaciones AyusOS.</li><li>Cada publicación Stable o Testing de AiO
+      incluye el Centro de Control de la misma compilación, con versiones verificadas antes de firmar el repositorio APT.</li></ul>
 ContentRating:
   oars-1.1:
     violence-cartoon: none

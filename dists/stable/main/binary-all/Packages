@@ -1,5 +1,5 @@
 Package: aio-debian-gui
-Version: 1:1.5.4
+Version: 1:1.5.5
 Architecture: all
 Maintainer: Julio Ayuso <epdc@msn.com>
 Installed-Size: 1766
@@ -9,11 +9,11 @@ Conflicts: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
 Breaks: ayusos-control-center (<< 1.4.10)
 Replaces: ayusos-control-center (<< 1.4.10), aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
 Provides: aio-debian-gui-software-manager
-Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.5.4_all.deb
-Size: 891880
-MD5sum: 009e3f677cf349bc8e48c2f73087d579
-SHA1: ea4b892e71ef26014c4809b98f5ea377e88af84d
-SHA256: 357d49c23d902954744412640455a7ff57f6d25068ae33f986a82a6aef848790
+Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.5.5_all.deb
+Size: 892032
+MD5sum: 1beaa40168f03a20970ee94240ffeafd
+SHA1: 5b1df97b2840c0feac588da41ca08ebe130ca80e
+SHA256: 3f174a1bb17c35441293888e2ea9ec6f06b85dccaa8bb1b60d2dbcef13b79e1f
 Section: admin
 Priority: optional
 Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
@@ -27,16 +27,16 @@ Description: Interfaz gráfica de mantenimiento y configuración para Debian y U
  Este paquete configura el repositorio APT de AiO Debian GUI.
 
 Package: ayusos-control-center
-Version: 1.4.10
+Version: 1.5.5
 Architecture: all
 Maintainer: Julio Ayuso <epdc@msn.com>
-Depends: aio-debian-gui, aio-debian-gui-software-manager, python3, python3-gi, gir1.2-gtk-3.0, bash, coreutils, systemd
+Depends: aio-debian-gui (>= 1:1.5.5), aio-debian-gui-software-manager, python3, python3-gi, gir1.2-gtk-3.0, bash, coreutils, systemd
 Recommends: calamares, timeshift
-Filename: pool/main/a/ayusos-control-center/ayusos-control-center_1.4.10_all.deb
-Size: 10444984
-MD5sum: 2a33320622ca0f6b9a83bf639409ff6d
-SHA1: 8be36df98a81dec105ebc5bfc680e6e8c06031fe
-SHA256: efec05f8e98d2307c18d4289af2b1aec2acc2a119d979a849eb500b9318c62d9
+Filename: pool/main/a/ayusos-control-center/ayusos-control-center_1.5.5_all.deb
+Size: 10447576
+MD5sum: 420bf4787e448711ad127eecb9a871d1
+SHA1: 7c24f9121ba4e14f9e5d8eb6cd614fd9deaba81e
+SHA256: b3aea8ed45183fa720f1cef3704330ad82bdc7d3a07213cb730f0e37c5d0b580
 Section: admin
 Priority: optional
 Homepage: https://github.com/julioayusoalende-hue/AyusOS-Linux
