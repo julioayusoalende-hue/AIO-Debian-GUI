@@ -1,5 +1,11 @@
 # Cambios
 
+## 1.6.0
+
+- La sincronización del reloj deja de ser una tarea de mantenimiento. Se solicita en segundo plano al abrir AiO, sin esperas ni bloqueos de las tareas.
+- AyusOS Control Centre declara el proveedor de hora del sistema como dependencia para la sincronización NTP en segundo plano.
+- La ventana principal puede reducirse correctamente a 600 px y activar la disposición vertical sin quedar atrapada en el ancho inicial.
+
 ## 1.5.9
 
 - El asistente de primer arranque se abre directamente al detectar la sesión gráfica y aplica la selección de NVIDIA del usuario que lo completó. La compilación DKMS puede terminar aunque dure más de cinco minutos.

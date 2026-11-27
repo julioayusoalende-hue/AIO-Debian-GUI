@@ -237,12 +237,13 @@ for formato in ('appimage', 'flatpak', 'deb'):
         window.distribucion = 'ubuntu'
         with patch.object(window, '_consultar_estados_tareas') as status:
             window._preparar_anfitrion_al_iniciar()
+            assert worker.call_args_list[0].kwargs['target'] is app.core_clock.solicitar_sincronizacion
             if formato == 'deb':
-                worker.assert_not_called()
+                worker.assert_called_once()
                 prepare.assert_not_called()
                 status.assert_called_once_with(inicial=True)
             else:
-                worker.assert_called_once()
+                assert worker.call_count == 2
                 worker.call_args.kwargs['target']()
                 prepare.assert_called_once_with(formato, '2.10.15')
                 settle()
@@ -285,33 +286,19 @@ for maquina in ('riscv64', 'ppc64le', 's390x', 'i386', 'i686'):
             raise AssertionError("Debería haber fallado para " + maquina)
         except RuntimeError as exc:
             assert 'no soportada' in str(exc) or 'unsupported' in str(exc).lower()
-for sincronizado in (True, False):
-    window = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
-    if window.pagina_software is None:
-        window.pagina_software = Gtk.Box()
-    window.distribucion = 'debian'
-    with patch.object(app, 'formato_actualizacion', return_value='deb'), \
-         patch.object(app.threading, 'Thread') as worker, \
-         patch.object(app.core_clock, 'sincronizar', return_value=sincronizado), \
-         patch.object(app, 'guardar_preferencias') as save, \
-         patch.object(window, '_consultar_estados_tareas') as status:
-        window._preparar_anfitrion_al_iniciar()
-        assert window.sincronizando_reloj and not window.btn_iniciar.get_sensitive()
-        assert not window.pagina_software.get_sensitive()
-        status.assert_not_called()
-        worker.call_args.kwargs['target']()
-        settle()
-        status.assert_called_once_with(inicial=True)
-        assert not window.sincronizando_reloj and window.pagina_software.get_sensitive()
-        assert window.aviso_reloj_inicial is (not sincronizado)
-        if sincronizado:
-            assert save.call_args.args[0]['reloj_inicial_sincronizado'] is True
-            worker.reset_mock()
-            window._preparar_anfitrion_al_iniciar()
-            worker.assert_not_called()
-        else:
-            save.assert_not_called()
-    window.destroy()
+window = app.VentanaPrincipal({'idioma': 'es', 'tema': 'claro', 'modo_simple': False})
+window.distribucion = 'debian'
+with patch.object(app, 'formato_actualizacion', return_value='deb'), \
+     patch.object(app.threading, 'Thread') as worker, \
+     patch.object(app.core_clock, 'solicitar_sincronizacion') as ntp, \
+     patch.object(window, '_consultar_estados_tareas') as status:
+    window._preparar_anfitrion_al_iniciar()
+    worker.assert_called_once_with(target=ntp, args=(app.comando_host,), daemon=True)
+    worker.return_value.start.assert_called_once_with()
+    ntp.assert_not_called()
+    status.assert_called_once_with(inicial=True)
+    assert window.btn_iniciar.get_sensitive() and window.pagina_software.get_sensitive()
+window.destroy()
 
 preferencias = {'idioma': 'es', 'tema': 'claro', 'modo_simple': False}
 paquete_instalado = app.paquete_instalado
@@ -528,8 +515,7 @@ for language in ('es', 'en', 'fr', 'zh'):
         assert name.get_text() == app.APLICACIONES_BACKUP[app_id]['name']
         assert description.get_text() == app.traducir(app.APLICACIONES_BACKUP[app_id]['description'])
     w.notebook.set_current_page(3)
-    w.resize(600, 900)
-    settle()
+    esperar_disposicion(w, 600)
     assert w.get_size()[0] <= 601, (language, w.get_size())
     assert all(button.get_mapped() for button in w.backup_buttons.values())
     w.notebook.set_current_page(w.notebook.page_num(w.pagina_recomendadas))
@@ -540,8 +526,7 @@ for language in ('es', 'en', 'fr', 'zh'):
     first = w.recommended_grid.get_child_at_index(0)
     second = w.recommended_grid.get_child_at_index(1)
     assert first.get_allocation().x == second.get_allocation().x
-    w.resize(1160, 900)
-    settle()
+    esperar_disposicion(w, 1160)
     assert first.get_allocation().y == second.get_allocation().y
     assert first.get_allocation().x < second.get_allocation().x
     expected_names = ['Audacity', 'Bitwarden', 'Brave', 'btop', 'Celluloid', 'Deluge', 'Feishin', 'Flameshot', 'Gear Lever', 'Ghostty', 'GIMP',
@@ -613,7 +598,9 @@ for language in ('es', 'en', 'fr', 'zh'):
     assert w.ventana_detalles_sistema is None
     assert not w.expansor_consola.get_expanded()
     w.expansor_consola.set_expanded(True)
-    settle()
+    deadline = time.monotonic() + 5
+    while w.marco_consola.get_allocated_height() < 200 and time.monotonic() < deadline:
+        settle()
     assert w.marco_consola.get_allocated_height() >= 200
     assert w.btn_iniciar.get_mapped()
     w.expansor_consola.set_expanded(False)
@@ -621,6 +608,8 @@ for language in ('es', 'en', 'fr', 'zh'):
     assert not w.seleccion_detalle.get_expanded()
     assert not w.chk_sin_contrasena.get_ancestor(Gtk.Expander).get_expanded()
     assert all(isinstance(check, Gtk.CheckButton) for check, _ in w.switches.values())
+    assert 'clock' not in w.switches
+    assert all(p[0] != 'clock' for p in app.PASOS)
     assert isinstance(w.chk_sin_contrasena, Gtk.Switch)
     limpieza = ('clean-apt', 'clean-trash', 'clean-thumbnails', 'clean-journal')
     assert all(tarea in w.switches for tarea in limpieza)
@@ -805,26 +794,17 @@ for language in ('es', 'en', 'fr', 'zh'):
     w.expansor_consola.set_expanded(False)
     w.scroll_resultados.hide()
     if language == 'es':
-        for sincronizado in (True, False):
-            w.en_curso = False
-            acciones = Mock()
-            acciones.reloj.return_value = sincronizado
-            acciones.preflight.return_value = app.core_preflight.Report(False, [])
-            with patch.object(app.core_clock, 'sincronizar', acciones.reloj), \
-                 patch.object(app.core_preflight, 'check', acciones.preflight), \
-                 patch.object(app.threading, 'Thread', side_effect=lambda target, **_: SimpleNamespace(start=target)), \
-                 patch.object(GLib, 'idle_add') as idle:
-                w._comprobar_mantenimiento(['upgrade', 'autoclean'])
-            acciones.reloj.assert_called_once_with(app.comando_host, espera=120)
-            assert idle.call_args.args[1] == ['upgrade', 'autoclean']
-            if sincronizado:
-                assert [call[0] for call in acciones.mock_calls] == ['reloj', 'preflight']
-                assert idle.call_args.args[3] is None
-            else:
-                acciones.preflight.assert_not_called()
-                assert idle.call_args.args[2] is None
-                assert 'reloj' in idle.call_args.args[3]
-            w._poner_ocupado(False)
+        w.en_curso = False
+        report = app.core_preflight.Report(False, [])
+        with patch.object(app.core_clock, 'solicitar_sincronizacion') as ntp, \
+             patch.object(app.core_preflight, 'check', return_value=report) as preflight, \
+             patch.object(app.threading, 'Thread', side_effect=lambda target, **_: SimpleNamespace(start=target)), \
+             patch.object(GLib, 'idle_add') as idle:
+            w._comprobar_mantenimiento(['upgrade', 'autoclean'])
+        ntp.assert_not_called()
+        preflight.assert_called_once_with(['upgrade', 'autoclean'])
+        idle.assert_called_once_with(w._terminar_preflight, ['upgrade', 'autoclean'], report, None, {})
+        w._poner_ocupado(False)
 
     # Una segunda confirmación cancelada debe liberar el estado ocupado.
     w.en_curso = True

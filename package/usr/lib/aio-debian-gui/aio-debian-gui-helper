@@ -148,7 +148,7 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.5.9
+HELPER_VERSION=1.6.0
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -923,32 +923,6 @@ anadir_componentes() {
 # ------------------------------------------------------------------------------
 # Pasos
 # ------------------------------------------------------------------------------
-paso_clock() {
-    local estado intento
-    local -a timedate=(timeout 5 /usr/bin/timedatectl --no-ask-password)
-    estado=$("${timedate[@]}" show -p NTPSynchronized --value) || return 1
-    if [ "$estado" = yes ]; then
-        return 0
-    fi
-
-    warn "Esperando a que se sincronice el reloj del sistema…"
-    estado=$("${timedate[@]}" show -p NTP --value) || return 1
-    if [ "$estado" != yes ]; then
-        "${timedate[@]}" set-ntp true || return 1
-    fi
-
-    for ((intento=0; intento<120; intento++)); do
-        estado=$("${timedate[@]}" show -p NTPSynchronized --value) || return 1
-        if [ "$estado" = yes ]; then
-            ok "Reloj del sistema sincronizado."
-            return 0
-        fi
-        sleep 1
-    done
-    err "No se pudo sincronizar el reloj del sistema."
-    return 1
-}
-
 paso_repos() {
     if [ "$(leer_distribucion)" = ubuntu ]; then
         paso_ubuntu_repos
@@ -2090,7 +2064,6 @@ paso_nvidia_driver() {
 # Principal
 # ------------------------------------------------------------------------------
 declare -A TITULOS=(
-    [clock]="Sincronizar el reloj"
     [repos]="Configurar componentes oficiales de repositorios"
     [tools]="Instalar herramientas auxiliares"
     [backports-kernel-mesa]="Instalar kernel y Mesa desde Backports"
@@ -2358,17 +2331,11 @@ main() {
         printf '%s\n' 1
         return 0
     fi
-    if [ "${1:-}" = "--sync-maintenance-clock" ] && [ "$#" -eq 1 ]; then
-        [ "$EUID" -eq 0 ] || return 1
-        paso_clock
-        return $?
-    fi
     # Actualizar exclusivamente Flatpak del usuario sin elevar privilegios.
     # Sin --system ni instalaciones de root; no requiere polkit ni pkexec.
     if [ "${1:-}" = "--flatpak-user-update" ] && [ "$#" -eq 1 ]; then
         [ "$EUID" -ne 0 ] || { err "Flatpak de usuario nunca se ejecuta como root."; return 1; }
         command -v flatpak >/dev/null 2>&1 || { err "Flatpak no está instalado."; return 1; }
-        paso_clock || return 1
         echo "##STEP:1:1:Actualizar aplicaciones Flatpak del usuario"
         if flatpak --user update -y && flatpak --user uninstall --unused -y; then
             ok "Flatpak de usuario actualizado y dependencias sin uso eliminadas."
@@ -2574,12 +2541,6 @@ main() {
         exit 1
     fi
     AIO_PRIV_LOCK_FD="$inherited_lock"
-
-    if ! paso_clock; then
-        err "Mantenimiento bloqueado: no se pudo sincronizar el reloj del sistema."
-        echo "##DONE:1"
-        exit 1
-    fi
 
     local total=${#pasos[@]} i=0 fallos=0 resultado
     for s in "${pasos[@]}"; do

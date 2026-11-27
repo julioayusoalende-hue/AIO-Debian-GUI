@@ -85,7 +85,7 @@ NOTAS_VERSION = os.path.normpath(
 )
 
 # Versión embebida en tiempo de compilación (inyectada por build-deb.sh)
-AIO_DEBIAN_GUI_VERSION = "1.5.9"
+AIO_DEBIAN_GUI_VERSION = "1.6.0"
 
 RECOMMENDED_ICON_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/recommended-icons")
@@ -990,8 +990,6 @@ def informacion_sistema():
 # ------------------------------------------------------------------------------
 # id, título, descripción, activada por defecto, grupo
 PASOS = [
-    ("clock", "Sincronizar el reloj",
-     "Un reloj desfasado rompe la validación de certificados (apt, Flathub…).", True, "apt"),
     ("repos", "Configurar repositorios oficiales",
      "En Debian habilita contrib/non-free; en Ubuntu LTS habilita universe/restricted/multiverse.", True, "apt"),
     ("tools", "Instalar herramientas auxiliares",
@@ -1375,8 +1373,6 @@ class VentanaPrincipal(Gtk.Window):
         self.ventana_terminal = None
         self.terminal_monitor = None
         self.programando = False
-        self.sincronizando_reloj = False
-        self.aviso_reloj_inicial = False
         self.programacion = ControladorProgramacion(self)
         self.diagnostico_en_curso = False
         self.ventana_diagnostico = None
@@ -1414,48 +1410,10 @@ class VentanaPrincipal(Gtk.Window):
         self.connect("focus-in-event", self._refrescar_recomendadas_al_volver)
 
     def _preparar_anfitrion_al_iniciar(self):
-        if self.sincronizando_reloj:
-            return
-        if (self.distribucion == "no-soportada"
-                or self.preferencias.get("reloj_inicial_sincronizado") is True):
-            self._preparar_integracion_inicial()
-            return
-        self.sincronizando_reloj = True
-        msg = traducir("Sincronizando el reloj del sistema…")
-        self.estado.set_text(msg)
-        self._anunciar_estado(msg)
-        self._actualizar_sensibilidad()
-
-        def sincronizar():
-            try:
-                sincronizado = core_clock.sincronizar(comando_host)
-            except (OSError, subprocess.SubprocessError):
-                sincronizado = False
-            GLib.idle_add(self._reloj_inicial_comprobado, sincronizado)
-
-        threading.Thread(target=sincronizar, daemon=True).start()
-
-    def _reloj_inicial_comprobado(self, sincronizado):
-        if self.destruida:
-            return GLib.SOURCE_REMOVE
-        self.sincronizando_reloj = False
-        self.aviso_reloj_inicial = not sincronizado
-        if sincronizado:
-            nuevas = dict(self.preferencias, reloj_inicial_sincronizado=True)
-            try:
-                guardar_preferencias(nuevas)
-            except OSError as error:
-                self._escribir("[!] %s: %s\n" % (
-                    traducir("No se pudieron guardar las preferencias"), error,
-                ), "aviso")
-            self.preferencias = nuevas
-        else:
-            self._escribir("[!] %s\n" % traducir(
-                "El reloj aún no está sincronizado. Se volverá a intentar al abrir AiO.",
-            ), "aviso")
-        self._actualizar_sensibilidad()
+        if self.distribucion != "no-soportada":
+            threading.Thread(target=core_clock.solicitar_sincronizacion,
+                             args=(comando_host,), daemon=True).start()
         self._preparar_integracion_inicial()
-        return GLib.SOURCE_REMOVE
 
     def _preparar_integracion_inicial(self):
         formato = formato_actualizacion()
@@ -2553,7 +2511,7 @@ class VentanaPrincipal(Gtk.Window):
 
         contexto = Gtk.ScrolledWindow()
         contexto.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        contexto.set_size_request(300, -1)
+        contexto.set_size_request(280, -1)
         contexto.set_min_content_height(200)
         lateral = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         lateral.pack_start(self._tarjeta_info(), False, False, 0)
@@ -4851,7 +4809,7 @@ class VentanaPrincipal(Gtk.Window):
         )
 
         grupos = (
-            ("Mantenimiento habitual", "view-refresh-symbolic", {"clock", "upgrade", "autoremove", "autopurge", "autoclean", "flatpak-update", "snap-update", "rebootcheck"}),
+            ("Mantenimiento habitual", "view-refresh-symbolic", {"upgrade", "autoremove", "autopurge", "autoclean", "flatpak-update", "snap-update", "rebootcheck"}),
             ("Limpieza del sistema", "user-trash-symbolic", {"clean-apt", "clean-trash", "clean-thumbnails", "clean-journal", "clean-flatpak", "clean-snap"}),
             ("Aplicaciones y repositorios", "system-software-install-symbolic", {"repos", "tools", "flatpak-setup", "gnome-plugin", "ext-manager"} | TAREAS_EXTENSIONES_GNOME),
             ("Kernel y controladores · Avanzado", "preferences-system-symbolic", {"backports-kernel-mesa", "revertir-backports", "nvidia-driver", "ubuntu-hwe"}),
@@ -5042,9 +5000,7 @@ class VentanaPrincipal(Gtk.Window):
         self._actualizar_sensibilidad()
         if correcta:
             if inicial:
-                mensaje = ("El reloj aún no está sincronizado. Se volverá a intentar al abrir AiO."
-                           if self.aviso_reloj_inicial else "Selecciona las tareas que quieres ejecutar.")
-                msg = traducir(mensaje)
+                msg = traducir("Selecciona las tareas que quieres ejecutar.")
                 self.estado.set_text(msg)
                 self._anunciar_estado(msg)
             return
@@ -5063,7 +5019,7 @@ class VentanaPrincipal(Gtk.Window):
     def _actualizar_sensibilidad(self):
         if self.destruida:
             return
-        disponible = (not self.sincronizando_reloj and not self.en_curso
+        disponible = (not self.en_curso
                      and not self.comprobando_actualizacion and not self.programando
                      and not self.diagnostico_en_curso and not self.backup_action_in_progress
                      and not self.grub_action_in_progress
@@ -5100,13 +5056,13 @@ class VentanaPrincipal(Gtk.Window):
             fila.set_sensitive(habilitada)
             self.switches[pid][0].set_sensitive(habilitada)
         for boton in self.backup_buttons.values():
-            boton.set_sensitive(not self.sincronizando_reloj and not self.en_curso
+            boton.set_sensitive(not self.en_curso
                                 and not self.programando
                                 and not self.comprobando_actualizacion
                                 and not self.diagnostico_en_curso
                                 and not self.backup_action_in_progress
                                 and not self.grub_action_in_progress)
-        recomendaciones_disponibles = (not self.sincronizando_reloj and not self.en_curso
+        recomendaciones_disponibles = (not self.en_curso
                                        and not self.programando
                                        and not self.comprobando_actualizacion
                                        and not self.diagnostico_en_curso
@@ -5300,7 +5256,7 @@ class VentanaPrincipal(Gtk.Window):
         return sel
 
     def _iniciar(self, _b):
-        if self.sincronizando_reloj or self.en_curso or self.programando:
+        if self.en_curso or self.programando:
             return
         pasos = self._pasos_seleccionados()
         if self.distribucion == "no-soportada":
@@ -5313,30 +5269,14 @@ class VentanaPrincipal(Gtk.Window):
         self._comprobar_mantenimiento(pasos)
 
     def _comprobar_mantenimiento(self, pasos, **opciones):
-        if self.sincronizando_reloj or self.en_curso or self.programando:
+        if self.en_curso or self.programando:
             return
         self._poner_ocupado(True)
-        msg = traducir("Sincronizando el reloj del sistema…")
+        msg = traducir("Comprobando seguridad del mantenimiento…")
         self.estado.set_text(msg)
         self._anunciar_estado(msg)
 
-        def estado_preflight():
-            if not self.destruida and self.en_curso:
-                mensaje = traducir("Comprobando seguridad del mantenimiento…")
-                self.estado.set_text(mensaje)
-                self._anunciar_estado(mensaje)
-            return GLib.SOURCE_REMOVE
-
         def verificar():
-            try:
-                sincronizado = core_clock.sincronizar(comando_host, espera=120)
-            except (OSError, subprocess.SubprocessError):
-                sincronizado = False
-            if not sincronizado:
-                error = traducir("No se pudo sincronizar el reloj del sistema.")
-                GLib.idle_add(self._terminar_preflight, pasos, None, error, opciones)
-                return
-            GLib.idle_add(estado_preflight)
             try:
                 informe = core_preflight.check(pasos)
                 preparacion = dict(opciones)

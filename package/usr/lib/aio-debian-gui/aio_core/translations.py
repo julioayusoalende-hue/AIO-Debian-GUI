@@ -108,7 +108,6 @@ TRADUCCIONES = {
         "Permite ejecutar las tareas de AiO sin contraseña en la sesión local activa.": "Allows AiO tasks to run without a password in the active local session.",
         "Sistema (APT)": "System (APT)",
         "Al terminar": "After completion",
-        "Sincronizar el reloj": "Synchronize the clock",
         "Un reloj desfasado rompe la validación de certificados (apt, Flathub…).": "An incorrect clock breaks certificate validation (APT, Flathub…).",
         "Habilitar contrib y non-free": "Enable contrib and non-free",
         "Añade los componentes a los repositorios oficiales de Debian (con copia .bak).": "Adds these components to official Debian repositories (with a .bak backup).",
@@ -276,7 +275,6 @@ TRADUCCIONES = {
         "Permite ejecutar las tareas de AiO sin contraseña en la sesión local activa.": "Permet d’exécuter les tâches AiO sans mot de passe dans la session locale active.",
         "Sistema (APT)": "Système (APT)",
         "Al terminar": "À la fin",
-        "Sincronizar el reloj": "Synchroniser l’horloge",
         "Un reloj desfasado rompe la validación de certificados (apt, Flathub…).": "Une horloge incorrecte empêche la validation des certificats (APT, Flathub…).",
         "Habilitar contrib y non-free": "Activer contrib et non-free",
         "Añade los componentes a los repositorios oficiales de Debian (con copia .bak).": "Ajoute ces composants aux dépôts officiels Debian (avec sauvegarde .bak).",
@@ -444,7 +442,6 @@ TRADUCCIONES = {
         "Permite ejecutar las tareas de AiO sin contraseña en la sesión local activa.": "允许在当前本地会话中无需密码运行 AiO 任务。",
         "Sistema (APT)": "系统（APT）",
         "Al terminar": "完成后",
-        "Sincronizar el reloj": "同步时钟",
         "Un reloj desfasado rompe la validación de certificados (apt, Flathub…).": "时钟不准确会导致证书验证失败（APT、Flathub 等）。",
         "Habilitar contrib y non-free": "启用 contrib 和 non-free",
         "Añade los componentes a los repositorios oficiales de Debian (con copia .bak).": "将这些组件添加到 Debian 官方软件源（创建 .bak 备份）。",
@@ -2364,9 +2361,6 @@ TRADUCCIONES["zh"].update({
 })
 
 TRADUCCIONES["en"].update({
-    "Sincronizando el reloj del sistema…": "Synchronizing the system clock…",
-    "No se pudo sincronizar el reloj del sistema.": "The system clock could not be synchronized.",
-    "El reloj aún no está sincronizado. Se volverá a intentar al abrir AiO.": "The clock is not synchronized yet. AiO will try again the next time it opens.",
     "Todos": "All",
     "Instalados": "Installed",
     "Disponibles": "Available",
@@ -2395,9 +2389,6 @@ TRADUCCIONES["en"].update({
 })
 
 TRADUCCIONES["fr"].update({
-    "Sincronizando el reloj del sistema…": "Synchronisation de l’horloge système…",
-    "No se pudo sincronizar el reloj del sistema.": "Impossible de synchroniser l’horloge système.",
-    "El reloj aún no está sincronizado. Se volverá a intentar al abrir AiO.": "L’horloge reste à synchroniser. AiO réessaiera à la prochaine ouverture.",
     "Todos": "Tous",
     "Instalados": "Installés",
     "Disponibles": "Disponibles",
@@ -2426,9 +2417,6 @@ TRADUCCIONES["fr"].update({
 })
 
 TRADUCCIONES["zh"].update({
-    "Sincronizando el reloj del sistema…": "正在同步系统时钟…",
-    "No se pudo sincronizar el reloj del sistema.": "无法同步系统时钟。",
-    "El reloj aún no está sincronizado. Se volverá a intentar al abrir AiO.": "时钟尚未同步。AiO 将在下次打开时重试。",
     "Todos": "全部",
     "Instalados": "已安装",
     "Disponibles": "可用",

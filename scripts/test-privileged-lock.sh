@@ -75,7 +75,6 @@ unshare --user --map-root-user bash -c '
     llamadas="$TEST_LOCK.calls"
     distribucion_soportada() { return 0; }
     leer_distribucion() { printf "%s\n" debian; }
-    paso_clock() { printf "%s\n" clock >> "$llamadas"; }
     paquete_instalado() { return 1; }
     run_privileged() {
         printf "%s\n" "$1" >> "$llamadas"
@@ -90,10 +89,10 @@ unshare --user --map-root-user bash -c '
          main --lock-fd 9 upgrade autoremove autoclean) || codigo=$?
         if [ "$estado" -eq 0 ]; then
             [ "$codigo" -eq 0 ]
-            esperado=$(printf "%s\n" clock apt-update apt-upgrade apt-autoremove---no-purge apt-autoclean)
+            esperado=$(printf "%s\n" apt-update apt-upgrade apt-autoremove---no-purge apt-autoclean)
         else
             [ "$codigo" -eq 1 ]
-            esperado=$(printf "%s\n" clock apt-update apt-upgrade)
+            esperado=$(printf "%s\n" apt-update apt-upgrade)
         fi
         [ "$(cat "$llamadas")" = "$esperado" ]
     done
