@@ -57,7 +57,17 @@ assert_no_install() {
 )
 
 reset_calls
-paso_upgrade
+(
+    run_privileged() {
+        case "$1" in
+            apt-simulate-upgrade) [ "$2" -eq 60 ] || return 1 ;;
+            apt-upgrade) [ "$2" -eq 0 ] || return 1 ;;
+        esac
+        shift 2
+        "$@"
+    }
+    paso_upgrade
+)
 [ "$(head -n 1 "$TEST_DIR/calls")" = update ]
 grep -q -- '^-s -o Debug::NoLocking=1 upgrade --with-new-pkgs --no-remove$' "$TEST_DIR/calls"
 grep -qE '^-y .*upgrade --with-new-pkgs --no-remove$' "$TEST_DIR/calls"

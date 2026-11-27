@@ -143,11 +143,12 @@ export NEEDRESTART_MODE=l
 APT_OPTS=(-y -o DPkg::options::=--force-confdef -o DPkg::options::=--force-confold -o Dpkg::Use-Pty=0)
 
 LISTAS_ACTUALIZADAS=0
+APT_RUTINA=0
 UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.5.7
+HELPER_VERSION=1.5.8
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -629,7 +630,7 @@ instalar_aplicacion_recomendada() {
 # Auditoría dpkg obligatoria antes de cualquier operación APT
 _aio_dpkg_audit() {
     local auditoria
-    if ! auditoria=$(LC_ALL=C run_privileged "dpkg-audit" 30 dpkg --audit 2>&1) || [ -n "$auditoria" ]; then
+    if ! auditoria=$(LC_ALL=C run_privileged "dpkg-audit" 60 dpkg --audit 2>&1) || [ -n "$auditoria" ]; then
         err "Hay una incidencia de dpkg pendiente. Revisa el diagnóstico antes de continuar."
         [ -z "$auditoria" ] || printf '%s\n' "$auditoria" >&2
         return 1
@@ -638,7 +639,9 @@ _aio_dpkg_audit() {
 
 asegurar_listas() {
     [ "$LISTAS_ACTUALIZADAS" -eq 1 ] && return 0
-    _aio_dpkg_audit || return 1
+    if [ "$APT_RUTINA" -eq 0 ]; then
+        _aio_dpkg_audit || return 1
+    fi
     info "Sincronizando listas de paquetes (apt-get update)..."
     if run_privileged "apt-update" 120 apt-get --error-on=any update; then
         LISTAS_ACTUALIZADAS=1
@@ -650,7 +653,7 @@ asegurar_listas() {
 
 refrescar_indices_diagnostico() {
     local auditoria codigo=0
-    auditoria=$(LC_ALL=C run_privileged "dpkg-audit" 30 dpkg --audit 2>&1) || codigo=$?
+    auditoria=$(LC_ALL=C run_privileged "dpkg-audit" 60 dpkg --audit 2>&1) || codigo=$?
     printf '##DIAGNOSTIC_DPKG:%s:' "$codigo"
     printf '%s' "${auditoria:0:500}" | base64 -w0
     printf '\n'
@@ -1412,23 +1415,27 @@ huella_plan_apt() {
 
 paso_upgrade() {
     asegurar_listas || return 1
-    local simulation plan
-    if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-upgrade" 60 apt-get -s -o Debug::NoLocking=1 upgrade --with-new-pkgs --no-remove 2>&1); then
-        err "No se pudo simular la actualización con los índices actuales."
-        printf '%s\n' "$simulation"
-        return 1
-    fi
-    if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
-        err "La actualización propone eliminar paquetes y se ha bloqueado."
-        return 1
-    fi
-    plan=$(huella_plan_apt <<< "$simulation") || return 1
-    if [ -n "$UPGRADE_PLAN" ] && [ "$plan" != "$UPGRADE_PLAN" ]; then
-        err "El plan APT ha cambiado. Repite las comprobaciones y revisa la nueva vista previa antes de actualizar."
-        return 1
+    if [ "$APT_RUTINA" -eq 0 ]; then
+        local simulation plan
+        if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-upgrade" 60 apt-get -s -o Debug::NoLocking=1 upgrade --with-new-pkgs --no-remove 2>&1); then
+            err "No se pudo simular la actualización con los índices actuales."
+            printf '%s\n' "$simulation"
+            return 1
+        fi
+        if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
+            err "La actualización propone eliminar paquetes y se ha bloqueado."
+            return 1
+        fi
+        plan=$(huella_plan_apt <<< "$simulation") || return 1
+        if [ -n "$UPGRADE_PLAN" ] && [ "$plan" != "$UPGRADE_PLAN" ]; then
+            err "El plan APT ha cambiado. Repite las comprobaciones y revisa la nueva vista previa antes de actualizar."
+            return 1
+        fi
     fi
     info "Actualizando los paquetes del sistema (apt-get upgrade --with-new-pkgs --no-remove)..."
-    if ! run_privileged "apt-upgrade" 300 apt-get "${APT_OPTS[@]}" upgrade --with-new-pkgs --no-remove; then
+    # Desempaquetar y configurar paquetes puede superar varios minutos.
+    # APT debe terminar por sí mismo para no dejar dpkg a medio configurar.
+    if ! run_privileged "apt-upgrade" 0 apt-get "${APT_OPTS[@]}" -o DPkg::Lock::Timeout=60 upgrade --with-new-pkgs --no-remove; then
         err "Error durante la actualización de paquetes."
         return 1
     fi
@@ -1452,42 +1459,44 @@ limpiar_dependencias() {
     for paquete in libnotify-bin needrestart; do
         paquete_instalado "$paquete" && conservar+=("${paquete}+")
     done
-    local simulation plan cambios respuesta aprobado="$AUTOREMOVE_PLAN"
-    while :; do
-        if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-autoremove-$modo" 60 apt-get -s -o Debug::NoLocking=1 autoremove "$modo" "${conservar[@]}" </dev/null 2>&1); then
-            err "No se pudo simular la limpieza de dependencias."
-            printf '%s\n' "$simulation"
-            return 1
-        fi
-        plan=$(huella_plan_apt <<< "$simulation") || return 1
-        [ "$plan" = "$aprobado" ] && break
-        if [ "$REVISAR_LIMPIEZA" -ne 1 ] || [ -z "$aprobado" ]; then
-            err "Limpieza detenida: revisa y confirma de nuevo el plan de autoremove antes de eliminar paquetes."
-            return 1
-        fi
-        cambios=$(LC_ALL=C awk '/^(Inst|Remv|Purg) /' <<< "$simulation") || return 1
-        if [ -z "$cambios" ]; then
-            ok "No quedan dependencias huérfanas que limpiar."
-            return 0
-        fi
-        local detalle
-        detalle=$(printf '%s' "$cambios" | base64 -w0) || return 1
-        printf '##CLEANUP-REVIEW:%s:%s:%s\n' "$modo" "$plan" "$detalle"
-        if ! IFS= read -r -t 300 -u "${_aio_review_fd:-8}" respuesta; then
-            err "No se recibió una respuesta para el nuevo plan de limpieza."
-            return 1
-        fi
-        if [ "$respuesta" = "omitir" ]; then
-            warn "Se omitió la limpieza de dependencias por decisión del usuario."
-            return 3
-        fi
-        if [ "$respuesta" != "$plan" ]; then
-            err "La respuesta no coincide con el plan de limpieza."
-            return 1
-        fi
-        aprobado="$plan"
-    done
-    if ! run_privileged "apt-autoremove-$modo" 300 apt-get "${APT_OPTS[@]}" autoremove "$modo" "${conservar[@]}" </dev/null; then
+    if [ "$APT_RUTINA" -eq 0 ] || [ "$modo" != --no-purge ]; then
+        local simulation plan cambios respuesta aprobado="$AUTOREMOVE_PLAN"
+        while :; do
+            if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-autoremove-$modo" 60 apt-get -s -o Debug::NoLocking=1 autoremove "$modo" "${conservar[@]}" </dev/null 2>&1); then
+                err "No se pudo simular la limpieza de dependencias."
+                printf '%s\n' "$simulation"
+                return 1
+            fi
+            plan=$(huella_plan_apt <<< "$simulation") || return 1
+            [ "$plan" = "$aprobado" ] && break
+            if [ "$REVISAR_LIMPIEZA" -ne 1 ] || [ -z "$aprobado" ]; then
+                err "Limpieza detenida: revisa y confirma de nuevo el plan de autoremove antes de eliminar paquetes."
+                return 1
+            fi
+            cambios=$(LC_ALL=C awk '/^(Inst|Remv|Purg) /' <<< "$simulation") || return 1
+            if [ -z "$cambios" ]; then
+                ok "No quedan dependencias huérfanas que limpiar."
+                return 0
+            fi
+            local detalle
+            detalle=$(printf '%s' "$cambios" | base64 -w0) || return 1
+            printf '##CLEANUP-REVIEW:%s:%s:%s\n' "$modo" "$plan" "$detalle"
+            if ! IFS= read -r -t 300 -u "${_aio_review_fd:-8}" respuesta; then
+                err "No se recibió una respuesta para el nuevo plan de limpieza."
+                return 1
+            fi
+            if [ "$respuesta" = "omitir" ]; then
+                warn "Se omitió la limpieza de dependencias por decisión del usuario."
+                return 3
+            fi
+            if [ "$respuesta" != "$plan" ]; then
+                err "La respuesta no coincide con el plan de limpieza."
+                return 1
+            fi
+            aprobado="$plan"
+        done
+    fi
+    if ! run_privileged "apt-autoremove-$modo" 0 apt-get "${APT_OPTS[@]}" -o DPkg::Lock::Timeout=60 autoremove "$modo" "${conservar[@]}" </dev/null; then
         err "No se pudieron eliminar las dependencias huérfanas."
         return 1
     fi
@@ -2282,7 +2291,7 @@ actualizar_aiodebian_testing() (
     paquete_instalado aio-debian-gui || { err "AiO Debian GUI no está instalado como DEB."; return 1; }
     instalada=$(dpkg-query -W -f='${Version}' aio-debian-gui) || return 1
     if [ "$accion" = instalar ]; then
-        if ! auditoria=$(LC_ALL=C run_privileged "dpkg-audit" 30 dpkg --audit 2>&1) || [ -n "$auditoria" ]; then
+        if ! auditoria=$(LC_ALL=C run_privileged "dpkg-audit" 60 dpkg --audit 2>&1) || [ -n "$auditoria" ]; then
             err "Hay una incidencia de dpkg pendiente. Revisa el diagnóstico antes de actualizar AiO."
             [ -z "$auditoria" ] || printf '%s\n' "$auditoria" >&2
             return 1
@@ -2535,6 +2544,22 @@ main() {
         esac
     done
 
+    local secuencia=" ${pasos[*]} "
+    if [[ "$secuencia" == *" upgrade "*" autoremove "* ||
+          "$secuencia" == *" upgrade "*" autoclean "* ]] &&
+       [[ "$secuencia" != *" autoremove "*" upgrade "* &&
+          "$secuencia" != *" autoclean "*" upgrade "* &&
+          "$secuencia" != *" autoclean "*" autoremove "* ]] &&
+       [ -z "$UPGRADE_PLAN" ] && [ -z "$AUTOREMOVE_PLAN" ]; then
+        APT_RUTINA=1
+        for s in "${pasos[@]}"; do
+            case "$s" in
+                clock|upgrade|autoremove|autoclean|flatpak-update|snap-update|rebootcheck) ;;
+                *) APT_RUTINA=0; break ;;
+            esac
+        done
+    fi
+
     # Un bloqueo común impide solapar tareas manuales y programadas de AiO.
     if [ -z "$inherited_lock" ]; then
         install -d -o root -g root -m 0755 /run/aio-debian-gui || exit 1
@@ -2571,7 +2596,7 @@ main() {
         elif [ "$resultado" -ne 0 ]; then
             echo "##RESULT:${s}:1"
             fallos=1
-            if [[ "$CRITICOS" == *" $s "* ]]; then
+            if [ "$APT_RUTINA" -eq 1 ] || [[ "$CRITICOS" == *" $s "* ]]; then
                 echo "##DONE:1"
                 exit 1
             fi

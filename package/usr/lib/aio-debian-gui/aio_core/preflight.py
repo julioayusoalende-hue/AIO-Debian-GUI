@@ -17,6 +17,13 @@ NON_APT_TASKS = {
 }
 
 
+def routine_apt(tasks):
+    selected = set(tasks)
+    return ("upgrade" in selected and bool(selected & {"autoremove", "autoclean"})
+            and selected <= {"clock", "upgrade", "autoremove", "autoclean",
+                             "flatpak-update", "snap-update", "rebootcheck"})
+
+
 @dataclass
 class Report:
     blocked: bool
@@ -26,11 +33,13 @@ class Report:
     autoremove_plan: str = None
 
 
-def _run(command, timeout=25):
+def _run(command, timeout=25, *, raise_errors=False):
     try:
-        return subprocess.run(command, capture_output=True, text=True,
+        return subprocess.run(command, capture_output=True, text=True, errors="replace",
                               timeout=timeout, env={**os.environ, "LC_ALL": "C"})
     except (OSError, subprocess.TimeoutExpired):
+        if raise_errors:
+            raise
         return None
 
 
@@ -122,13 +131,6 @@ def _check_local(tasks):
     upgrade_plan = None
     autoremove_plan = None
     blocked = False
-    locks = _apt_locks()
-    if locks:
-        blocked = True
-        messages.append('APT/dpkg ocupado: ' + ', '.join(locks))
-    elif locks is None:
-        blocked = True
-        messages.append("No se pudo comprobar el bloqueo de APT/dpkg; operación detenida por seguridad.")
     try:
         free = shutil.disk_usage("/").free
         if free < 1024 ** 3:
@@ -139,17 +141,41 @@ def _check_local(tasks):
     except OSError:
         messages.append("No se pudo comprobar el espacio libre en /.")
 
+    # APT adquiere sus propios bloqueos al ejecutar la cadena ordinaria.
+    # Simular con los índices antiguos generaría un plan obsoleto al refrescarlos.
+    if routine_apt(tasks):
+        return Report(blocked, messages)
+
+    locks = _apt_locks()
+    if locks:
+        blocked = True
+        messages.append('APT/dpkg ocupado: ' + ', '.join(locks))
+    elif locks is None:
+        blocked = True
+        messages.append("No se pudo comprobar el bloqueo de APT/dpkg; operación detenida por seguridad.")
     if not shutil.which("dpkg"):
         blocked = True
         messages.append("No se encuentra dpkg para comprobar su estado.")
     else:
-        dpkg = _run(["dpkg", "--audit"])
-        if dpkg is None or dpkg.returncode != 0 or dpkg.stderr.strip():
+        audit = ["dpkg", "--audit"]
+        try:
+            dpkg = _run(audit, timeout=60, raise_errors=True)
+        except subprocess.TimeoutExpired:
             blocked = True
-            messages.append("No se pudo verificar el estado de dpkg.")
-        elif dpkg.stdout.strip():
+            messages.append("dpkg --audit no terminó en 60 segundos. No se ha iniciado el mantenimiento.")
+        except OSError as exc:
             blocked = True
-            messages.append("Hay paquetes pendientes de configurar (dpkg --audit).")
+            messages.append(f"No se pudo ejecutar dpkg --audit.\n{exc}")
+        else:
+            stderr, stdout = dpkg.stderr.strip(), dpkg.stdout.strip()
+            if dpkg.returncode or stderr or stdout:
+                blocked = True
+                if not dpkg.returncode and stdout:
+                    message = "Hay paquetes pendientes de configurar (dpkg --audit)."
+                else:
+                    message = f"No se pudo verificar el estado de dpkg (código de salida: {dpkg.returncode})."
+                detail = "\n".join(part for part in (stderr, stdout) if part)
+                messages.append(message + ("\n\n" + detail[:900] if detail else ""))
 
     if blocked:
         return Report(True, messages)

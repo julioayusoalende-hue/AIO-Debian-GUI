@@ -343,7 +343,7 @@ for flatpak, snap, flathub in (
         seleccion_inicial = ventana._pasos_seleccionados()
         assert "autopurge" not in seleccion_inicial
         ventana.botones_preset["completo"].clicked()
-        assert set(ventana._pasos_seleccionados()) == set(seleccion_inicial) | {"autopurge"}
+        assert set(ventana._pasos_seleccionados()) == (set(seleccion_inicial) - {"autoremove"}) | {"autopurge"}
         if flatpak:
             ventana.botones_preset["flatpak"].clicked()
             assert ventana._pasos_seleccionados() == ["flatpak-update"]
@@ -701,8 +701,8 @@ for language in ('es', 'en', 'fr', 'zh'):
         w.switches['revertir-backports'][0].set_active(False)
         assert w.switches['upgrade'][0].get_sensitive()
     w.botones_preset["estandar"].clicked()
-    assert 'autoremove' not in w._pasos_seleccionados()
-    assert not w.switches['autoremove'][0].get_active()
+    assert 'autoremove' in w._pasos_seleccionados()
+    assert w.switches['autoremove'][0].get_active()
     assert not w.switches['autopurge'][0].get_active()
     w.switches['autoremove'][0].set_active(True)
     w.switches['autopurge'][0].set_active(True)

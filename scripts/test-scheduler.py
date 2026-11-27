@@ -15,7 +15,6 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path('package/usr/lib/aio-debian-gui').resolve()))
-from aio_core import preflight
 from aio_core import scheduler as s
 
 base = copy.deepcopy(s.DEFAULT)
@@ -238,7 +237,7 @@ with tempfile.TemporaryDirectory() as directory:
         class Process:
             def __init__(self, command, **kwargs):
                 assert command[:4] == [s.HELPER, '--lang', 'C.UTF-8', '--lock-fd']
-                assert '--upgrade-plan' in command
+                assert command[5:] == config['tasks']
                 assert kwargs['pass_fds'] == (int(command[4]),)
                 assert kwargs['env']['PKEXEC_UID'] == '1000'
                 fd = os.open(s.LOCK, os.O_WRONLY)
@@ -255,11 +254,8 @@ with tempfile.TemporaryDirectory() as directory:
             def __enter__(self): return self
             def __exit__(self, *args): pass
             def wait(self): return 0
-        report = preflight.Report(False, [], [], 'a'*64)
-        with patch.object(preflight, '_apt_locks', return_value=[]), \
-             patch.object(preflight, '_check_local', return_value=report) as check, \
-             patch.object(s.shutil, 'disk_usage', return_value=SimpleNamespace(free=4*1024**3)), \
-             patch.object(s.subprocess, 'run', return_value=SimpleNamespace(returncode=0, stdout='')) as run, \
+        with patch.object(s.shutil, 'disk_usage', return_value=SimpleNamespace(free=4*1024**3)), \
+             patch.object(s.subprocess, 'run', side_effect=AssertionError('ejecución duplicada fuera del helper')) as run, \
              patch.object(s.subprocess, 'Popen', side_effect=Process) as popen, \
              patch.object(s, '_notify_success') as notify, \
              patch.object(s, '_notify_incomplete') as incomplete, \
@@ -272,8 +268,7 @@ with tempfile.TemporaryDirectory() as directory:
             result = s._read(s.STATE_DIR/'1000.json')
             assert result['status'] == 'success' and result['finished'] and result['reboot_required']
             assert all(v == 'success' for v in result['tasks'].values())
-            assert run.call_args_list[0].args[0] == [s.HELPER, '--sync-maintenance-clock']
-            assert run.call_args.args[0] == ['apt-get', '-o', 'APT::Update::Error-Mode=any', 'update']
+            run.assert_not_called()
             class FailedRebootProcess(Process):
                 def __init__(self, command, **kwargs):
                     super().__init__(command, **kwargs)
@@ -306,45 +301,11 @@ with tempfile.TemporaryDirectory() as directory:
                 # El aviso de reinicio ya se mostró en la ejecución anterior
                 # del mismo arranque: no vuelve a abrir AiO.
                 launch.assert_not_called()
-            with patch.object(preflight, '_check_local', return_value=preflight.Report(True, ['blocked'])):
-                popen.reset_mock()
-                notify.reset_mock()
-                launch.reset_mock()
-                assert s.run_schedule('1000') == 1
-                popen.assert_not_called()
-                notify.assert_not_called()
-                launch.assert_not_called()
-                assert s._read(s.STATE_DIR/'1000.json')['status'] == 'blocked'
-                assert incomplete.call_args.args[2]['status'] == 'blocked'
-            with patch.object(preflight, '_apt_locks', return_value=['/var/lib/dpkg/lock']):
-                run.reset_mock()
-                assert s.run_schedule('1000') == 0
-                run.assert_not_called()
-                assert s._read(s.STATE_DIR/'1000.json')['status'] == 'skipped'
-                assert incomplete.call_args.args[2]['status'] == 'skipped'
             with patch.object(s.shutil, 'disk_usage', return_value=SimpleNamespace(free=500*1024**2)):
-                run.reset_mock()
-                assert s.run_schedule('1000') == 1
-                run.assert_not_called()
-            with patch.object(s.subprocess, 'run', return_value=SimpleNamespace(returncode=1)) as clock_failure:
                 popen.reset_mock()
                 assert s.run_schedule('1000') == 1
-                clock_failure.assert_called_once_with(
-                    [s.HELPER, '--sync-maintenance-clock'], timeout=140, check=False)
                 popen.assert_not_called()
-                result = s._read(s.STATE_DIR/'1000.json')
-                assert result['status'] == 'blocked' and 'reloj' in result['detail']
-                assert set(result['tasks'].values()) == {'not-run'}
-            run.side_effect = [
-                SimpleNamespace(returncode=0),
-                SimpleNamespace(returncode=1, stdout='E: Repositorio inaccesible\n'),
-            ]
-            popen.reset_mock()
-            assert s.run_schedule('1000') == 1
-            popen.assert_not_called()
-            assert 'Repositorio inaccesible' in s.status('1000', include_history=True)['history'][0]['detail']
-            run.side_effect = None
-            run.return_value = SimpleNamespace(returncode=0, stdout='')
+                assert s._read(s.STATE_DIR/'1000.json')['status'] == 'blocked'
             with patch.object(s.subprocess, 'Popen', side_effect=OSError('missing helper')):
                 assert s.run_schedule('1000') == 1
                 assert s._read(s.STATE_DIR/'1000.json')['status'] == 'error'

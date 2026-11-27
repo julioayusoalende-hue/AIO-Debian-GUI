@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from html import escape
 from pathlib import Path
 
-VERSION = '1.5.7'
+VERSION = '1.5.8'
 
 
 HOST_PROTOCOL = 1
@@ -42,7 +42,7 @@ USER_RUNTIME_DIR = Path('/run/user')
 HISTORY_LIMIT = 100
 # Identificador del arranque actual: caduca el aviso de reinicio al reiniciar.
 BOOT_ID_FILE = Path('/proc/sys/kernel/random/boot_id')
-TASKS = ('upgrade', 'autoclean', 'flatpak-update', 'snap-update', 'rebootcheck')
+TASKS = ('upgrade', 'autoremove', 'autoclean', 'flatpak-update', 'snap-update', 'rebootcheck')
 DAYS = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 DEFAULT = {'enabled': False, 'frequency': 'weekly', 'weekday': 6,
            'hour': 10, 'minute': 0, 'tasks': ['upgrade', 'autoclean', 'rebootcheck'],
@@ -73,6 +73,8 @@ def validate_config(config):
             or any(not isinstance(t, str) or t not in TASKS for t in tasks)
             or len(set(tasks)) != len(tasks)):
         raise ValueError('Selecciona al menos una tarea programable, sin duplicados.')
+    if 'autoremove' in tasks and 'upgrade' not in tasks:
+        raise ValueError('Para programar la eliminación de dependencias huérfanas, selecciona también la actualización de paquetes.')
     launcher = config['launcher']
     if launcher is not None:
         if (not isinstance(launcher, dict) or set(launcher) != {'format', 'path'}
@@ -568,36 +570,11 @@ def run_schedule(uid):
             return finish('skipped', 'Ya hay otro mantenimiento de AiO en curso.')
         archive_previous()
         _atomic(path, json.dumps(result) + '\n')
-        from aio_core import preflight
-        if set(config['tasks']) - {'flatpak-update', 'snap-update'} and preflight._apt_locks() != []:
-            return finish('skipped', 'APT/dpkg ocupado o no se pudo comprobar su bloqueo.')
         if 'flatpak-update' in config['tasks'] and not shutil.which('flatpak'):
             return finish('blocked', 'Flatpak no está instalado en el anfitrión.')
         if shutil.disk_usage('/').free < 1024**3:
             return finish('blocked', 'Espacio insuficiente en /: menos de 1 GiB disponible.')
-        try:
-            clock = subprocess.run([HELPER, '--sync-maintenance-clock'], timeout=140, check=False)
-        except (OSError, subprocess.SubprocessError) as exc:
-            return finish('blocked', 'No se pudo sincronizar el reloj del sistema.', mensaje_error(str(exc)))
-        if clock.returncode:
-            return finish('blocked', 'No se pudo sincronizar el reloj del sistema.')
-        if 'upgrade' in config['tasks']:
-            update = subprocess.run(['apt-get', '-o', 'APT::Update::Error-Mode=any', 'update'],
-                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                    text=True, errors='replace', check=False)
-            output = update.stdout or ''
-            if output:
-                print(output, end='', flush=True)
-            if update.returncode:
-                detail = 'No se pudieron actualizar los índices APT.'
-                return finish('blocked', detail, detail + '\n' + mensaje_error(output[-1600:]))
-        report = preflight._check_local(config['tasks'])
-        if report.blocked:
-            return finish('blocked', '\n'.join(report.messages)[:2000])
-        command = [HELPER, '--lang', 'C.UTF-8', '--lock-fd', str(fd)]
-        if report.upgrade_plan:
-            command += ['--upgrade-plan', report.upgrade_plan]
-        command += config['tasks']
+        command = [HELPER, '--lang', 'C.UTF-8', '--lock-fd', str(fd), *config['tasks']]
         environment = {**os.environ, 'PKEXEC_UID': uid, 'LC_ALL': 'C'}
         messages = []
         active = None
@@ -629,6 +606,8 @@ def run_schedule(uid):
                 errors[active] = mensaje_error('\n'.join(messages))
         if code == 0 and all(v == 'success' for v in result['tasks'].values()):
             return finish('success', 'Mantenimiento completado.')
+        if messages and all(value == 'not-run' for value in result['tasks'].values()):
+            return finish('error', mensaje_error('\n'.join(messages))[:600])
         if result['tasks'].get('rebootcheck') == 'error':
             return finish('error', 'No se pudo comprobar si hace falta reiniciar; revisa needrestart y el journal.')
         return finish('error', 'El mantenimiento terminó con errores; revisa los resultados de las tareas.',

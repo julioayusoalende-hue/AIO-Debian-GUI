@@ -85,7 +85,7 @@ NOTAS_VERSION = os.path.normpath(
 )
 
 # Versión embebida en tiempo de compilación (inyectada por build-deb.sh)
-AIO_DEBIAN_GUI_VERSION = "1.5.7"
+AIO_DEBIAN_GUI_VERSION = "1.5.8"
 
 RECOMMENDED_ICON_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "../share/aio-debian-gui/recommended-icons")
@@ -1011,7 +1011,7 @@ PASOS = [
     ("upgrade", "Actualizar los paquetes del sistema",
      "Actualiza con APT y admite dependencias nuevas. No elimina paquetes.", True, "apt"),
     ("autoremove", "Eliminar dependencias huérfanas",
-     "apt-get autoremove; puede quitar paquetes que APT considera huérfanos.", False, "apt"),
+     "apt-get autoremove; puede quitar paquetes que APT considera huérfanos.", True, "apt"),
     ("autopurge", "Purgar dependencias huérfanas",
      "Elimina dependencias sin uso y sus archivos de configuración del sistema.", False, "apt"),
     ("autoclean", "Limpiar la caché de paquetes obsoletos",
@@ -2056,7 +2056,11 @@ class VentanaPrincipal(Gtk.Window):
         dialogo.set_default_response(Gtk.ResponseType.CANCEL)
         detalle = (traducir("Ejecutar 1 tarea") if len(pasos) == 1 else traducir("Ejecutar %d tareas") % len(pasos))
         detalle += "\n\n" + "\n".join("• " + traducir(nombres[p]) for p in pasos)
-        if set(pasos) <= TAREAS_LIMPIEZA:
+        if core_preflight.routine_apt(pasos):
+            detalle += "\n\n" + traducir("Se actualizarán primero los índices APT. Las tareas siguientes se ejecutarán solo si la anterior termina correctamente.")
+            if "autoremove" in pasos:
+                detalle += "\n\n" + traducir("APT eliminará las dependencias que queden huérfanas tras la actualización.")
+        elif set(pasos) <= TAREAS_LIMPIEZA:
             detalle += ("\n\n" + traducir(
                 "Esta es una vista previa de las limpiezas seleccionadas. "
                 "Se eliminarán los archivos indicados; revisa la selección antes de continuar."

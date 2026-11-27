@@ -1,5 +1,10 @@
 # Cambios
 
+## 1.5.8
+
+- El mantenimiento estándar actualiza los índices una vez y encadena la actualización y las limpiezas seleccionadas hasta el primer fallo de APT, sin simulaciones duplicadas.
+- La limpieza de dependencias puede programarse junto con la actualización; los errores de `dpkg --audit` muestran su causa antes de bloquear el mantenimiento.
+
 ## 1.5.7
 
 - El mantenimiento manual y programado espera a la sincronización del reloj y continúa automáticamente al confirmarla.

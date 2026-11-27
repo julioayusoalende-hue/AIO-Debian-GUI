@@ -16,7 +16,7 @@ mod = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = mod
 spec.loader.exec_module(mod)
 
-def run(cmd, timeout=25):
+def run(cmd, timeout=25, **kwargs):
     if "upgrade" in cmd:
         return SimpleNamespace(returncode=0, stdout="Remv linux-image-old [1]\n", stderr="")
     return SimpleNamespace(returncode=0, stdout="", stderr="")
@@ -59,14 +59,14 @@ with patch.object(mod, "_apt_locks", return_value=[]), \
     mocked.assert_not_called()
 
 # Vista previa detallada de versiones sin escrituras
-with patch.object(mod, "_apt_locks", return_value=[]), patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), patch.object(mod, "_run", side_effect=lambda cmd, timeout=25: SimpleNamespace(returncode=0, stdout="Inst nano [7.2] (7.3 Debian:stable)\nInst vim (9.1 Debian:stable)\n" if "upgrade" in cmd else "", stderr="")):
+with patch.object(mod, "_apt_locks", return_value=[]), patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), patch.object(mod, "_run", side_effect=lambda cmd, timeout=25, **kwargs: SimpleNamespace(returncode=0, stdout="Inst nano [7.2] (7.3 Debian:stable)\nInst vim (9.1 Debian:stable)\n" if "upgrade" in cmd else "", stderr="")):
     report = mod.check(["upgrade"])
     assert not report.blocked
     assert any("ACTUALIZAR: nano 7.2 → 7.3" in x for x in report.preview)
     assert any("INSTALAR: vim 9.1" in x for x in report.preview)
 
 # Avisar de cambios en componentes críticos.
-with patch.object(mod, "_apt_locks", return_value=[]), patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), patch.object(mod, "_run", side_effect=lambda cmd, timeout=25: SimpleNamespace(returncode=0, stdout="Inst linux-image-amd64 [6.1] (6.12 Debian:stable)\n" if "upgrade" in cmd else "", stderr="")):
+with patch.object(mod, "_apt_locks", return_value=[]), patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), patch.object(mod, "_run", side_effect=lambda cmd, timeout=25, **kwargs: SimpleNamespace(returncode=0, stdout="Inst linux-image-amd64 [6.1] (6.12 Debian:stable)\n" if "upgrade" in cmd else "", stderr="")):
     report = mod.check(["upgrade"])
     assert any("kernel, Mesa o NVIDIA" in m for m in report.messages)
 
@@ -77,7 +77,7 @@ for task in ("upgrade", "autoremove"):
         with patch.object(mod, "_apt_locks", return_value=[]), \
              patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), \
              patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), \
-             patch.object(mod, "_run", side_effect=lambda cmd, timeout=25: SimpleNamespace(
+             patch.object(mod, "_run", side_effect=lambda cmd, timeout=25, **kwargs: SimpleNamespace(
                  returncode=0, stdout=plan if "-s" in cmd else "", stderr="")):
             report = mod.check([task])
             assert ("PURGAR: " if marker == "Purg" else "ELIMINAR: ") + "old-package" in report.preview
@@ -92,7 +92,7 @@ for task in ("upgrade", "autoremove"):
 with patch.object(mod, "_apt_locks", return_value=[]), \
      patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), \
      patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), \
-     patch.object(mod, "_run", side_effect=lambda cmd, timeout=25: SimpleNamespace(
+     patch.object(mod, "_run", side_effect=lambda cmd, timeout=25, **kwargs: SimpleNamespace(
          returncode=0, stdout="Purg old-package [1]\n" if "--purge" in cmd else "", stderr="")) as run:
     report = mod.check(["autopurge"])
     assert not report.blocked
@@ -106,7 +106,7 @@ plan = "Inst nano [7.2] (7.3 Debian:stable)\n"
 with patch.object(mod, "_apt_locks", return_value=[]), \
      patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), \
      patch.object(mod.shutil, "which", return_value="/usr/bin/tool"), \
-     patch.object(mod, "_run", side_effect=lambda cmd, timeout=25: SimpleNamespace(
+     patch.object(mod, "_run", side_effect=lambda cmd, timeout=25, **kwargs: SimpleNamespace(
          returncode=0, stdout="Reading package lists...\n" + plan if "-s" in cmd else "", stderr="")):
     report = mod.check(["upgrade"])
     assert report.upgrade_plan == hashlib.sha256(plan.encode()).hexdigest()
@@ -139,3 +139,27 @@ for error in (OSError("host unavailable"), subprocess.TimeoutExpired("host", 180
          patch.object(mod.subprocess, "run", side_effect=error):
         assert mod.check(["upgrade"]).blocked
 print("Preflight: Remv/Purg, huella del plan y anfitrión Flatpak OK")
+
+
+# Comunicar la causa concreta del bloqueo sin continuar con APT.
+for result, detail in (
+    (subprocess.TimeoutExpired(["dpkg", "--audit"], 60), "no terminó en 60 segundos"),
+    (PermissionError("Permiso denegado"), "Permiso denegado"),
+    (SimpleNamespace(returncode=2, stdout="", stderr="dpkg: error: cannot read status"), "cannot read status"),
+    (SimpleNamespace(returncode=0, stdout="", stderr="dpkg: warning: missing metadata"), "missing metadata"),
+    (SimpleNamespace(returncode=0, stdout="libreoffice-core pendiente", stderr=""), "libreoffice-core pendiente"),
+):
+    with patch.object(mod, "_apt_locks", return_value=[]), \
+         patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), \
+         patch.object(mod.shutil, "which", return_value="/usr/bin/dpkg"), \
+         patch.object(mod, "_run", side_effect=[result]) as audit:
+        report = mod._check_local(["upgrade"])
+    assert report.blocked and detail in "\n".join(report.messages), report.messages
+    audit.assert_called_once_with(["dpkg", "--audit"], timeout=60, raise_errors=True)
+
+
+with patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=4*1024**3)), \
+     patch.object(mod, "_apt_locks", side_effect=AssertionError("APT gestiona sus bloqueos")), \
+     patch.object(mod, "_run", side_effect=AssertionError("comprobación APT duplicada")):
+    report = mod._check_local(["upgrade", "autoremove", "autoclean", "rebootcheck"])
+    assert not report.blocked and report.upgrade_plan is None and report.autoremove_plan is None

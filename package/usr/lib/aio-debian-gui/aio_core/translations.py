@@ -2541,3 +2541,24 @@ TRADUCCIONES["zh"].update({
     "Hay %d actualizaciones; el límite de la cola es %d.": "有 %d 项更新；队列上限为 %d。",
     "%d actualizaciones en cola": "队列中有 %d 项更新",
 })
+
+TRADUCCIONES["en"].update({
+    "Se actualizarán primero los índices APT. Las tareas siguientes se ejecutarán solo si la anterior termina correctamente.": "APT indexes are refreshed first. Each following task runs only if the previous one succeeds.",
+    "APT eliminará las dependencias que queden huérfanas tras la actualización.": "APT will remove dependencies that are no longer needed after the upgrade.",
+    "Si el equipo estaba apagado, se recupera la ejecución pendiente al encender. No se reinicia automáticamente. La limpieza de dependencias se ejecuta solo si la seleccionas junto con la actualización.": "If the computer was off, missed maintenance runs after startup. It does not reboot automatically. Dependency cleanup runs only if you select it together with package upgrades.",
+    "Para programar la eliminación de dependencias huérfanas, selecciona también la actualización de paquetes.": "To schedule the removal of unused dependencies, also select package upgrades.",
+})
+
+TRADUCCIONES["fr"].update({
+    "Se actualizarán primero los índices APT. Las tareas siguientes se ejecutarán solo si la anterior termina correctamente.": "Les index APT sont actualisés en premier. Chaque tâche suivante s’exécute uniquement si la précédente réussit.",
+    "APT eliminará las dependencias que queden huérfanas tras la actualización.": "APT supprimera les dépendances devenues inutiles après la mise à jour.",
+    "Si el equipo estaba apagado, se recupera la ejecución pendiente al encender. No se reinicia automáticamente. La limpieza de dependencias se ejecuta solo si la seleccionas junto con la actualización.": "Si l’ordinateur était éteint, la maintenance manquée s’exécute au démarrage. Le redémarrage n’est pas automatique. Le nettoyage des dépendances s’exécute uniquement si vous le sélectionnez avec la mise à jour des paquets.",
+    "Para programar la eliminación de dependencias huérfanas, selecciona también la actualización de paquetes.": "Pour programmer la suppression des dépendances inutilisées, sélectionnez aussi la mise à jour des paquets.",
+})
+
+TRADUCCIONES["zh"].update({
+    "Se actualizarán primero los índices APT. Las tareas siguientes se ejecutarán solo si la anterior termina correctamente.": "先刷新 APT 索引。只有上一项任务成功，才会执行下一项。",
+    "APT eliminará las dependencias que queden huérfanas tras la actualización.": "APT 会移除升级后不再需要的依赖项。",
+    "Si el equipo estaba apagado, se recupera la ejecución pendiente al encender. No se reinicia automáticamente. La limpieza de dependencias se ejecuta solo si la seleccionas junto con la actualización.": "如果电脑已关机，错过的维护将在开机后执行。系统不会自动重启。只有同时选择软件包升级，才会清理依赖项。",
+    "Para programar la eliminación de dependencias huérfanas, selecciona también la actualización de paquetes.": "要计划移除不再使用的依赖项，请同时选择软件包升级。",
+})

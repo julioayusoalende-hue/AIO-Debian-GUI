@@ -88,7 +88,7 @@ class ControladorProgramacion:
             if tarea == "snap-update" and not getattr(self.ventana, "snapd_presente", False):
                 check.set_no_show_all(True)
                 check.hide()
-        detalle = etiqueta("Si el equipo estaba apagado, se recupera la ejecución pendiente al encender. No se reinicia automáticamente. Eliminaciones de paquetes, kernel, controladores y repositorios se gestionan manualmente.", dim=True)
+        detalle = etiqueta("Si el equipo estaba apagado, se recupera la ejecución pendiente al encender. No se reinicia automáticamente. La limpieza de dependencias se ejecuta solo si la seleccionas junto con la actualización.", dim=True)
         detalle.set_max_width_chars(65)
         formulario.pack_start(detalle, False, False, 0)
         resultados = etiqueta("")

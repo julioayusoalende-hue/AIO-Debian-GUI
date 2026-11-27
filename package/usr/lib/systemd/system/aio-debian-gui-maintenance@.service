@@ -6,7 +6,8 @@ After=network-online.target
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/python3 -I /usr/lib/aio-debian-gui/aio_core/scheduler.py --run %i
-TimeoutStartSec=450
+# Una transacción APT en curso debe terminar aunque sea larga.
+TimeoutStartSec=infinity
 Nice=10
 IOSchedulingClass=best-effort
 IOSchedulingPriority=7
