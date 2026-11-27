@@ -156,13 +156,13 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/acerca-de.png
 Releases:
-- version: 1.6.1
+- version: 1.6.2
   type: stable
   unix-timestamp: 1795737600
   description:
     C: >-
-      <ul><li>El asistente de primer arranque exige acceso al repositorio Debian antes de continuar y permite abrir los ajustes
-      de red y reintentar.</li></ul>
+      <ul><li>El actualizador de AiO incluye el Centro de Control de AyusOS en la misma operación cuando está instalado y
+      hay una versión compatible en el canal seleccionado.</li></ul>
 ContentRating:
   oars-1.1:
     violence-cartoon: none
