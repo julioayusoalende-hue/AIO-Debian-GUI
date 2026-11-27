@@ -1,17 +1,19 @@
 Package: aio-debian-gui
-Version: 1:1.5.4~testing.111.1
+Version: 1:1.5.4~testing.112.1
 Architecture: all
 Maintainer: Julio Ayuso <epdc@msn.com>
-Installed-Size: 1703
+Installed-Size: 1769
 Depends: bash, apt, ca-certificates, libglib2.0-bin, dconf-cli, coreutils, diffutils, grep, sed, util-linux, pciutils, libnotify-bin, needrestart, python3, python3-apt, python3-gi, gir1.2-gtk-3.0, gir1.2-vte-2.91, librsvg2-common, pkexec | policykit-1, flatpak
 Recommends: systemd-timesyncd | time-daemon, fwupd
 Conflicts: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
-Replaces: aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
-Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.5.4~testing.111.1_all.deb
-Size: 883256
-MD5sum: c99f743308a33c8138db0ac210843512
-SHA1: 62cb1765853a7776d3d26acbc337d8185eb75451
-SHA256: 2fa87cbbcb66eacea370f1ee2633185f2c54f6fa226f97482f3463475ce57154
+Breaks: ayusos-control-center (<< 1.4.10)
+Replaces: ayusos-control-center (<< 1.4.10), aio-debian (= 1.1.0), aio-debian (= 1.1.1), aio-debian-gui-host
+Provides: aio-debian-gui-software-manager
+Filename: pool/main/a/aio-debian-gui/aio-debian-gui_1.5.4~testing.112.1_all.deb
+Size: 895536
+MD5sum: 4d0d2adb70b5fc72819116946c1080b9
+SHA1: c9fd3674131bdce4eb5438e8d43822da5f38b0a7
+SHA256: a753b0fb2d7bd8e5dca6bfcfcaf1b0c5f45e6fb8900022c52ca8327744030832
 Section: admin
 Priority: optional
 Homepage: https://github.com/julioayusoalende-hue/AIO-Debian-GUI
@@ -20,28 +22,28 @@ Description: Interfaz gráfica de mantenimiento y configuración para Debian y U
  programar el mantenimiento y guardar o restaurar copias de repositorios APT
  y ajustes del escritorio.
  .
- También permite instalar aplicaciones recomendadas por APT o Flatpak,
+ Incluye un gestor de software para APT y Flatpak, aplicaciones recomendadas,
  configurar GRUB en sistemas compatibles y usar una terminal separable.
  Este paquete configura el repositorio APT de AiO Debian GUI.
 
 Package: ayusos-control-center
-Version: 1.4.9
+Version: 1.4.10
 Architecture: all
 Maintainer: Julio Ayuso <epdc@msn.com>
-Depends: aio-debian-gui (>= 1.5.1), python3, python3-gi, gir1.2-gtk-3.0, bash, coreutils, systemd
+Depends: aio-debian-gui, aio-debian-gui-software-manager, python3, python3-gi, gir1.2-gtk-3.0, bash, coreutils, systemd
 Recommends: calamares, timeshift
-Filename: pool/main/a/ayusos-control-center/ayusos-control-center_1.4.9_all.deb
-Size: 10457148
-MD5sum: 08c0d9aafe91b56fb9122e5ab06ddd00
-SHA1: 50630ecd523db58c75517461326cfb7d4251504f
-SHA256: fd2ca686efd087ed1bd51a4235f01e2710a7f8cf16ef5c4b7fd5210fa393cd49
+Filename: pool/main/a/ayusos-control-center/ayusos-control-center_1.4.10_all.deb
+Size: 10444964
+MD5sum: d068986ee954836616e48a54eae264a1
+SHA1: 447b4cebeca2ee30782e9826ece67b1afa47368c
+SHA256: 7316c91d9e7ca04cb40b95c528295feb206f121b1cfde7b2451198ad1a316362
 Section: admin
 Priority: optional
 Homepage: https://github.com/julioayusoalende-hue/AyusOS-Linux
 Description: Integración de AyusOS en aio-debian-gui
  Añade el Centro de Control de AyusOS, onboarding de primer arranque,
  pestañas de actualización, snapshots, hardware, diagnósticos y apariencia,
- gestor de software, modo de recuperación, servicios de mantenimiento,
+ modo de recuperación, servicios de mantenimiento,
  aplicador de preferencias y el módulo Calamares de configuración inicial.
  El núcleo aio-debian-gui permanece independiente de la distribución.
 
