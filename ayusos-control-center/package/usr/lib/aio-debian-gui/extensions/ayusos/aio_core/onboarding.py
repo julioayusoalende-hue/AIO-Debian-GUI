@@ -8,25 +8,33 @@ import os
 from pathlib import Path
 
 import gi
+
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gdk, GdkPixbuf, GLib, GObject, Gtk, Pango
-
 from aio_core.constants import traducir
+from gi.repository import Gdk, GObject, Gtk
+
 from ..branding import (
-    es_ayusos, logo_cabecera, color_acento_ayusos,
-    get_ayusos_version, get_ayusos_codename,
-    titulo_aplicacion, icono_aplicacion,
+    color_acento_ayusos,
+    es_ayusos,
+    get_ayusos_codename,
+    get_ayusos_version,
+    icono_aplicacion,
+    logo_cabecera,
+    titulo_aplicacion,
 )
 from .ayusos_config import (
-    get_effective_config, load_user_preferences, save_user_preferences,
-    mark_onboarding_done, get_profile_packages,
-    get_recommended_apps_for_profile, APP_PROFILES,
-    VALID_KERNEL_VARIANTS, VALID_NVIDIA_MODES, VALID_MAINTENANCE_SCHEDULES,
-    VALID_APP_PROFILES, VALID_THEMES, VALID_ACCENTS,
+    VALID_ACCENTS,
+    VALID_APP_PROFILES,
+    VALID_KERNEL_VARIANTS,
+    VALID_MAINTENANCE_SCHEDULES,
+    VALID_NVIDIA_MODES,
+    VALID_THEMES,
+    get_effective_config,
+    load_user_preferences,
+    mark_onboarding_done,
+    save_user_preferences,
 )
-from aio_core.operations import coordinator as operation_coordinator
-
 
 # Estilo CSS para el onboarding
 ONBOARDING_CSS = b"""
@@ -141,7 +149,7 @@ class OnboardingWizard(Gtk.Window):
         self._setup_css()
 
         # Estado
-        self.steps: List[OnboardingStep] = []
+        self.steps: list[OnboardingStep] = []
         self.current_index = 0
         self.config = get_effective_config()
         self.version = get_ayusos_version() or "1.0"
@@ -524,7 +532,7 @@ class OnboardingWizard(Gtk.Window):
             ("full", traducir("Completo"), traducir("Todo lo anterior + ofimática, Thunderbird, OnlyOffice")),
         ]
 
-        for i, (pid, pname, pdesc) in enumerate(profiles_info):
+        for pid, pname, pdesc in profiles_info:
             radio = Gtk.RadioButton.new_with_label_from_widget(profile_group, "")
             if profile_group is None:
                 profile_group = radio
@@ -806,9 +814,7 @@ class OnboardingWizard(Gtk.Window):
         # Validar hora HH:MM
         import re
         time_str = self.maint_time.get_text().strip()
-        if not re.match(r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$", time_str):
-            return False
-        return True
+        return bool(re.match(r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$", time_str))
 
     def _apply_maintenance(self, widget, config) -> bool:
         config.maintenance.schedule = self.maint_freq.get_active_id() or "weekly"
@@ -945,7 +951,6 @@ def launch_onboarding(parent=None) -> OnboardingWizard:
 
 def should_launch_onboarding() -> bool:
     """True si se debe lanzar onboarding (AyusOS instalado + no completado)."""
-    from ..branding import es_ayusos
     from .ayusos_config import is_onboarding_completed
     if not es_ayusos() or is_onboarding_completed():
         return False

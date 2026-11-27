@@ -6318,6 +6318,10 @@ def main():
             onboarding_win = onboarding_extension.launch_onboarding(win)
         except Exception as exc:  # noqa: BLE001
             print(f"No se pudo abrir el onboarding: {exc}", file=sys.stderr)
+            if onboarding_only:
+                # Salir con error para que el servicio reintente y no se marque
+                # el onboarding como completado sin haber mostrado el wizard.
+                sys.exit(2)
             onboarding_extension = None
 
     if onboarding_extension is not None:
@@ -6335,6 +6339,10 @@ def main():
         onboarding_win.connect("completed", lambda *_: _cerrar_onboarding())
         onboarding_win.connect("cancelled", lambda *_: _cerrar_onboarding())
     else:
+        if onboarding_only:
+            print("Onboarding no disponible: ninguna extensión lo proporciona.",
+                  file=sys.stderr)
+            sys.exit(2)
         win.show_all()
         win._preparar_anfitrion_al_iniciar()
 

@@ -1,14 +1,10 @@
 """Perfiles de hardware y optimizaciones para AyusOS."""
 
 import json
-import os
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
-from .ayusos_config import get_effective_config
-from aio_core.constants import comando_host, paquete_instalado, leer_texto
-
+from aio_core.constants import comando_host, leer_texto, paquete_instalado
 
 # Perfiles de hardware predefinidos
 HARDWARE_PROFILES = {
@@ -117,7 +113,7 @@ def detect_hardware_profile() -> str:
         return "server"
 
 
-def get_hardware_info() -> Dict:
+def get_hardware_info() -> dict:
     """Información detallada de hardware."""
     info = {}
 
@@ -196,7 +192,7 @@ def get_hardware_info() -> Dict:
     return info
 
 
-def apply_hardware_profile(profile_id: str) -> Tuple[bool, str]:
+def apply_hardware_profile(profile_id: str) -> tuple[bool, str]:
     """Aplica un perfil de hardware (instala paquetes, habilita servicios, tweaks)."""
     if profile_id not in HARDWARE_PROFILES:
         return False, f"Perfil desconocido: {profile_id}"
@@ -269,10 +265,9 @@ def apply_hardware_profile(profile_id: str) -> Tuple[bool, str]:
     return True, f"Perfil '{profile['name']}' aplicado correctamente"
 
 
-def get_current_profile_status() -> Dict:
+def get_current_profile_status() -> dict:
     """Estado actual de perfiles y servicios."""
     detected = detect_hardware_profile()
-    config = get_effective_config()
 
     # Verificar qué servicios están activos
     active_services = {}

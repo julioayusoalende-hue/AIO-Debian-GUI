@@ -1,14 +1,12 @@
 """Gestión de snapshots Btrfs + Timeshift + grub-btrfs para AyusOS."""
 
 import json
-import os
+import re
 import subprocess
-from pathlib import Path
-from typing import List, Dict, Optional, Tuple
+
+from aio_core.constants import comando_host, paquete_instalado
 
 from .ayusos_config import get_effective_config
-from aio_core.constants import comando_host, paquete_instalado, leer_texto
-
 
 TIMESHIFT_CMD = "timeshift"
 GRUB_BTRFS_CMD = "grub-btrfsd"
@@ -42,7 +40,7 @@ def is_grub_btrfs_active() -> bool:
         return False
 
 
-def list_timeshift_snapshots() -> List[Dict[str, str]]:
+def list_timeshift_snapshots() -> list[dict[str, str]]:
     """Lista snapshots de Timeshift (JSON)."""
     if not is_timeshift_installed():
         return []
@@ -58,7 +56,7 @@ def list_timeshift_snapshots() -> List[Dict[str, str]]:
     return []
 
 
-def list_btrfs_snapshots(path: str = "/") -> List[Dict[str, str]]:
+def list_btrfs_snapshots(path: str = "/") -> list[dict[str, str]]:
     """Lista subvolúmenes/snapshots Btrfs."""
     if not is_btrfs_root():
         return []
@@ -69,12 +67,18 @@ def list_btrfs_snapshots(path: str = "/") -> List[Dict[str, str]]:
         )
         snapshots = []
         for line in result.stdout.strip().split("\n"):
-            if "snapshot" in line.lower():
+            if not line.startswith("ID "):
+                continue
+            path_match = re.search(r"\bpath\s+(\S+)", line)
+            if not path_match:
+                continue
+            path = path_match.group(1)
+            if "snapshot" in path.lower() or ".snapshots" in path:
                 parts = line.split()
                 if len(parts) >= 9:
                     snapshots.append({
                         "id": parts[1],
-                        "path": parts[8],
+                        "path": path,
                         "parent": parts[6],
                     })
         return snapshots
@@ -82,7 +86,7 @@ def list_btrfs_snapshots(path: str = "/") -> List[Dict[str, str]]:
         return []
 
 
-def create_timeshift_snapshot(comment: str = "", tags: str = "O") -> Tuple[bool, str]:
+def create_timeshift_snapshot(comment: str = "", tags: str = "O") -> tuple[bool, str]:
     """Crea snapshot Timeshift. tags: O=ondemand, B=boot, H=hourly, D=daily, W=weekly, M=monthly, Y=yearly"""
     if not is_timeshift_installed():
         return False, "Timeshift no instalado"
@@ -97,7 +101,7 @@ def create_timeshift_snapshot(comment: str = "", tags: str = "O") -> Tuple[bool,
         return False, str(e)
 
 
-def restore_timeshift_snapshot(snapshot_id: str) -> Tuple[bool, str]:
+def restore_timeshift_snapshot(snapshot_id: str) -> tuple[bool, str]:
     """Restaura snapshot Timeshift (requiere reboot)."""
     if not is_timeshift_installed():
         return False, "Timeshift no instalado"
@@ -116,7 +120,7 @@ def restore_timeshift_snapshot(snapshot_id: str) -> Tuple[bool, str]:
         return False, str(e)
 
 
-def delete_timeshift_snapshot(snapshot_id: str) -> Tuple[bool, str]:
+def delete_timeshift_snapshot(snapshot_id: str) -> tuple[bool, str]:
     """Elimina snapshot Timeshift."""
     if not is_timeshift_installed():
         return False, "Timeshift no instalado"
@@ -130,7 +134,7 @@ def delete_timeshift_snapshot(snapshot_id: str) -> Tuple[bool, str]:
         return False, str(e)
 
 
-def get_timeshift_config() -> Dict:
+def get_timeshift_config() -> dict:
     """Obtiene configuración actual de Timeshift."""
     if not is_timeshift_installed():
         return {}
@@ -160,7 +164,7 @@ def set_timeshift_schedule(schedule: str, retention: str) -> bool:
     return False
 
 
-def trigger_grub_btrfs_update() -> Tuple[bool, str]:
+def trigger_grub_btrfs_update() -> tuple[bool, str]:
     """Fuerza actualización de menú GRUB con snapshots Btrfs."""
     try:
         result = subprocess.run(
@@ -172,7 +176,7 @@ def trigger_grub_btrfs_update() -> Tuple[bool, str]:
         return False, str(e)
 
 
-def get_snapshot_status() -> Dict:
+def get_snapshot_status() -> dict:
     """Estado general de snapshots para UI."""
     config = get_effective_config()
     return {

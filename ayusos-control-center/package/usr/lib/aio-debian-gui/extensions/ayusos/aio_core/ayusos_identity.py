@@ -9,7 +9,6 @@ import subprocess
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Dict, Tuple, Optional
 
 AYUSOS_SOURCES = Path("/etc/apt/sources.list.d/ayusos.sources")
 AYUSOS_KEYRING = Path("/usr/share/keyrings/ayusos-archive.gpg")
@@ -22,14 +21,17 @@ DCONF_AYUSOS_EXTENSIONS = "/org/gnome/shell/extensions/"
 LIMIT = 16 * 1024 * 1024  # 16 MB para identidad
 
 
-def _run(cmd, capture=True):
-    result = subprocess.run(cmd, capture_output=capture, text=True, timeout=30)
+def _run(cmd, capture=True, data=None):
+    if isinstance(data, bytes):
+        data = data.decode("utf-8", errors="replace")
+    result = subprocess.run(cmd, capture_output=capture, text=True, timeout=30, input=data)
     if result.returncode != 0:
-        raise RuntimeError(f"{cmd[0]} falló: {result.stderr.strip()}")
+        err = (result.stderr or "").strip() if capture else ""
+        raise RuntimeError(f"{cmd[0]} falló: {err}")
     return result.stdout if capture else ""
 
 
-def snapshot_identity() -> Dict[str, Tuple[bytes, int]]:
+def snapshot_identity() -> dict[str, tuple[bytes, int]]:
     """Captura el estado actual de la identidad de AyusOS."""
     files = {}
 
@@ -88,7 +90,7 @@ def snapshot_identity() -> Dict[str, Tuple[bytes, int]]:
     return files
 
 
-def save_identity(path: Path, files: Dict[str, Tuple[bytes, int]]) -> None:
+def save_identity(path: Path, files: dict[str, tuple[bytes, int]]) -> None:
     """Guarda el snapshot de identidad en un archivo ZIP."""
     if sum(len(data) for data, _ in files.values()) > LIMIT:
         raise ValueError("Identity backup exceeds size limit")
@@ -106,7 +108,7 @@ def save_identity(path: Path, files: Dict[str, Tuple[bytes, int]]) -> None:
         Path(name).unlink(missing_ok=True)
 
 
-def read_identity(path: Path) -> Dict[str, Tuple[bytes, int]]:
+def read_identity(path: Path) -> dict[str, tuple[bytes, int]]:
     """Lee un archivo de backup de identidad."""
     with zipfile.ZipFile(path) as archive:
         entries = archive.infolist()
@@ -125,7 +127,7 @@ def read_identity(path: Path) -> Dict[str, Tuple[bytes, int]]:
         return files
 
 
-def restore_identity(files: Dict[str, Tuple[bytes, int]], dry_run: bool = False) -> Tuple[bool, str]:
+def restore_identity(files: dict[str, tuple[bytes, int]], dry_run: bool = False) -> tuple[bool, str]:
     """Restaura la identidad de AyusOS desde un backup."""
     errors = []
     restored = []

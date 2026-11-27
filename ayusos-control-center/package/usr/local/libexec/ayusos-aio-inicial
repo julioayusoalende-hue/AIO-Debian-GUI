@@ -14,7 +14,12 @@ if "$live"; then
     exit 0
 fi
 
-read -r uid < "$state/aio-usuario"
+# El servicio de autorización escribe la lista de UIDs en aio-usuarios.
+[[ -s "$state/aio-usuarios" ]] || {
+    echo 'No hay usuarios autorizados registrados; ejecuta ayusos-aio-autorizar.' >&2
+    exit 1
+}
+read -r uid < "$state/aio-usuarios"
 [[ "$uid" =~ ^[1-9][0-9]*$ ]]
 
 # Aplicar las elecciones del wizard una sola vez, antes del mantenimiento.

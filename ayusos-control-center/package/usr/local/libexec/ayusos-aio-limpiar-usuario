@@ -36,7 +36,7 @@ marker="$PASSWORDLESS_STATE_DIR/${uid}.rules"
 state=/var/lib/ayusos
 if [[ -f "$state/aio-usuarios" ]]; then
     # Filtrar el UID eliminado
-    grep -v "^${uid}$" "$state/aio-usuarios" > "$state/aio-usuarios.tmp" 2>/dev/null || true
+    awk -v id="$uid" '$1 != id' "$state/aio-usuarios" > "$state/aio-usuarios.tmp" 2>/dev/null || true
     mv -f "$state/aio-usuarios.tmp" "$state/aio-usuarios"
 fi
 

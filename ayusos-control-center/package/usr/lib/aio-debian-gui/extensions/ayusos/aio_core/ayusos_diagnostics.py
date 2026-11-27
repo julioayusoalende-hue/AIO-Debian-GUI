@@ -5,15 +5,12 @@ import os
 import subprocess
 import time
 from pathlib import Path
-from typing import Dict, List, Tuple
 
-from .ayusos_config import get_effective_config
-from aio_core.constants import comando_host, paquete_instalado, leer_texto
-from ..branding import es_ayusos
+from aio_core.constants import comando_host, leer_texto, paquete_instalado
 from aio_core.diagnostics import run_diagnostics as core_diagnostico
 
 
-def check_ayusos_repos() -> Tuple[bool, str]:
+def check_ayusos_repos() -> tuple[bool, str]:
     """Verifica repositorio AyusOS configurado y firmado."""
     sources = Path("/etc/apt/sources.list.d/ayusos.sources")
     keyring = Path("/usr/share/keyrings/ayusos-archive.gpg")
@@ -31,7 +28,7 @@ def check_ayusos_repos() -> Tuple[bool, str]:
     return True, "Repositorio AyusOS configurado correctamente"
 
 
-def check_ayusos_keyring() -> Tuple[bool, str]:
+def check_ayusos_keyring() -> tuple[bool, str]:
     """Verifica llave GPG del repo AyusOS."""
     keyring = Path("/usr/share/keyrings/ayusos-archive.gpg")
     if not keyring.exists():
@@ -48,7 +45,7 @@ def check_ayusos_keyring() -> Tuple[bool, str]:
     return False, "Llave GPG inválida o corrupta"
 
 
-def check_btrfs_health() -> Tuple[bool, str]:
+def check_btrfs_health() -> tuple[bool, str]:
     """Verifica salud de Btrfs (si es root)."""
     if not Path("/").exists():
         return False, "No se puede acceder a /"
@@ -79,14 +76,14 @@ def check_btrfs_health() -> Tuple[bool, str]:
         return False, f"Error comprobando Btrfs: {e}"
 
 
-def check_timeshift_config() -> Tuple[bool, str]:
+def check_timeshift_config() -> tuple[bool, str]:
     """Verifica configuración de Timeshift."""
     if not paquete_instalado("timeshift"):
         return False, "Timeshift no instalado"
 
     config_file = Path("/etc/timeshift/timeshift.json")
     if not config_file.exists():
-        return False, "Falta /etc/timeshift.json"
+        return False, "Falta /etc/timeshift/timeshift.json"
 
     try:
         import json
@@ -100,7 +97,7 @@ def check_timeshift_config() -> Tuple[bool, str]:
         return False, f"Error leyendo config Timeshift: {e}"
 
 
-def check_grub_btrfs() -> Tuple[bool, str]:
+def check_grub_btrfs() -> tuple[bool, str]:
     """Verifica grub-btrfsd activo."""
     try:
         result = subprocess.run(
@@ -114,7 +111,7 @@ def check_grub_btrfs() -> Tuple[bool, str]:
         return False, "Error consultando grub-btrfsd"
 
 
-def check_ayusos_packages() -> Tuple[bool, str]:
+def check_ayusos_packages() -> tuple[bool, str]:
     """Verifica paquetes esenciales de AyusOS instalados."""
     essential = [
         "ayusos-release", "ayusos-branding", "aio-debian-gui",
@@ -130,7 +127,7 @@ def check_ayusos_packages() -> Tuple[bool, str]:
     return True, "Todos los paquetes esenciales instalados"
 
 
-def check_snapshots_recent() -> Tuple[bool, str]:
+def check_snapshots_recent() -> tuple[bool, str]:
     """Verifica que hay snapshots recientes (últimos 7 días)."""
     if not paquete_instalado("timeshift"):
         return True, "Timeshift no instalado (omitido)"
@@ -170,7 +167,7 @@ def check_snapshots_recent() -> Tuple[bool, str]:
         return False, f"Error: {e}"
 
 
-def check_firmware_updates() -> Tuple[bool, str]:
+def check_firmware_updates() -> tuple[bool, str]:
     """Verifica actualizaciones de firmware (fwupd)."""
     if not paquete_instalado("fwupd"):
         return True, "fwupd no instalado (omitido)"
@@ -191,7 +188,7 @@ def check_firmware_updates() -> Tuple[bool, str]:
     return True, "No se pudo comprobar firmware"
 
 
-def check_flatpak_flathub() -> Tuple[bool, str]:
+def check_flatpak_flathub() -> tuple[bool, str]:
     """Verifica Flatpak y Flathub configurados."""
     if not paquete_instalado("flatpak"):
         return False, "Flatpak no instalado"
@@ -225,7 +222,7 @@ def _uid_solicitante() -> str:
     return str(os.getuid())
 
 
-def check_gnome_extensions() -> Tuple[bool, str]:
+def check_gnome_extensions() -> tuple[bool, str]:
     """Comprueba que las extensiones incluidas están instaladas y activadas."""
     faltan = [nombre for uuid, nombre in EXTENSIONES_INCLUIDAS.items()
               if not (EXTENSIONES_SISTEMA / uuid).is_dir()]
@@ -239,7 +236,7 @@ def check_gnome_extensions() -> Tuple[bool, str]:
     return True, "Dash to Dock, Blur my Shell y AppIndicator incluidos"
 
 
-def check_scheduled_maintenance() -> Tuple[bool, str]:
+def check_scheduled_maintenance() -> tuple[bool, str]:
     """Último resultado del mantenimiento programado de AiO."""
     estado = ESTADO_MANTENIMIENTO / f"{_uid_solicitante()}.json"
     if not estado.is_file():
@@ -258,7 +255,7 @@ def check_scheduled_maintenance() -> Tuple[bool, str]:
     return False, f"Último mantenimiento: {situacion} ({fecha}). {detalle}"[:300]
 
 
-def check_reboot_required() -> Tuple[bool, str]:
+def check_reboot_required() -> tuple[bool, str]:
     """Avisa si el sistema o el kernel necesitan reinicio."""
     if Path("/var/run/reboot-required").exists() or Path("/run/reboot-required").exists():
         return False, "El sistema requiere reinicio"
@@ -274,7 +271,7 @@ def check_reboot_required() -> Tuple[bool, str]:
     return True, "No hay reinicio pendiente"
 
 
-def check_ayusos_identity() -> Tuple[bool, str]:
+def check_ayusos_identity() -> tuple[bool, str]:
     """Comprueba que la identidad de la distro está completa."""
     os_release = Path("/etc/os-release")
     try:
@@ -294,7 +291,7 @@ def check_ayusos_identity() -> Tuple[bool, str]:
     return True, "Identidad de AyusOS completa"
 
 
-def run_full_diagnostics() -> Dict:
+def run_full_diagnostics() -> dict:
     """Ejecuta todos los diagnósticos y devuelve reporte completo."""
     checks = [
         ("core", core_diagnostico),
@@ -347,5 +344,4 @@ def cli_diagnostics() -> str:
 
 
 if __name__ == "__main__":
-    import sys
     print(cli_diagnostics())

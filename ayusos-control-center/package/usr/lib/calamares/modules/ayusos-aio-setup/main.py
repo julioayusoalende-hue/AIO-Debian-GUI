@@ -7,8 +7,6 @@ with the user's preselected options, before first boot.
 Uses the libcalamares Python API.
 """
 
-import os
-import subprocess
 from pathlib import Path
 
 import libcalamares

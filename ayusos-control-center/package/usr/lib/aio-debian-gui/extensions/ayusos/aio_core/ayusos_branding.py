@@ -1,16 +1,14 @@
 """Branding y apariencia de AyusOS: temas, acentos, fondos, plymouth."""
 
 import json
-import os
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Optional
 
-from .ayusos_config import get_effective_config, VALID_THEMES, VALID_ACCENTS
-from aio_core.constants import comando_host, leer_texto
-from ..branding import es_ayusos
+from aio_core.constants import comando_host
 from aio_core.gtk_appearance import aplicar_tema
 
+from ..branding import es_ayusos
+from .ayusos_config import VALID_THEMES, get_effective_config
 
 THEMES_DIR = Path("/usr/share/themes")
 AYUSOS_THEME_DIR = Path("/usr/share/themes/AyusOS")
@@ -31,7 +29,7 @@ ACENTOS = {
 }
 
 
-def get_available_wallpapers() -> List[Dict[str, str]]:
+def get_available_wallpapers() -> list[dict[str, str]]:
     """Lista fondos de pantalla disponibles."""
     walls = []
     if WALLPAPERS_DIR.exists():
@@ -41,7 +39,7 @@ def get_available_wallpapers() -> List[Dict[str, str]]:
     return walls
 
 
-def get_current_wallpaper() -> Optional[str]:
+def get_current_wallpaper() -> str | None:
     """Fondo actual del usuario (GNOME)."""
     try:
         result = subprocess.run(
@@ -80,13 +78,7 @@ def set_theme_variant(variant: str) -> bool:
     if variant not in VALID_THEMES:
         return False
     try:
-        if variant == "system":
-            subprocess.run(
-                ["gsettings", "set", "org.gnome.desktop.interface", "color-scheme", "prefer-dark"],
-                check=True, timeout=5
-            )
-            # O detectar automáticamente
-        elif variant == "dark":
+        if variant == "system" or variant == "dark":
             subprocess.run(
                 ["gsettings", "set", "org.gnome.desktop.interface", "color-scheme", "prefer-dark"],
                 check=True, timeout=5
@@ -106,16 +98,8 @@ def set_accent_color(accent_id: str) -> bool:
     if accent_id not in ACENTOS:
         return False
 
-    accent = ACENTOS[accent_id]
     config = get_effective_config()
     config.appearance.accent = accent_id
-
-    # Generar CSS override para GTK
-    css_content = f"""
-/* AyusOS Accent Color Override */
-@define-color theme_selected_bg_color {accent['gtk']};
-@define-color theme_selected_fg_color #ffffff;
-"""
 
     # Escribir override dconf
     override_path = DCONF_DB_DIR / "99-ayusos-accent"
@@ -140,7 +124,7 @@ theme-variant='dark'
     return True
 
 
-def get_plymouth_theme() -> Optional[str]:
+def get_plymouth_theme() -> str | None:
     """Tema Plymouth actual."""
     try:
         result = subprocess.run(
@@ -184,17 +168,23 @@ def apply_full_branding() -> bool:
     if walls:
         # Seleccionar según modo
         mode = config.appearance.wallpaper_mode
+        light_walls = [w for w in walls if "claro" in w["id"] or "light" in w["id"]]
+        dark_walls = [w for w in walls if "oscuro" in w["id"] or "dark" in w["id"]]
         if mode == "auto":
-            # Usar claro/oscuro según tema
-            pass
-        elif mode == "light":
-            light_walls = [w for w in walls if "claro" in w["id"] or "light" in w["id"]]
-            if light_walls:
-                set_wallpaper(light_walls[0]["path"], "light")
-        elif mode == "dark":
-            dark_walls = [w for w in walls if "oscuro" in w["id"] or "dark" in w["id"]]
-            if dark_walls:
-                set_wallpaper(dark_walls[0]["path"], "dark")
+            # Usar claro/oscuro según tema; en "system" aplica ambos
+            if config.appearance.theme == "light" and light_walls:
+                set_wallpaper(light_walls[0]["path"], "both")
+            elif config.appearance.theme == "dark" and dark_walls:
+                set_wallpaper(dark_walls[0]["path"], "both")
+            else:
+                if light_walls:
+                    set_wallpaper(light_walls[0]["path"], "light")
+                if dark_walls:
+                    set_wallpaper(dark_walls[0]["path"], "dark")
+        elif mode == "light" and light_walls:
+            set_wallpaper(light_walls[0]["path"], "light")
+        elif mode == "dark" and dark_walls:
+            set_wallpaper(dark_walls[0]["path"], "dark")
 
     # Plymouth
     set_plymouth_theme("ayusos")
@@ -202,7 +192,7 @@ def apply_full_branding() -> bool:
     return True
 
 
-def get_branding_status() -> Dict:
+def get_branding_status() -> dict:
     """Estado actual de branding para UI."""
     config = get_effective_config()
     return {

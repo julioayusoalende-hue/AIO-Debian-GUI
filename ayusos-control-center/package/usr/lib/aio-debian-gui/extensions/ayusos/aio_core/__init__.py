@@ -5,8 +5,8 @@ y configuración durante el descubrimiento de extensiones.
 """
 
 from .ayusos_config import (
-    AyusOSConfig,
     APP_PROFILES,
+    AyusOSConfig,
     get_effective_config,
     is_onboarding_completed,
     load_system_config,

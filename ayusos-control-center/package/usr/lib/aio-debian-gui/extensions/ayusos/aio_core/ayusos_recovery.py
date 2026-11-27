@@ -6,9 +6,9 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Optional, Tuple
 
 from aio_core.constants import comando_host
+
 from . import ayusos_diagnostics, ayusos_snapshots
 
 RECOVERY_PARAMETER = "ayusos-recovery"
@@ -24,7 +24,7 @@ def is_recovery_boot(cmdline: str = "/proc/cmdline") -> bool:
     return RECOVERY_PARAMETER in tokens
 
 
-def _run(command: list[str], timeout: int = 300) -> Tuple[bool, str]:
+def _run(command: list[str], timeout: int = 300) -> tuple[bool, str]:
     env = os.environ.copy()
     env.update({
         "DEBIAN_FRONTEND": "noninteractive",
@@ -49,7 +49,7 @@ def _run(command: list[str], timeout: int = 300) -> Tuple[bool, str]:
     return result.returncode == 0, detail
 
 
-def repair_system() -> Tuple[bool, str]:
+def repair_system() -> tuple[bool, str]:
     """Repara dpkg y APT sin solicitar entrada interactiva."""
     commands = (
         ("dpkg --configure -a", ["dpkg", "--configure", "-a"]),
@@ -75,7 +75,7 @@ def repair_system() -> Tuple[bool, str]:
     return not failed, "\n".join(messages)
 
 
-def regenerate_grub() -> Tuple[bool, str]:
+def regenerate_grub() -> tuple[bool, str]:
     """Regenera grub.cfg con la herramienta disponible en el sistema."""
     if shutil.which("update-grub"):
         ok, detail = _run(["update-grub"], timeout=180)
@@ -86,14 +86,14 @@ def regenerate_grub() -> Tuple[bool, str]:
     return ok, detail or "GRUB actualizado."
 
 
-def restore_snapshot(snapshot_id: str) -> Tuple[bool, str]:
+def restore_snapshot(snapshot_id: str) -> tuple[bool, str]:
     """Valida y restaura un snapshot de Timeshift."""
     if not _SNAPSHOT_ID.fullmatch(snapshot_id or ""):
         return False, "Identificador de snapshot no válido."
     return ayusos_snapshots.restore_timeshift_snapshot(snapshot_id)
 
 
-def execute(action: str, snapshot_id: Optional[str] = None) -> dict:
+def execute(action: str, snapshot_id: str | None = None) -> dict:
     """Ejecuta una acción y devuelve un resultado serializable para la GUI."""
     if action == "repair":
         ok, message = repair_system()
@@ -116,7 +116,7 @@ def execute(action: str, snapshot_id: Optional[str] = None) -> dict:
     return {"success": False, "message": f"Acción desconocida: {action}"}
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     import sys
 
     args = list(sys.argv[1:] if argv is None else argv)

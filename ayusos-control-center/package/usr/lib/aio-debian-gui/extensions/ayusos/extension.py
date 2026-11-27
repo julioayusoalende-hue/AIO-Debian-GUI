@@ -3,15 +3,18 @@
 import os
 
 import gi
+
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gtk, GLib
-
 from aio_core.constants import (
     autorizacion_sin_contrasena_activa,
     es_flatpak,
     traducir,
 )
+from gi.repository import GLib, Gtk
+
+from .aio_core.ayusos_recovery import is_recovery_boot
+from .aio_core.onboarding import launch_onboarding, should_launch_onboarding
 from .branding import (
     es_ayusos,
     get_ayusos_version,
@@ -19,9 +22,6 @@ from .branding import (
 )
 from .pages import AyusOSPagesMixin
 from .recovery import open_recovery
-from .aio_core.ayusos_recovery import is_recovery_boot
-from .aio_core.onboarding import launch_onboarding, should_launch_onboarding
-
 
 # IDs de aplicaciones que forman parte de la instalación estándar de AyusOS.
 # Estos coinciden con los IDs en APPS_RECOMENDADAS del core.
@@ -88,9 +88,8 @@ class Extension:
             (traducir("Actualización AyusOS"), window._pagina_ayusos_update),
             (traducir("Snapshots"), window._pagina_ayusos_snapshots),
             (traducir("Perfil Hardware"), window._pagina_ayusos_hardware),
-            (traducir("Diagnósticos"), window._pagina_ayusos_diagnostics),
-            (traducir("Apariencia"), window._pagina_ayusos_branding),
-            (traducir("Autorización"), window._pagina_ayusos_autorizacion),
+            (traducir("Diagnósticos AyusOS"), window._pagina_ayusos_diagnostics),
+            (traducir("Branding AyusOS"), window._pagina_ayusos_branding),
             (traducir("Identidad"), window._pagina_ayusos_identity),
         ]
         for title, factory in pages:
@@ -134,10 +133,10 @@ class Extension:
             return
         # Filtrar para mostrar solo apps del perfil AyusOS
         ayusos_ids = self.ayusos_apps()
-        coincidencias = []
-        for app in window.canales_recomendados.keys():
-            coincidencias.append(app in ayusos_ids)
-        window.recommended_grid.set_filter_func(lambda t: coincidencias[t.get_index()])
+        coincidencias = [app in ayusos_ids for app in window.canales_recomendados]
+        window.recommended_grid.set_filter_func(
+            lambda t: t.get_index() < len(coincidencias) and coincidencias[t.get_index()]
+        )
 
     def should_launch_onboarding(self):
         return False if is_recovery_boot() else should_launch_onboarding()

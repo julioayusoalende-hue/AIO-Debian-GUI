@@ -9,10 +9,10 @@ sys.path.insert(0, str(ROOT / "package/usr/lib/aio-debian-gui/extensions"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "package/usr/lib/aio-debian-gui"))
 
 import gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
 
+gi.require_version("Gtk", "3.0")
 from ayusos.recovery import open_recovery
+from gi.repository import Gtk
 
 
 class RecoveryUITests(unittest.TestCase):

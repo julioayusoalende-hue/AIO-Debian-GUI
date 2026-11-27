@@ -5,9 +5,8 @@ import subprocess
 import threading
 
 import gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import GLib, Gtk
 
+gi.require_version("Gtk", "3.0")
 from aio_core.constants import (
     cabecera_mantenimiento,
     comando_host,
@@ -15,6 +14,7 @@ from aio_core.constants import (
     tarjeta_mantenimiento,
     traducir,
 )
+from gi.repository import GLib, Gtk
 
 RECOVERY_HELPER = "/usr/lib/aio-debian-gui/extensions/ayusos/ayusos-recovery"
 

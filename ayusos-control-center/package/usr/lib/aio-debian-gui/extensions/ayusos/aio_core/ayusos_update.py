@@ -5,12 +5,6 @@ import os
 import re
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-
-from .ayusos_config import get_effective_config
-from aio_core.constants import comando_host, leer_texto, paquete_instalado
-from aio_core.updates import version_numerica, obtener_release_actualizacion
-
 
 AYUSOS_RELEASE_PATH = Path("/etc/ayusos-release")
 AYUSOS_REPO_SOURCES = Path("/etc/apt/sources.list.d/ayusos.sources")
@@ -37,7 +31,6 @@ def get_current_version() -> str:
 
 def get_current_channel() -> str:
     """Canal actual: stable o testing."""
-    config = get_effective_config()
     # Leer de la fuente APT si existe
     if AYUSOS_REPO_SOURCES.exists():
         content = AYUSOS_REPO_SOURCES.read_text()
@@ -46,14 +39,14 @@ def get_current_channel() -> str:
     return "stable"
 
 
-def get_available_versions(channel: str) -> List[Dict[str, str]]:
+def get_available_versions(channel: str) -> list[dict[str, str]]:
     """Obtiene versiones disponibles desde el repositorio AyusOS."""
     # En producción: consultar API GitHub releases o repo APT
     # Por ahora: simulación
     return []
 
 
-def check_updates() -> Tuple[bool, Optional[str], Optional[str]]:
+def check_updates() -> tuple[bool, str | None, str | None]:
     """Comprueba el candidato del repositorio firmado usando índices APT locales."""
     current = get_current_version()
     if os.environ.get("AIO_TEST_AYUSOS_UPDATE"):
@@ -79,7 +72,7 @@ def check_updates() -> Tuple[bool, Optional[str], Optional[str]]:
     return newer, current, candidate if newer else None
 
 
-def perform_update(channel: str = None, dry_run: bool = False) -> Tuple[bool, str]:
+def perform_update(channel: str = None, dry_run: bool = False) -> tuple[bool, str]:
     """Ejecuta actualización de AyusOS.
     Returns: (exito, mensaje)"""
     if channel is None:
@@ -111,7 +104,6 @@ def perform_update(channel: str = None, dry_run: bool = False) -> Tuple[bool, st
     # Crear snapshot antes de actualizar (si Timeshift está disponible)
     snapshot_created = False
     try:
-        import subprocess
         if Path("/usr/bin/timeshift").exists():
             subprocess.run(
                 ["timeshift", "--create", "--comments", "Pre-update AyusOS", "--tags", "O"],
@@ -120,6 +112,8 @@ def perform_update(channel: str = None, dry_run: bool = False) -> Tuple[bool, st
             snapshot_created = True
     except (OSError, subprocess.SubprocessError):
         pass
+
+    old_version = get_current_version()
 
     try:
         # Actualizar índices APT
@@ -136,11 +130,8 @@ def perform_update(channel: str = None, dry_run: bool = False) -> Tuple[bool, st
             env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL": "C", "DEBIAN_FRONTEND": "noninteractive"},
         )
 
-        # Verificar nueva versión
+        # Verificar nueva versión y migrar configuración si procede
         new_version = get_current_version()
-        old_version = get_current_version()  # se actualizó arriba
-
-        # Migrar configuración si es necesario
         if old_version != new_version:
             migrate_config(old_version, new_version)
 
@@ -175,9 +166,9 @@ def get_changelog(version: str) -> str:
     """Obtiene changelog de una versión desde el paquete o archivo local."""
     # Intentar leer desde el paquete instalado
     changelog_paths = [
-        Path(f"/usr/share/doc/ayusos-release/changelog.Debian.gz"),
-        Path(f"/usr/share/doc/ayusos-release/changelog.gz"),
-        Path(f"/usr/share/doc/ayusos-release/NEWS.gz"),
+        Path("/usr/share/doc/ayusos-release/changelog.Debian.gz"),
+        Path("/usr/share/doc/ayusos-release/changelog.gz"),
+        Path("/usr/share/doc/ayusos-release/NEWS.gz"),
     ]
     for path in changelog_paths:
         if path.exists():

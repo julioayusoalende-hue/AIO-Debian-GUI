@@ -19,7 +19,8 @@ ExecStart=/usr/bin/ayusos-onboarding-graphical
 # Si la sesion grafica aun no esta lista, reintentar sin bloquear el arranque.
 Restart=on-failure
 RestartSec=10
-TimeoutStartSec=15min
+# El wizard es interactivo: no matarlo por tiempo mientras el usuario decide.
+TimeoutStartSec=infinity
 RemainAfterExit=yes
 StandardOutput=journal
 StandardError=journal

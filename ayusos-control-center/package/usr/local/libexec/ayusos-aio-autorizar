@@ -47,13 +47,38 @@ else
     done
 fi
 
+generar_regla_polkit() {
+    local username="$1"
+    [[ "$username" =~ ^[a-zA-Z_][a-zA-Z0-9_.-]*[$]?$ ]] || {
+        echo "Nombre de usuario no válido para una regla Polkit: $username" >&2
+        return 1
+    }
+    cat <<EOF
+polkit.addRule(function(action, subject) {
+    if (action.id === "es.aiodebian.gui.mantenimiento" &&
+        action.lookup("program") === "/usr/lib/aio-debian-gui/aio-debian-gui-helper" &&
+        subject.user === "$username" &&
+        subject.local &&
+        subject.active) {
+        return polkit.Result.YES;
+    }
+});
+EOF
+}
+
+passwordless_dir=/var/lib/aio-debian-gui/passwordless
+install -d -m 0755 "$passwordless_dir" 2>/dev/null || true
+
 # Generar una regla por cada administrador
 for username in "${admins[@]}"; do
     uid=$(id -u "$username" 2>/dev/null) || continue
     rule=$(mktemp "$directory/.ayusos-aio.XXXXXX")
-    trap 'rm -f -- "$rule"' EXIT
-    bash -c 'source "$1"; generar_regla_polkit "$2"' _ "$helper" "$username" > "$rule"
+    if ! generar_regla_polkit "$username" > "$rule"; then
+        rm -f -- "$rule"
+        continue
+    fi
     chmod 0644 "$rule"
+    cp -- "$rule" "$passwordless_dir/${uid}.rules" 2>/dev/null || true
     mv -f -- "$rule" "$directory/50-aiodebian-gui-$uid.rules"
 done
 

@@ -13,8 +13,8 @@ EXTENSION = ROOT / "package/usr/lib/aio-debian-gui/extensions/ayusos"
 sys.path.insert(0, str(EXTENSION.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "package/usr/lib/aio-debian-gui"))
 
-from ayusos.aio_core import ayusos_recovery
 from ayusos import extension, recovery
+from ayusos.aio_core import ayusos_recovery
 
 
 class RecoveryTests(unittest.TestCase):

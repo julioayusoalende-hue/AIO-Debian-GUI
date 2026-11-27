@@ -4,20 +4,22 @@ Este módulo se instala como extensión de aio-debian-gui; el core no conoce
 nada de AyusOS. Los métodos se enlazan a la ventana principal en install().
 """
 
-import json
 import os
 import subprocess
 import threading
 
 import gi
+
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import GdkPixbuf, GLib, Gtk, Pango
-
 from aio_core.constants import (
-    traducir, etiqueta, tarjeta_mantenimiento, cabecera_mantenimiento,
-    comando_host, HELPER_SISTEMA,
+    cabecera_mantenimiento,
+    etiqueta,
+    tarjeta_mantenimiento,
+    traducir,
 )
+from gi.repository import GdkPixbuf, GLib, Gtk
+
 from .aio_core.ayusos_branding import ACENTOS
 
 
@@ -357,14 +359,6 @@ class AyusOSPagesMixin:
         self.branding_accent.set_active_id("ayusos")
         grid.attach(self.branding_accent, 1, 1, 1, 1)
 
-        # Wallpaper mode
-        grid.attach(etiqueta("Fondo de pantalla:"), 0, 2, 1, 1)
-        self.branding_wallpaper_mode = Gtk.ComboBoxText()
-        for wm in ["auto", "light", "dark", "custom"]:
-            self.branding_wallpaper_mode.append(wm, traducir({"auto": "Auto (claro/oscuro)", "light": "Solo claro", "dark": "Solo oscuro", "custom": "Personalizado"}[wm]))
-        self.branding_wallpaper_mode.set_active_id("auto")
-        grid.attach(self.branding_wallpaper_mode, 1, 2, 1, 1)
-
         btn_row = Gtk.Box(spacing=8)
         self.branding_apply_btn = Gtk.Button(label=traducir("Aplicar todo"))
         self.branding_apply_btn.get_style_context().add_class("suggested-action")
@@ -374,7 +368,7 @@ class AyusOSPagesMixin:
         self.branding_refresh_btn = Gtk.Button(label=traducir("Actualizar estado"))
         self.branding_refresh_btn.connect("clicked", self._branding_refresh)
         btn_row.pack_start(self.branding_refresh_btn, False, False, 0)
-        grid.attach(btn_row, 0, 3, 2, 1)
+        grid.attach(btn_row, 0, 2, 2, 1)
 
         caja.pack_start(grid, False, False, 0)
         contenido.pack_start(tarjeta, False, False, 0)
@@ -481,7 +475,7 @@ class AyusOSPagesMixin:
 
         def cargar():
             try:
-                import subprocess, json
+                import subprocess
                 result = subprocess.run(
                     ["/usr/local/libexec/ayusos-aio-autorizar", "status"],
                     capture_output=True, text=True, timeout=10
@@ -525,7 +519,7 @@ class AyusOSPagesMixin:
 
         def aplicar():
             try:
-                import subprocess, json
+                import subprocess
                 result = subprocess.run(
                     ["/usr/local/libexec/ayusos-aio-autorizar", "apply"],
                     capture_output=True, text=True, timeout=30
@@ -555,7 +549,6 @@ class AyusOSPagesMixin:
         if not treeiter:
             return
         username = model[treeiter][0]
-        uid = model[treeiter][1]
 
         # Confirmar
         dialog = Gtk.MessageDialog(
@@ -577,7 +570,7 @@ class AyusOSPagesMixin:
 
         def revocar():
             try:
-                import subprocess, json
+                import subprocess
                 result = subprocess.run(
                     ["/usr/local/libexec/ayusos-aio-limpiar-usuario", username],
                     capture_output=True, text=True, timeout=10
@@ -607,8 +600,9 @@ class AyusOSPagesMixin:
 
         def comprobar():
             try:
-                from .aio_core import ayusos_update
                 import json
+
+                from .aio_core import ayusos_update
                 result = json.loads(ayusos_update.cli_check_updates())
             except (OSError, ValueError, RuntimeError, ImportError) as exc:
                 GLib.idle_add(self._ayusos_check_done, False, str(exc))
@@ -670,8 +664,9 @@ class AyusOSPagesMixin:
 
         def cargar():
             try:
-                from .aio_core import ayusos_snapshots
                 import json
+
+                from .aio_core import ayusos_snapshots
                 result = json.loads(ayusos_snapshots.cli_snapshot_status())
             except (OSError, ValueError, RuntimeError, ImportError) as exc:
                 GLib.idle_add(self._snapshots_refresh_done, False, str(exc))
@@ -714,8 +709,9 @@ class AyusOSPagesMixin:
 
         def crear():
             try:
-                from .aio_core import ayusos_snapshots
                 import json
+
+                from .aio_core import ayusos_snapshots
                 result = json.loads(ayusos_snapshots.cli_create_snapshot(comment, tags))
             except (OSError, ValueError, RuntimeError, ImportError) as exc:
                 GLib.idle_add(self._snapshots_create_done, False, str(exc))
@@ -768,8 +764,9 @@ class AyusOSPagesMixin:
 
         def restaurar():
             try:
-                from .aio_core import ayusos_snapshots
                 import json
+
+                from .aio_core import ayusos_snapshots
                 result = json.loads(ayusos_snapshots.cli_restore_snapshot(snap_id))
             except (OSError, ValueError, RuntimeError, ImportError) as exc:
                 GLib.idle_add(self._snapshots_restore_done, False, str(exc))
@@ -819,8 +816,9 @@ class AyusOSPagesMixin:
 
         def eliminar():
             try:
-                from .aio_core import ayusos_snapshots
                 import json
+
+                from .aio_core import ayusos_snapshots
                 result = json.loads(ayusos_snapshots.cli_delete_snapshot(snap_id))
             except (OSError, ValueError, RuntimeError, ImportError) as exc:
                 GLib.idle_add(self._snapshots_delete_done, False, str(exc))
@@ -850,8 +848,9 @@ class AyusOSPagesMixin:
 
         def actualizar():
             try:
-                from .aio_core import ayusos_snapshots
                 import json
+
+                from .aio_core import ayusos_snapshots
                 result = json.loads(ayusos_snapshots.cli_grub_btrfs_update())
             except (OSError, ValueError, RuntimeError, ImportError) as exc:
                 GLib.idle_add(self._snapshots_grub_done, False, str(exc))
@@ -877,8 +876,9 @@ class AyusOSPagesMixin:
 
         def detectar():
             try:
-                from .aio_core import ayusos_hardware
                 import json
+
+                from .aio_core import ayusos_hardware
                 info = json.loads(ayusos_hardware.cli_hardware_info())
                 profile = json.loads(ayusos_hardware.cli_detect_profile())
                 status = json.loads(ayusos_hardware.cli_profile_status())
@@ -926,8 +926,9 @@ class AyusOSPagesMixin:
 
         def aplicar():
             try:
-                from .aio_core import ayusos_hardware
                 import json
+
+                from .aio_core import ayusos_hardware
                 result = json.loads(ayusos_hardware.cli_apply_profile(profile))
             except (OSError, ValueError, RuntimeError, ImportError) as exc:
                 GLib.idle_add(self._hardware_apply_done, False, str(exc))
@@ -958,8 +959,9 @@ class AyusOSPagesMixin:
 
         def diagnosticar():
             try:
-                from .aio_core import ayusos_diagnostics
                 import json
+
+                from .aio_core import ayusos_diagnostics
                 result = json.loads(ayusos_diagnostics.cli_diagnostics())
             except (OSError, ValueError, RuntimeError, ImportError) as exc:
                 GLib.idle_add(self._diagnostics_done, False, str(exc))
@@ -998,8 +1000,9 @@ class AyusOSPagesMixin:
 
         def cargar():
             try:
-                from .aio_core import ayusos_branding
                 import json
+
+                from .aio_core import ayusos_branding
                 result = json.loads(ayusos_branding.cli_branding_status())
             except (OSError, ValueError, RuntimeError, ImportError) as exc:
                 GLib.idle_add(self._branding_refresh_done, False, str(exc))
@@ -1016,7 +1019,6 @@ class AyusOSPagesMixin:
 
         self.branding_theme.set_active_id(data.get("theme", "system"))
         self.branding_accent.set_active_id(data.get("accent", "ayusos"))
-        self.branding_wallpaper_mode.set_active_id(data.get("wallpaper_mode", "auto"))
 
         # Cargar wallpapers
         grid = self.branding_wallpapers_grid
@@ -1033,8 +1035,9 @@ class AyusOSPagesMixin:
         self.branding_status.set_text(traducir("Aplicando fondo…"))
         def aplicar():
             try:
-                from .aio_core import ayusos_branding
                 import json
+
+                from .aio_core import ayusos_branding
                 result = json.loads(ayusos_branding.cli_set_wallpaper(path, "both"))
             except (OSError, ValueError, RuntimeError, ImportError) as exc:
                 GLib.idle_add(self._branding_wallpaper_done, False, str(exc))
@@ -1055,12 +1058,12 @@ class AyusOSPagesMixin:
 
         theme = self.branding_theme.get_active_id() or "system"
         accent = self.branding_accent.get_active_id() or "ayusos"
-        wallpaper_mode = self.branding_wallpaper_mode.get_active_id() or "auto"
 
         def aplicar():
             try:
-                from .aio_core import ayusos_branding
                 import json
+
+                from .aio_core import ayusos_branding
                 # Aplicar tema
                 json.loads(ayusos_branding.cli_set_theme(theme))
                 # Aplicar acento
@@ -1091,8 +1094,9 @@ class AyusOSPagesMixin:
 
         def aplicar():
             try:
-                from .aio_core import ayusos_branding
                 import json
+
+                from .aio_core import ayusos_branding
                 result = json.loads(ayusos_branding.cli_set_plymouth(theme))
             except (OSError, ValueError, RuntimeError, ImportError) as exc:
                 GLib.idle_add(self._branding_plymouth_done, False, str(exc))
@@ -1223,12 +1227,6 @@ class AyusOSPagesMixin:
 
         def cargar():
             try:
-                import subprocess, json
-                result = subprocess.run(
-                    ["/usr/local/libexec/ayusos-aio-autorizar", "status"],
-                    capture_output=True, text=True, timeout=10
-                )
-                # Verificar existencia de archivos
                 import os
                 sources = os.path.exists("/etc/apt/sources.list.d/ayusos.sources")
                 keyring = os.path.exists("/usr/share/keyrings/ayusos-archive.gpg")
@@ -1273,16 +1271,11 @@ class AyusOSPagesMixin:
 
         def backup():
             try:
-                import subprocess, json
-                result = subprocess.run(
-                    ["/usr/local/libexec/ayusos-aio-autorizar", "status"],
-                    capture_output=True, text=True, timeout=30
-                )
-                # Usar el módulo directamente
+                import json
                 from .aio_core import ayusos_identity
                 result = json.loads(ayusos_identity.cli_backup(path))
                 GLib.idle_add(self._identity_backup_done, True, result)
-            except (OSError, ValueError, RuntimeError, ImportError, subprocess.SubprocessError) as exc:
+            except (OSError, ValueError, RuntimeError, ImportError) as exc:
                 GLib.idle_add(self._identity_backup_done, False, str(exc))
 
         threading.Thread(target=backup, daemon=True).start()
@@ -1312,7 +1305,9 @@ class AyusOSPagesMixin:
 
         def restore():
             try:
-                import subprocess, json
+                import json
+                import subprocess
+
                 from .aio_core import ayusos_identity
                 result = json.loads(ayusos_identity.cli_restore(path, dry_run))
                 GLib.idle_add(self._identity_restore_done, True, result)

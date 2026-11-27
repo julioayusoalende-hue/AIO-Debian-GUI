@@ -137,7 +137,7 @@ def apply_appearance(config, username, uid, dry):
     appearance = config["appearance"]
     theme = appearance["theme"]
     if theme not in ("system", "light", "dark"):
-        return None
+        return None, False
     home = Path(pwd.getpwnam(username).pw_dir)
     runtime = Path(f"/run/user/{uid}")
     env = {
@@ -168,7 +168,7 @@ def apply_appearance(config, username, uid, dry):
             gsettings("org.gnome.desktop.background", "picture-uri", f"file://{light}")
         if dark.is_file():
             gsettings("org.gnome.desktop.background", "picture-uri-dark", f"file://{dark}")
-    return result
+    return result, False
 
 
 def apply(config, username, uid, dry=False):

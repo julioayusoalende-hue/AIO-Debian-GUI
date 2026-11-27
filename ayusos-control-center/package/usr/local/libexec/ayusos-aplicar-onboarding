@@ -15,8 +15,12 @@ fi
 }
 
 runner=/usr/lib/aio-debian-gui/extensions/ayusos/aio-run
-/usr/bin/python3 -I "$runner" ayusos_onboarding_apply --user "$username"
-exit_code=$?
+# No abortar con set -e si el aplicador devuelve código no nulo; capturamos.
+if /usr/bin/python3 -I "$runner" ayusos_onboarding_apply --user "$username"; then
+    exit_code=0
+else
+    exit_code=$?
+fi
 
 # Verificar si se requiere reinicio
 REBOOT_MARKER="/var/lib/ayusos/reboot-required"

@@ -8,6 +8,7 @@ install -d -m 0755 "$state"
 # Esperar hasta 30s a que exista una sesion de usuario local.
 USER_NAME=""
 USER_UID=""
+SESSION_ID=""
 SESSION_TYPE=""
 SESSION_DISPLAY=""
 for _ in $(seq 1 30); do
@@ -28,6 +29,7 @@ for _ in $(seq 1 30); do
         if [[ "$uid" =~ ^[1-9][0-9]*$ && -S "/run/user/$uid/bus" ]]; then
             USER_NAME=${name:-$session_user}
             USER_UID=$uid
+            SESSION_ID=$session_id
             SESSION_TYPE=$type
             SESSION_DISPLAY=$display
             echo "Sesion detectada: id=$session_id user=$USER_NAME uid=$USER_UID type=$SESSION_TYPE display=$SESSION_DISPLAY"
@@ -43,7 +45,6 @@ if [[ -z "$USER_NAME" ]]; then
         if (( uid >= 1000 && uid < 60000 )) && id -nG "$username" | grep -qw sudo; then
             USER_NAME=$username
             USER_UID=$uid
-            SESSION_TYPE=wayland
             break
         fi
     done < /etc/passwd
@@ -61,35 +62,71 @@ if [[ ! -S "$USER_RUNTIME/bus" || ! -d "$USER_HOME" ]]; then
     exit 1
 fi
 
-# Construir entorno de sesion. En Wayland no hay DISPLAY; en X11 puede haberlo.
-DISPLAY_VALUE="${DISPLAY:-:0}"
-WAYLAND_DISPLAY_VALUE="${WAYLAND_DISPLAY:-wayland-0}"
-if [[ -n "$SESSION_DISPLAY" ]]; then
-    if [[ "$SESSION_TYPE" == x11 ]]; then
-        DISPLAY_VALUE="$SESSION_DISPLAY"
-    else
-        WAYLAND_DISPLAY_VALUE="$SESSION_DISPLAY"
+# Reconstruir el entorno real de la sesion desde el proceso lider de logind.
+# En X11 (GNOME on Xorg, NVIDIA, algunas VMs) es imprescindible XAUTHORITY:
+# sin el, la ventana no puede conectarse al servidor X y el wizard no aparece.
+LEADER_ENV=""
+if [[ -n "$SESSION_ID" ]]; then
+    leader=$(loginctl show-session "$SESSION_ID" -p Leader --value 2>/dev/null || true)
+    if [[ "$leader" =~ ^[0-9]+$ && -r "/proc/$leader/environ" ]]; then
+        LEADER_ENV=$(tr '\0' '\n' < "/proc/$leader/environ" || true)
     fi
 fi
-# Si el socket de Wayland no esta en el runtime, probar el display por defecto.
+valor_entorno() { sed -n "s/^$1=//p" <<< "$LEADER_ENV" | head -n 1; }
+
+DISPLAY_VALUE=$(valor_entorno DISPLAY)
+WAYLAND_DISPLAY_VALUE=$(valor_entorno WAYLAND_DISPLAY)
+XAUTHORITY_VALUE=$(valor_entorno XAUTHORITY)
+DBUS_VALUE=$(valor_entorno DBUS_SESSION_BUS_ADDRESS)
+
+[[ -n "$DISPLAY_VALUE" ]] || DISPLAY_VALUE="${SESSION_DISPLAY:-:0}"
+[[ -n "$WAYLAND_DISPLAY_VALUE" ]] || WAYLAND_DISPLAY_VALUE=wayland-0
+[[ -n "$DBUS_VALUE" ]] || DBUS_VALUE="unix:path=$USER_RUNTIME/bus"
+
+# El socket de Wayland decide el tipo real de sesion (logind puede reportar tty).
 if [[ ! -S "$USER_RUNTIME/$WAYLAND_DISPLAY_VALUE" && -S "$USER_RUNTIME/wayland-0" ]]; then
     WAYLAND_DISPLAY_VALUE=wayland-0
 fi
+if [[ -S "$USER_RUNTIME/$WAYLAND_DISPLAY_VALUE" ]]; then
+    SESSION_TYPE=wayland
+else
+    SESSION_TYPE=x11
+fi
+
+entorno=(
+    HOME="$USER_HOME"
+    USER="$USER_NAME"
+    LOGNAME="$USER_NAME"
+    XDG_RUNTIME_DIR="$USER_RUNTIME"
+    DBUS_SESSION_BUS_ADDRESS="$DBUS_VALUE"
+    XDG_SESSION_TYPE="$SESSION_TYPE"
+    DISPLAY="$DISPLAY_VALUE"
+    LANG=es_ES.UTF-8
+)
+if [[ "$SESSION_TYPE" == wayland ]]; then
+    entorno+=(WAYLAND_DISPLAY="$WAYLAND_DISPLAY_VALUE")
+else
+    if [[ -z "$XAUTHORITY_VALUE" ]]; then
+        for candidato in "$USER_HOME/.Xauthority" "$USER_RUNTIME/gdm/Xauthority"; do
+            if [[ -f "$candidato" ]]; then
+                XAUTHORITY_VALUE=$candidato
+                break
+            fi
+        done
+    fi
+    if [[ -n "$XAUTHORITY_VALUE" ]]; then
+        entorno+=(XAUTHORITY="$XAUTHORITY_VALUE")
+    else
+        echo 'Aviso: sesion X11 sin XAUTHORITY conocido; el wizard podria no abrirse.' >&2
+    fi
+fi
 
 echo "Lanzando onboarding de AyusOS para $USER_NAME ($SESSION_TYPE)."
-runuser -u "$USER_NAME" -- env \
-    HOME="$USER_HOME" \
-    USER="$USER_NAME" \
-    LOGNAME="$USER_NAME" \
-    XDG_RUNTIME_DIR="$USER_RUNTIME" \
-    DBUS_SESSION_BUS_ADDRESS="unix:path=$USER_RUNTIME/bus" \
-    XDG_SESSION_TYPE="$SESSION_TYPE" \
-    DISPLAY="$DISPLAY_VALUE" \
-    WAYLAND_DISPLAY="$WAYLAND_DISPLAY_VALUE" \
-    LANG=es_ES.UTF-8 \
+runuser -u "$USER_NAME" -- env "${entorno[@]}" \
     /usr/bin/aio-debian-gui --onboarding-only
 
 # Marcar como completado para no volver a mostrar (incluso si el usuario salto).
+# Solo se llega aqui si el wizard termino correctamente (set -e).
 touch "$state/onboarding-done"
 mkdir -p "$USER_HOME/.config/ayusos"
 touch "$USER_HOME/.config/ayusos/onboarding-done"

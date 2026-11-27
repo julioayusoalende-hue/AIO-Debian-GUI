@@ -4,11 +4,12 @@ import re
 from pathlib import Path
 
 import gi
+
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
+from aio_core.constants import datos_distribucion_anfitrion, traducir
 from gi.repository import GdkPixbuf, GLib, Gtk
 
-from aio_core.constants import datos_distribucion_anfitrion, traducir
 from .aio_core.ayusos_config import get_effective_config
 
 LOGO = Path("/usr/share/ayusos-control-center/ayusos-logo.png")

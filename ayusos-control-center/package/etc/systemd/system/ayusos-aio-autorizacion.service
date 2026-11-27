@@ -2,7 +2,7 @@
 Description=Configurar la autorización inicial de AiO Debian GUI
 After=live-config.service
 Before=display-manager.service ayusos-aio-inicial.service
-ConditionPathExists=!/var/lib/ayusos/aio-usuario
+ConditionPathExists=!/var/lib/ayusos/aio-usuarios
 ConditionKernelCommandLine=!ayusos-recovery
 
 [Service]

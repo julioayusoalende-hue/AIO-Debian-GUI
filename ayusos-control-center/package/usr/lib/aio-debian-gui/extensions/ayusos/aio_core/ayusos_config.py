@@ -5,11 +5,10 @@ Esquema TOML tipado con validación, migración y fusión de prioridades:
 """
 
 import json
-import os
 import tempfile
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 try:
     import tomllib
@@ -97,7 +96,7 @@ class ReposConfig:
 class FlatpakConfig:
     enabled: bool = True
     flathub: bool = True
-    extra_remotes: List[str] = field(default_factory=list)
+    extra_remotes: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -115,7 +114,7 @@ class NvidiaConfig:
 class MaintenanceConfig:
     schedule: str = "weekly"  # daily, weekly, monthly, disabled
     time: str = "03:00"
-    tasks: List[str] = field(default_factory=lambda: [
+    tasks: list[str] = field(default_factory=lambda: [
         "upgrade", "autoclean", "flatpak-update", "snap-update",
         "clean-journal", "rebootcheck"
     ])
@@ -130,7 +129,7 @@ class AppsConfig:
 
 @dataclass
 class GnomeExtensionsConfig:
-    enabled_by_default: List[str] = field(default_factory=lambda: [
+    enabled_by_default: list[str] = field(default_factory=lambda: [
         "gnome-ext-appindicator",
         "gnome-ext-blur-shell",
         "gnome-ext-dash-to-dock",
@@ -175,7 +174,7 @@ class AyusOSConfig:
     # Versión del esquema para migraciones
     SCHEMA_VERSION = 1
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "repos": asdict(self.repos),
             "flatpak": asdict(self.flatpak),
@@ -191,7 +190,7 @@ class AyusOSConfig:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "AyusOSConfig":
+    def from_dict(cls, data: dict[str, Any]) -> "AyusOSConfig":
         return cls(
             repos=ReposConfig(**data.get("repos", {})),
             flatpak=FlatpakConfig(**data.get("flatpak", {})),
@@ -206,7 +205,7 @@ class AyusOSConfig:
         )
 
 
-def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     """Fusiona recursivamente override sobre base."""
     result = base.copy()
     for key, value in override.items():
@@ -217,7 +216,7 @@ def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any
     return result
 
 
-def _load_toml(path: Path) -> Dict[str, Any]:
+def _load_toml(path: Path) -> dict[str, Any]:
     """Carga TOML de forma segura."""
     try:
         with open(path, "rb") as f:
@@ -226,7 +225,7 @@ def _load_toml(path: Path) -> Dict[str, Any]:
         return {}
 
 
-def _load_json(path: Path) -> Dict[str, Any]:
+def _load_json(path: Path) -> dict[str, Any]:
     """Carga JSON de forma segura."""
     try:
         with open(path, encoding="utf-8") as f:
@@ -245,7 +244,7 @@ def _toml_value(value: Any) -> str:
     return json.dumps(str(value), ensure_ascii=False)
 
 
-def _toml_dumps(data: Dict[str, Any]) -> str:
+def _toml_dumps(data: dict[str, Any]) -> str:
     lines = ["# Configuración de AyusOS", ""]
     for key, value in data.items():
         if key.startswith("_"):
@@ -260,7 +259,7 @@ def _toml_dumps(data: Dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _save_toml_atomic(path: Path, data: Dict[str, Any]) -> bool:
+def _save_toml_atomic(path: Path, data: dict[str, Any]) -> bool:
     """Guarda TOML atómicamente (temp + rename), sin dependencias externas."""
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -275,12 +274,12 @@ def _save_toml_atomic(path: Path, data: Dict[str, Any]) -> bool:
         return False
 
 
-def load_system_config() -> Dict[str, Any]:
+def load_system_config() -> dict[str, Any]:
     """Carga solo la config del sistema (/etc/ayusos/ayusos.conf)."""
     return _load_toml(SYSTEM_CONFIG_PATH)
 
 
-def load_user_preferences() -> Dict[str, Any]:
+def load_user_preferences() -> dict[str, Any]:
     """Carga solo preferencias de usuario (~/.config/aio-debian-gui/preferences.json)."""
     return _load_json(USER_PREFS_PATH)
 
@@ -298,7 +297,7 @@ def save_system_config(config: AyusOSConfig) -> bool:
     return _save_toml_atomic(SYSTEM_CONFIG_PATH, config.to_dict())
 
 
-def save_user_preferences(prefs: Dict[str, Any]) -> bool:
+def save_user_preferences(prefs: dict[str, Any]) -> bool:
     """Guarda preferencias de usuario."""
     USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     try:
@@ -336,9 +335,7 @@ def is_onboarding_completed() -> bool:
     if system.get("onboarding", {}).get("completed"):
         return True
     user = load_user_preferences()
-    if user.get("onboarding", {}).get("completed"):
-        return True
-    return False
+    return bool(user.get("onboarding", {}).get("completed"))
 
 
 def get_onboarding_version() -> str:
@@ -373,12 +370,12 @@ APP_PROFILES = {
 }
 
 
-def get_profile_packages(profile: str) -> List[str]:
+def get_profile_packages(profile: str) -> list[str]:
     """Devuelve lista de paquetes DEB para un perfil."""
     return APP_PROFILES.get(profile, [])
 
 
-def get_recommended_apps_for_profile(profile: str) -> List[str]:
+def get_recommended_apps_for_profile(profile: str) -> list[str]:
     """IDs de apps recomendadas (aio-debian-gui) para un perfil."""
     base = ["vlc", "gimp", "celluloid", "btop", "flameshot", "htop"]
     extra = {
@@ -401,7 +398,7 @@ VALID_THEMES = {"system", "light", "dark"}
 VALID_ACCENTS = {"ayusos", "blue", "green", "orange", "purple", "red", "teal"}
 
 
-def validate_config(config: AyusOSConfig) -> List[str]:
+def validate_config(config: AyusOSConfig) -> list[str]:
     """Valida config y devuelve lista de errores (vacía si ok)."""
     errors = []
     if config.kernel.variant not in VALID_KERNEL_VARIANTS:
@@ -420,7 +417,7 @@ def validate_config(config: AyusOSConfig) -> List[str]:
 
 
 # CLI helper para el asistente privilegiado
-def cli_get(key: str) -> Optional[str]:
+def cli_get(key: str) -> str | None:
     """Obtiene valor de config efectiva por clave punteada (ej: repos.backports)."""
     config = get_effective_config()
     parts = key.split(".")
