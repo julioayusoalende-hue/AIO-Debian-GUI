@@ -804,6 +804,28 @@ for language in ('es', 'en', 'fr', 'zh'):
     assert w.expansor_consola.get_expanded()
     w.expansor_consola.set_expanded(False)
     w.scroll_resultados.hide()
+    if language == 'es':
+        for sincronizado in (True, False):
+            w.en_curso = False
+            acciones = Mock()
+            acciones.reloj.return_value = sincronizado
+            acciones.preflight.return_value = app.core_preflight.Report(False, [])
+            with patch.object(app.core_clock, 'sincronizar', acciones.reloj), \
+                 patch.object(app.core_preflight, 'check', acciones.preflight), \
+                 patch.object(app.threading, 'Thread', side_effect=lambda target, **_: SimpleNamespace(start=target)), \
+                 patch.object(GLib, 'idle_add') as idle:
+                w._comprobar_mantenimiento(['upgrade', 'autoclean'])
+            acciones.reloj.assert_called_once_with(app.comando_host, espera=120)
+            assert idle.call_args.args[1] == ['upgrade', 'autoclean']
+            if sincronizado:
+                assert [call[0] for call in acciones.mock_calls] == ['reloj', 'preflight']
+                assert idle.call_args.args[3] is None
+            else:
+                acciones.preflight.assert_not_called()
+                assert idle.call_args.args[2] is None
+                assert 'reloj' in idle.call_args.args[3]
+            w._poner_ocupado(False)
+
     # Una segunda confirmación cancelada debe liberar el estado ocupado.
     w.en_curso = True
     w.proceso = None

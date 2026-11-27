@@ -6,7 +6,7 @@ After=network-online.target
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/python3 -I /usr/lib/aio-debian-gui/aio_core/scheduler.py --run %i
-TimeoutStartSec=300
+TimeoutStartSec=450
 Nice=10
 IOSchedulingClass=best-effort
 IOSchedulingPriority=7

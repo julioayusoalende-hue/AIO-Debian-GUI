@@ -575,6 +575,12 @@ def run_schedule(uid):
             return finish('blocked', 'Flatpak no está instalado en el anfitrión.')
         if shutil.disk_usage('/').free < 1024**3:
             return finish('blocked', 'Espacio insuficiente en /: menos de 1 GiB disponible.')
+        try:
+            clock = subprocess.run([HELPER, '--sync-maintenance-clock'], timeout=140, check=False)
+        except (OSError, subprocess.SubprocessError) as exc:
+            return finish('blocked', 'No se pudo sincronizar el reloj del sistema.', mensaje_error(str(exc)))
+        if clock.returncode:
+            return finish('blocked', 'No se pudo sincronizar el reloj del sistema.')
         if 'upgrade' in config['tasks']:
             update = subprocess.run(['apt-get', '-o', 'APT::Update::Error-Mode=any', 'update'],
                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT,

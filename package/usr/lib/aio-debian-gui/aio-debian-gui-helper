@@ -921,54 +921,29 @@ anadir_componentes() {
 # Pasos
 # ------------------------------------------------------------------------------
 paso_clock() {
-    command -v timedatectl &> /dev/null || { info "timedatectl no disponible. Omitiendo."; return 0; }
-
-    local estado
-    estado=$(timedatectl show -p NTPSynchronized --value 2>/dev/null)
-    if [ "$estado" = "yes" ]; then
-        ok "Reloj del sistema sincronizado."
+    local estado intento
+    local -a timedate=(timeout 5 /usr/bin/timedatectl --no-ask-password)
+    estado=$("${timedate[@]}" show -p NTPSynchronized --value) || return 1
+    if [ "$estado" = yes ]; then
         return 0
     fi
 
-    warn "El reloj del sistema no está sincronizado. Intentando sincronizarlo..."
-
-    # Activar NTP; si no hay servicio de hora instalado, instalar systemd-timesyncd
-    if ! timedatectl set-ntp true &> /dev/null; then
-        info "Servicio de hora no disponible. Instalando systemd-timesyncd..."
-        asegurar_listas || return 1
-        local simulation
-        info "Simulando instalación de systemd-timesyncd..."
-        if ! simulation=$(LC_ALL=C run_privileged "apt-simulate-install-systemd-timesyncd" 60 apt-get -s --no-remove install systemd-timesyncd 2>&1); then
-            err "No se pudo simular la instalación de systemd-timesyncd."
-            printf '%s\n' "$simulation" >&2
-            return 1
-        fi
-        if grep -Eq '^(Remv|Purg) ' <<< "$simulation"; then
-            err "La instalación de systemd-timesyncd propone eliminar paquetes. Se cancela por seguridad."
-            return 1
-        fi
-        if ! run_privileged "apt-install-systemd-timesyncd" 300 apt-get "${APT_OPTS[@]}" --no-remove install systemd-timesyncd ||
-           ! timedatectl set-ntp true; then
-            err "No se pudo activar el servicio de sincronización horaria."
-            return 1
-        fi
+    warn "Esperando a que se sincronice el reloj del sistema…"
+    estado=$("${timedate[@]}" show -p NTP --value) || return 1
+    if [ "$estado" != yes ]; then
+        "${timedate[@]}" set-ntp true || return 1
     fi
 
-    # Esperar hasta 30 segundos a que se sincronice
-    local i
-    for i in $(seq 1 30); do
-        estado=$(timedatectl show -p NTPSynchronized --value 2>/dev/null)
-        [ "$estado" = "yes" ] && break
+    for ((intento=0; intento<120; intento++)); do
+        estado=$("${timedate[@]}" show -p NTPSynchronized --value) || return 1
+        if [ "$estado" = yes ]; then
+            ok "Reloj del sistema sincronizado."
+            return 0
+        fi
         sleep 1
     done
-
-    if [ "$estado" = "yes" ]; then
-        ok "Reloj sincronizado correctamente: $(date)"
-    else
-        err "No se pudo sincronizar el reloj (¿sin red o puerto NTP bloqueado?)."
-        err "Fecha actual del sistema: $(date)"
-        return 1
-    fi
+    err "No se pudo sincronizar el reloj del sistema."
+    return 1
 }
 
 paso_repos() {
@@ -2374,11 +2349,17 @@ main() {
         printf '%s\n' 1
         return 0
     fi
+    if [ "${1:-}" = "--sync-maintenance-clock" ] && [ "$#" -eq 1 ]; then
+        [ "$EUID" -eq 0 ] || return 1
+        paso_clock
+        return $?
+    fi
     # Actualizar exclusivamente Flatpak del usuario sin elevar privilegios.
     # Sin --system ni instalaciones de root; no requiere polkit ni pkexec.
     if [ "${1:-}" = "--flatpak-user-update" ] && [ "$#" -eq 1 ]; then
         [ "$EUID" -ne 0 ] || { err "Flatpak de usuario nunca se ejecuta como root."; return 1; }
         command -v flatpak >/dev/null 2>&1 || { err "Flatpak no está instalado."; return 1; }
+        paso_clock || return 1
         echo "##STEP:1:1:Actualizar aplicaciones Flatpak del usuario"
         if flatpak --user update -y && flatpak --user uninstall --unused -y; then
             ok "Flatpak de usuario actualizado y dependencias sin uso eliminadas."
@@ -2568,6 +2549,12 @@ main() {
         exit 1
     fi
     AIO_PRIV_LOCK_FD="$inherited_lock"
+
+    if ! paso_clock; then
+        err "Mantenimiento bloqueado: no se pudo sincronizar el reloj del sistema."
+        echo "##DONE:1"
+        exit 1
+    fi
 
     local total=${#pasos[@]} i=0 fallos=0 resultado
     for s in "${pasos[@]}"; do

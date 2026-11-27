@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.5.7
+
+- El mantenimiento manual y programado espera a la sincronización del reloj y continúa automáticamente al confirmarla.
+
 ## 1.5.6
 
 - El asistente guarda la elección de Flathub al finalizar. La tarea para añadir el repositorio está disponible cuando falta y el diagnóstico comprueba su configuración.

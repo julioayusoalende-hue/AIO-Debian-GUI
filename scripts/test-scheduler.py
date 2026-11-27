@@ -272,6 +272,7 @@ with tempfile.TemporaryDirectory() as directory:
             result = s._read(s.STATE_DIR/'1000.json')
             assert result['status'] == 'success' and result['finished'] and result['reboot_required']
             assert all(v == 'success' for v in result['tasks'].values())
+            assert run.call_args_list[0].args[0] == [s.HELPER, '--sync-maintenance-clock']
             assert run.call_args.args[0] == ['apt-get', '-o', 'APT::Update::Error-Mode=any', 'update']
             class FailedRebootProcess(Process):
                 def __init__(self, command, **kwargs):
@@ -325,11 +326,24 @@ with tempfile.TemporaryDirectory() as directory:
                 run.reset_mock()
                 assert s.run_schedule('1000') == 1
                 run.assert_not_called()
-            run.return_value = SimpleNamespace(returncode=1, stdout='E: Repositorio inaccesible\n')
+            with patch.object(s.subprocess, 'run', return_value=SimpleNamespace(returncode=1)) as clock_failure:
+                popen.reset_mock()
+                assert s.run_schedule('1000') == 1
+                clock_failure.assert_called_once_with(
+                    [s.HELPER, '--sync-maintenance-clock'], timeout=140, check=False)
+                popen.assert_not_called()
+                result = s._read(s.STATE_DIR/'1000.json')
+                assert result['status'] == 'blocked' and 'reloj' in result['detail']
+                assert set(result['tasks'].values()) == {'not-run'}
+            run.side_effect = [
+                SimpleNamespace(returncode=0),
+                SimpleNamespace(returncode=1, stdout='E: Repositorio inaccesible\n'),
+            ]
             popen.reset_mock()
             assert s.run_schedule('1000') == 1
             popen.assert_not_called()
             assert 'Repositorio inaccesible' in s.status('1000', include_history=True)['history'][0]['detail']
+            run.side_effect = None
             run.return_value = SimpleNamespace(returncode=0, stdout='')
             with patch.object(s.subprocess, 'Popen', side_effect=OSError('missing helper')):
                 assert s.run_schedule('1000') == 1

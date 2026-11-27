@@ -68,11 +68,9 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.5.6
+### Lo nuevo en la 1.5.7
 
-- El asistente guarda la elección de Flathub y el Centro de Control comprueba su configuración.
-- AyusOS Control Centre retira las preselecciones de aplicaciones del asistente y las pestañas Perfil Hardware e Identidad.
-- La receta de la ISO verifica que AiO Debian GUI y AyusOS Control Centre tengan las versiones compiladas para esa imagen.
+- El mantenimiento manual y programado espera hasta 120 segundos a que se sincronice el reloj antes de comenzar; si no se sincroniza, cancela las tareas.
 
 [Consultar el historial completo →](CHANGELOG.md)
 
@@ -80,7 +78,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.5.6**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.5.7**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -104,10 +102,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.5.6:
+Para la versión 1.5.7:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.5.6_all.deb
+sudo apt install ./aio-debian-gui_1.5.7_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.

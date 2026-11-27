@@ -5309,13 +5309,30 @@ class VentanaPrincipal(Gtk.Window):
         self._comprobar_mantenimiento(pasos)
 
     def _comprobar_mantenimiento(self, pasos, **opciones):
-        if self.en_curso or self.programando:
+        if self.sincronizando_reloj or self.en_curso or self.programando:
             return
         self._poner_ocupado(True)
-        msg = traducir("Comprobando seguridad del mantenimiento…")
+        msg = traducir("Sincronizando el reloj del sistema…")
         self.estado.set_text(msg)
         self._anunciar_estado(msg)
+
+        def estado_preflight():
+            if not self.destruida and self.en_curso:
+                mensaje = traducir("Comprobando seguridad del mantenimiento…")
+                self.estado.set_text(mensaje)
+                self._anunciar_estado(mensaje)
+            return GLib.SOURCE_REMOVE
+
         def verificar():
+            try:
+                sincronizado = core_clock.sincronizar(comando_host, espera=120)
+            except (OSError, subprocess.SubprocessError):
+                sincronizado = False
+            if not sincronizado:
+                error = traducir("No se pudo sincronizar el reloj del sistema.")
+                GLib.idle_add(self._terminar_preflight, pasos, None, error, opciones)
+                return
+            GLib.idle_add(estado_preflight)
             try:
                 informe = core_preflight.check(pasos)
                 preparacion = dict(opciones)

@@ -2365,6 +2365,7 @@ TRADUCCIONES["zh"].update({
 
 TRADUCCIONES["en"].update({
     "Sincronizando el reloj del sistema…": "Synchronizing the system clock…",
+    "No se pudo sincronizar el reloj del sistema.": "The system clock could not be synchronized.",
     "El reloj aún no está sincronizado. Se volverá a intentar al abrir AiO.": "The clock is not synchronized yet. AiO will try again the next time it opens.",
     "Todos": "All",
     "Instalados": "Installed",
@@ -2395,6 +2396,7 @@ TRADUCCIONES["en"].update({
 
 TRADUCCIONES["fr"].update({
     "Sincronizando el reloj del sistema…": "Synchronisation de l’horloge système…",
+    "No se pudo sincronizar el reloj del sistema.": "Impossible de synchroniser l’horloge système.",
     "El reloj aún no está sincronizado. Se volverá a intentar al abrir AiO.": "L’horloge reste à synchroniser. AiO réessaiera à la prochaine ouverture.",
     "Todos": "Tous",
     "Instalados": "Installés",
@@ -2425,6 +2427,7 @@ TRADUCCIONES["fr"].update({
 
 TRADUCCIONES["zh"].update({
     "Sincronizando el reloj del sistema…": "正在同步系统时钟…",
+    "No se pudo sincronizar el reloj del sistema.": "无法同步系统时钟。",
     "El reloj aún no está sincronizado. Se volverá a intentar al abrir AiO.": "时钟尚未同步。AiO 将在下次打开时重试。",
     "Todos": "全部",
     "Instalados": "已安装",
