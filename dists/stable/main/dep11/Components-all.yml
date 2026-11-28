@@ -156,9 +156,9 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/acerca-de.png
 Releases:
-- version: 1.6.3
+- version: 1.6.4
   type: stable
-  unix-timestamp: 1795737600
+  unix-timestamp: 1795824000
   description:
     C: >-
       <ul><li>El actualizador de AiO incluye el Centro de Control de AyusOS en la misma operación cuando está instalado y
