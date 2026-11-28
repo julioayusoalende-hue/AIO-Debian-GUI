@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.6.6
+
+- Si APT detecta una operación de dpkg interrumpida, el mantenimiento termina de configurar los paquetes pendientes y reintenta la actualización una vez.
+
 ## 1.6.5
 
 - El asistente de primer arranque actualiza Debian antes de aplicar la configuración, guarda el progreso y la retoma tras reiniciar si la actualización lo requiere.

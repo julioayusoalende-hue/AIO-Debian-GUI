@@ -70,7 +70,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 | **Terminal** | Usar Bash, consultar la salida de mantenimiento, copiar y pegar, y aplicar o restaurar el diseño incluido de Fastfetch. |
 | **Preferencias** | Elegir español, inglés, francés o chino, apariencia clara u oscura y una interfaz simple. |
 
-### Lo nuevo en la 1.6.5
+### Lo nuevo en la 1.6.6
 
 - La sincronización del reloj deja de ser una tarea de mantenimiento y se solicita en segundo plano al abrir AiO, sin bloquear ni retrasar las tareas.
 - AyusOS Control Centre incluye el proveedor de hora del sistema para mantener NTP disponible.
@@ -81,7 +81,7 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ### Versión estable
 
-**Recomendada para el uso habitual.** La última estable publicada es **1.6.5**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
+**Recomendada para el uso habitual.** La última estable publicada es **1.6.6**, disponible como paquete **DEB**, junto con `SHA256SUMS`.
 
 **[Descargar la última estable →](https://github.com/julioayusoalende-hue/AIO-Debian-GUI/releases/latest)**
 
@@ -105,10 +105,10 @@ Abre la [última release estable](https://github.com/julioayusoalende-hue/AIO-De
 
 ### 2. Instala el paquete
 
-Para la versión 1.6.5:
+Para la versión 1.6.6:
 
 ```bash
-sudo apt install ./aio-debian-gui_1.6.5_all.deb
+sudo apt install ./aio-debian-gui_1.6.6_all.deb
 ```
 
 APT instala las dependencias y el paquete configura el repositorio firmado del proyecto para futuras actualizaciones.

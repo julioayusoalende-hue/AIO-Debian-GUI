@@ -148,7 +148,7 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.6.5
+HELPER_VERSION=1.6.6
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -1387,6 +1387,34 @@ huella_plan_apt() {
     printf '%s\n' "${plan%% *}"
 }
 
+ejecutar_upgrade_apt() (
+    local registro codigo
+    registro=$(mktemp) || return 1
+    trap 'rm -f -- "$registro"' EXIT
+    local -a comando=(apt-get "${APT_OPTS[@]}" -o DPkg::Lock::Timeout=120
+                      upgrade --with-new-pkgs --no-remove)
+
+    # Mantener la consola en directo y conservar el motivo exacto de APT.
+    if run_privileged "apt-upgrade" 0 "${comando[@]}" 2>&1 | tee "$registro"; then
+        codigo=${PIPESTATUS[0]}
+    else
+        codigo=${PIPESTATUS[0]}
+    fi
+    [ "$codigo" -ne 0 ] || return 0
+    if [ "$APT_RUTINA" -ne 1 ] || [ "$codigo" -ne 100 ] ||
+       ! grep -Eq '^E: dpkg was interrupted, you must manually run .*dpkg --configure -a' "$registro"; then
+        return "$codigo"
+    fi
+
+    warn "APT ha detectado una operación de dpkg interrumpida. Terminando de configurar los paquetes pendientes…"
+    # dpkg conserva sus propios bloqueos y rechaza la reparación si otro
+    # proceso ha tomado el control entre la comprobación y este comando.
+    run_privileged "dpkg-configure-pending" 0 dpkg --force-confdef --force-confold --configure -a </dev/null ||
+        return 1
+    info "Configuración pendiente completada. Reintentando la actualización una vez…"
+    run_privileged "apt-upgrade" 0 "${comando[@]}"
+)
+
 paso_upgrade() {
     asegurar_listas || return 1
     if [ "$APT_RUTINA" -eq 0 ]; then
@@ -1409,7 +1437,7 @@ paso_upgrade() {
     info "Actualizando los paquetes del sistema (apt-get upgrade --with-new-pkgs --no-remove)..."
     # Desempaquetar y configurar paquetes puede superar varios minutos.
     # APT debe terminar por sí mismo para no dejar dpkg a medio configurar.
-    if ! run_privileged "apt-upgrade" 0 apt-get "${APT_OPTS[@]}" -o DPkg::Lock::Timeout=60 upgrade --with-new-pkgs --no-remove; then
+    if ! ejecutar_upgrade_apt; then
         err "Error durante la actualización de paquetes."
         return 1
     fi
@@ -2574,8 +2602,7 @@ main() {
     done
 
     local secuencia=" ${pasos[*]} "
-    if [[ "$secuencia" == *" upgrade "*" autoremove "* ||
-          "$secuencia" == *" upgrade "*" autoclean "* ]] &&
+    if [[ "$secuencia" == *" upgrade "* ]] &&
        [[ "$secuencia" != *" autoremove "*" upgrade "* &&
           "$secuencia" != *" autoclean "*" upgrade "* &&
           "$secuencia" != *" autoclean "*" autoremove "* ]] &&

@@ -70,6 +70,7 @@ echo "✔ lock privilegiado compartido sin falsos bloqueos"
 
 # La cadena normal sigue el orden APT y no repite auditorías ni simulaciones.
 unshare --user --map-root-user bash -c '
+    set -euo pipefail
     source "$1"
     MAINTENANCE_LOCK="$TEST_LOCK"
     llamadas="$TEST_LOCK.calls"
@@ -78,23 +79,42 @@ unshare --user --map-root-user bash -c '
     paquete_instalado() { return 1; }
     run_privileged() {
         printf "%s\n" "$1" >> "$llamadas"
-        if [ "$1" = apt-upgrade ]; then
-            return "${UPGRADE_STATUS:-0}"
-        fi
+        case "$1" in
+            dpkg-configure-pending)
+                [ "$2" -eq 0 ] && [[ "${*:3}" == "dpkg --force-confdef --force-confold --configure -a" ]] || return 2
+                [ "$estado" != reparacion-falla ]
+                return $? ;;
+            apt-upgrade)
+                [[ " $* " == *" DPkg::Lock::Timeout=120 "* ]] || return 2
+                case "$estado" in
+                    ocupado)
+                        echo "E: Could not get lock /var/lib/dpkg/lock-frontend."
+                        return 100 ;;
+                    interrumpido|reparacion-falla|reintento-falla)
+                        if [ "$(grep -Fxc apt-upgrade "$llamadas")" -eq 1 ] || [ "$estado" = reintento-falla ]; then
+                            echo "E: dpkg was interrupted, you must manually run dpkg --configure -a to correct the problem."
+                            return 100
+                        fi ;;
+                esac ;;
+        esac
+        return 0
     }
-    for estado in 0 100; do
+    for estado in normal ocupado interrumpido reparacion-falla reintento-falla; do
         : > "$llamadas"
         codigo=0
-        (exec 9>"$MAINTENANCE_LOCK"; UPGRADE_STATUS=$estado
-         main --lock-fd 9 upgrade autoremove autoclean) || codigo=$?
-        if [ "$estado" -eq 0 ]; then
-            [ "$codigo" -eq 0 ]
-            esperado=$(printf "%s\n" apt-update apt-upgrade apt-autoremove---no-purge apt-autoclean)
-        else
-            [ "$codigo" -eq 1 ]
-            esperado=$(printf "%s\n" apt-update apt-upgrade)
-        fi
+        (exec 9>"$MAINTENANCE_LOCK"; main --lock-fd 9 upgrade autoremove autoclean) || codigo=$?
+        case "$estado" in
+            normal|interrumpido) [ "$codigo" -eq 0 ] ;;
+            *) [ "$codigo" -eq 1 ] ;;
+        esac
+        case "$estado" in
+            normal) esperado=$(printf "%s\n" apt-update apt-upgrade apt-autoremove---no-purge apt-autoclean) ;;
+            ocupado) esperado=$(printf "%s\n" apt-update apt-upgrade) ;;
+            interrumpido) esperado=$(printf "%s\n" apt-update apt-upgrade dpkg-configure-pending apt-upgrade apt-autoremove---no-purge apt-autoclean) ;;
+            reparacion-falla) esperado=$(printf "%s\n" apt-update apt-upgrade dpkg-configure-pending) ;;
+            reintento-falla) esperado=$(printf "%s\n" apt-update apt-upgrade dpkg-configure-pending apt-upgrade) ;;
+        esac
         [ "$(cat "$llamadas")" = "$esperado" ]
     done
 ' _ "$HELPER"
-echo "✔ cadena APT: un refresco y parada al primer fallo"
+echo "✔ cadena APT: espera de bloqueos, recuperación de dpkg y un solo reintento"

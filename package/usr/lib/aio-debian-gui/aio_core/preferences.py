@@ -37,10 +37,19 @@ def cargar_preferencias(ruta, defaults=None):
 def guardar_preferencias(preferencias, ruta):
     directorio = os.path.dirname(ruta)
     os.makedirs(directorio, exist_ok=True)
+    # El asistente de AyusOS comparte este archivo y guarda sus propias claves.
+    try:
+        with open(ruta, encoding="utf-8") as archivo:
+            actuales = json.load(archivo)
+    except (FileNotFoundError, ValueError):
+        actuales = {}
+    if not isinstance(actuales, dict):
+        actuales = {}
+    actuales.update(preferencias)
     descriptor, temporal = tempfile.mkstemp(prefix=".preferences-", dir=directorio)
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8") as archivo:
-            json.dump(preferencias, archivo, ensure_ascii=False, indent=2)
+            json.dump(actuales, archivo, ensure_ascii=False, indent=2)
             archivo.write("\n")
         os.replace(temporal, ruta)
     finally:

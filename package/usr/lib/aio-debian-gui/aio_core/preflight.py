@@ -19,8 +19,7 @@ NON_APT_TASKS = {
 
 def routine_apt(tasks):
     selected = set(tasks)
-    return ("upgrade" in selected and bool(selected & {"autoremove", "autoclean"})
-            and selected <= {"upgrade", "autoremove", "autoclean",
+    return ("upgrade" in selected and selected <= {"upgrade", "autoremove", "autoclean",
                              "flatpak-update", "snap-update", "rebootcheck"})
 
 
