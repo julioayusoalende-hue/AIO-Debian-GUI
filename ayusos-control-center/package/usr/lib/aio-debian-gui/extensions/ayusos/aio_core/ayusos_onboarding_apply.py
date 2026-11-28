@@ -97,7 +97,7 @@ def notify_nvidia(uid, message):
 
 def apply_nvidia(config, uid, dry):
     mode = config["nvidia"]["mode"]
-    if dry or mode not in ("auto", "manual"):
+    if dry or config["nvidia"].get("handled_by_wizard") or mode not in ("auto", "manual"):
         return None, False
     report = run([HELPER, "--nvidia-report"], timeout=15)
     if report.returncode:
@@ -287,7 +287,12 @@ def main(argv=None):
     if args.dry_run:
         print(json.dumps(config, ensure_ascii=False, indent=2))
         return 0
-    return apply(config, args.user, entry.pw_uid)
+    result = apply(config, args.user, entry.pw_uid)
+    reboot_boot_id = config["nvidia"].get("reboot_boot_id")
+    if result == 0 and config["nvidia"].get("handled_by_wizard") and reboot_boot_id:
+        if reboot_boot_id == Path("/proc/sys/kernel/random/boot_id").read_text().strip():
+            return 11
+    return result
 
 
 if __name__ == "__main__":

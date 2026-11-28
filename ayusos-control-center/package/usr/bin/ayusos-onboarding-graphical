@@ -116,7 +116,9 @@ else
 fi
 
 echo "Lanzando onboarding de AyusOS para $USER_NAME ($SESSION_TYPE)."
-runuser -u "$USER_NAME" -- env "${entorno[@]}" \
+runner=/usr/lib/aio-debian-gui/extensions/ayusos/aio-run
+/usr/bin/python3 -I "$runner" onboarding_nvidia "$USER_UID" \
+    /usr/sbin/runuser -u "$USER_NAME" -- /usr/bin/env "${entorno[@]}" AYUSOS_ONBOARDING_SERVICE=1 \
     /usr/bin/aio-debian-gui --onboarding-only
 
 # Marcar como completado para no volver a mostrar (incluso si el usuario salto).

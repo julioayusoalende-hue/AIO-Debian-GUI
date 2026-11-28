@@ -148,7 +148,7 @@ UPGRADE_PLAN=""
 AUTOREMOVE_PLAN=""
 REVISAR_LIMPIEZA=0
 REINICIO_REQUERIDO=0
-HELPER_VERSION=1.6.3
+HELPER_VERSION=1.6.4
 SYSTEM_HELPER=/usr/lib/aio-debian-gui/aio-debian-gui-helper
 SYSTEM_POLICY=/usr/share/polkit-1/actions/es.aiodebian.gui.policy
 SCHEDULER_MODULE=/usr/lib/aio-debian-gui/aio_core/scheduler.py
@@ -1709,6 +1709,21 @@ paso_rebootcheck() {
     echo "##REBOOT:${necesita}"
 }
 
+paso_nvidia_check_upgrade() {
+    local resultado
+    if ! resultado=$(paso_rebootcheck); then
+        printf '%s\n' "$resultado"
+        err "Se aplaza NVIDIA porque no se pudo comprobar el estado del sistema tras actualizar."
+        return 1
+    fi
+    printf '%s\n' "$resultado"
+    if grep -qx '##REBOOT:1' <<< "$resultado"; then
+        err "Se aplaza NVIDIA hasta que reinicies para aplicar la actualización."
+        echo "##NVIDIA:deferred:1"
+        return 1
+    fi
+}
+
 # NVIDIA: detección PCI del anfitrión, sin depender del driver instalado.
 nvidia_pci_root() {
     if [ "$EUID" -ne 0 ] && [[ -v AIO_TEST_PCI_ROOT ]]; then
@@ -2068,6 +2083,7 @@ declare -A TITULOS=(
     [tools]="Instalar herramientas auxiliares"
     [backports-kernel-mesa]="Instalar kernel y Mesa desde Backports"
     [revertir-backports]="Preparar el retorno de kernel y Mesa a Debian Stable"
+    [nvidia-check-upgrade]="Comprobar el sistema actualizado antes de instalar NVIDIA"
     [nvidia-driver]="Detectar e instalar el controlador NVIDIA de Debian"
     [ubuntu-hwe]="Instalar kernel HWE oficial de Ubuntu"
     [flatpak-setup]="Instalar Flatpak y Flathub"
@@ -2095,7 +2111,7 @@ declare -A TITULOS=(
     [rebootcheck]="Comprobar si hace falta reiniciar"
 )
 # Pasos cuyo fallo detiene la ejecución (el resto solo se anota)
-CRITICOS=" upgrade backports-kernel-mesa revertir-backports nvidia-driver "
+CRITICOS=" upgrade nvidia-check-upgrade backports-kernel-mesa revertir-backports nvidia-driver "
 
 # Hook genérico: cada paquete de distro puede registrar pasos y estados.
 EXTENSION_STATUS_HOOKS=()

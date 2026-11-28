@@ -19,7 +19,8 @@ fi
     exit 1
 }
 # Aplicar las elecciones del wizard una sola vez, antes del mantenimiento.
-# Código 10 = aplicado pero requiere reinicio; no abortar.
+# Código 10 = reinicio pendiente. Código 11 = reinicio confirmado en el asistente.
+reboot_requested=false
 if [[ ! -e "$state/onboarding-done" ]]; then
     echo 'El asistente de primer inicio todavía está pendiente.' >&2
     exit 1
@@ -40,9 +41,11 @@ if [[ ! -e "$state/onboarding-applied" || ! -f "$config" ]]; then
         :
     else
         rc=$?
-        if [[ $rc -ne 10 ]]; then
-            exit $rc
-        fi
+        case "$rc" in
+            10) ;;
+            11) reboot_requested=true ;;
+            *) exit "$rc" ;;
+        esac
     fi
 fi
 
@@ -61,3 +64,6 @@ if [[ "$enabled" == True ]]; then
         "/var/lib/aio-debian-gui/schedules/$uid.json"
 fi
 touch "$state/aio-inicial"
+if "$reboot_requested"; then
+    systemctl reboot
+fi

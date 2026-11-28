@@ -108,6 +108,8 @@ class KernelConfig:
 class NvidiaConfig:
     mode: str = "auto"  # auto, manual, none
     prime_offload: bool = True
+    handled_by_wizard: bool = False
+    reboot_boot_id: str = ""
 
 
 @dataclass

@@ -1,8 +1,12 @@
 # Cambios
 
-## 1.6.3
+## 1.6.4
 
 - El actualizador de AiO incluye el Centro de Control de AyusOS en la misma operación cuando está instalado y hay una versión compatible en el canal seleccionado.
+
+## 1.6.3
+
+- El onboarding muestra el resultado y progreso de la instalación NVIDIA, con opción de actualizar Debian antes y gestionar el reinicio necesario.
 
 ## 1.6.2
 

@@ -24,6 +24,7 @@ from ayusos.aio_core import (
     ayusos_recovery as recovery,
     ayusos_update as update,
     onboarding,
+    onboarding_nvidia,
 )
 
 
@@ -89,11 +90,102 @@ class DesktopIntegrationTests(unittest.TestCase):
                 wizard.nvidia_combo.set_active_id("manual")
                 wizard.btn_next.clicked()
                 wizard._show_step(len(steps) - 1)
-                wizard.btn_next.clicked()
+                with patch.object(wizard, "_install_nvidia") as install:
+                    wizard.btn_next.clicked()
+                install.assert_called_once_with()
+                save.assert_not_called()
+                wizard.nvidia_outcome = "Controlador verificado"
+                wizard._finish_onboarding()
                 saved = save.call_args.args[1]
                 self.assertTrue(saved["flatpak"]["flathub"])
                 self.assertFalse(saved["apps"]["auto_install"])
                 self.assertEqual(saved["nvidia"]["mode"], "manual")
+                self.assertTrue(saved["nvidia"]["handled_by_wizard"])
+            finally:
+                wizard.destroy()
+
+    def test_nvidia_worker_reports_success_failure_and_update_reboot(self):
+        wizard = SimpleNamespace(
+            config=config.AyusOSConfig(), update_before_nvidia=True, system_onboarding=False,
+        )
+        wizard._run_nvidia_helper = onboarding.OnboardingWizard._run_nvidia_helper.__get__(wizard)
+        report = subprocess.CompletedProcess([], 0, stdout="##NVIDIA:present:1\n", stderr="")
+        cases = (
+            (0, ["[*] Compilando DKMS", "##RESULT:nvidia-driver:0", "##REBOOT:1"],
+             "preparado correctamente", True),
+            (1, ["[-] Secure Boot activo", "##RESULT:nvidia-driver:1"], "Secure Boot activo", False),
+            (1, ["##REBOOT:1", "##NVIDIA:deferred:1"], "Debian se actualizó", True),
+        )
+        for code, output, message, reboot in cases:
+            complete, log = Mock(), Mock()
+            with self.subTest(output=output), \
+                 patch.object(onboarding.subprocess, "run", return_value=report), \
+                 patch.object(onboarding.subprocess, "Popen") as popen:
+                process = popen.return_value.__enter__.return_value
+                process.stdout = iter(output)
+                process.wait.return_value = code
+                onboarding.OnboardingWizard._nvidia_worker(wizard, log, complete)
+                self.assertEqual(popen.call_args.args[0][-3:], [
+                    "upgrade", "nvidia-check-upgrade", "nvidia-driver",
+                ])
+                result, requires_reboot = complete.call_args.args
+                self.assertIn(message, result)
+                self.assertEqual(requires_reboot, reboot)
+                for line in output:
+                    if not line.startswith("##"):
+                        log.assert_any_call(line)
+
+    def test_system_nvidia_channel_runs_only_one_fixed_request(self):
+        wizard = Mock(stdout=iter([
+            "texto cualquiera\n", "##AYUSOS-NVIDIA:1:1\n", "##AYUSOS-NVIDIA:0:0\n",
+        ]))
+        wizard.wait.return_value = 0
+        helper = Mock(stdout=iter(["[*] Instalando NVIDIA\n", "##RESULT:nvidia-driver:0\n"]))
+        helper.wait.return_value = 0
+        processes = [Mock(), Mock()]
+        for context, process in zip(processes, (wizard, helper)):
+            context.__enter__ = Mock(return_value=process)
+            context.__exit__ = Mock(return_value=False)
+        with patch.object(onboarding_nvidia.os, "geteuid", return_value=0), \
+             patch.object(onboarding_nvidia.subprocess, "Popen", side_effect=processes) as popen:
+            self.assertEqual(onboarding_nvidia.run_session(1000, ["wizard"]), 0)
+        self.assertEqual(popen.call_count, 2)
+        self.assertEqual(popen.call_args.args[0], [
+            onboarding_nvidia.HELPER, "--lang", "es", "repos", "upgrade",
+            "nvidia-check-upgrade", "nvidia-driver",
+        ])
+        self.assertEqual(popen.call_args.kwargs["env"]["PKEXEC_UID"], "1000")
+        wizard.stdin.write.assert_any_call("##RESULT:nvidia-driver:0\n")
+        wizard.stdin.write.assert_any_call("##AYUSOS-NVIDIA-EXIT:0\n")
+        wizard.stdin.write.assert_any_call("##AYUSOS-NVIDIA-EXIT:2\n")
+
+    def test_nvidia_dialog_is_modal_and_offers_reboot_after_success(self):
+        from gi.repository import GLib, Gtk
+
+        if not Gtk.init_check([])[0]:
+            self.skipTest("GTK sin pantalla")
+
+        def worker(_wizard, log, complete):
+            log("[*] Compilando DKMS")
+            complete("Controlador preparado correctamente", True)
+
+        with patch.object(onboarding.OnboardingWizard, "_comprobar_conexion"), \
+             patch.object(onboarding.OnboardingWizard, "_nvidia_worker", worker):
+            wizard = onboarding.OnboardingWizard()
+            try:
+                with patch.object(wizard, "_finish_onboarding") as finish:
+                    wizard._install_nvidia()
+                    dialog = next(win for win in Gtk.Window.list_toplevels()
+                                  if isinstance(win, Gtk.Dialog) and win.get_transient_for() is wizard)
+                    self.assertTrue(dialog.get_modal())
+                    self.assertFalse(dialog.get_deletable())
+                    self.assertIsNone(dialog.get_widget_for_response(Gtk.ResponseType.YES))
+                    while not dialog.get_deletable():
+                        GLib.MainContext.default().iteration(True)
+                    self.assertIsNotNone(dialog.get_widget_for_response(Gtk.ResponseType.YES))
+                    dialog.response(Gtk.ResponseType.YES)
+                    self.assertTrue(wizard.reboot_nvidia)
+                    finish.assert_called_once_with()
             finally:
                 wizard.destroy()
 
@@ -150,7 +242,8 @@ class DesktopIntegrationTests(unittest.TestCase):
             launcher = root / "launcher"
             launcher.write_text((package / "usr/bin/ayusos-onboarding-graphical").read_text()
                                 .replace("/var/lib/ayusos", str(state))
-                                .replace("/run/user", str(runtime.parent)))
+                                .replace("/run/user", str(runtime.parent))
+                                .replace("/usr/bin/python3 -I", "python3 -I"))
             started = subprocess.run(["bash", "-c", """
                 loginctl() {
                     case "$1:$2" in
@@ -167,6 +260,12 @@ class DesktopIntegrationTests(unittest.TestCase):
                     [ "$2" = segundo ] || return 1
                     if [[ "$*" == *show-environment* ]]; then printf 'DISPLAY=:8\n'; return; fi
                     [[ "$*" == *"DISPLAY=:8"* && "$*" == *"--onboarding-only"* ]] || return 1
+                }
+                python3() {
+                    [[ "$3" == onboarding_nvidia && "$4" == 1001 && "$5" == /usr/sbin/runuser ]] || return 1
+                    shift 5
+                    [[ "$*" == *AYUSOS_ONBOARDING_SERVICE=1* ]] || return 1
+                    runuser "$@"
                 }
                 export HOME_TEST="$2"
                 source "$1"

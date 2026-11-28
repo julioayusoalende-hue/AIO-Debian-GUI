@@ -22,6 +22,9 @@ else
     exit_code=$?
 fi
 
+# El asistente ya confirmó el reinicio. El servicio inicial lo ejecutará al terminar.
+[[ $exit_code -ne 11 ]] || exit 11
+
 # Verificar si se requiere reinicio
 REBOOT_MARKER="/var/lib/ayusos/reboot-required"
 if [[ -f "$REBOOT_MARKER" ]]; then

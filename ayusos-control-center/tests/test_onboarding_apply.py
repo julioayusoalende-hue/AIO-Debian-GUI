@@ -92,6 +92,14 @@ class OnboardingApplyTests(unittest.TestCase):
             self.assertEqual(app.apply_nvidia(app.SYSTEM_DEFAULTS, 1000, False), (None, False))
         helper.assert_not_called()
 
+    def test_background_service_does_not_repeat_a_wizard_installation(self):
+        config = app._merge(app.SYSTEM_DEFAULTS, {"nvidia": {
+            "mode": "manual", "handled_by_wizard": True,
+        }})
+        with patch.object(app, "run") as run:
+            self.assertEqual(app.apply_nvidia(config, 1000, False), (None, False))
+        run.assert_not_called()
+
     def test_kernel_mapping(self):
         config = json.loads(json.dumps(app.SYSTEM_DEFAULTS))
         config["kernel"]["variant"] = "backports"
