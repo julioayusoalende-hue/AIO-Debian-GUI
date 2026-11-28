@@ -26,31 +26,33 @@ Puedes mantener el sistema, programar tareas, revisar problemas, gestionar aplic
 
 ## Capturas de pantalla
 
-![Configuración y mantenimiento de AiO Debian GUI 1.1.0](docs/capturas/mantenimiento.png)
+![Configuración y mantenimiento de AiO Debian GUI 1.6.5](docs/capturas/mantenimiento.png)
+
+![Acerca de AiO Debian GUI 1.6.5](docs/capturas/acerca-de.png)
 
 <details>
-<summary><strong>Inicio, Backup, Apps recomendadas y Terminal</strong></summary>
+<summary><strong>Gestor de software, Apps recomendadas, Backup, GRUB y Branding AyusOS</strong></summary>
 
-| Inicio de GRUB | Ajustes de GRUB cargados |
+| Gestor de software | Apps recomendadas |
 | --- | --- |
-| ![Configuración de GRUB antes de cargar los ajustes](docs/capturas/grub-antes-de-cargar.png) | ![Configuración de GRUB con los ajustes cargados](docs/capturas/grub-ajustes-cargados.png) |
-| **Backup** | **Apps recomendadas** |
-| ![Opciones para copiar y restaurar repositorios y ajustes](docs/capturas/backup.png) | ![Catálogo de aplicaciones con opciones DEB y Flatpak](docs/capturas/apps-recomendadas.png) |
-
-![Terminal integrada con el menú Comandos abierto](docs/capturas/terminal.png)
+| ![Gestor de software con paquetes DEB](docs/capturas/gestor-software.png) | ![Catálogo de aplicaciones recomendadas con opciones DEB y Flatpak](docs/capturas/apps-recomendadas.png) |
+| **Backup** | **Ajustes de GRUB cargados** |
+| ![Opciones para copiar y restaurar repositorios y ajustes](docs/capturas/backup.png) | ![Configuración de GRUB con los ajustes cargados](docs/capturas/grub-ajustes-cargados.png) |
+| **Branding AyusOS** |  |
+| ![Tema, color de acento, fondos y tema de arranque de AyusOS](docs/capturas/branding-ayusos.png) |  |
 
 </details>
 
 <details>
-<summary><strong>Diagnóstico, novedades y preferencias</strong></summary>
+<summary><strong>Salud del sistema, detalles técnicos, novedades, preferencias y programación</strong></summary>
 
-| Diagnóstico preventivo | Detalles técnicos |
+| Salud del sistema | Detalles técnicos |
 | --- | --- |
-| ![Resultados del diagnóstico preventivo del sistema](docs/capturas/diagnostico.png) | ![Información de la distribución, el hardware y el escritorio](docs/capturas/detalles-tecnicos.png) |
+| ![Panel Salud del sistema con comprobaciones preventivas](docs/capturas/diagnostico.png) | ![Detalles técnicos de la distribución, el hardware y el escritorio](docs/capturas/detalles-tecnicos.png) |
 | **Novedades de la versión** | **Preferencias** |
-| ![Ventana de novedades de AiO Debian GUI 1.1.0](docs/capturas/novedades.png) | ![Preferencias de idioma, apariencia e interfaz simple](docs/capturas/preferencias.png) |
-| **Programación** | **Acerca de** |
-| ![Configuración del mantenimiento automático y última ejecución](docs/capturas/programacion.png) | ![Versión y licencia de AiO Debian GUI](docs/capturas/acerca-de.png) |
+| ![Ventana de novedades de AiO Debian GUI](docs/capturas/novedades.png) | ![Preferencias de idioma, apariencia e interfaz simple](docs/capturas/preferencias.png) |
+| **Programación** |  |
+| ![Configuración del mantenimiento automático y última ejecución](docs/capturas/programacion.png) |  |
 
 </details>
 
@@ -148,7 +150,7 @@ Cierra y vuelve a abrir la aplicación para cargar la versión nueva. El paquete
 ## Antes de empezar
 
 - **Revisa la selección y las advertencias.** Los cambios de kernel, Mesa, repositorios o controladores merecen una copia de seguridad previa.
-- **La programación tiene límites.** No programa eliminaciones ni cambios de kernel, controladores o repositorios; no enciende un equipo apagado ni reinicia automáticamente.
+- **La programación tiene límites.** No programa cambios de kernel, controladores o repositorios; no enciende un equipo apagado ni reinicia automáticamente. `autoremove` es opcional y no viene seleccionado por defecto; si lo añades, APT eliminará paquetes que considere dependencias huérfanas sin pedir confirmación durante la ejecución programada.
 - **NVIDIA se instala solo cuando se puede verificar la compatibilidad.** La comprobación del módulo DKMS no sustituye la prueba de funcionamiento después de reiniciar. Secure Boot activo o desconocido requiere preparación manual de la firma DKMS/MOK.
 - **La autorización sin contraseña es opcional.** Está desactivada inicialmente y reduce la protección de la cuenta si se habilita.
 
