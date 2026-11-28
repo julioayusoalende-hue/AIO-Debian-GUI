@@ -90,9 +90,11 @@ class DesktopIntegrationTests(unittest.TestCase):
                 wizard.nvidia_combo.set_active_id("manual")
                 wizard.btn_next.clicked()
                 wizard._show_step(len(steps) - 1)
-                with patch.object(wizard, "_install_nvidia") as install:
+                with patch.object(wizard, "_begin_initial_update") as update, \
+                     patch.object(wizard, "_install_nvidia") as install:
                     wizard.btn_next.clicked()
-                install.assert_called_once_with()
+                update.assert_called_once_with()
+                install.assert_not_called()
                 save.assert_not_called()
                 wizard.nvidia_outcome = "Controlador verificado"
                 wizard._finish_onboarding()
@@ -104,17 +106,16 @@ class DesktopIntegrationTests(unittest.TestCase):
             finally:
                 wizard.destroy()
 
-    def test_nvidia_worker_reports_success_failure_and_update_reboot(self):
+    def test_nvidia_worker_reports_success_and_failure(self):
         wizard = SimpleNamespace(
-            config=config.AyusOSConfig(), update_before_nvidia=True, system_onboarding=False,
+            config=config.AyusOSConfig(), system_onboarding=False,
         )
-        wizard._run_nvidia_helper = onboarding.OnboardingWizard._run_nvidia_helper.__get__(wizard)
+        wizard._run_helper = onboarding.OnboardingWizard._run_helper.__get__(wizard)
         report = subprocess.CompletedProcess([], 0, stdout="##NVIDIA:present:1\n", stderr="")
         cases = (
             (0, ["[*] Compilando DKMS", "##RESULT:nvidia-driver:0", "##REBOOT:1"],
              "preparado correctamente", True),
             (1, ["[-] Secure Boot activo", "##RESULT:nvidia-driver:1"], "Secure Boot activo", False),
-            (1, ["##REBOOT:1", "##NVIDIA:deferred:1"], "Debian se actualizó", True),
         )
         for code, output, message, reboot in cases:
             complete, log = Mock(), Mock()
@@ -125,9 +126,7 @@ class DesktopIntegrationTests(unittest.TestCase):
                 process.stdout = iter(output)
                 process.wait.return_value = code
                 onboarding.OnboardingWizard._nvidia_worker(wizard, log, complete)
-                self.assertEqual(popen.call_args.args[0][-3:], [
-                    "upgrade", "nvidia-check-upgrade", "nvidia-driver",
-                ])
+                self.assertEqual(popen.call_args.args[0][-2:], ["repos", "nvidia-driver"])
                 result, requires_reboot = complete.call_args.args
                 self.assertIn(message, result)
                 self.assertEqual(requires_reboot, reboot)
@@ -137,27 +136,77 @@ class DesktopIntegrationTests(unittest.TestCase):
 
     def test_system_nvidia_channel_runs_only_one_fixed_request(self):
         wizard = Mock(stdout=iter([
-            "texto cualquiera\n", "##AYUSOS-NVIDIA:1:1\n", "##AYUSOS-NVIDIA:0:0\n",
+            "texto cualquiera\n", "##AYUSOS-NVIDIA:update\n",
+            "##AYUSOS-NVIDIA:driver:1\n", "##AYUSOS-NVIDIA:driver:0\n",
         ]))
         wizard.wait.return_value = 0
         helper = Mock(stdout=iter(["[*] Instalando NVIDIA\n", "##RESULT:nvidia-driver:0\n"]))
         helper.wait.return_value = 0
-        processes = [Mock(), Mock()]
-        for context, process in zip(processes, (wizard, helper)):
+        update_helper = Mock(stdout=iter(["##RESULT:onboarding-check-upgrade:0\n"]))
+        update_helper.wait.return_value = 0
+        processes = [Mock(), Mock(), Mock()]
+        for context, process in zip(processes, (wizard, update_helper, helper)):
             context.__enter__ = Mock(return_value=process)
             context.__exit__ = Mock(return_value=False)
         with patch.object(onboarding_nvidia.os, "geteuid", return_value=0), \
              patch.object(onboarding_nvidia.subprocess, "Popen", side_effect=processes) as popen:
             self.assertEqual(onboarding_nvidia.run_session(1000, ["wizard"]), 0)
-        self.assertEqual(popen.call_count, 2)
-        self.assertEqual(popen.call_args.args[0], [
-            onboarding_nvidia.HELPER, "--lang", "es", "repos", "upgrade",
-            "nvidia-check-upgrade", "nvidia-driver",
-        ])
+        self.assertEqual(popen.call_count, 3)
+        self.assertEqual(popen.call_args_list[1].args[0][-2:], ["upgrade", "onboarding-check-upgrade"])
+        self.assertEqual(popen.call_args.args[0][-2:], ["repos", "nvidia-driver"])
         self.assertEqual(popen.call_args.kwargs["env"]["PKEXEC_UID"], "1000")
         wizard.stdin.write.assert_any_call("##RESULT:nvidia-driver:0\n")
         wizard.stdin.write.assert_any_call("##AYUSOS-NVIDIA-EXIT:0\n")
         wizard.stdin.write.assert_any_call("##AYUSOS-NVIDIA-EXIT:2\n")
+
+    def test_update_checkpoint_keeps_nvidia_pending_until_a_different_boot(self):
+        from gi.repository import Gtk
+
+        if not Gtk.init_check([])[0]:
+            self.skipTest("GTK sin pantalla")
+        settings = config.AyusOSConfig()
+        settings.nvidia.mode = "manual"
+        settings.onboarding.initial_update = "running"
+        with patch.object(onboarding, "get_effective_config", return_value=settings), \
+             patch.object(onboarding.OnboardingWizard, "_comprobar_conexion"), \
+             patch.object(onboarding, "load_user_preferences", return_value={}), \
+             patch.object(onboarding, "save_user_preferences", return_value=True) as save:
+            wizard = onboarding.OnboardingWizard()
+            try:
+                complete = Mock()
+
+                def update(operation, steps, _log, progress):
+                    self.assertEqual(operation, "update")
+                    self.assertEqual(steps, ("upgrade", "onboarding-check-upgrade"))
+                    progress("##RESULT:onboarding-check-upgrade:0")
+                    progress("##REBOOT:1")
+                    return 0
+
+                with patch.object(onboarding, "BOOT_ID") as boot, \
+                     patch.object(wizard, "_run_helper", side_effect=update), \
+                     patch.object(onboarding.GLib, "idle_add", side_effect=lambda callback: callback()), \
+                     patch.object(onboarding.Gtk, "MessageDialog") as dialog, \
+                     patch.object(wizard, "_install_nvidia") as install:
+                    boot.read_text.return_value = "boot-original"
+                    wizard._update_worker(Mock(), complete)
+                    saved = save.call_args.args[0]
+                    self.assertEqual(saved["onboarding"]["initial_update"], "reboot:boot-original")
+                    self.assertFalse(saved["onboarding"]["completed"])
+                    self.assertEqual(saved["nvidia"]["mode"], "manual")
+                    self.assertTrue(complete.call_args.args[1])
+                    wizard.config = config.AyusOSConfig.from_dict(saved)
+                    dialog.return_value.run.return_value = Gtk.ResponseType.CLOSE
+                    wizard._continue_after_update()
+                    install.assert_not_called()
+                    boot.read_text.return_value = "boot-nuevo"
+                    wizard._continue_after_update()
+                    install.assert_not_called()
+                    self.assertEqual(wizard.config.onboarding.initial_update, "reboot:boot-original")
+                    dialog.return_value.run.return_value = Gtk.ResponseType.OK
+                    wizard._continue_after_update()
+                    install.assert_called_once_with()
+            finally:
+                wizard.destroy()
 
     def test_nvidia_dialog_is_modal_and_offers_reboot_after_success(self):
         from gi.repository import GLib, Gtk

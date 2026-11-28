@@ -1,4 +1,4 @@
-"""Canal de instalación NVIDIA para el asistente iniciado por systemd."""
+"""Canal de actualización e instalación NVIDIA para el asistente iniciado por systemd."""
 
 import argparse
 import os
@@ -12,15 +12,15 @@ SYSTEM_ENV = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL": "C.UTF-8",
               "DEBIAN_FRONTEND": "noninteractive"}
 
 
-def steps_for_driver(repos, upgrade):
-    steps = ["repos"] if repos else []
-    if upgrade:
-        steps.extend(("upgrade", "nvidia-check-upgrade"))
-    return [*steps, "nvidia-driver"]
+UPDATE_STEPS = ("upgrade", "onboarding-check-upgrade")
+
+
+def steps_for_driver(repos):
+    return ("repos", "nvidia-driver") if repos else ("nvidia-driver",)
 
 
 def run_session(uid, command):
-    """El hijo puede solicitar una sola instalación con dos opciones booleanas."""
+    """El hijo solo puede solicitar las operaciones previstas por el asistente."""
     if os.geteuid() != 0 or uid <= 0:
         return 2
     with subprocess.Popen(
@@ -39,19 +39,25 @@ def run_session(uid, command):
                     channel_open = False
 
         for line in wizard.stdout:
-            request = re.fullmatch(r"##AYUSOS-NVIDIA:([01]):([01])", line.rstrip("\n"))
+            request = re.fullmatch(rf"{REQUEST}(update|driver:[01]|reboot)", line.rstrip("\n"))
             if not request:
                 print(line, end="", flush=True)
                 continue
-            if requested:
+            operation = request[1]
+            if operation.startswith("driver:") and requested:
                 forward("[-] Ya se procesó una solicitud NVIDIA en este asistente.\n")
                 forward(f"{RESULT}2\n")
                 continue
-            requested = True
-            repos, upgrade = (flag == "1" for flag in request.groups())
+            if operation == "reboot":
+                command = ["/usr/bin/systemctl", "--no-block", "reboot"]
+            elif operation == "update":
+                command = [HELPER, "--lang", "es", *UPDATE_STEPS]
+            else:
+                requested = True
+                command = [HELPER, "--lang", "es", *steps_for_driver(operation.endswith(":1"))]
             try:
                 with subprocess.Popen(
-                    [HELPER, "--lang", "es", *steps_for_driver(repos, upgrade)],
+                    command,
                     env={**SYSTEM_ENV, "PKEXEC_UID": str(uid)}, stdin=subprocess.DEVNULL,
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace",
                 ) as helper:

@@ -29,6 +29,7 @@ from ..branding import (
     titulo_aplicacion,
 )
 from .ayusos_config import (
+    AyusOSConfig,
     VALID_ACCENTS,
     VALID_KERNEL_VARIANTS,
     VALID_MAINTENANCE_SCHEDULES,
@@ -38,8 +39,9 @@ from .ayusos_config import (
     installed_gnome_tasks,
     load_user_preferences,
     mark_onboarding_done,
+    save_user_preferences,
 )
-from .onboarding_nvidia import HELPER as NVIDIA_HELPER, REQUEST, RESULT, steps_for_driver
+from .onboarding_nvidia import HELPER as NVIDIA_HELPER, REQUEST, RESULT, UPDATE_STEPS, steps_for_driver
 BOOT_ID = Path("/proc/sys/kernel/random/boot_id")
 
 
@@ -174,7 +176,6 @@ class OnboardingWizard(Gtk.Window):
         self.comprobando_conexion = False
         self.cerrado = False
         self.nvidia_outcome = None
-        self.update_before_nvidia = False
         self.reboot_nvidia = False
         self.system_onboarding = os.environ.get("AYUSOS_ONBOARDING_SERVICE") == "1"
 
@@ -183,11 +184,13 @@ class OnboardingWizard(Gtk.Window):
         self._define_steps()
 
         # Mostrar primer paso
-        self._show_step(0)
+        self._show_step(len(self.steps) - 1 if self.config.onboarding.initial_update else 0)
 
         self.connect("destroy", self._on_destroy)
         self.timer_conexion = GLib.timeout_add_seconds(7, self._comprobar_conexion)
         self._comprobar_conexion()
+        if self.config.onboarding.initial_update not in ("", "running"):
+            GLib.idle_add(self._continue_after_update)
 
     def _setup_css(self):
         provider = Gtk.CssProvider()
@@ -328,8 +331,8 @@ class OnboardingWizard(Gtk.Window):
         mensaje = ("Conexión a Internet comprobada." if disponible else
                    "Comprueba tu conexión a Internet. AyusOS necesita acceder al repositorio Debian para continuar.")
         self.estado_conexion.set_text(traducir(mensaje))
-        self.btn_next.set_sensitive(disponible)
-        self.btn_skip.set_sensitive(disponible)
+        self.btn_next.set_sensitive(disponible or self.config.onboarding.initial_update not in ("", "running"))
+        self.btn_skip.set_sensitive(disponible and not self.config.onboarding.initial_update)
         return GLib.SOURCE_REMOVE
 
     def _define_steps(self):
@@ -560,16 +563,6 @@ class OnboardingWizard(Gtk.Window):
         self.nvidia_combo.set_active(["auto", "manual", "none"].index(self.config.nvidia.mode))
         box.pack_start(self.nvidia_combo, False, False, 0)
 
-        self.nvidia_update = Gtk.CheckButton(
-            label=traducir("Actualizar Debian antes de instalar NVIDIA (opcional)"),
-        )
-        self.nvidia_update.set_active(self.update_before_nvidia)
-        self.nvidia_combo.connect(
-            "changed", lambda combo: self.nvidia_update.set_sensitive(combo.get_active_id() != "none"),
-        )
-        self.nvidia_update.set_sensitive(self.nvidia_combo.get_active_id() != "none")
-        box.pack_start(self.nvidia_update, False, False, 0)
-
         return box
 
     def _create_gnome_ext_step(self) -> Gtk.Widget:
@@ -743,14 +736,12 @@ class OnboardingWizard(Gtk.Window):
         box.pack_start(icon, False, False, 0)
 
         title = Gtk.Label()
-        title.set_markup(f"<big><b>{traducir('¡Configuración completada!')}</b></big>")
+        title.set_markup(f"<big><b>{traducir('Actualización inicial de Debian')}</b></big>")
         box.pack_start(title, False, False, 0)
 
         desc = Gtk.Label(label=traducir(
-            "Tu sistema AyusOS está listo.\n\n"
-            "• El mantenimiento automático se ejecutará según lo programado.\n"
-            "• Puedes abrir el Centro de Control en cualquier momento para ajustar opciones.\n\n"
-            "¡Disfruta de tu nuevo sistema!"
+            "AyusOS actualizará Debian antes de aplicar tus elecciones. "
+            "Si hace falta reiniciar, el asistente retomará la configuración al volver a entrar."
         ))
         desc.set_line_wrap(True)
         desc.set_justify(Gtk.Justification.CENTER)
@@ -788,7 +779,6 @@ class OnboardingWizard(Gtk.Window):
 
     def _apply_nvidia(self, widget, config) -> bool:
         config.nvidia.mode = self.nvidia_combo.get_active_id() or "auto"
-        self.update_before_nvidia = self.nvidia_update.get_active()
         return True
 
     def _validate_gnome_ext(self, widget) -> bool:
@@ -836,8 +826,19 @@ class OnboardingWizard(Gtk.Window):
         return True
 
     def _install_nvidia(self):
+        def finish(reboot, response):
+            self.reboot_nvidia = reboot and response == Gtk.ResponseType.YES
+            self.nvidia_outcome = True
+            self._finish_onboarding()
+
+        self._operation_dialog(
+            "Instalación del controlador NVIDIA", "Preparando el controlador NVIDIA…",
+            self._nvidia_worker, finish, deferred_reboot=self.system_onboarding,
+        )
+
+    def _operation_dialog(self, title, initial, worker, finish, *, deferred_reboot=False):
         dialog = Gtk.Dialog(
-            title=traducir("Instalación del controlador NVIDIA"),
+            title=traducir(title),
             transient_for=self, modal=True, deletable=False,
         )
         delete_handler = dialog.connect("delete-event", lambda *_: True)
@@ -845,7 +846,7 @@ class OnboardingWizard(Gtk.Window):
         content = dialog.get_content_area()
         content.set_spacing(10)
         content.set_border_width(12)
-        status = Gtk.Label(label=traducir("Preparando la instalación del controlador NVIDIA…"))
+        status = Gtk.Label(label=traducir(initial))
         status.set_line_wrap(True)
         status.set_xalign(0)
         content.pack_start(status, False, False, 0)
@@ -877,22 +878,20 @@ class OnboardingWizard(Gtk.Window):
             dialog.set_deletable(True)
             if reboot:
                 dialog.add_button(traducir("Más tarde"), Gtk.ResponseType.CLOSE)
-                label = "Reiniciar al terminar la configuración" if self.system_onboarding else "Reiniciar ahora"
+                label = "Reiniciar al terminar la configuración" if deferred_reboot else "Reiniciar ahora"
                 dialog.add_button(traducir(label), Gtk.ResponseType.YES)
             else:
                 dialog.add_button(traducir("Continuar"), Gtk.ResponseType.CLOSE)
             dialog.set_default_response(Gtk.ResponseType.CLOSE)
 
-            def finish(_dialog, response):
-                self.reboot_nvidia = reboot and response == Gtk.ResponseType.YES
-                self.nvidia_outcome = message
+            def respond(_dialog, response):
                 dialog.destroy()
-                self._finish_onboarding()
+                finish(reboot, response)
 
-            dialog.connect("response", finish)
+            dialog.connect("response", respond)
 
         threading.Thread(
-            target=self._nvidia_worker,
+            target=worker,
             args=(lambda line: GLib.idle_add(append_line, line),
                   lambda message, reboot: GLib.idle_add(done, message, reboot)),
             daemon=True,
@@ -933,15 +932,14 @@ class OnboardingWizard(Gtk.Window):
                     if line.startswith("[-] "):
                         error = line[4:]
 
-            code = self._run_nvidia_helper(log, progress)
+            repos = self.config.repos.contrib_nonfree
+            code = self._run_helper(f"driver:{int(repos)}", steps_for_driver(repos), log, progress)
         except (OSError, subprocess.SubprocessError) as exc:
             log(str(exc))
             complete("No se pudo ejecutar la instalación del controlador NVIDIA.", False)
             return
 
-        if "##NVIDIA:deferred:1" in markers:
-            complete("Debian se actualizó. Reinicia y después instala NVIDIA desde AiO con el nuevo estado del sistema.", True)
-        elif "##RESULT:nvidia-driver:0" in markers:
+        if "##RESULT:nvidia-driver:0" in markers:
             reboot = "##REBOOT:1" in markers
             complete("Controlador NVIDIA preparado correctamente. Reinicia para aplicar los cambios." if reboot
                      else "El controlador NVIDIA ya estaba instalado y verificado para el kernel activo.", reboot)
@@ -952,11 +950,9 @@ class OnboardingWizard(Gtk.Window):
         else:
             complete(traducir("El asistente no confirmó la instalación de NVIDIA (código %d).") % code, False)
 
-    def _run_nvidia_helper(self, log, progress):
-        repos = self.config.repos.contrib_nonfree
-        upgrade = self.update_before_nvidia
+    def _run_helper(self, operation, steps, log, progress):
         if self.system_onboarding:
-            print(f"{REQUEST}{int(repos)}:{int(upgrade)}", flush=True)
+            print(f"{REQUEST}{operation}", flush=True)
             while line := sys.stdin.readline():
                 if line.startswith(RESULT):
                     code = line[len(RESULT):].strip()
@@ -968,13 +964,141 @@ class OnboardingWizard(Gtk.Window):
 
         log("[*] Esperando autorización de administrador…")
         with subprocess.Popen(
-            comando_host("pkexec", NVIDIA_HELPER, "--lang", "es", *steps_for_driver(repos, upgrade)),
+            comando_host("pkexec", NVIDIA_HELPER, "--lang", "es", *steps),
             stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, errors="replace",
         ) as process:
             for line in process.stdout:
                 progress(line)
             return process.wait()
+
+    def _begin_initial_update(self):
+        self.config.onboarding.initial_update = "running"
+        if not self._save_checkpoint():
+            return
+        self._show_step(len(self.steps) - 1)
+
+        def finish(reboot, response):
+            if reboot:
+                if response == Gtk.ResponseType.YES:
+                    self._reboot_for_update()
+            elif self.config.onboarding.initial_update == "ready":
+                self._continue_after_update(offer_nvidia=False)
+
+        self._operation_dialog(
+            "Actualización inicial de Debian", "Preparando la actualización de Debian…",
+            self._update_worker, finish,
+        )
+
+    def _update_worker(self, log, complete):
+        markers = set()
+        error = ""
+
+        def progress(line):
+            nonlocal error
+            line = line.rstrip()
+            if line.startswith("##"):
+                markers.add(line)
+            elif line:
+                log(line)
+                if line.startswith("[-] "):
+                    error = line[4:]
+
+        try:
+            code = self._run_helper("update", UPDATE_STEPS, log, progress)
+            if code or "##RESULT:onboarding-check-upgrade:0" not in markers:
+                complete(error or traducir("No se pudo completar la actualización de Debian (código %d).") % code, False)
+                return
+            reboot = "##REBOOT:1" in markers
+            checkpoint = "reboot:" + BOOT_ID.read_text().strip() if reboot else "ready"
+        except (OSError, subprocess.SubprocessError) as exc:
+            complete(str(exc), False)
+            return
+
+        def save_result():
+            self.config.onboarding.initial_update = checkpoint
+            if not self._save_checkpoint(show_error=False):
+                self.config.onboarding.initial_update = "running"
+                complete("No se pudo guardar el resultado. Pulsa Finalizar para volver a intentarlo.", False)
+                return
+            complete("Debian se actualizó. Reinicia para continuar con la configuración." if reboot
+                     else "Debian se actualizó correctamente.", reboot)
+
+        GLib.idle_add(save_result)
+
+    def _save_checkpoint(self, *, show_error=True):
+        prefs = load_user_preferences()
+        self.config.onboarding.completed = False
+        prefs.update(self.config.to_dict())
+        prefs.pop("_schema_version", None)
+        if save_user_preferences(prefs):
+            return True
+        if show_error:
+            self._show_error(traducir("No se pudo guardar el progreso del asistente."))
+        return False
+
+    def _continue_after_update(self, *, offer_nvidia=True):
+        checkpoint = self.config.onboarding.initial_update
+        if checkpoint.startswith("reboot:"):
+            try:
+                same_boot = checkpoint == "reboot:" + BOOT_ID.read_text().strip()
+            except OSError as exc:
+                self._show_error(str(exc))
+                return
+            if same_boot:
+                dialog = Gtk.MessageDialog(
+                    transient_for=self, modal=True, message_type=Gtk.MessageType.INFO,
+                    text=traducir("Reinicia para continuar la configuración"),
+                )
+                dialog.add_button(traducir("Más tarde"), Gtk.ResponseType.CLOSE)
+                dialog.add_button(traducir("Reiniciar ahora"), Gtk.ResponseType.YES)
+                dialog.set_default_response(Gtk.ResponseType.CLOSE)
+                response = dialog.run()
+                dialog.destroy()
+                if response == Gtk.ResponseType.YES:
+                    self._reboot_for_update()
+                return
+
+        if self.config.nvidia.mode == "none" or self.nvidia_outcome is not None:
+            self._finish_onboarding()
+        elif not offer_nvidia:
+            self._install_nvidia()
+        else:
+            dialog = Gtk.MessageDialog(
+                transient_for=self, modal=True, message_type=Gtk.MessageType.QUESTION,
+                text=traducir("Instalación pendiente del controlador NVIDIA"),
+            )
+            dialog.format_secondary_text(traducir(
+                "Debian está actualizado. Puedes instalar el controlador ahora o retomar este paso más tarde."
+            ))
+            dialog.add_button(traducir("Omitir NVIDIA"), Gtk.ResponseType.REJECT)
+            dialog.add_button(traducir("Más tarde"), Gtk.ResponseType.CLOSE)
+            dialog.add_button(traducir("Instalar NVIDIA"), Gtk.ResponseType.OK)
+            dialog.set_default_response(Gtk.ResponseType.OK)
+            response = dialog.run()
+            dialog.destroy()
+            if response == Gtk.ResponseType.OK:
+                self._install_nvidia()
+            elif response == Gtk.ResponseType.REJECT:
+                self.config.nvidia.mode = "none"
+                self._finish_onboarding()
+
+    def _reboot_for_update(self):
+        try:
+            if self.system_onboarding:
+                output = []
+                code = self._run_helper("reboot", (), output.append, output.append)
+                error = "".join(output).strip()
+            else:
+                result = subprocess.run(
+                    comando_host("systemctl", "--no-block", "reboot"),
+                    capture_output=True, text=True, timeout=15,
+                )
+                code, error = result.returncode, result.stderr.strip()
+            if code:
+                self._show_error(error or traducir("No se pudo reiniciar el sistema."))
+        except (OSError, subprocess.SubprocessError) as exc:
+            self._show_error(str(exc))
 
     def _finish_onboarding(self):
         self.config.nvidia.handled_by_wizard = True
@@ -1003,6 +1127,7 @@ class OnboardingWizard(Gtk.Window):
         prefs = load_user_preferences()
         config.apps.auto_install = False
         prefs.update(config.to_dict())
+        prefs["onboarding"].pop("initial_update", None)
         prefs.pop("_schema_version", None)
         return mark_onboarding_done(self.version, prefs)
 
@@ -1034,9 +1159,9 @@ class OnboardingWizard(Gtk.Window):
         self.step_label.set_text(f"{traducir('Paso')} {index + 1} {traducir('de')} {len(self.steps)}: {step.title}")
 
         # Botones
-        self.btn_back.set_sensitive(index > 0)
-        self.btn_next.set_sensitive(self.conexion_disponible)
-        self.btn_skip.set_sensitive(self.conexion_disponible)
+        self.btn_back.set_sensitive(index > 0 and not self.config.onboarding.initial_update)
+        self.btn_next.set_sensitive(self.conexion_disponible or self.config.onboarding.initial_update not in ("", "running"))
+        self.btn_skip.set_sensitive(self.conexion_disponible and not self.config.onboarding.initial_update)
         is_last = (index == len(self.steps) - 1)
         self.btn_next.set_label(traducir("Finalizar") if is_last else traducir("Siguiente"))
         if is_last:
@@ -1044,9 +1169,9 @@ class OnboardingWizard(Gtk.Window):
             self.btn_next.get_style_context().add_class("onboarding-button-accent")
 
     def _on_next(self, _):
-        if not self.conexion_disponible:
-            return
         step = self.steps[self.current_index]
+        if not self.conexion_disponible and self.config.onboarding.initial_update in ("", "running"):
+            return
 
         # Validar
         if step.validate_fn and not step.validate_fn(step.widget):
@@ -1054,10 +1179,10 @@ class OnboardingWizard(Gtk.Window):
             return
 
         if step.id == "finish":
-            if self.config.nvidia.mode == "none" or self.nvidia_outcome is not None:
-                self._finish_onboarding()
+            if self.config.onboarding.initial_update in ("", "running"):
+                self._begin_initial_update()
             else:
-                self._install_nvidia()
+                self._continue_after_update()
             return
 
         # Aplicar
@@ -1070,11 +1195,11 @@ class OnboardingWizard(Gtk.Window):
         self._show_step(self.current_index + 1)
 
     def _on_back(self, _):
-        if self.current_index > 0:
+        if self.current_index > 0 and not self.config.onboarding.initial_update:
             self._show_step(self.current_index - 1)
 
     def _on_skip(self, _):
-        if not self.conexion_disponible:
+        if not self.conexion_disponible or self.config.onboarding.initial_update:
             return
         dialog = Gtk.MessageDialog(
             transient_for=self,
@@ -1083,21 +1208,15 @@ class OnboardingWizard(Gtk.Window):
             text=traducir("¿Saltar configuración?"),
         )
         dialog.format_secondary_text(traducir(
-            "Se usarán los valores por defecto. Podrás configurar todo después "
+            "Se usarán los valores por defecto y se actualizará Debian. Podrás configurar todo después "
             "desde el Centro de Control."
         ))
         response = dialog.run()
         dialog.destroy()
         if response == Gtk.ResponseType.YES and self.conexion_disponible:
+            self.config = AyusOSConfig()
             self.config.nvidia.mode = "none"
-            self.reboot_nvidia = False
-            # Mantener los demás valores por defecto al saltar el asistente.
-            prefs = load_user_preferences()
-            prefs["nvidia"] = {"mode": "none", "handled_by_wizard": True, "reboot_boot_id": ""}
-            if mark_onboarding_done(self.version, prefs):
-                self.emit("completed")
-            else:
-                self._show_error(traducir("No se pudo guardar la configuración."))
+            self._begin_initial_update()
 
     def _show_error(self, message: str):
         dialog = Gtk.MessageDialog(

@@ -1,8 +1,12 @@
 # Cambios
 
-## 1.6.4
+## 1.6.5
 
 - El actualizador de AiO incluye el Centro de Control de AyusOS en la misma operación cuando está instalado y hay una versión compatible en el canal seleccionado.
+
+## 1.6.4
+
+- El asistente completa primero la actualización inicial de Debian, guarda el progreso y retoma la configuración después de reiniciar si es necesario.
 
 ## 1.6.3
 

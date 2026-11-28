@@ -157,6 +157,7 @@ class SnapshotsConfig:
 @dataclass
 class OnboardingConfig:
     completed: bool = False
+    initial_update: str = ""
     version: str = "0.0.0"
 
 
