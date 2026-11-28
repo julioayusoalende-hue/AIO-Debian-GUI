@@ -2,11 +2,12 @@
 
 ## 1.6.5
 
-- El actualizador de AiO incluye el Centro de Control de AyusOS en la misma operación cuando está instalado y hay una versión compatible en el canal seleccionado.
+- El asistente de primer arranque actualiza Debian antes de aplicar la configuración, guarda el progreso y la retoma tras reiniciar si la actualización lo requiere.
+- La instalación de NVIDIA se realiza después de la actualización inicial y muestra el progreso y el resultado antes de completar el asistente.
 
 ## 1.6.4
 
-- El asistente completa primero la actualización inicial de Debian, guarda el progreso y retoma la configuración después de reiniciar si es necesario.
+- El actualizador de AiO incluye el Centro de Control de AyusOS en la misma operación cuando está instalado y hay una versión compatible en el canal seleccionado.
 
 ## 1.6.3
 
