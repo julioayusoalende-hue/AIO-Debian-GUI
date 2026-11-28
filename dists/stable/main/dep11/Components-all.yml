@@ -156,13 +156,14 @@ Screenshots:
   source-image:
     url: https://raw.githubusercontent.com/julioayusoalende-hue/AIO-Debian-GUI/main/docs/capturas/acerca-de.png
 Releases:
-- version: 1.6.5
+- version: 1.6.6
   type: stable
   unix-timestamp: 1795824000
   description:
     C: >-
-      <ul><li>El actualizador de AiO incluye el Centro de Control de AyusOS en la misma operación cuando está instalado y
-      hay una versión compatible en el canal seleccionado.</li></ul>
+      <ul><li>El asistente de primer arranque conserva su estado completado al cambiar el tema o la interfaz y recupera ese
+      estado aunque se pierdan las preferencias del usuario.</li><li>Si APT detecta una operación de dpkg interrumpida, el
+      mantenimiento termina de configurar los paquetes pendientes y reintenta la actualización una vez.</li></ul>
 ContentRating:
   oars-1.1:
     violence-cartoon: none
