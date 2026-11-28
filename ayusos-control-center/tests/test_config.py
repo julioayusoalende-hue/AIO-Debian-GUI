@@ -37,6 +37,23 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(prefs["onboarding"], {"completed": True, "version": "1.4"})
         self.assertEqual(prefs["tema"], "sistema")
 
+    def test_completion_survives_missing_preferences_for_the_original_user(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            marker = Path(tmp) / "onboarding-done"
+            marker.touch()
+            (marker.parent / "aio-usuarios").write_text("1000\n1001\n", encoding="ascii")
+            with patch.object(ayusos_config, "MARKER_ONBOARDING_DONE", marker), \
+                 patch.object(ayusos_config, "load_system_config", return_value={}), \
+                 patch.object(ayusos_config, "load_user_preferences", return_value={}), \
+                 patch.object(ayusos_config.os, "getuid", return_value=1000) as uid:
+                self.assertTrue(ayusos_config.is_onboarding_completed())
+                marker.with_name("onboarding-uid").write_text("1001\n", encoding="ascii")
+                self.assertFalse(ayusos_config.is_onboarding_completed())
+                uid.return_value = 1001
+                self.assertTrue(ayusos_config.is_onboarding_completed())
+                marker.unlink()
+                self.assertFalse(ayusos_config.is_onboarding_completed())
+
     def test_save_handles_unwritable_config_directory(self):
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp) / "file"

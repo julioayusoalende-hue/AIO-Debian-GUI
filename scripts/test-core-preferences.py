@@ -18,6 +18,16 @@ with tempfile.TemporaryDirectory() as directory:
     with open(path, encoding="utf-8") as f:
         assert json.load(f) == values
 
+    # Se abre Preferencias con las claves de AiO y luego se guarda el estado
+    # del asistente en el mismo archivo. Guardar el tema no debe descartarlo.
+    onboarding = {"completed": True, "version": "1.4"}
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump({**values, "onboarding": onboarding, "nvidia": {"mode": "manual"}}, f)
+    values = dict(preferences.cargar_preferencias(path, DEFAULTS), tema="claro", modo_simple=False)
+    preferences.guardar_preferencias(values, path)
+    with open(path, encoding="utf-8") as f:
+        assert json.load(f) == {**values, "onboarding": onboarding, "nvidia": {"mode": "manual"}}
+
     for invalid in [dict(DEFAULTS, idioma="unsupported"),
                     dict(DEFAULTS, tema="unsafe"),
                     dict(DEFAULTS, modo_simple="True")]:

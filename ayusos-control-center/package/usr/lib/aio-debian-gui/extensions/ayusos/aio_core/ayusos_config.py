@@ -325,13 +325,25 @@ def mark_onboarding_done(version: str, prefs: dict[str, Any] | None = None) -> b
 
 
 def is_onboarding_completed() -> bool:
-    """Comprueba si el onboarding ya se completó (system o user)."""
-    # Prioridad: marcador de sistema > user > defecto
+    """Recupera el estado del primer arranque aunque se perdieran las preferencias."""
     system = load_system_config()
     if system.get("onboarding", {}).get("completed"):
         return True
     user = load_user_preferences()
-    return bool(user.get("onboarding", {}).get("completed"))
+    if user.get("onboarding", {}).get("completed"):
+        return True
+    if not MARKER_ONBOARDING_DONE.is_file():
+        return False
+    try:
+        try:
+            uid = MARKER_ONBOARDING_DONE.with_name("onboarding-uid").read_text(encoding="ascii").strip()
+        except FileNotFoundError:
+            # Las instalaciones anteriores aplicaban las elecciones del primer administrador.
+            with MARKER_ONBOARDING_DONE.with_name("aio-usuarios").open(encoding="ascii") as usuarios:
+                uid = usuarios.readline().strip()
+    except (OSError, UnicodeError):
+        return False
+    return uid == str(os.getuid())
 
 
 def get_onboarding_version() -> str:

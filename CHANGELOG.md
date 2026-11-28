@@ -2,6 +2,7 @@
 
 ## 1.6.6
 
+- El asistente de primer arranque conserva su estado completado al cambiar el tema o la interfaz y recupera ese estado aunque se pierdan las preferencias del usuario.
 - Si APT detecta una operación de dpkg interrumpida, el mantenimiento termina de configurar los paquetes pendientes y reintenta la actualización una vez.
 
 ## 1.6.5
